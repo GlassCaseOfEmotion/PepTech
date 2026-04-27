@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { Shell } from '@/components/shell/Shell'
 import { saveTelegramCredentials, saveWhatsAppCredentials, disconnectChannel } from './actions'
 
 export default async function ChannelsPage() {
@@ -7,16 +8,15 @@ export default async function ChannelsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: userRow } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
-  if (!userRow) redirect('/login')
-
   const { data: channels } = await supabase
     .from('tenant_channels')
     .select('channel_type, is_active, identifier')
-    .eq('tenant_id', userRow.tenant_id)
 
   const connectedMap = Object.fromEntries((channels ?? []).map((c) => [c.channel_type, c]))
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://your-app.vercel.app'
+
+  // Get tenant_id only for webhook URL display
+  const { data: userRow } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
 
   const inputStyle = {
     height: 34, padding: '0 10px', borderRadius: 'var(--pt-radius-sm)',
@@ -25,6 +25,7 @@ export default async function ChannelsPage() {
   } as const
 
   return (
+    <Shell section="Settings">
     <div className="pt-page">
       <div className="pt-page-hd">
         <div>
@@ -118,5 +119,6 @@ export default async function ChannelsPage() {
 
       </div>
     </div>
+    </Shell>
   )
 }
