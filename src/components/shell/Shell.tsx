@@ -6,9 +6,10 @@ interface ShellProps {
   children: React.ReactNode
   section?: string
   isInbox?: boolean
+  rightRail?: React.ReactNode
 }
 
-export async function Shell({ children, section, isInbox = false }: ShellProps) {
+export async function Shell({ children, section, isInbox = false, rightRail }: ShellProps) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -31,7 +32,9 @@ export async function Shell({ children, section, isInbox = false }: ShellProps) 
     connectedChannels = (channels ?? []).map((c) => c.channel_type)
   }
 
-  const rootClass = `pt-root no-right${isInbox ? ' is-inbox' : ''}`
+  const rootClass = rightRail
+    ? 'pt-root'
+    : `pt-root no-right${isInbox ? ' is-inbox' : ''}`
 
   return (
     <div className={rootClass}>
@@ -40,6 +43,7 @@ export async function Shell({ children, section, isInbox = false }: ShellProps) 
         <TopBar section={section} connectedChannels={connectedChannels} />
         {children}
       </main>
+      {rightRail}
     </div>
   )
 }
