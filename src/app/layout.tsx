@@ -3,6 +3,11 @@ import '../../styles/peptech.css'
 import '../../styles/inbox.css'
 import '../../styles/customer.css'
 import '../../styles/settings.css'
+import '../../styles/orders.css'
+import '../../styles/catalog.css'
+import '../../styles/broadcast.css'
+import '../../styles/automations.css'
+import '../../styles/vault.css'
 
 export const metadata: Metadata = {
   title: 'Peptech',
