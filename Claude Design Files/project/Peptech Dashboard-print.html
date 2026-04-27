@@ -1,0 +1,2083 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Peptech — Dashboard (Print)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* peptech.css — Linear/Attio-flavored CRM, originally drawn for Peptech */
+
+/* ─── Tokens ─────────────────────────────────────────────────────────────── */
+:root {
+  --pt-accent-h: 130;
+  --pt-accent-c: 0.13;
+  --pt-accent-l: 0.62;
+  --pt-accent: oklch(var(--pt-accent-l) var(--pt-accent-c) var(--pt-accent-h));
+  --pt-accent-soft: oklch(var(--pt-accent-l) var(--pt-accent-c) var(--pt-accent-h) / 0.14);
+  --pt-accent-fg:  oklch(0.32 0.08 var(--pt-accent-h));
+
+  /* light surfaces */
+  --pt-bg:        oklch(0.985 0.002 100);
+  --pt-bg-side:   oklch(0.972 0.003 100);
+  --pt-surface:   oklch(1    0    0);
+  --pt-surface-2: oklch(0.974 0.002 100);
+  --pt-line:      oklch(0.91 0.004 100);
+  --pt-line-soft: oklch(0.945 0.004 100);
+
+  --pt-fg:        oklch(0.20 0.01 100);
+  --pt-fg-2:      oklch(0.40 0.01 100);
+  --pt-fg-3:      oklch(0.55 0.008 100);
+  --pt-fg-4:      oklch(0.68 0.006 100);
+
+  --pt-warn:      oklch(0.72 0.13 65);
+  --pt-warn-soft: oklch(0.96 0.04 65);
+  --pt-cool:      oklch(0.62 0.10 240);
+  --pt-cool-soft: oklch(0.965 0.025 240);
+  --pt-ok:        oklch(0.62 0.13 145);
+  --pt-ok-soft:   oklch(0.965 0.04 145);
+  --pt-danger:    oklch(0.60 0.18 25);
+
+  /* channel colors */
+  --pt-wa:  oklch(0.62 0.13 150);
+  --pt-tg:  oklch(0.66 0.13 240);
+  --pt-em:  oklch(0.55 0.02 280);
+
+  --pt-radius: 8px;
+  --pt-radius-sm: 6px;
+  --pt-radius-lg: 12px;
+  --pt-shadow: 0 1px 0 rgba(20,20,20,.04), 0 1px 2px rgba(20,20,20,.04);
+  --pt-shadow-card: 0 0 0 0.5px oklch(0.9 0.005 100), 0 1px 0 oklch(0.96 0.004 100);
+
+  --pt-font: "Inter", "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --pt-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* density */
+  --pt-row-h: 44px;
+  --pt-pad: 14px;
+  --pt-gap: 12px;
+}
+
+.pt-d-compact { --pt-row-h: 36px; --pt-pad: 10px; --pt-gap: 8px; }
+.pt-d-comfy   { --pt-row-h: 52px; --pt-pad: 18px; --pt-gap: 16px; }
+
+.pt-th-dim {
+  --pt-bg:        oklch(0.22 0.005 250);
+  --pt-bg-side:   oklch(0.20 0.005 250);
+  --pt-surface:   oklch(0.245 0.005 250);
+  --pt-surface-2: oklch(0.225 0.005 250);
+  --pt-line:      oklch(0.32 0.006 250);
+  --pt-line-soft: oklch(0.27 0.006 250);
+  --pt-fg:        oklch(0.95 0.005 250);
+  --pt-fg-2:      oklch(0.78 0.005 250);
+  --pt-fg-3:      oklch(0.62 0.005 250);
+  --pt-fg-4:      oklch(0.50 0.005 250);
+  --pt-warn-soft: oklch(0.32 0.04 65);
+  --pt-cool-soft: oklch(0.30 0.04 240);
+  --pt-ok-soft:   oklch(0.30 0.04 145);
+  --pt-shadow-card: 0 0 0 0.5px oklch(0.32 0.006 250), 0 1px 0 oklch(0.27 0.006 250);
+}
+.pt-th-dark {
+  --pt-bg:        oklch(0.13 0.004 260);
+  --pt-bg-side:   oklch(0.115 0.004 260);
+  --pt-surface:   oklch(0.155 0.004 260);
+  --pt-surface-2: oklch(0.135 0.004 260);
+  --pt-line:      oklch(0.24 0.005 260);
+  --pt-line-soft: oklch(0.19 0.004 260);
+  --pt-fg:        oklch(0.96 0.005 260);
+  --pt-fg-2:      oklch(0.76 0.005 260);
+  --pt-fg-3:      oklch(0.58 0.005 260);
+  --pt-fg-4:      oklch(0.45 0.005 260);
+  --pt-warn-soft: oklch(0.26 0.05 65);
+  --pt-cool-soft: oklch(0.24 0.05 240);
+  --pt-ok-soft:   oklch(0.24 0.05 145);
+  --pt-shadow-card: 0 0 0 0.5px oklch(0.24 0.005 260), 0 1px 0 oklch(0.18 0.004 260);
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  font-family: var(--pt-font);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--pt-fg);
+  background: var(--pt-bg);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11","ss01","ss03";
+}
+button { font-family: inherit; }
+.mono { font-family: var(--pt-mono); font-feature-settings: "tnum"; letter-spacing: -0.01em; }
+kbd {
+  font-family: var(--pt-mono); font-size: 10px;
+  padding: 1px 5px; border-radius: 4px;
+  background: oklch(from var(--pt-fg) l c h / 0.06);
+  color: var(--pt-fg-3);
+}
+
+/* ─── Layout shell ───────────────────────────────────────────────────────── */
+.pt-root {
+  display: grid;
+  grid-template-columns: 232px 1fr 320px;
+  height: 100%;
+  background: var(--pt-bg);
+  color: var(--pt-fg);
+}
+.pt-root.no-right { grid-template-columns: 232px 1fr; }
+.pt-d-compact .pt-root { grid-template-columns: 220px 1fr 296px; }
+
+/* ─── Sidebar ────────────────────────────────────────────────────────────── */
+.pt-sidebar {
+  background: var(--pt-bg-side);
+  border-right: 0.5px solid var(--pt-line);
+  display: flex; flex-direction: column;
+  padding: 10px 8px;
+  min-height: 0;
+}
+.pt-brand {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 6px 10px;
+}
+.pt-brand-mark {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  background: var(--pt-fg);
+  color: var(--pt-bg);
+  display: grid; place-items: center;
+}
+.pt-brand-name {
+  font-weight: 600; font-size: 13.5px; letter-spacing: -0.01em;
+  flex: 1;
+}
+.pt-brand-name span { color: var(--pt-accent); }
+.pt-brand-menu {
+  appearance: none; border: 0; background: transparent; color: var(--pt-fg-3);
+  width: 22px; height: 22px; border-radius: 5px; display: grid; place-items: center;
+  cursor: pointer;
+}
+.pt-brand-menu:hover { background: oklch(from var(--pt-fg) l c h / 0.06); color: var(--pt-fg); }
+
+.pt-compose, .pt-search {
+  display: flex; align-items: center; gap: 8px;
+  margin: 2px 4px 6px;
+  padding: 0 9px; height: 30px;
+  border: 0.5px solid var(--pt-line);
+  border-radius: var(--pt-radius);
+  background: var(--pt-surface);
+  color: var(--pt-fg-2);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.pt-compose { color: var(--pt-fg); font-weight: 500; }
+.pt-compose svg { color: var(--pt-accent-fg); }
+.pt-compose span { flex: 1; text-align: left; }
+.pt-compose:hover { background: var(--pt-surface-2); }
+.pt-search:hover { background: var(--pt-surface-2); }
+.pt-search span { flex: 1; text-align: left; color: var(--pt-fg-3); }
+
+.pt-nav {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 6px 0;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+.pt-nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 0 9px; height: 28px;
+  border-radius: 6px;
+  background: transparent; border: 0; color: var(--pt-fg-2);
+  font-size: 12.5px;
+  cursor: pointer;
+  text-align: left;
+}
+.pt-nav-item:hover { background: oklch(from var(--pt-fg) l c h / 0.05); color: var(--pt-fg); }
+.pt-nav-item.is-on {
+  background: oklch(from var(--pt-fg) l c h / 0.07);
+  color: var(--pt-fg);
+  font-weight: 500;
+}
+.pt-nav-item.is-on svg { color: var(--pt-accent-fg); }
+.pt-nav-label { flex: 1; }
+.pt-nav-badge {
+  font-family: var(--pt-mono); font-size: 10px;
+  padding: 1px 5px; border-radius: 4px;
+  background: var(--pt-accent-soft);
+  color: var(--pt-accent-fg);
+  font-weight: 500;
+}
+.pt-nav-sep {
+  height: 1px; background: var(--pt-line-soft);
+  margin: 8px 8px;
+}
+.pt-nav-section {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--pt-fg-4);
+  padding: 2px 9px 4px;
+  display: flex; justify-content: space-between;
+}
+.pt-pin {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 9px; height: 36px;
+  background: transparent; border: 0; cursor: pointer;
+  border-radius: 6px;
+  text-align: left;
+  color: var(--pt-fg-2);
+}
+.pt-pin:hover { background: oklch(from var(--pt-fg) l c h / 0.05); }
+.pt-pin svg { color: var(--pt-fg-3); }
+.pt-pin-body { flex: 1; min-width: 0; }
+.pt-pin-name { font-size: 12px; color: var(--pt-fg); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pt-pin-snip { font-size: 11px; color: var(--pt-fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pt-pin-unread {
+  font-family: var(--pt-mono); font-size: 10px;
+  background: var(--pt-accent); color: oklch(0.18 0.02 var(--pt-accent-h));
+  border-radius: 999px; padding: 1px 5px; font-weight: 600;
+}
+
+.pt-side-foot {
+  border-top: 0.5px solid var(--pt-line-soft);
+  margin: 6px -8px -10px;
+  padding: 8px 10px;
+}
+.pt-me { display: flex; align-items: center; gap: 8px; padding: 4px; border-radius: 6px; }
+.pt-me:hover { background: oklch(from var(--pt-fg) l c h / 0.05); }
+.pt-me-av {
+  width: 26px; height: 26px; border-radius: 6px;
+  background: var(--pt-accent-soft);
+  color: var(--pt-accent-fg);
+  display: grid; place-items: center;
+  font-size: 11px; font-weight: 600;
+}
+.pt-me-info { flex: 1; min-width: 0; }
+.pt-me-name { font-size: 12px; font-weight: 500; }
+.pt-me-status { font-size: 10.5px; color: var(--pt-fg-3); display: flex; align-items: center; gap: 5px; }
+.pt-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pt-ok); display: inline-block; }
+.pt-dot-ok { background: var(--pt-ok); }
+.pt-dot-warn { background: var(--pt-warn); }
+.pt-dot-cool { background: var(--pt-cool); }
+.pt-me-more {
+  background: transparent; border: 0; color: var(--pt-fg-3);
+  width: 22px; height: 22px; border-radius: 5px; cursor: pointer;
+}
+.pt-me-more:hover { background: oklch(from var(--pt-fg) l c h / 0.06); color: var(--pt-fg); }
+
+/* ─── Main column ────────────────────────────────────────────────────────── */
+.pt-main { min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+.pt-top {
+  display: flex; align-items: center; gap: 16px;
+  height: 48px; padding: 0 18px;
+  border-bottom: 0.5px solid var(--pt-line);
+  background: var(--pt-bg);
+  flex-shrink: 0;
+}
+.pt-top-crumbs {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px;
+}
+.pt-crumb-home { color: var(--pt-fg-3); }
+.pt-crumb-sep { color: var(--pt-fg-4); }
+.pt-crumb-now { color: var(--pt-fg); font-weight: 500; }
+.pt-top-mid {
+  flex: 1;
+  display: flex; gap: 6px;
+  justify-content: center;
+}
+.pt-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 9px 3px 8px;
+  border-radius: 999px;
+  border: 0.5px solid var(--pt-line);
+  background: var(--pt-surface);
+  font-size: 11px;
+  color: var(--pt-fg-2);
+}
+.pt-chip-wa svg { color: var(--pt-wa); }
+.pt-chip-tg svg { color: var(--pt-tg); }
+.pt-chip-em svg { color: var(--pt-em); }
+.pt-chip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pt-ok); margin-left: 2px; }
+.pt-top-actions { display: flex; align-items: center; gap: 4px; }
+.pt-iconbtn {
+  position: relative;
+  width: 28px; height: 28px;
+  display: grid; place-items: center;
+  background: transparent; border: 0;
+  color: var(--pt-fg-2); border-radius: 6px; cursor: pointer;
+}
+.pt-iconbtn:hover { background: oklch(from var(--pt-fg) l c h / 0.06); color: var(--pt-fg); }
+.pt-iconbtn.is-on { background: var(--pt-accent-soft); color: var(--pt-accent-fg); }
+.pt-iconbtn-dot {
+  position: absolute; top: 6px; right: 6px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--pt-warn);
+  box-shadow: 0 0 0 1.5px var(--pt-bg);
+}
+.pt-top-divider { width: 1px; height: 16px; background: var(--pt-line); margin: 0 4px; }
+.pt-cta {
+  height: 28px; padding: 0 12px;
+  background: var(--pt-fg); color: var(--pt-bg);
+  border: 0; border-radius: 6px; cursor: pointer;
+  font-size: 12px; font-weight: 500;
+}
+.pt-cta:hover { background: oklch(from var(--pt-fg) calc(l - 0.05) c h); }
+
+/* ─── Page ───────────────────────────────────────────────────────────────── */
+.pt-page {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  padding: 22px 22px 32px;
+}
+.pt-page-hd {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  margin-bottom: 18px;
+}
+.pt-page-hd h1 {
+  margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.018em;
+}
+.pt-page-hd p {
+  margin: 3px 0 0; color: var(--pt-fg-3); font-size: 13px;
+}
+.pt-page-actions { display: flex; gap: 8px; }
+.pt-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 30px; padding: 0 12px;
+  border-radius: 7px;
+  font-size: 12.5px; font-weight: 500;
+  cursor: pointer;
+  border: 0.5px solid var(--pt-line);
+  background: var(--pt-surface);
+  color: var(--pt-fg);
+  white-space: nowrap;
+}
+.pt-btn-ghost { background: transparent; }
+.pt-btn-primary {
+  background: var(--pt-fg); color: var(--pt-bg); border-color: transparent;
+}
+
+/* ─── KPIs ───────────────────────────────────────────────────────────────── */
+.pt-kpis {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: var(--pt-gap);
+  margin-bottom: var(--pt-gap);
+}
+.pt-kpi {
+  background: var(--pt-surface);
+  border-radius: var(--pt-radius);
+  padding: 12px 14px 13px;
+  box-shadow: var(--pt-shadow-card);
+}
+.pt-kpi-lbl { font-size: 11px; color: var(--pt-fg-3); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+.pt-kpi-val-row { display: flex; align-items: baseline; gap: 10px; margin-top: 4px; }
+.pt-kpi-val { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.pt-kpi-delta { font-size: 11px; font-family: var(--pt-mono); }
+.pt-kpi-delta.up { color: var(--pt-ok); }
+.pt-kpi-delta.dn { color: var(--pt-danger); }
+.pt-spark { margin-left: auto; }
+.pt-kpi-sub { font-size: 11.5px; color: var(--pt-fg-3); margin-top: 3px; }
+
+/* ─── Card grid ──────────────────────────────────────────────────────────── */
+.pt-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: minmax(280px, auto);
+  gap: var(--pt-gap);
+}
+.pt-span-2 { grid-column: span 2; grid-row: span 2; }
+.pt-card {
+  background: var(--pt-surface);
+  border-radius: var(--pt-radius);
+  box-shadow: var(--pt-shadow-card);
+  display: flex; flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.pt-card-hd {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 12px 14px 10px;
+  gap: 10px;
+}
+.pt-card-hd h3 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+.pt-card-hd p  { margin: 1px 0 0; font-size: 11.5px; color: var(--pt-fg-3); }
+.pt-card-body { padding: 0 4px 10px; flex: 1; min-height: 0; }
+.pt-card-body.is-scroll { overflow-y: auto; }
+.pt-card-ft {
+  border-top: 0.5px solid var(--pt-line-soft);
+  padding: 8px 14px; font-size: 11.5px; color: var(--pt-fg-3);
+}
+.pt-link {
+  background: transparent; border: 0;
+  font-size: 11.5px; color: var(--pt-fg-2); cursor: pointer;
+  font-weight: 500;
+}
+.pt-link:hover { color: var(--pt-fg); }
+
+.pt-pillbar { display: flex; gap: 2px; background: oklch(from var(--pt-fg) l c h / 0.05); border-radius: 7px; padding: 2px; }
+.pt-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px;
+  background: transparent; border: 0; border-radius: 5px;
+  font-size: 11px; color: var(--pt-fg-2); cursor: pointer;
+}
+.pt-pill.is-on { background: var(--pt-surface); color: var(--pt-fg); box-shadow: 0 0 0 0.5px var(--pt-line); }
+.pt-pill-num { font-family: var(--pt-mono); font-size: 10px; color: var(--pt-fg-3); }
+.pt-pill.is-on .pt-pill-num { color: var(--pt-accent-fg); }
+
+.pt-segctl { display: flex; gap: 0; background: oklch(from var(--pt-fg) l c h / 0.05); border-radius: 6px; padding: 2px; }
+.pt-segctl button {
+  appearance: none; border: 0; background: transparent;
+  font-size: 11px; padding: 2px 9px; border-radius: 4px;
+  color: var(--pt-fg-2); cursor: pointer; font-family: var(--pt-mono);
+}
+.pt-segctl button.is-on { background: var(--pt-surface); color: var(--pt-fg); box-shadow: 0 0 0 0.5px var(--pt-line); }
+
+/* ─── Inbox / threads ────────────────────────────────────────────────────── */
+.pt-thread-list { list-style: none; margin: 0; padding: 0; }
+.pt-thread {
+  display: grid; grid-template-columns: 32px 1fr auto;
+  align-items: center; gap: 10px;
+  padding: 9px 12px;
+  cursor: pointer;
+  border-top: 0.5px solid var(--pt-line-soft);
+  position: relative;
+}
+.pt-thread:first-child { border-top: 0; }
+.pt-thread:hover { background: oklch(from var(--pt-fg) l c h / 0.025); }
+.pt-thread.is-active {
+  background: var(--pt-accent-soft);
+}
+.pt-thread.is-active::before {
+  content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px;
+  background: var(--pt-accent); border-radius: 2px;
+}
+.pt-thread-av {
+  position: relative;
+  width: 32px; height: 32px; border-radius: 7px;
+  background: var(--pt-surface-2);
+  display: grid; place-items: center;
+  font-size: 11px; font-weight: 600; color: var(--pt-fg-2);
+  border: 0.5px solid var(--pt-line);
+}
+.pt-thread-av[data-channel="wa"] { color: var(--pt-wa); }
+.pt-thread-av[data-channel="tg"] { color: var(--pt-tg); }
+.pt-thread-av[data-channel="em"] { color: var(--pt-em); }
+.pt-thread-ch {
+  position: absolute; right: -3px; bottom: -3px;
+  width: 14px; height: 14px;
+  background: var(--pt-bg); border-radius: 50%;
+  display: grid; place-items: center;
+}
+.pt-ch-wa { color: var(--pt-wa); }
+.pt-ch-tg { color: var(--pt-tg); }
+.pt-ch-em { color: var(--pt-em); }
+.pt-thread-mid { min-width: 0; overflow: hidden; }
+.pt-thread-row1 { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.pt-thread-name { font-size: 12.5px; font-weight: 500; color: var(--pt-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; min-width: 0; }
+.pt-thread.is-unread .pt-thread-name { font-weight: 600; }
+.pt-thread-snip {
+  font-size: 12px; color: var(--pt-fg-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 1px;
+}
+.pt-thread.is-unread .pt-thread-snip { color: var(--pt-fg-2); }
+.pt-thread-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.pt-thread-time { font-size: 10.5px; color: var(--pt-fg-4); font-family: var(--pt-mono); }
+.pt-thread-unread {
+  background: var(--pt-accent); color: oklch(0.18 0.02 var(--pt-accent-h));
+  font-family: var(--pt-mono); font-size: 10px; font-weight: 600;
+  border-radius: 999px; padding: 1px 6px; min-width: 18px; text-align: center;
+}
+
+/* tags */
+.pt-tag {
+  font-size: 10px;
+  padding: 1px 6px; border-radius: 4px;
+  background: oklch(from var(--pt-fg) l c h / 0.07);
+  color: var(--pt-fg-2);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.pt-tag-soft { background: oklch(from var(--pt-fg) l c h / 0.04); color: var(--pt-fg-3); }
+.pt-tag-vip { background: var(--pt-accent-soft); color: var(--pt-accent-fg); }
+.pt-tag-new { background: var(--pt-cool-soft); color: var(--pt-cool); }
+.pt-tag-warn { background: var(--pt-warn-soft); color: var(--pt-warn); }
+
+/* trust */
+.pt-trust-pill {
+  font-family: var(--pt-mono); font-size: 10.5px; font-weight: 600;
+  padding: 1px 5px; border-radius: 4px;
+  background: oklch(from var(--pt-fg) l c h / 0.05);
+  color: var(--pt-fg-3);
+}
+.pt-trust-hi { background: var(--pt-ok-soft); color: var(--pt-ok); }
+.pt-trust-md { background: var(--pt-warn-soft); color: var(--pt-warn); }
+.pt-trust-lo { background: oklch(0.96 0.04 25); color: var(--pt-danger); }
+.pt-trust { display: flex; flex-direction: column; align-items: flex-end; }
+.pt-trust .pt-trust-num { font-family: var(--pt-mono); font-size: 16px; font-weight: 600; line-height: 1; }
+.pt-trust .pt-trust-lbl { font-size: 9px; color: var(--pt-fg-4); text-transform: uppercase; letter-spacing: 0.06em; }
+.pt-trust-hi .pt-trust-num { color: var(--pt-ok); }
+.pt-trust-md .pt-trust-num { color: var(--pt-warn); }
+.pt-trust-lo .pt-trust-num { color: var(--pt-danger); }
+
+/* ─── Payments ───────────────────────────────────────────────────────────── */
+.pt-pay-list { list-style: none; margin: 0; padding: 0; }
+.pt-pay {
+  display: grid; grid-template-columns: 46px 1fr auto;
+  gap: 10px; align-items: center;
+  padding: 9px 12px;
+  border-top: 0.5px solid var(--pt-line-soft);
+}
+.pt-pay:first-child { border-top: 0; }
+.pt-pay-asset {
+  font-family: var(--pt-mono); font-size: 10.5px; font-weight: 600;
+  text-align: center;
+  padding: 4px 6px; border-radius: 5px;
+  background: oklch(from var(--pt-fg) l c h / 0.05);
+  color: var(--pt-fg-2);
+}
+.pt-pay-asset[data-asset="USDT"] { background: oklch(0.95 0.06 165); color: oklch(0.40 0.10 165); }
+.pt-pay-asset[data-asset="BTC"]  { background: oklch(0.96 0.06 60);  color: oklch(0.50 0.14 60);  }
+.pt-pay-asset[data-asset="XMR"]  { background: oklch(0.96 0.04 30);  color: oklch(0.45 0.12 30);  }
+.pt-th-dim .pt-pay-asset[data-asset="USDT"], .pt-th-dark .pt-pay-asset[data-asset="USDT"] { background: oklch(0.30 0.06 165); color: oklch(0.85 0.10 165); }
+.pt-th-dim .pt-pay-asset[data-asset="BTC"],  .pt-th-dark .pt-pay-asset[data-asset="BTC"]  { background: oklch(0.30 0.06 60);  color: oklch(0.85 0.12 60);  }
+.pt-th-dim .pt-pay-asset[data-asset="XMR"],  .pt-th-dark .pt-pay-asset[data-asset="XMR"]  { background: oklch(0.30 0.06 30);  color: oklch(0.85 0.10 30);  }
+
+.pt-pay-who { font-size: 12.5px; font-weight: 500; }
+.pt-pay-state { font-size: 11px; color: var(--pt-fg-3); display: flex; align-items: center; gap: 5px; margin-top: 1px; }
+.pt-pay-amt-col { text-align: right; }
+.pt-pay-amt { font-family: var(--pt-mono); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pt-pay-act {
+  margin-top: 2px;
+  font-size: 10.5px;
+  background: transparent; border: 0;
+  color: var(--pt-accent-fg); font-weight: 500; cursor: pointer;
+}
+.pt-pay-act:hover { text-decoration: underline; }
+.pt-pay-confirmed .pt-pay-amt { color: var(--pt-ok); }
+
+/* ─── Reorders ───────────────────────────────────────────────────────────── */
+.pt-reorder-list { list-style: none; margin: 0; padding: 0; }
+.pt-reorder {
+  display: grid; grid-template-columns: 70px 1fr 76px 26px;
+  gap: 10px; align-items: center;
+  padding: 8px 12px;
+  border-top: 0.5px solid var(--pt-line-soft);
+}
+.pt-reorder:first-child { border-top: 0; }
+.pt-reorder-due { text-align: left; }
+.pt-reorder-when { font-size: 11.5px; font-weight: 600; color: var(--pt-fg); }
+.pt-reorder-when.is-now { color: var(--pt-warn); }
+.pt-reorder-cycle { font-size: 10px; color: var(--pt-fg-4); font-family: var(--pt-mono); margin-top: 1px; }
+.pt-reorder-who { font-size: 12px; font-weight: 500; }
+.pt-reorder-prod { font-size: 11px; color: var(--pt-fg-3); margin-top: 1px; }
+.pt-reorder-conf { display: flex; align-items: center; gap: 6px; }
+.pt-confbar { flex: 1; height: 4px; background: oklch(from var(--pt-fg) l c h / 0.07); border-radius: 999px; overflow: hidden; }
+.pt-confbar-fill { height: 100%; background: var(--pt-accent); border-radius: 999px; }
+.pt-reorder-pct { font-family: var(--pt-mono); font-size: 10.5px; color: var(--pt-fg-3); }
+.pt-reorder-act {
+  width: 26px; height: 26px;
+  border: 0.5px solid var(--pt-line);
+  background: var(--pt-surface);
+  border-radius: 6px; cursor: pointer;
+  display: grid; place-items: center;
+  color: var(--pt-fg-2);
+}
+.pt-reorder-act:hover { color: var(--pt-accent-fg); border-color: var(--pt-accent); }
+
+/* ─── Stock table ────────────────────────────────────────────────────────── */
+.pt-stock { width: 100%; border-collapse: collapse; }
+.pt-stock th, .pt-stock td {
+  padding: 7px 12px; text-align: left;
+  border-top: 0.5px solid var(--pt-line-soft);
+  font-size: 12px;
+}
+.pt-stock th {
+  border-top: 0; border-bottom: 0.5px solid var(--pt-line);
+  font-size: 10.5px; font-weight: 500; color: var(--pt-fg-4);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.pt-stock .r { text-align: right; }
+.pt-sku { font-family: var(--pt-mono); font-size: 11px; font-weight: 600; }
+.pt-sku-name { font-size: 11px; color: var(--pt-fg-3); margin-top: 1px; }
+.pt-stock-unit { color: var(--pt-fg-4); margin-left: 2px; font-size: 10px; }
+.pt-stock tr.is-low td { background: oklch(from var(--pt-warn) 0.97 0.03 h); }
+.pt-th-dim .pt-stock tr.is-low td, .pt-th-dark .pt-stock tr.is-low td { background: oklch(from var(--pt-warn) 0.25 0.04 h); }
+.pt-stock tr.is-out td { color: var(--pt-fg-4); }
+.pt-out { color: var(--pt-danger); font-family: var(--pt-mono); font-weight: 600; font-size: 10.5px; }
+.pt-stock td.up { color: var(--pt-ok); }
+.pt-stock td.dn { color: var(--pt-danger); }
+
+/* ─── Revenue bars ───────────────────────────────────────────────────────── */
+.pt-bars {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  align-items: end; gap: 8px;
+  padding: 12px 14px 4px;
+  height: 100%;
+}
+.pt-bar-col { display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; }
+.pt-bar-track {
+  width: 100%; flex: 1;
+  background: oklch(from var(--pt-fg) l c h / 0.04);
+  border-radius: 4px;
+  position: relative;
+  display: flex; align-items: flex-end;
+}
+.pt-bar-fill {
+  width: 100%;
+  background: var(--pt-accent);
+  border-radius: 4px;
+  position: relative;
+  transition: height .3s;
+}
+.pt-bar-tip {
+  position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+  font-family: var(--pt-mono); font-size: 10px; color: var(--pt-fg-3);
+  white-space: nowrap; opacity: 0; transition: opacity .15s;
+}
+.pt-bar-col:hover .pt-bar-tip { opacity: 1; }
+.pt-bar-lbl { font-size: 10.5px; color: var(--pt-fg-4); font-family: var(--pt-mono); }
+
+/* ─── Shipments ──────────────────────────────────────────────────────────── */
+.pt-ship-list { list-style: none; margin: 0; padding: 0; }
+.pt-ship {
+  display: grid; grid-template-columns: 28px 1fr;
+  gap: 10px; align-items: flex-start;
+  padding: 9px 12px;
+  border-top: 0.5px solid var(--pt-line-soft);
+}
+.pt-ship:first-child { border-top: 0; }
+.pt-ship-icon {
+  width: 26px; height: 26px; border-radius: 6px;
+  background: var(--pt-surface-2);
+  display: grid; place-items: center;
+  color: var(--pt-fg-3);
+  border: 0.5px solid var(--pt-line);
+}
+.pt-ship-delivered .pt-ship-icon { background: var(--pt-ok-soft); color: var(--pt-ok); border-color: transparent; }
+.pt-ship-in_transit .pt-ship-icon { background: var(--pt-cool-soft); color: var(--pt-cool); border-color: transparent; }
+.pt-ship-customs .pt-ship-icon { background: var(--pt-warn-soft); color: var(--pt-warn); border-color: transparent; }
+.pt-ship-row1 { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.pt-ship-to { font-weight: 500; }
+.pt-ship-carrier { font-size: 10px; padding: 1px 5px; background: oklch(from var(--pt-fg) l c h / 0.06); border-radius: 3px; color: var(--pt-fg-2); font-weight: 500; }
+.pt-ship-id { font-size: 10.5px; color: var(--pt-fg-4); }
+.pt-ship-track { display: flex; align-items: center; gap: 4px; margin-top: 5px; }
+.pt-ship-step { width: 22px; height: 3px; border-radius: 999px; background: oklch(from var(--pt-fg) l c h / 0.08); }
+.pt-ship-step.on { background: var(--pt-accent); }
+.pt-ship-status { font-size: 10.5px; color: var(--pt-fg-3); margin-left: 6px; }
+
+/* ─── Right rail ─────────────────────────────────────────────────────────── */
+.pt-right {
+  border-left: 0.5px solid var(--pt-line);
+  background: var(--pt-bg-side);
+  overflow-y: auto;
+  padding: 14px 14px 24px;
+  display: flex; flex-direction: column; gap: 16px;
+  min-height: 0;
+}
+.pt-right-section { display: flex; flex-direction: column; gap: 8px; }
+.pt-right-hd {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--pt-fg-3); font-weight: 500;
+}
+.pt-right-add {
+  width: 18px; height: 18px; border-radius: 4px;
+  border: 0; background: transparent; color: var(--pt-fg-3); cursor: pointer;
+  display: grid; place-items: center;
+}
+.pt-right-add:hover { background: oklch(from var(--pt-fg) l c h / 0.06); color: var(--pt-fg); }
+.pt-agenda { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.pt-agenda-i {
+  display: grid; grid-template-columns: 14px 1fr auto;
+  gap: 9px; align-items: flex-start;
+  padding: 7px 8px;
+  border-radius: 6px;
+}
+.pt-agenda-i:hover { background: oklch(from var(--pt-fg) l c h / 0.04); }
+.pt-agenda-bullet {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--pt-fg-4); margin-top: 6px;
+  display: block;
+}
+.pt-bul-warn { background: var(--pt-warn); }
+.pt-bul-cool { background: var(--pt-cool); }
+.pt-agenda-t { font-size: 12px; font-weight: 500; }
+.pt-agenda-s { font-size: 11px; color: var(--pt-fg-3); margin-top: 1px; }
+.pt-agenda-time { font-family: var(--pt-mono); font-size: 10.5px; color: var(--pt-fg-4); }
+
+.pt-cust { background: var(--pt-surface); border-radius: var(--pt-radius); padding: 12px; box-shadow: var(--pt-shadow-card); }
+.pt-cust-hd { display: flex; align-items: center; gap: 10px; }
+.pt-cust-av {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--pt-surface-2); border: 0.5px solid var(--pt-line);
+  display: grid; place-items: center; font-weight: 600; font-size: 12px;
+  color: var(--pt-fg-2);
+}
+.pt-cust-av[data-channel="wa"] { color: var(--pt-wa); }
+.pt-cust-av[data-channel="tg"] { color: var(--pt-tg); }
+.pt-cust-id { flex: 1; min-width: 0; }
+.pt-cust-name { font-size: 13px; font-weight: 600; }
+.pt-cust-handle { font-size: 11px; color: var(--pt-fg-3); margin-top: 1px; }
+.pt-cust-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 6px; margin-top: 12px;
+  padding-top: 10px; border-top: 0.5px solid var(--pt-line-soft);
+}
+.pt-cust-stats .lbl { font-size: 10px; color: var(--pt-fg-4); text-transform: uppercase; letter-spacing: 0.05em; }
+.pt-cust-stats .val { font-size: 12px; font-weight: 600; margin-top: 1px; }
+.pt-cust-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+.pt-cust-history { margin-top: 10px; padding-top: 10px; border-top: 0.5px solid var(--pt-line-soft); }
+.pt-cust-hist-hd { font-size: 10.5px; color: var(--pt-fg-4); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.pt-cust-history ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.pt-cust-history li {
+  display: grid; grid-template-columns: 60px 1fr auto;
+  font-size: 11.5px; gap: 8px;
+}
+.pt-cust-history li > span:first-child { color: var(--pt-fg-4); }
+
+.pt-quicks { display: flex; flex-wrap: wrap; gap: 4px; }
+.pt-quick {
+  font-size: 11px;
+  padding: 4px 9px;
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line);
+  border-radius: 999px;
+  color: var(--pt-fg-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pt-quick:hover { background: var(--pt-accent-soft); color: var(--pt-accent-fg); border-color: transparent; }
+
+/* ─── Footer ─────────────────────────────────────────────────────────────── */
+.pt-foot {
+  margin-top: 22px; padding-top: 14px;
+  border-top: 0.5px solid var(--pt-line-soft);
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; color: var(--pt-fg-4);
+}
+.pt-foot-mid { font-style: italic; }
+
+
+/* ── Print ── */
+@page { size: 1500px 1900px; margin: 0; }
+@media print {
+  html, body { background: #fff !important; }
+  .pt-root {
+    grid-template-columns: 232px 1fr 320px !important;
+    height: auto !important;
+    min-height: 1900px;
+  }
+  .pt-root.no-right { grid-template-columns: 232px 1fr !important; }
+  .pt-sidebar, .pt-right { height: auto !important; overflow: visible !important; }
+  .pt-page { overflow: visible !important; height: auto !important; }
+  .pt-card-body.is-scroll { overflow: visible !important; }
+  .pt-card { break-inside: avoid; }
+  .pt-kpi { break-inside: avoid; }
+  .twk-panel { display: none !important; }
+  .pt-iconbtn-dot, .pt-bar-tip { display: none !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
+
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+
+/* ───── tweaks-panel.jsx ───── */
+
+// tweaks-panel.jsx
+// Reusable Tweaks shell + form-control helpers.
+//
+// Owns the host protocol (listens for __activate_edit_mode / __deactivate_edit_mode,
+// posts __edit_mode_available / __edit_mode_set_keys / __edit_mode_dismissed) so
+// individual prototypes don't re-roll it. Ships a consistent set of controls so you
+// don't hand-draw <input type="range">, segmented radios, steppers, etc.
+//
+// Usage (in an HTML file that loads React + Babel):
+//
+//   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+//     "primaryColor": "#D97757",
+//     "fontSize": 16,
+//     "density": "regular",
+//     "dark": false
+//   }/*EDITMODE-END*/;
+//
+//   function App() {
+//     const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+//     return (
+//       <div style={{ fontSize: t.fontSize, color: t.primaryColor }}>
+//         Hello
+//         <TweaksPanel>
+//           <TweakSection label="Typography" />
+//           <TweakSlider label="Font size" value={t.fontSize} min={10} max={32} unit="px"
+//                        onChange={(v) => setTweak('fontSize', v)} />
+//           <TweakRadio  label="Density" value={t.density}
+//                        options={['compact', 'regular', 'comfy']}
+//                        onChange={(v) => setTweak('density', v)} />
+//           <TweakSection label="Theme" />
+//           <TweakColor  label="Primary" value={t.primaryColor}
+//                        onChange={(v) => setTweak('primaryColor', v)} />
+//           <TweakToggle label="Dark mode" value={t.dark}
+//                        onChange={(v) => setTweak('dark', v)} />
+//         </TweaksPanel>
+//       </div>
+//     );
+//   }
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-body::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+
+  .twk-field{appearance:none;width:100%;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;
+    overflow-wrap:anywhere}
+
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+
+  .twk-num{display:flex;align-items:center;height:26px;padding:0 0 0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6)}
+  .twk-num-lbl{font-weight:500;color:rgba(41,38,27,.6);cursor:ew-resize;
+    user-select:none;padding-right:8px}
+  .twk-num input{flex:1;min-width:0;height:100%;border:0;background:transparent;
+    font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:0 8px 0 0;
+    outline:none;color:inherit;-moz-appearance:textfield}
+  .twk-num input::-webkit-inner-spin-button,.twk-num input::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0}
+  .twk-num-unit{padding-right:8px;color:rgba(41,38,27,.45)}
+
+  .twk-btn{appearance:none;height:26px;padding:0 12px;border:0;border-radius:7px;
+    background:rgba(0,0,0,.78);color:#fff;font:inherit;font-weight:500;cursor:default}
+  .twk-btn:hover{background:rgba(0,0,0,.88)}
+  .twk-btn.secondary{background:rgba(0,0,0,.06);color:inherit}
+  .twk-btn.secondary:hover{background:rgba(0,0,0,.1)}
+
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+  .twk-swatch::-moz-color-swatch{border:0;border-radius:5.5px}
+`;
+
+// ── useTweaks ───────────────────────────────────────────────────────────────
+// Single source of truth for tweak values. setTweak persists via the host
+// (__edit_mode_set_keys → host rewrites the EDITMODE block on disk).
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  // Accepts either setTweak('key', value) or setTweak({ key: value, ... }) so a
+  // useState-style call doesn't write a "[object Object]" key into the persisted
+  // JSON block.
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+    setValues((prev) => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+  }, []);
+  return [values, setTweak];
+}
+
+// ── TweaksPanel ─────────────────────────────────────────────────────────────
+// Floating shell. Registers the protocol listener BEFORE announcing
+// availability — if the announce ran first, the host's activate could land
+// before our handler exists and the toolbar toggle would silently no-op.
+// The close button posts __edit_mode_dismissed so the host's toolbar toggle
+// flips off in lockstep; the host echoes __deactivate_edit_mode back which
+// is what actually hides the panel.
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', clampToViewport);
+      return () => window.removeEventListener('resize', clampToViewport);
+    }
+    const ro = new ResizeObserver(clampToViewport);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clampToViewport]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  };
+
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel"
+           style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" aria-label="Close tweaks"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">{children}</div>
+      </div>
+    </>
+  );
+}
+
+// ── Layout helpers ──────────────────────────────────────────────────────────
+
+function TweakSection({ label, children }) {
+  return (
+    <>
+      <div className="twk-sect">{label}</div>
+      {children}
+    </>
+  );
+}
+
+function TweakRow({ label, value, children, inline = false }) {
+  return (
+    <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
+      <div className="twk-lbl">
+        <span>{label}</span>
+        {value != null && <span className="twk-val">{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Controls ────────────────────────────────────────────────────────────────
+
+function TweakSlider({ label, value, min = 0, max = 100, step = 1, unit = '', onChange }) {
+  return (
+    <TweakRow label={label} value={`${value}${unit}`}>
+      <input type="range" className="twk-slider" min={min} max={max} step={step}
+             value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </TweakRow>
+  );
+}
+
+function TweakToggle({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
+              role="switch" aria-checked={!!value}
+              onClick={() => onChange(!value)}><i /></button>
+    </div>
+  );
+}
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+
+  // The active value is read by pointer-move handlers attached for the lifetime
+  // of a drag — ref it so a stale closure doesn't fire onChange for every move.
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  const segAt = (clientX) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i = Math.floor(((clientX - r.left - 2) / inner) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => {
+      if (!trackRef.current) return;
+      const v = segAt(ev.clientX);
+      if (v !== valueRef.current) onChange(v);
+    };
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown}
+           className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb"
+             style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+                      width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakSelect({ label, value, options, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <select className="twk-field" value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => {
+          const v = typeof o === 'object' ? o.value : o;
+          const l = typeof o === 'object' ? o.label : o;
+          return <option key={v} value={v}>{l}</option>;
+        })}
+      </select>
+    </TweakRow>
+  );
+}
+
+function TweakText({ label, value, placeholder, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <input className="twk-field" type="text" value={value} placeholder={placeholder}
+             onChange={(e) => onChange(e.target.value)} />
+    </TweakRow>
+  );
+}
+
+function TweakNumber({ label, value, min, max, step = 1, unit = '', onChange }) {
+  const clamp = (n) => {
+    if (min != null && n < min) return min;
+    if (max != null && n > max) return max;
+    return n;
+  };
+  const startRef = React.useRef({ x: 0, val: 0 });
+  const onScrubStart = (e) => {
+    e.preventDefault();
+    startRef.current = { x: e.clientX, val: value };
+    const decimals = (String(step).split('.')[1] || '').length;
+    const move = (ev) => {
+      const dx = ev.clientX - startRef.current.x;
+      const raw = startRef.current.val + dx * step;
+      const snapped = Math.round(raw / step) * step;
+      onChange(clamp(Number(snapped.toFixed(decimals))));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return (
+    <div className="twk-num">
+      <span className="twk-num-lbl" onPointerDown={onScrubStart}>{label}</span>
+      <input type="number" value={value} min={min} max={max} step={step}
+             onChange={(e) => onChange(clamp(Number(e.target.value)))} />
+      {unit && <span className="twk-num-unit">{unit}</span>}
+    </div>
+  );
+}
+
+function TweakColor({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <input type="color" className="twk-swatch" value={value}
+             onChange={(e) => onChange(e.target.value)} />
+    </div>
+  );
+}
+
+function TweakButton({ label, onClick, secondary = false }) {
+  return (
+    <button type="button" className={secondary ? 'twk-btn secondary' : 'twk-btn'}
+            onClick={onClick}>{label}</button>
+  );
+}
+
+Object.assign(window, {
+  useTweaks, TweaksPanel, TweakSection, TweakRow,
+  TweakSlider, TweakToggle, TweakRadio, TweakSelect,
+  TweakText, TweakNumber, TweakColor, TweakButton,
+});
+
+
+/* ───── data.jsx ───── */
+// data.jsx — mock state + helpers for Peptech dashboard
+
+const PT_PRODUCTS = [
+  { sku: "BPC-157",   name: "BPC-157 5mg",       stock: 142, lot: "L24-118", price: 38, trend: +12 },
+  { sku: "TB-500",    name: "TB-500 10mg",       stock: 88,  lot: "L24-122", price: 72, trend: +4  },
+  { sku: "RETA-10",   name: "Retatrutide 10mg",  stock: 24,  lot: "L24-131", price: 165, trend: +38 },
+  { sku: "TIRZ-30",   name: "Tirzepatide 30mg",  stock: 9,   lot: "L24-127", price: 220, trend: +22 },
+  { sku: "GHK-CU",    name: "GHK-Cu 50mg",       stock: 61,  lot: "L24-104", price: 55, trend: -2  },
+  { sku: "MOTS-C",    name: "MOTS-c 10mg",       stock: 0,   lot: "—",       price: 95, trend: 0   },
+  { sku: "SEMA-10",   name: "Semaglutide 10mg",  stock: 47,  lot: "L24-129", price: 130, trend: +9  },
+  { sku: "CJC-DAC",   name: "CJC-1295 w/ DAC",   stock: 33,  lot: "L24-115", price: 48, trend: -1  },
+];
+
+const PT_THREADS = [
+  {
+    id: "t01", name: "K. (gymrat_84)", handle: "+1 ••• 4421", channel: "wa",
+    snippet: "yo 2 vials reta, same addy as last time. paid usdt",
+    minsAgo: 3, unread: 2, status: "needs_reply",
+    tags: ["repeat", "vip"], trust: 92, ltv: 2840, lastOrder: "11d",
+    pinned: true,
+  },
+  {
+    id: "t02", name: "marcus_r", handle: "@marcus_r", channel: "tg",
+    snippet: "got the package fam. dosed 0.5mg this AM, no sides yet",
+    minsAgo: 14, unread: 0, status: "in_progress",
+    tags: ["repeat"], trust: 78, ltv: 1120, lastOrder: "3d",
+  },
+  {
+    id: "t03", name: "Dani V.", handle: "dani.v@proton.me", channel: "em",
+    snippet: "wire didn't go through, can i pay BTC instead?",
+    minsAgo: 22, unread: 1, status: "needs_reply",
+    tags: ["payment"], trust: 64, ltv: 480, lastOrder: "—",
+  },
+  {
+    id: "t04", name: "swolepriest", handle: "@swolepriest", channel: "tg",
+    snippet: "bro you got tirz back in stock yet? been waiting 2 wks",
+    minsAgo: 41, unread: 3, status: "needs_reply",
+    tags: ["waitlist", "repeat"], trust: 88, ltv: 3200, lastOrder: "22d",
+  },
+  {
+    id: "t05", name: "J. (first time)", handle: "+44 ••• 7732", channel: "wa",
+    snippet: "hi, friend referred me. how does payment work? new to this",
+    minsAgo: 58, unread: 1, status: "new",
+    tags: ["new", "referred"], trust: 30, ltv: 0, lastOrder: "—",
+  },
+  {
+    id: "t06", name: "T.B.", handle: "@thebeast_22", channel: "tg",
+    snippet: "screenshots of tracking attached. usps says delivered ✅",
+    minsAgo: 92, unread: 0, status: "delivered",
+    tags: ["shipping"], trust: 95, ltv: 4400, lastOrder: "8d",
+  },
+  {
+    id: "t07", name: "rxqueen", handle: "@rxqueen", channel: "tg",
+    snippet: "running low on ghk, queue me up for next batch pls",
+    minsAgo: 130, unread: 0, status: "snoozed",
+    tags: ["reorder"], trust: 81, ltv: 1640, lastOrder: "29d",
+  },
+];
+
+const PT_PAYMENTS = [
+  { id: "p1", who: "K. (gymrat_84)",   amt: 330, asset: "USDT", state: "confirming",  conf: 2,  need: 3, txAge: "4m"  },
+  { id: "p2", who: "Dani V.",          amt: 480, asset: "BTC",  state: "pending",     conf: 0,  need: 2, txAge: "—"   },
+  { id: "p3", who: "anon_2k",          amt: 165, asset: "XMR",  state: "confirmed",   conf: 12, need: 10,txAge: "1h"  },
+  { id: "p4", who: "T.B.",             amt: 720, asset: "USDT", state: "confirmed",   conf: 24, need: 3, txAge: "3h"  },
+  { id: "p5", who: "swolepriest",      amt: 220, asset: "BTC",  state: "confirming",  conf: 1,  need: 2, txAge: "11m" },
+];
+
+const PT_REORDERS = [
+  { who: "marcus_r",     product: "BPC-157 5mg",     dueIn: "now",     cycle: "wk 8/8",   conf: 0.94 },
+  { who: "T.B.",         product: "Tirz 30mg",       dueIn: "2 days",  cycle: "wk 4/12",  conf: 0.86 },
+  { who: "rxqueen",      product: "GHK-Cu 50mg",     dueIn: "4 days",  cycle: "wk 6/8",   conf: 0.78 },
+  { who: "K. (gymrat)",  product: "Reta 10mg",       dueIn: "6 days",  cycle: "wk 2/16",  conf: 0.71 },
+  { who: "@hyp3rion",    product: "Sema 10mg",       dueIn: "9 days",  cycle: "wk 7/12",  conf: 0.62 },
+];
+
+const PT_SHIPMENTS = [
+  { id: "9405-..-7821", to: "K.",        carrier: "USPS",  status: "in_transit",  step: 3, of: 4, eta: "tomorrow" },
+  { id: "1Z-..-A41",    to: "marcus_r",  carrier: "UPS",   status: "delivered",   step: 4, of: 4, eta: "today"    },
+  { id: "9405-..-3320", to: "Dani V.",   carrier: "USPS",  status: "label_made",  step: 1, of: 4, eta: "—"        },
+  { id: "EX-..-99",     to: "swolepriest", carrier: "DHL", status: "customs",    step: 2, of: 4, eta: "Apr 30"    },
+];
+
+const PT_REVENUE_7D = [
+  { d: "Mon", v: 1240 }, { d: "Tue", v: 980  }, { d: "Wed", v: 1820 },
+  { d: "Thu", v: 1410 }, { d: "Fri", v: 2240 }, { d: "Sat", v: 2680 },
+  { d: "Sun", v: 1960 },
+];
+
+// hue -> oklch accent
+const PT_ACCENTS = {
+  acid:    { name: "Acid",    h: 130 },  // muted lime
+  cobalt:  { name: "Cobalt",  h: 248 },
+  ember:   { name: "Ember",   h: 32  },
+  violet:  { name: "Violet",  h: 296 },
+};
+
+Object.assign(window, {
+  PT_PRODUCTS, PT_THREADS, PT_PAYMENTS, PT_REORDERS,
+  PT_SHIPMENTS, PT_REVENUE_7D, PT_ACCENTS,
+});
+
+
+/* ───── icons.jsx ───── */
+// icons.jsx — minimal stroke icon set for Peptech (lucide-style, 1.5px stroke)
+
+const PtIcon = ({ d, size = 14, fill = "none", stroke = "currentColor", sw = 1.5, children }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}
+       stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round"
+       style={{ flexShrink: 0 }}>
+    {d ? <path d={d} /> : children}
+  </svg>
+);
+
+const I = {
+  inbox:    (p) => <PtIcon {...p} d="M22 12h-6l-2 3h-4l-2-3H2 M5.5 5.5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6Z" />,
+  users:    (p) => <PtIcon {...p}><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M22 20a6.5 6.5 0 0 0-5-6.3"/></PtIcon>,
+  box:      (p) => <PtIcon {...p} d="M3.3 7.5 12 3l8.7 4.5v9L12 21l-8.7-4.5v-9Z M3.3 7.5 12 12l8.7-4.5 M12 12v9" />,
+  flask:    (p) => <PtIcon {...p} d="M9 3h6 M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3 M7 15h10" />,
+  send:     (p) => <PtIcon {...p} d="M22 3 11 14 M22 3l-7 18-4-7-7-4 18-7Z" />,
+  zap:      (p) => <PtIcon {...p} d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" />,
+  vault:    (p) => <PtIcon {...p}><rect x="3" y="4.5" width="18" height="15" rx="2"/><circle cx="13" cy="12" r="3"/><path d="M13 9v-1 M13 16v-1 M16 12h1 M9 12h1"/></PtIcon>,
+  search:   (p) => <PtIcon {...p}><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.3-4.3"/></PtIcon>,
+  bell:     (p) => <PtIcon {...p} d="M6 8a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6 M10 19a2 2 0 0 0 4 0" />,
+  plus:     (p) => <PtIcon {...p} d="M12 5v14 M5 12h14" />,
+  arrowUp:  (p) => <PtIcon {...p} d="M7 14l5-5 5 5" />,
+  arrowDn:  (p) => <PtIcon {...p} d="M7 10l5 5 5-5" />,
+  arrowR:   (p) => <PtIcon {...p} d="M5 12h14 M13 6l6 6-6 6" />,
+  check:    (p) => <PtIcon {...p} d="M5 12.5 10 17 19 7" />,
+  x:        (p) => <PtIcon {...p} d="M6 6l12 12 M18 6 6 18" />,
+  more:     (p) => <PtIcon {...p}><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></PtIcon>,
+  pin:      (p) => <PtIcon {...p} d="M12 17v5 M9 3h6l-1 5 3 3v3H7v-3l3-3-1-5Z" />,
+  filter:   (p) => <PtIcon {...p} d="M3 5h18l-7 9v6l-4-2v-4L3 5Z" />,
+  clock:    (p) => <PtIcon {...p}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></PtIcon>,
+  truck:    (p) => <PtIcon {...p} d="M2 7h11v10H2zM13 10h5l3 3v4h-8 M5.5 17a1.5 1.5 0 1 0 0 .01 M16.5 17a1.5 1.5 0 1 0 0 .01" />,
+  spark:    (p) => <PtIcon {...p} d="M12 3v3 M12 18v3 M3 12h3 M18 12h3 M5.6 5.6l2.1 2.1 M16.3 16.3l2.1 2.1 M5.6 18.4l2.1-2.1 M16.3 7.7l2.1-2.1" />,
+  cmd:      (p) => <PtIcon {...p} d="M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6Z" />,
+  trend:    (p) => <PtIcon {...p} d="M3 17l6-6 4 4 8-8 M14 7h7v7" />,
+  // channel marks — solid filled circles with letterforms
+  wa:       (p) => <PtIcon {...p}><circle cx="12" cy="12" r="9" fill="currentColor" stroke="none"/><path d="M8 8.5c0-.5.4-.9 1-.9h.6c.4 0 .8.3.9.7l.4 1.4c.1.4 0 .8-.3 1l-.6.5c.7 1.4 1.8 2.5 3.2 3.2l.5-.6c.2-.3.6-.4 1-.3l1.4.4c.4.1.7.5.7.9V15c0 .6-.4 1-.9 1A7.5 7.5 0 0 1 8 8.5Z" stroke="white" fill="none"/></PtIcon>,
+  tg:       (p) => <PtIcon {...p}><circle cx="12" cy="12" r="9" fill="currentColor" stroke="none"/><path d="M7 12.5 17 8.5l-1.5 8L12 14l-1 2.5L9.5 13Z" fill="white" stroke="white"/></PtIcon>,
+  em:       (p) => <PtIcon {...p}><rect x="3" y="6" width="18" height="12" rx="2"/><path d="m4 8 8 6 8-6"/></PtIcon>,
+};
+
+Object.assign(window, { PtIcon, I });
+
+
+/* ───── shell.jsx ───── */
+// shell.jsx — App shell: sidebar + topbar
+
+const NAV_PRIMARY = [
+  { id: "home",      label: "Dashboard",  icon: "spark",  badge: null },
+  { id: "inbox",     label: "Inbox",      icon: "inbox",  badge: 7 },
+  { id: "customers", label: "Customers",  icon: "users",  badge: null },
+  { id: "orders",    label: "Orders",     icon: "box",    badge: 3 },
+  { id: "catalog",   label: "Catalog",    icon: "flask",  badge: null },
+  { id: "broadcasts",label: "Broadcasts", icon: "send",   badge: null },
+  { id: "automations",label:"Automations",icon: "zap",    badge: null },
+];
+const NAV_SECONDARY = [
+  { id: "vault",     label: "Vault",      icon: "vault",  badge: null },
+];
+
+function PtSidebar({ active, onNav, density }) {
+  const Item = ({ n }) => {
+    const Ic = window.I[n.icon];
+    const on = active === n.id;
+    return (
+      <button className={`pt-nav-item ${on ? "is-on" : ""}`} onClick={() => onNav(n.id)}>
+        <Ic size={15} />
+        <span className="pt-nav-label">{n.label}</span>
+        {n.badge != null && <span className="pt-nav-badge">{n.badge}</span>}
+      </button>
+    );
+  };
+
+  return (
+    <aside className="pt-sidebar">
+      <div className="pt-brand">
+        <div className="pt-brand-mark" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 20 20">
+            <path d="M3 10.5 7 5.5h6l4 5-4 5H7l-4-5Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+            <circle cx="10" cy="10.5" r="2" fill="currentColor"/>
+          </svg>
+        </div>
+        <div className="pt-brand-name">Peptech<span>.</span></div>
+        <button className="pt-brand-menu" title="Workspace">
+          <window.I.arrowDn size={12} />
+        </button>
+      </div>
+
+      <button className="pt-compose">
+        <window.I.plus size={13} />
+        <span>New message</span>
+        <kbd>C</kbd>
+      </button>
+
+      <button className="pt-search">
+        <window.I.search size={13} />
+        <span>Search…</span>
+        <kbd>⌘K</kbd>
+      </button>
+
+      <nav className="pt-nav">
+        {NAV_PRIMARY.map((n) => <Item key={n.id} n={n} />)}
+        <div className="pt-nav-sep" />
+        <div className="pt-nav-section">Pinned threads</div>
+        <PtPinnedThread name="K. (gymrat_84)" snip="paid usdt — confirming" channel="wa" unread={2} />
+        <PtPinnedThread name="swolepriest"     snip="tirz back in stock?"   channel="tg" unread={3} />
+        <div className="pt-nav-sep" />
+        {NAV_SECONDARY.map((n) => <Item key={n.id} n={n} />)}
+      </nav>
+
+      <div className="pt-side-foot">
+        <div className="pt-me">
+          <div className="pt-me-av">DR</div>
+          <div className="pt-me-info">
+            <div className="pt-me-name">dr_peptide</div>
+            <div className="pt-me-status"><i className="pt-dot" /> online · 2 channels</div>
+          </div>
+          <button className="pt-me-more"><window.I.more size={14}/></button>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function PtPinnedThread({ name, snip, channel, unread }) {
+  const Ch = window.I[channel];
+  return (
+    <button className="pt-pin">
+      <Ch size={11} />
+      <div className="pt-pin-body">
+        <div className="pt-pin-name">{name}</div>
+        <div className="pt-pin-snip">{snip}</div>
+      </div>
+      {unread > 0 && <span className="pt-pin-unread">{unread}</span>}
+    </button>
+  );
+}
+
+function PtTopBar({ section, onLayoutToggle, layoutCompact, rightOpen, onRightToggle }) {
+  return (
+    <header className="pt-top">
+      <div className="pt-top-crumbs">
+        <span className="pt-crumb-home">Workspace</span>
+        <span className="pt-crumb-sep">/</span>
+        <span className="pt-crumb-now">{section}</span>
+      </div>
+      <div className="pt-top-mid">
+        <PtChannelChip channel="wa" label="WhatsApp" status="ok"/>
+        <PtChannelChip channel="tg" label="Telegram" status="ok"/>
+        <PtChannelChip channel="em" label="Email"    status="ok"/>
+      </div>
+      <div className="pt-top-actions">
+        <button className="pt-iconbtn" title="Filter"><window.I.filter size={14}/></button>
+        <button className="pt-iconbtn" title="Notifications">
+          <window.I.bell size={14}/>
+          <span className="pt-iconbtn-dot" />
+        </button>
+        <button className={`pt-iconbtn ${rightOpen ? "is-on" : ""}`}
+                title="Toggle right panel" onClick={onRightToggle}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="16" rx="2"/>
+            <line x1="15" y1="4" x2="15" y2="20"/>
+          </svg>
+        </button>
+        <span className="pt-top-divider"/>
+        <button className="pt-cta">Reload catalog</button>
+      </div>
+    </header>
+  );
+}
+
+function PtChannelChip({ channel, label, status }) {
+  const Ch = window.I[channel];
+  return (
+    <div className={`pt-chip pt-chip-${channel}`}>
+      <Ch size={12} />
+      <span>{label}</span>
+      <i className={`pt-chip-dot pt-chip-${status}`} />
+    </div>
+  );
+}
+
+Object.assign(window, { PtSidebar, PtTopBar });
+
+
+/* ───── widgets.jsx ───── */
+// widgets.jsx — Dashboard widget cards
+
+// ─── KPI strip ──────────────────────────────────────────────────────────────
+function PtKpiRow() {
+  const kpis = [
+    { label: "Revenue · 7d",      value: "$12,330", delta: +18.4, spark: [3,4,3,5,4,7,8] },
+    { label: "Pending crypto",    value: "$895",    delta: null,  sub: "2 confirming · 1 pending" },
+    { label: "Active conversations", value: "23",   delta: +4,    sub: "7 need reply" },
+    { label: "Reorders due · 7d", value: "11",      delta: null,  sub: "3 high-confidence" },
+  ];
+  return (
+    <div className="pt-kpis">
+      {kpis.map((k, i) => (
+        <div className="pt-kpi" key={i}>
+          <div className="pt-kpi-lbl">{k.label}</div>
+          <div className="pt-kpi-val-row">
+            <div className="pt-kpi-val">{k.value}</div>
+            {k.delta != null && (
+              <span className={`pt-kpi-delta ${k.delta >= 0 ? "up" : "dn"}`}>
+                {k.delta >= 0 ? "▲" : "▼"} {Math.abs(k.delta)}%
+              </span>
+            )}
+            {k.spark && <PtSpark data={k.spark} />}
+          </div>
+          {k.sub && <div className="pt-kpi-sub">{k.sub}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PtSpark({ data }) {
+  const max = Math.max(...data), min = Math.min(...data);
+  const w = 56, h = 18;
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * w;
+    const y = h - ((v - min) / Math.max(1, max - min)) * h;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="pt-spark">
+      <polyline points={pts} fill="none" stroke="var(--pt-accent)" strokeWidth="1.25"
+                strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+// ─── Card shell ─────────────────────────────────────────────────────────────
+function PtCard({ title, subtitle, action, span, footer, children, scroll }) {
+  return (
+    <section className={`pt-card ${span ? `pt-span-${span}` : ""}`}>
+      <header className="pt-card-hd">
+        <div>
+          <h3>{title}</h3>
+          {subtitle && <p>{subtitle}</p>}
+        </div>
+        {action}
+      </header>
+      <div className={`pt-card-body ${scroll ? "is-scroll" : ""}`}>{children}</div>
+      {footer && <footer className="pt-card-ft">{footer}</footer>}
+    </section>
+  );
+}
+
+// ─── Inbox preview ──────────────────────────────────────────────────────────
+function PtInboxCard({ threads, activeId, onSelect }) {
+  const [filter, setFilter] = React.useState("needs_reply");
+  const filters = [
+    { id: "needs_reply", label: "Needs reply", count: 4 },
+    { id: "all",         label: "All",         count: threads.length },
+    { id: "new",         label: "New",         count: 1 },
+    { id: "snoozed",     label: "Snoozed",     count: 1 },
+  ];
+  const shown = filter === "all"
+    ? threads
+    : threads.filter((t) => t.status === filter);
+  return (
+    <PtCard
+      title="Inbox" subtitle={`Live across WhatsApp, Telegram, Email`}
+      span="2"
+      action={
+        <div className="pt-pillbar">
+          {filters.map((f) => (
+            <button key={f.id}
+                    className={`pt-pill ${filter === f.id ? "is-on" : ""}`}
+                    onClick={() => setFilter(f.id)}>
+              {f.label}
+              <span className="pt-pill-num">{f.count}</span>
+            </button>
+          ))}
+        </div>
+      }
+      scroll
+    >
+      <ul className="pt-thread-list">
+        {shown.map((t) => (
+          <PtThreadRow key={t.id} t={t} active={t.id === activeId}
+                       onClick={() => onSelect(t.id)} />
+        ))}
+      </ul>
+    </PtCard>
+  );
+}
+
+function PtThreadRow({ t, active, onClick }) {
+  const Ch = window.I[t.channel];
+  return (
+    <li className={`pt-thread ${active ? "is-active" : ""} ${t.unread ? "is-unread" : ""}`}
+        onClick={onClick}>
+      <div className="pt-thread-av" data-channel={t.channel}>
+        <span>{(t.name.match(/[A-Z]/g) || [t.name[0]]).slice(0, 2).join("")}</span>
+        <i className={`pt-thread-ch pt-ch-${t.channel}`}><Ch size={9} /></i>
+      </div>
+      <div className="pt-thread-mid">
+        <div className="pt-thread-row1">
+          <span className="pt-thread-name">{t.name}</span>
+          {t.tags.includes("vip") && <span className="pt-tag pt-tag-vip">VIP</span>}
+          {t.tags.includes("new") && <span className="pt-tag pt-tag-new">new</span>}
+          {t.tags.includes("waitlist") && <span className="pt-tag">waitlist</span>}
+          {t.tags.includes("payment") && <span className="pt-tag pt-tag-warn">payment</span>}
+          {t.tags.includes("repeat") && !t.tags.includes("vip") && <span className="pt-tag pt-tag-soft">repeat</span>}
+        </div>
+        <div className="pt-thread-snip">{t.snippet}</div>
+      </div>
+      <div className="pt-thread-meta">
+        <div className="pt-thread-time">{fmtMins(t.minsAgo)}</div>
+        {t.unread > 0
+          ? <div className="pt-thread-unread">{t.unread}</div>
+          : <PtTrust score={t.trust} compact />}
+      </div>
+    </li>
+  );
+}
+
+function fmtMins(m) {
+  if (m < 60) return `${m}m`;
+  if (m < 60 * 24) return `${Math.floor(m/60)}h`;
+  return `${Math.floor(m/60/24)}d`;
+}
+
+// ─── Trust score ────────────────────────────────────────────────────────────
+function PtTrust({ score, compact }) {
+  const cls = score >= 85 ? "hi" : score >= 65 ? "md" : "lo";
+  if (compact) return <div className={`pt-trust-pill pt-trust-${cls}`}>{score}</div>;
+  return (
+    <div className={`pt-trust pt-trust-${cls}`}>
+      <div className="pt-trust-num">{score}</div>
+      <div className="pt-trust-lbl">trust</div>
+    </div>
+  );
+}
+
+// ─── Crypto payments ────────────────────────────────────────────────────────
+function PtPaymentsCard({ payments, onConfirm }) {
+  return (
+    <PtCard
+      title="Crypto payments"
+      subtitle="Awaiting confirmation"
+      action={<button className="pt-link">View all →</button>}
+    >
+      <ul className="pt-pay-list">
+        {payments.map((p) => (
+          <li key={p.id} className={`pt-pay pt-pay-${p.state}`}>
+            <div className="pt-pay-asset" data-asset={p.asset}>{p.asset}</div>
+            <div className="pt-pay-mid">
+              <div className="pt-pay-who">{p.who}</div>
+              <div className="pt-pay-state">
+                {p.state === "confirmed" && <><span className="pt-dot pt-dot-ok"/> confirmed · {p.conf} conf</>}
+                {p.state === "confirming" && <><span className="pt-dot pt-dot-warn"/> {p.conf}/{p.need} confirmations · {p.txAge} ago</>}
+                {p.state === "pending" && <><span className="pt-dot pt-dot-cool"/> awaiting tx hash · {p.who === "Dani V." ? "wire failed" : ""}</>}
+              </div>
+            </div>
+            <div className="pt-pay-amt-col">
+              <div className="pt-pay-amt">${p.amt}</div>
+              {p.state !== "confirmed" && (
+                <button className="pt-pay-act" onClick={() => onConfirm(p.id)}>
+                  {p.state === "confirming" ? "Mark paid" : "Resend addr"}
+                </button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </PtCard>
+  );
+}
+
+// ─── Reorder signals ────────────────────────────────────────────────────────
+function PtReordersCard({ reorders }) {
+  return (
+    <PtCard
+      title="Reorder signals"
+      subtitle="Cycle-end approaching · ML guess"
+      action={<button className="pt-link">Configure →</button>}
+    >
+      <ul className="pt-reorder-list">
+        {reorders.map((r, i) => (
+          <li key={i} className="pt-reorder">
+            <div className="pt-reorder-due">
+              <div className={`pt-reorder-when ${r.dueIn === "now" ? "is-now" : ""}`}>{r.dueIn}</div>
+              <div className="pt-reorder-cycle">{r.cycle}</div>
+            </div>
+            <div className="pt-reorder-mid">
+              <div className="pt-reorder-who">{r.who}</div>
+              <div className="pt-reorder-prod">{r.product}</div>
+            </div>
+            <div className="pt-reorder-conf">
+              <PtConfBar pct={r.conf} />
+              <div className="pt-reorder-pct">{Math.round(r.conf*100)}%</div>
+            </div>
+            <button className="pt-reorder-act" title="Send pre-written reorder ping">
+              <window.I.send size={12}/>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </PtCard>
+  );
+}
+
+function PtConfBar({ pct }) {
+  return (
+    <div className="pt-confbar">
+      <div className="pt-confbar-fill" style={{ width: `${pct*100}%` }} />
+    </div>
+  );
+}
+
+// ─── Stock / catalog peek ───────────────────────────────────────────────────
+function PtStockCard({ products }) {
+  return (
+    <PtCard
+      title="Stock"
+      subtitle="On-hand by SKU"
+      action={<button className="pt-link">Catalog →</button>}
+      scroll
+    >
+      <table className="pt-stock">
+        <thead>
+          <tr>
+            <th>SKU</th><th>Lot</th><th className="r">On-hand</th><th className="r">7d Δ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {products.map((p) => (
+            <tr key={p.sku} className={p.stock === 0 ? "is-out" : p.stock < 15 ? "is-low" : ""}>
+              <td>
+                <div className="pt-sku">{p.sku}</div>
+                <div className="pt-sku-name">{p.name}</div>
+              </td>
+              <td className="mono">{p.lot}</td>
+              <td className="r mono">
+                {p.stock === 0
+                  ? <span className="pt-out">OUT</span>
+                  : <>{p.stock}<span className="pt-stock-unit">v</span></>}
+              </td>
+              <td className={`r mono ${p.trend > 0 ? "up" : p.trend < 0 ? "dn" : ""}`}>
+                {p.trend > 0 ? "+" : ""}{p.trend}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </PtCard>
+  );
+}
+
+// ─── Revenue chart ──────────────────────────────────────────────────────────
+function PtRevenueCard({ data }) {
+  const max = Math.max(...data.map((d) => d.v));
+  return (
+    <PtCard
+      title="Revenue"
+      subtitle="Last 7 days · USD equivalent"
+      action={
+        <div className="pt-segctl">
+          <button className="is-on">7d</button>
+          <button>30d</button>
+          <button>90d</button>
+        </div>
+      }
+    >
+      <div className="pt-bars">
+        {data.map((d, i) => (
+          <div className="pt-bar-col" key={i}>
+            <div className="pt-bar-track">
+              <div className="pt-bar-fill" style={{ height: `${(d.v / max) * 100}%` }}>
+                <span className="pt-bar-tip">${d.v.toLocaleString()}</span>
+              </div>
+            </div>
+            <div className="pt-bar-lbl">{d.d}</div>
+          </div>
+        ))}
+      </div>
+    </PtCard>
+  );
+}
+
+// ─── Shipments ──────────────────────────────────────────────────────────────
+function PtShipmentsCard({ shipments }) {
+  const labelMap = {
+    label_made: "Label",
+    in_transit: "In transit",
+    customs:    "Customs",
+    delivered:  "Delivered",
+  };
+  return (
+    <PtCard
+      title="Shipments"
+      subtitle="Carrier tracking"
+      action={<button className="pt-link">All →</button>}
+    >
+      <ul className="pt-ship-list">
+        {shipments.map((s) => (
+          <li key={s.id} className={`pt-ship pt-ship-${s.status}`}>
+            <div className="pt-ship-icon"><window.I.truck size={13}/></div>
+            <div className="pt-ship-mid">
+              <div className="pt-ship-row1">
+                <span className="pt-ship-to">→ {s.to}</span>
+                <span className="pt-ship-carrier">{s.carrier}</span>
+                <span className="pt-ship-id mono">{s.id}</span>
+              </div>
+              <div className="pt-ship-track">
+                {[1,2,3,4].map((n) => (
+                  <i key={n} className={`pt-ship-step ${n <= s.step ? "on" : ""}`}/>
+                ))}
+                <span className="pt-ship-status">{labelMap[s.status]} · ETA {s.eta}</span>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </PtCard>
+  );
+}
+
+// ─── Right rail: agenda + customer focus ────────────────────────────────────
+function PtRightRail({ activeThread, threads }) {
+  const t = threads.find((x) => x.id === activeThread) || threads[0];
+  return (
+    <aside className="pt-right">
+      <div className="pt-right-section">
+        <div className="pt-right-hd">
+          <span>Today</span>
+          <button className="pt-right-add"><window.I.plus size={11}/></button>
+        </div>
+        <ul className="pt-agenda">
+          <li className="pt-agenda-i">
+            <i className="pt-agenda-bullet pt-bul-warn"/>
+            <div>
+              <div className="pt-agenda-t">Confirm USDT from K.</div>
+              <div className="pt-agenda-s">2/3 conf · ~9 min away</div>
+            </div>
+            <span className="pt-agenda-time">11:42</span>
+          </li>
+          <li className="pt-agenda-i">
+            <i className="pt-agenda-bullet pt-bul-cool"/>
+            <div>
+              <div className="pt-agenda-t">Drop pkg at USPS</div>
+              <div className="pt-agenda-s">3 labels printed · cutoff 4pm</div>
+            </div>
+            <span className="pt-agenda-time">14:00</span>
+          </li>
+          <li className="pt-agenda-i">
+            <i className="pt-agenda-bullet"/>
+            <div>
+              <div className="pt-agenda-t">Re-up tirz from supplier</div>
+              <div className="pt-agenda-s">9 vials left · 4 backorders</div>
+            </div>
+            <span className="pt-agenda-time pt-agenda-empty"></span>
+          </li>
+          <li className="pt-agenda-i">
+            <i className="pt-agenda-bullet"/>
+            <div>
+              <div className="pt-agenda-t">Reply to swolepriest</div>
+              <div className="pt-agenda-s">2wk old · risk of churn</div>
+            </div>
+            <span className="pt-agenda-time pt-agenda-empty"></span>
+          </li>
+        </ul>
+      </div>
+
+      <div className="pt-right-section">
+        <div className="pt-right-hd"><span>Focus customer</span><button className="pt-link">Open →</button></div>
+        <PtCustomerCard t={t} />
+      </div>
+
+      <div className="pt-right-section">
+        <div className="pt-right-hd"><span>Quick replies</span></div>
+        <div className="pt-quicks">
+          {[
+            "send wallet addr",
+            "tracking uploaded",
+            "out of stock — eta?",
+            "first-time how-to",
+            "dosing protocol",
+            "discount: repeat 10%",
+          ].map((q) => (
+            <button key={q} className="pt-quick">{q}</button>
+          ))}
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function PtCustomerCard({ t }) {
+  if (!t) return null;
+  return (
+    <div className="pt-cust">
+      <div className="pt-cust-hd">
+        <div className="pt-cust-av" data-channel={t.channel}>
+          {(t.name.match(/[A-Z]/g) || [t.name[0]]).slice(0,2).join("")}
+        </div>
+        <div className="pt-cust-id">
+          <div className="pt-cust-name">{t.name}</div>
+          <div className="pt-cust-handle mono">{t.handle}</div>
+        </div>
+        <PtTrust score={t.trust} />
+      </div>
+      <div className="pt-cust-stats">
+        <div><div className="lbl">LTV</div><div className="val mono">${t.ltv.toLocaleString()}</div></div>
+        <div><div className="lbl">Last</div><div className="val mono">{t.lastOrder}</div></div>
+        <div><div className="lbl">Channel</div><div className="val">{({wa:"WhatsApp",tg:"Telegram",em:"Email"})[t.channel]}</div></div>
+      </div>
+      <div className="pt-cust-tags">
+        {t.tags.map((tg) => <span key={tg} className="pt-tag pt-tag-soft">{tg}</span>)}
+      </div>
+      <div className="pt-cust-history">
+        <div className="pt-cust-hist-hd">Recent orders</div>
+        <ul>
+          <li><span className="mono">#A-2241</span><span>Reta 10mg ×2</span><span className="mono">$330</span></li>
+          <li><span className="mono">#A-2188</span><span>BPC 5mg ×3</span><span className="mono">$114</span></li>
+          <li><span className="mono">#A-2103</span><span>Tirz 30mg ×1</span><span className="mono">$220</span></li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, {
+  PtKpiRow, PtCard, PtInboxCard, PtPaymentsCard, PtReordersCard,
+  PtStockCard, PtRevenueCard, PtShipmentsCard, PtRightRail,
+});
+
+
+/* ───── app.jsx ───── */
+// app.jsx — main composition
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "light",
+  "accent": "acid",
+  "density": "regular",
+  "rightRail": true
+}/*EDITMODE-END*/;
+
+function PtApp() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [active, setActive] = React.useState("home");
+  const [activeThread, setActiveThread] = React.useState("t01");
+  const [confirmed, setConfirmed] = React.useState({});
+
+  const onConfirm = (id) => setConfirmed((p) => ({ ...p, [id]: true }));
+  const payments = window.PT_PAYMENTS.map((p) =>
+    confirmed[p.id] ? { ...p, state: "confirmed" } : p);
+
+  const accent = window.PT_ACCENTS[t.accent] || window.PT_ACCENTS.acid;
+  const sectionLabel = ({
+    home: "Dashboard", inbox: "Inbox", customers: "Customers",
+    orders: "Orders", catalog: "Catalog", broadcasts: "Broadcasts",
+    automations: "Automations", vault: "Vault",
+  })[active];
+
+  return (
+    <div className={`pt-root pt-th-${t.theme} pt-d-${t.density} ${t.rightRail ? "" : "no-right"}`}
+         style={{ "--pt-accent-h": accent.h }}>
+      <PtSidebar active={active} onNav={setActive} density={t.density} />
+      <main className="pt-main">
+        <PtTopBar
+          section={sectionLabel}
+          rightOpen={t.rightRail}
+          onRightToggle={() => setTweak("rightRail", !t.rightRail)}
+        />
+        <div className="pt-page">
+          <div className="pt-page-hd">
+            <div>
+              <h1>Tuesday afternoon, dr_peptide.</h1>
+              <p>23 active threads · 7 need a reply · 3 reorders due in &lt;48h</p>
+            </div>
+            <div className="pt-page-actions">
+              <button className="pt-btn pt-btn-ghost">Daily summary</button>
+              <button className="pt-btn pt-btn-primary">
+                <window.I.zap size={12}/> Run morning checks
+              </button>
+            </div>
+          </div>
+
+          <PtKpiRow />
+
+          <div className="pt-grid">
+            <PtInboxCard
+              threads={window.PT_THREADS}
+              activeId={activeThread}
+              onSelect={setActiveThread}
+            />
+            <PtPaymentsCard payments={payments} onConfirm={onConfirm} />
+            <PtRevenueCard data={window.PT_REVENUE_7D} />
+            <PtReordersCard reorders={window.PT_REORDERS} />
+            <PtStockCard products={window.PT_PRODUCTS} />
+            <PtShipmentsCard shipments={window.PT_SHIPMENTS} />
+          </div>
+
+          <footer className="pt-foot">
+            <span className="mono">v0.4.2 · last sync 14s ago</span>
+            <span className="pt-foot-mid">For research use only · Not for human consumption.</span>
+            <span className="mono">⌘K to search · ⌘N new msg</span>
+          </footer>
+        </div>
+      </main>
+
+      {t.rightRail && (
+        <PtRightRail activeThread={activeThread} threads={window.PT_THREADS} />
+      )}
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Theme" />
+        <TweakRadio label="Mode" value={t.theme}
+          options={[{value:"light",label:"Light"},{value:"dim",label:"Dim"},{value:"dark",label:"Dark"}]}
+          onChange={(v) => setTweak("theme", v)} />
+        <TweakRadio label="Accent" value={t.accent}
+          options={[
+            {value:"acid",label:"Acid"},
+            {value:"cobalt",label:"Cobalt"},
+            {value:"ember",label:"Ember"},
+            {value:"violet",label:"Violet"},
+          ]}
+          onChange={(v) => setTweak("accent", v)} />
+
+        <TweakSection label="Layout" />
+        <TweakRadio label="Density" value={t.density}
+          options={[{value:"compact",label:"Compact"},{value:"regular",label:"Regular"},{value:"comfy",label:"Comfy"}]}
+          onChange={(v) => setTweak("density", v)} />
+        <TweakToggle label="Right rail" value={t.rightRail}
+          onChange={(v) => setTweak("rightRail", v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<PtApp />);
+
+
+</script>
+
+<script>
+(function () {
+  var fired = false;
+  function go() {
+    if (fired) return; fired = true;
+    setTimeout(function () { window.print(); }, 800);
+  }
+  function ready() {
+    Promise.all([
+      document.fonts ? document.fonts.ready : Promise.resolve(),
+      new Promise(function (r) { setTimeout(r, 1500); })  // wait for Babel + React render
+    ]).then(go);
+  }
+  if (document.readyState === 'complete') ready();
+  else window.addEventListener('load', ready);
+})();
+</script>
+</body>
+</html>

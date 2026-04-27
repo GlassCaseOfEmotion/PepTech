@@ -8,7 +8,7 @@ export default async function SignupPage({ searchParams }: Props) {
   const { error } = await searchParams
 
   return (
-    <div className="pt-root no-right" style={{ placeItems: 'center', display: 'grid', height: '100vh' }}>
+    <div style={{ display: 'grid', placeItems: 'center', height: '100vh', background: 'var(--pt-bg)', color: 'var(--pt-fg)' }}>
       <div style={{ width: 360 }}>
         <div className="pt-brand" style={{ justifyContent: 'center', marginBottom: 24 }}>
           <div className="pt-brand-mark" aria-hidden="true">
