@@ -127,6 +127,7 @@ export async function processInboundMessage(
       last_message_snippet: content.slice(0, 100),
     })
     .eq('id', conversationId)
+    .eq('tenant_id', tenantId)
 
   return { conversationId, messageId: message.id }
 }

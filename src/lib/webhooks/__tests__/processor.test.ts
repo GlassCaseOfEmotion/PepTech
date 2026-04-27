@@ -1,6 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { processInboundMessage } from '../processor'
 
+// Helper: creates a chainable update mock that supports two .eq() calls,
+// resolving to { error: null } after the second .eq().
+function makeUpdateChain(onUpdate?: (data: unknown) => void) {
+  let callCount = 0
+  const chain: Record<string, unknown> = {
+    update: vi.fn().mockImplementation((data: unknown) => { onUpdate?.(data); return chain }),
+    eq: vi.fn().mockImplementation(() => {
+      callCount++
+      return callCount >= 2 ? Promise.resolve({ error: null }) : chain
+    }),
+  }
+  return chain
+}
+
 // Build a minimal chainable Supabase mock
 function makeSupabaseMock(overrides: Record<string, unknown> = {}) {
   const chain: Record<string, unknown> = {
@@ -51,7 +65,7 @@ describe('processInboundMessage', () => {
         // 6. messages upsert → returns message
         { upsert: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { id: MSG_ID }, error: null }) },
         // 7. conversations update (snippet)
-        { update: vi.fn().mockReturnThis(), eq: vi.fn().mockResolvedValue({ error: null }) },
+        makeUpdateChain(),
       ]
 
       let callCount = 0
@@ -81,7 +95,7 @@ describe('processInboundMessage', () => {
         // 3. messages upsert
         { upsert: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { id: MSG_ID }, error: null }) },
         // 4. conversations update
-        { update: vi.fn().mockReturnThis(), eq: vi.fn().mockResolvedValue({ error: null }) },
+        makeUpdateChain(),
       ]
 
       let callCount = 0
@@ -101,10 +115,7 @@ describe('processInboundMessage', () => {
   describe('status transitions', () => {
     it('moves a resolved conversation back to needs_reply on inbound message', async () => {
       const capturedUpdates: unknown[] = []
-      const updateChain = {
-        update: vi.fn().mockImplementation((data) => { capturedUpdates.push(data); return updateChain }),
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      }
+      const updateChain = makeUpdateChain((data) => capturedUpdates.push(data))
       const fromSequence = [
         { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { customer_id: CUSTOMER_ID }, error: null }) },
         { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { id: CONV_ID, status: 'resolved', unread_count: 0 }, error: null }) },
