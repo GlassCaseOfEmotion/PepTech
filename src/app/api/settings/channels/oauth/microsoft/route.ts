@@ -35,6 +35,14 @@ export async function GET(request: Request) {
     return NextResponse.redirect(getMsAuthUrl())
   }
 
+  // Verify the user is authenticated before consuming the auth code
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.redirect(new URL('/login', request.url))
+
+  const { data: userRow } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
+  if (!userRow) return NextResponse.redirect(new URL('/login', request.url))
+
   const tokenRes = await fetch(
     `https://login.microsoftonline.com/${process.env.MICROSOFT_TENANT_ID ?? 'common'}/oauth2/v2.0/token`,
     {
@@ -66,13 +74,6 @@ export async function GET(request: Request) {
   })
   const me = await meRes.json() as { mail?: string; userPrincipalName?: string }
   const emailAddress = me.mail ?? me.userPrincipalName ?? ''
-
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.redirect(new URL('/login', request.url))
-
-  const { data: userRow } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
-  if (!userRow) return NextResponse.redirect(new URL('/login', request.url))
 
   await supabase.from('tenant_channels').upsert({
     tenant_id: userRow.tenant_id,
