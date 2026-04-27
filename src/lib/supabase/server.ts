@@ -20,3 +20,15 @@ export async function createClient() {
     }
   )
 }
+
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+
+// Use for webhook handlers and server-side jobs that run outside a user session.
+// Bypasses RLS — only use server-side, never expose to browser.
+export function createServiceClient() {
+  return createSupabaseClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}

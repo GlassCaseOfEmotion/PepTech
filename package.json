@@ -15,9 +15,13 @@
     "node": ">=18.17.0"
   },
   "dependencies": {
+    "@azure/msal-node": "^5.1.4",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.104.1",
+    "googleapis": "^171.4.0",
     "next": "15.5.15",
+    "node-telegram-bot-api": "^0.67.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -26,12 +30,14 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20",
+    "@types/node-telegram-bot-api": "^0.64.14",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^9",
     "eslint-config-next": "15.5.15",
     "jsdom": "^29.0.2",
+    "msw": "^2.13.6",
     "supabase": "^2.95.3",
     "typescript": "^5",
     "vitest": "^4.1.5"
