@@ -1,11 +1,11 @@
 import { loginAction } from './actions'
 
 interface Props {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; message?: string }>
 }
 
 export default async function LoginPage({ searchParams }: Props) {
-  const { error } = await searchParams
+  const { error, message } = await searchParams
 
   return (
     <div className="pt-root no-right" style={{ placeItems: 'center', display: 'grid', height: '100vh' }}>
@@ -23,6 +23,11 @@ export default async function LoginPage({ searchParams }: Props) {
         {error && (
           <p style={{ color: 'var(--pt-danger)', fontSize: 12, marginBottom: 12, textAlign: 'center' }}>
             {error}
+          </p>
+        )}
+        {message && (
+          <p style={{ color: 'var(--pt-ok)', fontSize: 12, marginBottom: 12, textAlign: 'center' }}>
+            {message}
           </p>
         )}
 
