@@ -1,4 +1,4 @@
-import { ChannelIcon, Icons } from '@/lib/icons'
+import { ChannelIcon } from '@/lib/icons'
 import { initials, fmtTime } from '@/types/inbox'
 import type { ConversationWithCustomer } from '@/types/inbox'
 
