@@ -19,7 +19,7 @@ function PtIcon({ d, size = 14, children, className }: { d?: string; size?: numb
 }
 
 export const Icons = {
-  inbox:   (p: IconProps) => <PtIcon {...p} d="M22 12h-6l-2 3h-4l-2-3H2 M5.5 5.5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6Z" />,
+  inbox:   (p: IconProps) => <PtIcon {...p} d="M22 12h-6l-2 3h-4l-2-3H2Z M5.5 5.5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6Z" />,
   users:   (p: IconProps) => <PtIcon {...p}><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M22 20a6.5 6.5 0 0 0-5-6.3"/></PtIcon>,
   box:     (p: IconProps) => <PtIcon {...p} d="M3.3 7.5 12 3l8.7 4.5v9L12 21l-8.7-4.5v-9Z M3.3 7.5 12 12l8.7-4.5 M12 12v9" />,
   flask:   (p: IconProps) => <PtIcon {...p} d="M9 3h6 M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3 M7 15h10" />,
@@ -44,7 +44,7 @@ export const Icons = {
   em:      (p: IconProps) => <PtIcon {...p}><rect x="3" y="6" width="18" height="12" rx="2"/><path d="m4 8 8 6 8-6"/></PtIcon>,
 }
 
-export function ChannelIcon({ channelType, size = 9 }: { channelType: string; size?: number }) {
+export function ChannelIcon({ channelType, size = 9 }: { channelType: 'whatsapp' | 'telegram' | 'email'; size?: number }) {
   if (channelType === 'whatsapp') return <Icons.wa size={size} />
   if (channelType === 'telegram') return <Icons.tg size={size} />
   return <Icons.em size={size} />
