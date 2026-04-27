@@ -15,19 +15,10 @@ export default async function InboxPage() {
     .select('id, status, unread_count, last_message_at, last_message_snippet, channel_type, channel_identifier, customers(id, display_name, trust_score, ltv, customer_tags(tag))')
     .order('last_message_at', { ascending: false, nullsFirst: false })
 
-  const { data: userRow } = await supabase
-    .from('users')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single()
-
-  const { data: quickReplies } = userRow
-    ? await supabase
-        .from('quick_replies')
-        .select('id, label, content, sort_order')
-        .eq('tenant_id', userRow.tenant_id)
-        .order('sort_order')
-    : { data: null }
+  const { data: quickReplies } = await supabase
+    .from('quick_replies')
+    .select('id, label, content, sort_order')
+    .order('sort_order')
 
   return (
     <Shell section="Inbox" isInbox>

@@ -82,6 +82,7 @@ export function InboxView({
 
   const handleSelect = useCallback(async (id: string) => {
     setActiveId(id)
+    setMessages([])  // clear immediately to avoid stale flash
     router.push(`/inbox/${id}`, { scroll: false })
 
     // Load messages for selected conversation

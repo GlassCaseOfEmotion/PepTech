@@ -18,20 +18,17 @@ export async function Shell({ children, section, isInbox = false }: ShellProps) 
   if (user) {
     const { data: userRow } = await supabase
       .from('users')
-      .select('display_name, tenant_id')
+      .select('display_name')
       .eq('id', user.id)
       .single()
 
     displayName = userRow?.display_name ?? user.email?.split('@')[0] ?? 'User'
 
-    if (userRow?.tenant_id) {
-      const { data: channels } = await supabase
-        .from('tenant_channels')
-        .select('channel_type')
-        .eq('tenant_id', userRow.tenant_id)
-        .eq('is_active', true)
-      connectedChannels = (channels ?? []).map((c) => c.channel_type)
-    }
+    const { data: channels } = await supabase
+      .from('tenant_channels')
+      .select('channel_type')
+      .eq('is_active', true)
+    connectedChannels = (channels ?? []).map((c) => c.channel_type)
   }
 
   const rootClass = `pt-root no-right${isInbox ? ' is-inbox' : ''}`

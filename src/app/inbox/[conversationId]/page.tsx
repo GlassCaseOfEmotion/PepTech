@@ -27,19 +27,10 @@ export default async function InboxConversationPage({
     .order('sent_at', { ascending: true })
     .limit(50)
 
-  const { data: userRow } = await supabase
-    .from('users')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single()
-
-  const { data: quickReplies } = userRow
-    ? await supabase
-        .from('quick_replies')
-        .select('id, label, content, sort_order')
-        .eq('tenant_id', userRow.tenant_id)
-        .order('sort_order')
-    : { data: null }
+  const { data: quickReplies } = await supabase
+    .from('quick_replies')
+    .select('id, label, content, sort_order')
+    .order('sort_order')
 
   return (
     <Shell section="Inbox" isInbox>
