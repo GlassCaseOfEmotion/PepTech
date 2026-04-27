@@ -1,124 +1,169 @@
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import { Shell } from '@/components/shell/Shell'
 import { saveTelegramCredentials, saveWhatsAppCredentials, disconnectChannel } from './actions'
+
+const CHANNEL_META: Record<string, { label: string; color: string; initial: string }> = {
+  whatsapp: { label: 'WhatsApp', color: 'oklch(0.62 0.13 150)', initial: 'W' },
+  telegram: { label: 'Telegram', color: 'oklch(0.66 0.13 240)', initial: 'T' },
+  email:    { label: 'Email',    color: 'oklch(0.55 0.02 280)', initial: 'E' },
+}
+
+const inputStyle = {
+  height: 32, padding: '0 10px', borderRadius: 'var(--pt-radius-sm)',
+  border: '0.5px solid var(--pt-line)', background: 'var(--pt-bg)',
+  font: 'inherit', fontSize: 12.5, color: 'var(--pt-fg)', outline: 'none', width: '100%',
+} as const
 
 export default async function ChannelsPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
-  const { data: channels } = await supabase
+  const { data: tenantChannels } = await supabase
     .from('tenant_channels')
     .select('channel_type, is_active, identifier')
 
-  const connectedMap = Object.fromEntries((channels ?? []).map((c) => [c.channel_type, c]))
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://your-app.vercel.app'
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('tenant_id')
+    .single()
 
-  // Get tenant_id only for webhook URL display
-  const { data: userRow } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
-
-  const inputStyle = {
-    height: 34, padding: '0 10px', borderRadius: 'var(--pt-radius-sm)',
-    border: '0.5px solid var(--pt-line)', background: 'var(--pt-surface)',
-    font: 'inherit', fontSize: 12.5, color: 'var(--pt-fg)', outline: 'none', width: '100%',
-  } as const
+  const connected = Object.fromEntries((tenantChannels ?? []).map((c) => [c.channel_type, c]))
 
   return (
-    <Shell section="Settings">
-    <div className="pt-page">
-      <div className="pt-page-hd">
+    <div className="pt-st-section">
+      <div className="pt-st-shd">
         <div>
-          <h1>Channels</h1>
-          <p>Connect your messaging channels to start receiving and sending messages.</p>
+          <h2>Channels</h2>
+          <p>Inbound message channels — connect, configure, or rotate.</p>
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 640 }}>
+      {/* Connected channels */}
+      <section className="pt-card pt-st-card">
+        <header className="pt-card-hd pt-st-card-hd">
+          <div>
+            <h3>Connected channels</h3>
+            <p>Manage your active messaging integrations.</p>
+          </div>
+        </header>
+        <div className="pt-card-body pt-st-card-body">
+          <ul className="pt-st-chans">
 
-        {/* WhatsApp */}
-        <div className="pt-card">
-          <div className="pt-card-hd">
-            <div>
-              <h3>WhatsApp</h3>
-              <p>Connect via 360dialog. Your webhook URL:
-                <code style={{ fontSize: 11, marginLeft: 6, color: 'var(--pt-accent-fg)' }}>
-                  {appUrl}/api/webhooks/whatsapp/{userRow.tenant_id}
-                </code>
-              </p>
-            </div>
-            {connectedMap.whatsapp?.is_active && (
-              <span className="pt-tag pt-tag-vip">Connected</span>
-            )}
-          </div>
-          <div className="pt-card-body" style={{ padding: '8px 14px 14px' }}>
-            {connectedMap.whatsapp?.is_active ? (
-              <form action={disconnectChannel.bind(null, 'whatsapp')}>
-                <button type="submit" className="pt-btn">Disconnect</button>
-              </form>
-            ) : (
-              <form action={saveWhatsAppCredentials} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <input name="apiKey" placeholder="360dialog API key" required style={inputStyle} />
-                <input name="phoneNumberId" placeholder="Phone number ID" required style={inputStyle} />
-                <input name="webhookSecret" placeholder="Webhook secret (optional)" style={inputStyle} />
-                <button type="submit" className="pt-btn pt-btn-primary" style={{ alignSelf: 'flex-start' }}>Connect WhatsApp</button>
-              </form>
-            )}
-          </div>
+            {/* WhatsApp */}
+            <li className={`pt-st-chan pt-st-chan-${connected.whatsapp?.is_active ? 'connected' : 'disconnected'}`}>
+              <div className="pt-st-chan-l">
+                <div className="pt-st-chan-icon" style={{ background: CHANNEL_META.whatsapp.color }}>W</div>
+                <div>
+                  <div className="pt-st-chan-name">
+                    WhatsApp
+                    <span className={`pt-st-chan-pill pt-st-chan-pill-${connected.whatsapp?.is_active ? 'connected' : 'disconnected'}`}>
+                      <i />{connected.whatsapp?.is_active ? 'Connected' : 'Not connected'}
+                    </span>
+                  </div>
+                  {connected.whatsapp?.is_active ? (
+                    <>
+                      <div className="pt-st-chan-handle mono">{connected.whatsapp.identifier}</div>
+                      <div className="pt-st-chan-meta">
+                        Webhook: <span className="mono" style={{ fontSize: 10 }}>{appUrl}/api/webhooks/whatsapp/{userRow?.tenant_id}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="pt-st-chan-handle">Not connected</div>
+                  )}
+                </div>
+              </div>
+              <div className="pt-st-chan-r">
+                {connected.whatsapp?.is_active ? (
+                  <form action={disconnectChannel.bind(null, 'whatsapp')}>
+                    <button type="submit" className="pt-st-mini pt-st-mini-warn">Disconnect</button>
+                  </form>
+                ) : (
+                  <details style={{ width: '100%' }}>
+                    <summary className="pt-btn pt-btn-ghost" style={{ cursor: 'pointer', fontSize: 12 }}>Connect</summary>
+                    <form action={saveWhatsAppCredentials} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+                      <input name="apiKey" placeholder="360dialog API key" required style={inputStyle} />
+                      <input name="phoneNumberId" placeholder="Phone number ID" required style={inputStyle} />
+                      <input name="webhookSecret" placeholder="Webhook secret (optional)" style={inputStyle} />
+                      <button type="submit" className="pt-btn pt-btn-primary" style={{ alignSelf: 'flex-start', fontSize: 12 }}>Save</button>
+                    </form>
+                  </details>
+                )}
+              </div>
+            </li>
+
+            {/* Telegram */}
+            <li className={`pt-st-chan pt-st-chan-${connected.telegram?.is_active ? 'connected' : 'disconnected'}`}>
+              <div className="pt-st-chan-l">
+                <div className="pt-st-chan-icon" style={{ background: CHANNEL_META.telegram.color }}>T</div>
+                <div>
+                  <div className="pt-st-chan-name">
+                    Telegram
+                    <span className={`pt-st-chan-pill pt-st-chan-pill-${connected.telegram?.is_active ? 'connected' : 'disconnected'}`}>
+                      <i />{connected.telegram?.is_active ? 'Connected' : 'Not connected'}
+                    </span>
+                  </div>
+                  {connected.telegram?.is_active ? (
+                    <div className="pt-st-chan-handle mono">{connected.telegram.identifier}</div>
+                  ) : (
+                    <div className="pt-st-chan-handle">Not connected</div>
+                  )}
+                </div>
+              </div>
+              <div className="pt-st-chan-r">
+                {connected.telegram?.is_active ? (
+                  <form action={disconnectChannel.bind(null, 'telegram')}>
+                    <button type="submit" className="pt-st-mini pt-st-mini-warn">Disconnect</button>
+                  </form>
+                ) : (
+                  <details style={{ width: '100%' }}>
+                    <summary className="pt-btn pt-btn-ghost" style={{ cursor: 'pointer', fontSize: 12 }}>Connect</summary>
+                    <form action={saveTelegramCredentials} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+                      <input name="botToken" placeholder="Bot token from @BotFather" required style={inputStyle} />
+                      <button type="submit" className="pt-btn pt-btn-primary" style={{ alignSelf: 'flex-start', fontSize: 12 }}>Save</button>
+                    </form>
+                  </details>
+                )}
+              </div>
+            </li>
+
+            {/* Email */}
+            <li className={`pt-st-chan pt-st-chan-${connected.email?.is_active ? 'connected' : 'disconnected'}`}>
+              <div className="pt-st-chan-l">
+                <div className="pt-st-chan-icon" style={{ background: CHANNEL_META.email.color }}>E</div>
+                <div>
+                  <div className="pt-st-chan-name">
+                    Email
+                    <span className={`pt-st-chan-pill pt-st-chan-pill-${connected.email?.is_active ? 'connected' : 'disconnected'}`}>
+                      <i />{connected.email?.is_active ? 'Connected' : 'Not connected'}
+                    </span>
+                  </div>
+                  {connected.email?.is_active ? (
+                    <div className="pt-st-chan-handle mono">{connected.email.identifier}</div>
+                  ) : (
+                    <div className="pt-st-chan-handle">Connect via Gmail or Outlook OAuth</div>
+                  )}
+                </div>
+              </div>
+              <div className="pt-st-chan-r">
+                {connected.email?.is_active ? (
+                  <form action={disconnectChannel.bind(null, 'email')}>
+                    <button type="submit" className="pt-st-mini pt-st-mini-warn">Disconnect</button>
+                  </form>
+                ) : (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <a href="/api/settings/channels/oauth/google" className="pt-btn pt-btn-ghost" style={{ fontSize: 12 }}>Connect Gmail</a>
+                    <a href="/api/settings/channels/oauth/microsoft" className="pt-btn pt-btn-ghost" style={{ fontSize: 12 }}>Connect Outlook</a>
+                  </div>
+                )}
+              </div>
+            </li>
+
+          </ul>
         </div>
+      </section>
 
-        {/* Telegram */}
-        <div className="pt-card">
-          <div className="pt-card-hd">
-            <div>
-              <h3>Telegram</h3>
-              <p>Create a bot via @BotFather and paste the token below. We&apos;ll register the webhook automatically.</p>
-            </div>
-            {connectedMap.telegram?.is_active && (
-              <span className="pt-tag pt-tag-vip">Connected</span>
-            )}
-          </div>
-          <div className="pt-card-body" style={{ padding: '8px 14px 14px' }}>
-            {connectedMap.telegram?.is_active ? (
-              <form action={disconnectChannel.bind(null, 'telegram')}>
-                <button type="submit" className="pt-btn">Disconnect</button>
-              </form>
-            ) : (
-              <form action={saveTelegramCredentials} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <input name="botToken" placeholder="Bot token from @BotFather" required style={inputStyle} />
-                <button type="submit" className="pt-btn pt-btn-primary" style={{ alignSelf: 'flex-start' }}>Connect Telegram</button>
-              </form>
-            )}
-          </div>
-        </div>
-
-        {/* Email */}
-        <div className="pt-card">
-          <div className="pt-card-hd">
-            <div>
-              <h3>Email</h3>
-              <p>Connect your Gmail or Outlook account via OAuth.</p>
-            </div>
-            {connectedMap.email?.is_active && (
-              <span className="pt-tag pt-tag-vip">Connected · {connectedMap.email.identifier}</span>
-            )}
-          </div>
-          <div className="pt-card-body" style={{ padding: '8px 14px 14px', display: 'flex', gap: 8 }}>
-            {connectedMap.email?.is_active ? (
-              <form action={disconnectChannel.bind(null, 'email')}>
-                <button type="submit" className="pt-btn">Disconnect</button>
-              </form>
-            ) : (
-              <>
-                <a href="/api/settings/channels/oauth/google" className="pt-btn">Connect Gmail</a>
-                <a href="/api/settings/channels/oauth/microsoft" className="pt-btn">Connect Outlook</a>
-              </>
-            )}
-          </div>
-        </div>
-
+      <div className="pt-st-foot">
+        <span className="pt-st-foot-status"><i />Changes saved automatically</span>
       </div>
     </div>
-    </Shell>
   )
 }

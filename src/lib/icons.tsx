@@ -42,6 +42,12 @@ export const Icons = {
   wa:      (p: IconProps) => <PtIcon {...p}><circle cx="12" cy="12" r="9" fill="currentColor" stroke="none"/><path d="M8 8.5c0-.5.4-.9 1-.9h.6c.4 0 .8.3.9.7l.4 1.4c.1.4 0 .8-.3 1l-.6.5c.7 1.4 1.8 2.5 3.2 3.2l.5-.6c.2-.3.6-.4 1-.3l1.4.4c.4.1.7.5.7.9V15c0 .6-.4 1-.9 1A7.5 7.5 0 0 1 8 8.5Z" stroke="white" fill="none"/></PtIcon>,
   tg:      (p: IconProps) => <PtIcon {...p}><circle cx="12" cy="12" r="9" fill="currentColor" stroke="none"/><path d="M7 12.5 17 8.5l-1.5 8L12 14l-1 2.5L9.5 13Z" fill="white" stroke="white"/></PtIcon>,
   em:      (p: IconProps) => <PtIcon {...p}><rect x="3" y="6" width="18" height="12" rx="2"/><path d="m4 8 8 6 8-6"/></PtIcon>,
+  hash:    (p: IconProps) => <PtIcon {...p} d="M4 9h16 M4 15h16 M10 3 8 21 M16 3l-2 18" />,
+  wallet:  (p: IconProps) => <PtIcon {...p}><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18 M16 14h2"/></PtIcon>,
+  shield:  (p: IconProps) => <PtIcon {...p} d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z" />,
+  doc:     (p: IconProps) => <PtIcon {...p} d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z M14 3v6h6 M8 13h8 M8 17h6" />,
+  lock:    (p: IconProps) => <PtIcon {...p}><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></PtIcon>,
+  card:    (p: IconProps) => <PtIcon {...p}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18 M7 15h3"/></PtIcon>,
 }
 
 export function ChannelIcon({ channelType, size = 9 }: { channelType: 'whatsapp' | 'telegram' | 'email'; size?: number }) {
