@@ -12,26 +12,19 @@ export async function Shell({ children, section, isInbox = false }: ShellProps) 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Get display name
   let displayName = 'User'
-  if (user) {
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('display_name')
-      .eq('id', user.id)
-      .single()
-    displayName = userRow?.display_name ?? user.email?.split('@')[0] ?? 'User'
-  }
-
-  // Get connected channels for topbar chips
   let connectedChannels: string[] = []
+
   if (user) {
     const { data: userRow } = await supabase
       .from('users')
-      .select('tenant_id')
+      .select('display_name, tenant_id')
       .eq('id', user.id)
       .single()
-    if (userRow) {
+
+    displayName = userRow?.display_name ?? user.email?.split('@')[0] ?? 'User'
+
+    if (userRow?.tenant_id) {
       const { data: channels } = await supabase
         .from('tenant_channels')
         .select('channel_type')
