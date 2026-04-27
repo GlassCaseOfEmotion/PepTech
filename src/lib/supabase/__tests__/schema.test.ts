@@ -144,3 +144,15 @@ describe('messages table', () => {
     expect(error?.message).toMatch(/check/i)
   })
 })
+
+describe('RLS tenant isolation', () => {
+  it('anon client cannot read customers', async () => {
+    const anonClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { data } = await anonClient.from('customers').select('*')
+    // RLS should return empty array (not an error, but no rows visible)
+    expect(data).toEqual([])
+  })
+})
