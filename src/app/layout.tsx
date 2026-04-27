@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
 import '../../styles/peptech.css'
+import '../../styles/inbox.css'
+import '../../styles/customer.css'
+import '../../styles/settings.css'
 
 export const metadata: Metadata = {
   title: 'Peptech',
