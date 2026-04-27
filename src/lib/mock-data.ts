@@ -103,3 +103,48 @@ export const MOCK_REVENUE_7D: MockRevenueDay[] = [
   { d: 'Thu', v: 1410 }, { d: 'Fri', v: 2240 }, { d: 'Sat', v: 2680 },
   { d: 'Sun', v: 1960 },
 ]
+
+export type MockMessage = {
+  id: string
+  from: 'me' | 'them'
+  at: string
+  text?: string
+  kind?: 'text' | 'wallet' | 'tx'
+  optimistic?: boolean
+}
+
+export const MOCK_MESSAGES: Record<string, MockMessage[]> = {
+  t01: [
+    { id: 'm1', from: 'them', at: 'Apr 18 · 14:22', text: 'yo bro, what\'s the haps. need to re-up reta finally' },
+    { id: 'm2', from: 'me',   at: 'Apr 18 · 14:24', text: 'ayy welcome back. how many vials u thinkin?' },
+    { id: 'm3', from: 'them', at: 'Apr 18 · 14:25', text: '2 of the 10mg. same as last time. quality was insane btw' },
+    { id: 'm4', from: 'me',   at: 'Apr 18 · 14:26', text: 'appreciate that 🙏 fresh batch lot L24-131, COA already up.\n2 vials = $330. usdt trc20?' },
+    { id: 'm5', from: 'them', at: 'Apr 18 · 14:27', text: 'yeah usdt works. drop the addy' },
+    { id: 'm6', from: 'me',   at: 'Apr 18 · 14:28', kind: 'wallet' },
+    { id: 'm7', from: 'them', at: 'Today · 11:38',  text: 'yo 2 vials reta, same addy as last time. paid usdt' },
+    { id: 'm8', from: 'them', at: 'Today · 11:39',  kind: 'tx' },
+  ],
+  t02: [
+    { id: 'm1', from: 'them', at: 'Today · 09:10', text: 'got the package fam. dosed 0.5mg this AM, no sides yet' },
+    { id: 'm2', from: 'me',   at: 'Today · 09:15', text: 'perfect. that\'s the sweet spot for first dose. log it and lmk after week 1' },
+  ],
+  t03: [
+    { id: 'm1', from: 'them', at: 'Today · 10:40', text: 'wire didn\'t go through, can i pay BTC instead?' },
+    { id: 'm2', from: 'me',   at: 'Today · 10:42', text: 'yep BTC works. sending addr now' },
+  ],
+  t04: [
+    { id: 'm1', from: 'them', at: 'Today · 12:20', text: 'bro you got tirz back in stock yet? been waiting 2 wks' },
+    { id: 'm2', from: 'me',   at: 'Today · 12:22', text: 'landing thurs, i\'ll put u at the top of the list' },
+    { id: 'm3', from: 'them', at: 'Today · 12:23', text: 'bet, same qty as last time' },
+  ],
+}
+
+export const MOCK_QUICK_REPLIES = [
+  { id: 'addr',     label: 'send wallet addr',  text: 'USDT (TRC20): T9XbnH4kQ4fM2pLrGv8WqRcXm6tPxJjN8a\nBTC: bc1q...x4t9\nXMR addr on req. lmk when sent + tx hash 🙏' },
+  { id: 'tracking', label: 'tracking uploaded', text: 'label printed, hits USPS today. tracking 9405 5036 9930 0000 7821 — i\'ll ping when scanned' },
+  { id: 'oos',      label: 'out of stock — eta', text: 'tirz is dry til thurs. supplier confirmed restock 4/30. want me to queue u up?' },
+  { id: 'first',    label: 'first-time how-to', text: 'first time? quick rundown:\n• payment: USDT/BTC/XMR\n• ship: USPS priority, 2-3d, discreet pkg\n• comms: keep it on tg/sig only\nany Qs holler' },
+  { id: 'dosing',   label: 'dosing protocol',   text: 'standard protocol, not medical advice. typical research dose is 0.25mg sub-q daily, titrate up over 4 wks. cycle 8-12 wks.' },
+  { id: 'discount', label: 'repeat-buyer 10%',  text: 'ur in the repeat tier, 10% off auto-applied. appreciate the loyalty fr' },
+  { id: 'coa',      label: 'drop COA',           text: 'COA pdf incoming. lot L24-131, third-party HPLC at Janoshik. 99.2% purity' },
+]

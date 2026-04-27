@@ -1,17 +1,17 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Shell } from '@/components/shell/Shell'
-import { DashboardView, DashboardRightRail } from '@/components/dashboard/DashboardView'
-import { MOCK_THREADS } from '@/lib/mock-data'
+import { DashboardLayout } from '@/components/shell/DashboardLayout'
 
 export default async function Home() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  return (
-    <Shell section="Dashboard" rightRail={<DashboardRightRail focusThread={MOCK_THREADS[0]} />}>
-      <DashboardView />
-    </Shell>
-  )
+  const { data: userRow } = await supabase.from('users').select('display_name').eq('id', user.id).single()
+  const displayName = userRow?.display_name ?? user.email?.split('@')[0] ?? 'User'
+
+  const { data: channels } = await supabase.from('tenant_channels').select('channel_type').eq('is_active', true)
+  const connectedChannels = (channels ?? []).map(c => c.channel_type)
+
+  return <DashboardLayout displayName={displayName} connectedChannels={connectedChannels} />
 }

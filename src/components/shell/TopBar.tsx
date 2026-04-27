@@ -5,9 +5,11 @@ import { Icons } from '@/lib/icons'
 interface TopBarProps {
   section?: string
   connectedChannels?: string[]
+  rightOpen?: boolean
+  onRightToggle?: () => void
 }
 
-export function TopBar({ section = 'Inbox', connectedChannels = [] }: TopBarProps) {
+export function TopBar({ section = 'Inbox', connectedChannels = [], rightOpen, onRightToggle }: TopBarProps) {
   return (
     <header className="pt-top">
       <div className="pt-top-crumbs">
@@ -18,32 +20,37 @@ export function TopBar({ section = 'Inbox', connectedChannels = [] }: TopBarProp
 
       <div className="pt-top-mid">
         {connectedChannels.includes('whatsapp') && (
-          <div className="pt-chip pt-chip-wa">
-            <Icons.wa size={12} />
-            <span>WhatsApp</span>
-            <i className="pt-chip-dot" />
-          </div>
+          <div className="pt-chip pt-chip-wa"><Icons.wa size={12} /><span>WhatsApp</span><i className="pt-chip-dot" /></div>
         )}
         {connectedChannels.includes('telegram') && (
-          <div className="pt-chip pt-chip-tg">
-            <Icons.tg size={12} />
-            <span>Telegram</span>
-            <i className="pt-chip-dot" />
-          </div>
+          <div className="pt-chip pt-chip-tg"><Icons.tg size={12} /><span>Telegram</span><i className="pt-chip-dot" /></div>
         )}
         {connectedChannels.includes('email') && (
-          <div className="pt-chip pt-chip-em">
-            <Icons.em size={12} />
-            <span>Email</span>
-            <i className="pt-chip-dot" />
-          </div>
+          <div className="pt-chip pt-chip-em"><Icons.em size={12} /><span>Email</span><i className="pt-chip-dot" /></div>
         )}
       </div>
 
       <div className="pt-top-actions">
+        <button className="pt-iconbtn" title="Filter"><Icons.filter size={14} /></button>
         <button className="pt-iconbtn" title="Notifications">
           <Icons.bell size={14} />
+          <span className="pt-iconbtn-dot" />
         </button>
+        {onRightToggle !== undefined && (
+          <button
+            className={`pt-iconbtn ${rightOpen ? 'is-on' : ''}`}
+            title="Toggle right panel"
+            onClick={onRightToggle}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="16" rx="2"/>
+              <line x1="15" y1="4" x2="15" y2="20"/>
+            </svg>
+          </button>
+        )}
+        <span className="pt-top-divider" />
+        <button className="pt-cta">Reload catalog</button>
       </div>
     </header>
   )
