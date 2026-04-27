@@ -44,7 +44,10 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   if (!channel) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  if (channel.webhook_secret && !verifyWhatsAppSignature(body, signature, channel.webhook_secret as string)) {
+  if (!channel.webhook_secret) {
+    return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 401 })
+  }
+  if (!verifyWhatsAppSignature(body, signature, channel.webhook_secret)) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 

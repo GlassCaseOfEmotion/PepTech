@@ -46,6 +46,10 @@ export async function GET(request: Request) {
   const { tokens } = await oauth2.getToken(code)
   oauth2.setCredentials(tokens)
 
+  if (!tokens.refresh_token) {
+    return NextResponse.redirect(new URL('/settings/channels?error=google_no_refresh_token', request.url))
+  }
+
   const gmail = google.gmail({ version: 'v1', auth: oauth2 })
   const profile = await gmail.users.getProfile({ userId: 'me' })
   const emailAddress = profile.data.emailAddress ?? ''

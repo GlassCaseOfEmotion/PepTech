@@ -5,13 +5,13 @@ vi.mock('@/lib/webhooks/processor', () => ({
   processInboundMessage: vi.fn().mockResolvedValue({ conversationId: 'c1', messageId: 'm1' }),
 }))
 vi.mock('@/lib/channels/email', () => ({
-  fetchGmailMessage: vi.fn().mockResolvedValue({
+  fetchGmailMessage: vi.fn().mockResolvedValue([{
     externalId: 'gmail-msg-001',
     from: 'customer@example.com',
     displayHandle: 'customer@example.com',
     content: 'Hello from email',
     sentAt: '2026-04-27T10:00:00.000Z',
-  }),
+  }]),
   fetchMicrosoftMessage: vi.fn().mockResolvedValue(null),
 }))
 

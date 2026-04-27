@@ -27,7 +27,7 @@ export interface MicrosoftCredentials {
 export async function fetchGmailMessage(
   credentials: GoogleCredentials,
   historyId: string,
-): Promise<EmailMessage | null> {
+): Promise<EmailMessage[]> {
   const auth = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
@@ -47,40 +47,39 @@ export async function fetchGmailMessage(
       historyTypes: ['messageAdded'],
     })
   } catch {
-    return null
+    return []
   }
 
   const added = historyRes.data.history?.flatMap((h) => h.messagesAdded ?? []) ?? []
-  if (added.length === 0) return null
+  if (added.length === 0) return []
 
-  const msgId = added[0].message?.id
-  if (!msgId) return null
+  const results: EmailMessage[] = []
 
-  const msgRes = await gmail.users.messages.get({
-    userId: 'me',
-    id: msgId,
-    format: 'full',
-  })
+  for (const item of added) {
+    const msgId = item.message?.id
+    if (!msgId) continue
 
-  const headers = msgRes.data.payload?.headers ?? []
-  const fromHeader = headers.find((h) => h.name?.toLowerCase() === 'from')?.value ?? ''
-  const dateHeader = headers.find((h) => h.name?.toLowerCase() === 'date')?.value
+    const msgRes = await gmail.users.messages.get({ userId: 'me', id: msgId, format: 'full' })
+    const headers = msgRes.data.payload?.headers ?? []
+    const fromHeader = headers.find((h) => h.name?.toLowerCase() === 'from')?.value ?? ''
+    const dateHeader = headers.find((h) => h.name?.toLowerCase() === 'date')?.value
+    const parts = msgRes.data.payload?.parts ?? []
+    const textPart = parts.find((p) => p.mimeType === 'text/plain')
+    const bodyData = textPart?.body?.data ?? msgRes.data.payload?.body?.data ?? ''
+    const content = Buffer.from(bodyData, 'base64').toString('utf-8').trim()
+    const emailMatch = fromHeader.match(/<(.+?)>/)
+    const fromEmail = emailMatch ? emailMatch[1] : fromHeader
 
-  const parts = msgRes.data.payload?.parts ?? []
-  const textPart = parts.find((p) => p.mimeType === 'text/plain')
-  const bodyData = textPart?.body?.data ?? msgRes.data.payload?.body?.data ?? ''
-  const content = Buffer.from(bodyData, 'base64').toString('utf-8').trim()
-
-  const emailMatch = fromHeader.match(/<(.+?)>/)
-  const fromEmail = emailMatch ? emailMatch[1] : fromHeader
-
-  return {
-    externalId: `gmail-${msgId}`,
-    from: fromEmail,
-    displayHandle: fromEmail,
-    content: content || '(no text content)',
-    sentAt: dateHeader ? new Date(dateHeader).toISOString() : new Date().toISOString(),
+    results.push({
+      externalId: `gmail-${msgId}`,
+      from: fromEmail,
+      displayHandle: fromEmail,
+      content: content || '(no text content)',
+      sentAt: dateHeader ? new Date(dateHeader).toISOString() : new Date().toISOString(),
+    })
   }
+
+  return results
 }
 
 export async function fetchMicrosoftMessage(

@@ -61,18 +61,21 @@ export async function saveWhatsAppCredentials(formData: FormData) {
   return { success: true }
 }
 
-export async function disconnectChannel(channelType: 'whatsapp' | 'telegram' | 'email') {
+export async function disconnectChannel(channelType: 'whatsapp' | 'telegram' | 'email'): Promise<{ success: true } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
+  if (!user) return { error: 'Unauthorized' }
 
   const { data: userRow } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
-  if (!userRow) return
+  if (!userRow) return { error: 'User not found' }
 
-  await supabase.from('tenant_channels')
+  const { error } = await supabase.from('tenant_channels')
     .update({ is_active: false })
     .eq('tenant_id', userRow.tenant_id)
     .eq('channel_type', channelType)
 
+  if (error) return { error: error.message }
+
   revalidatePath('/settings/channels')
+  return { success: true as const }
 }

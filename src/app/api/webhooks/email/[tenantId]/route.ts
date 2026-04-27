@@ -22,35 +22,46 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   const creds = channel.credentials as GoogleCredentials | MicrosoftCredentials
 
-  let emailMessage = null
-
   if (creds.provider === 'google') {
     const pubsubMsg = body.message as { data?: string } | undefined
     if (!pubsubMsg?.data) return NextResponse.json({ ok: true })
-
     const decoded = JSON.parse(Buffer.from(pubsubMsg.data, 'base64').toString()) as { historyId?: string }
     if (!decoded.historyId) return NextResponse.json({ ok: true })
 
-    emailMessage = await fetchGmailMessage(creds as GoogleCredentials, decoded.historyId)
+    const emailMessages = await fetchGmailMessage(creds as GoogleCredentials, decoded.historyId)
+    await Promise.all(
+      emailMessages.map((emailMessage) =>
+        processInboundMessage(supabase, {
+          tenantId,
+          channelType: 'email',
+          identifier: emailMessage.from,
+          displayHandle: emailMessage.displayHandle,
+          content: emailMessage.content,
+          externalId: emailMessage.externalId,
+          sentAt: emailMessage.sentAt,
+        })
+      )
+    )
+    return NextResponse.json({ ok: true })
   } else if (creds.provider === 'microsoft') {
     const notifications = (body.value as Array<{ resourceData?: { id?: string } }>) ?? []
     const msgId = notifications[0]?.resourceData?.id
     if (!msgId) return NextResponse.json({ ok: true })
 
-    emailMessage = await fetchMicrosoftMessage(creds as MicrosoftCredentials, msgId)
+    const emailMessage = await fetchMicrosoftMessage(creds as MicrosoftCredentials, msgId)
+    if (!emailMessage) return NextResponse.json({ ok: true })
+
+    await processInboundMessage(supabase, {
+      tenantId,
+      channelType: 'email',
+      identifier: emailMessage.from,
+      displayHandle: emailMessage.displayHandle,
+      content: emailMessage.content,
+      externalId: emailMessage.externalId,
+      sentAt: emailMessage.sentAt,
+    })
+    return NextResponse.json({ ok: true })
   }
-
-  if (!emailMessage) return NextResponse.json({ ok: true })
-
-  await processInboundMessage(supabase, {
-    tenantId,
-    channelType: 'email',
-    identifier: emailMessage.from,
-    displayHandle: emailMessage.displayHandle,
-    content: emailMessage.content,
-    externalId: emailMessage.externalId,
-    sentAt: emailMessage.sentAt,
-  })
 
   return NextResponse.json({ ok: true })
 }

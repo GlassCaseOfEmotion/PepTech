@@ -109,7 +109,10 @@ export async function processInboundMessage(
     .select('id')
     .single()
 
-  if (msgErr || !message) throw new Error(`Failed to insert message: ${msgErr?.message}`)
+  if (msgErr) throw new Error(`Failed to insert message: ${msgErr.message}`)
+
+  // Duplicate message (external_id already exists) — skip side effects
+  if (!message) return { conversationId, messageId: '' }
 
   // 4. Atomically increment unread count
   await supabase.rpc('increment_unread_count', { conv_id: conversationId, tenant: tenantId })
