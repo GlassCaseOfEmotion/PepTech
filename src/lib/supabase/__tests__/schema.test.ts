@@ -31,3 +31,38 @@ describe('users table', () => {
     expect(error?.message).toMatch(/check/i)
   })
 })
+
+describe('customer_channels table', () => {
+  it('rejects duplicate channel+identifier per tenant', async () => {
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .insert({ name: 'T1', slug: `t1-${Date.now()}` })
+      .select()
+      .single()
+
+    const { data: customer } = await supabase
+      .from('customers')
+      .insert({ tenant_id: tenant!.id, display_name: 'Alice' })
+      .select()
+      .single()
+
+    await supabase.from('customer_channels').insert({
+      tenant_id: tenant!.id,
+      customer_id: customer!.id,
+      channel_type: 'whatsapp',
+      identifier: '+15005550001',
+      display_handle: '+1 500 555 0001',
+    })
+
+    const { error } = await supabase.from('customer_channels').insert({
+      tenant_id: tenant!.id,
+      customer_id: customer!.id,
+      channel_type: 'whatsapp',
+      identifier: '+15005550001',
+      display_handle: '+1 500 555 0001',
+    })
+
+    expect(error).not.toBeNull()
+    expect(error?.message).toMatch(/unique/i)
+  })
+})
