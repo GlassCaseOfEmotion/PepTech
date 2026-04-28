@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
-import { MOCK_THREADS, MOCK_MESSAGES, MOCK_QUICK_REPLIES, type MockThread, type MockMessage } from '@/lib/mock-data'
+import { InboxProvider, useInbox } from './InboxProvider'
+import type { DbConversation, DbQuickReply, InboxThread, InboxMessage, DbNote } from '@/types/inbox'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -18,12 +19,21 @@ function fmtMins(m: number) {
   return `${Math.floor(m / 1440)}d`
 }
 
+function fmtRelative(iso: string) {
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (mins < 60) return `${mins}m ago`
+  if (mins < 1440) return `${Math.floor(mins / 60)}h ago`
+  const days = Math.floor(mins / 1440)
+  if (days < 30) return `${days}d ago`
+  return `${Math.floor(days / 30)}mo ago`
+}
+
 const CH_ICONS: Record<string, React.FC<{ size?: number }>> = { wa: Icons.wa, tg: Icons.tg, em: Icons.em }
 const CH_NAMES: Record<string, string> = { wa: 'WhatsApp', tg: 'Telegram', em: 'Email' }
 
 // ─── Thread item ─────────────────────────────────────────────────────────────
 
-function IxThread({ t, active, onClick }: { t: MockThread; active: boolean; onClick: () => void }) {
+function IxThread({ t, active, onClick }: { t: InboxThread; active: boolean; onClick: () => void }) {
   const ChIcon = CH_ICONS[t.channel]
   return (
     <li className={`pt-ixt ${active ? 'is-active' : ''} ${t.unread ? 'is-unread' : ''}`} onClick={onClick}>
@@ -58,16 +68,33 @@ function IxThread({ t, active, onClick }: { t: MockThread; active: boolean; onCl
 // ─── Thread column ───────────────────────────────────────────────────────────
 
 function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
-  threads: MockThread[]; activeId: string; onSelect: (id: string) => void
+  threads: InboxThread[]; activeId: string; onSelect: (id: string) => void
   filter: string; setFilter: (f: string) => void
 }) {
+  const [search, setSearch] = useState('')
+
+  const counts = {
+    all: threads.length,
+    needs_reply: threads.filter(t => t.status === 'needs_reply').length,
+    new: threads.filter(t => t.status === 'new').length,
+    snoozed: threads.filter(t => t.status === 'snoozed').length,
+  }
+
   const filters = [
-    { id: 'all',         label: 'All',         count: threads.length },
-    { id: 'needs_reply', label: 'Needs reply',  count: threads.filter(x => x.status === 'needs_reply').length },
-    { id: 'new',         label: 'New',          count: threads.filter(x => x.status === 'new').length },
-    { id: 'snoozed',     label: 'Snoozed',      count: threads.filter(x => x.status === 'snoozed').length },
+    { id: 'all',         label: 'All',         count: counts.all },
+    { id: 'needs_reply', label: 'Needs reply',  count: counts.needs_reply },
+    { id: 'new',         label: 'New',          count: counts.new },
+    { id: 'snoozed',     label: 'Snoozed',      count: counts.snoozed },
   ]
-  const list = filter === 'all' ? threads : threads.filter(x => x.status === filter)
+
+  const visible = threads.filter(t => {
+    if (filter !== 'all' && t.status !== filter) return false
+    if (search) {
+      const q = search.toLowerCase()
+      return t.name.toLowerCase().includes(q) || t.handle.toLowerCase().includes(q)
+    }
+    return true
+  })
 
   return (
     <div className="pt-ix-list">
@@ -81,7 +108,11 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
       </div>
       <div className="pt-ix-search">
         <Icons.search size={12} />
-        <input placeholder="search threads, names, txids…" />
+        <input
+          placeholder="search threads, names, txids…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
         <kbd>⌘F</kbd>
       </div>
       <div className="pt-ix-filters">
@@ -92,7 +123,7 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
         ))}
       </div>
       <ul className="pt-ix-threads">
-        {list.map(t => <IxThread key={t.id} t={t} active={t.id === activeId} onClick={() => onSelect(t.id)} />)}
+        {visible.map(t => <IxThread key={t.id} t={t} active={t.id === activeId} onClick={() => onSelect(t.id)} />)}
       </ul>
     </div>
   )
@@ -100,7 +131,7 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
 
 // ─── Message bubbles ─────────────────────────────────────────────────────────
 
-function Bubble({ m, channel }: { m: MockMessage; channel: string }) {
+function Bubble({ m, channel }: { m: InboxMessage; channel: string }) {
   if (m.kind === 'wallet') {
     return (
       <div className={`pt-bubble pt-bubble-${m.from} pt-bubble-card`}>
@@ -147,26 +178,24 @@ function Bubble({ m, channel }: { m: MockMessage; channel: string }) {
 
 // ─── Composer ────────────────────────────────────────────────────────────────
 
-function Composer({ thread, onSend }: { thread: MockThread; onSend: (text: string) => void }) {
+function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: (text: string) => void; isSending: boolean }) {
+  const { quickReplies } = useInbox()
   const [draft, setDraft] = useState('')
-  const [sending, setSending] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   const send = useCallback(() => {
     const text = draft.trim()
     if (!text) return
-    setSending(true)
     onSend(text)
     setDraft('')
-    setTimeout(() => setSending(false), 400)
   }, [draft, onSend])
 
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send() }
   }
 
-  const insertQuick = (text: string) => {
-    setDraft(d => d ? `${d}\n\n${text}` : text)
+  const insertQuick = (content: string) => {
+    setDraft(d => d ? `${d}\n\n${content}` : content)
     setTimeout(() => taRef.current?.focus(), 0)
   }
 
@@ -174,10 +203,12 @@ function Composer({ thread, onSend }: { thread: MockThread; onSend: (text: strin
     <div className="pt-ix-composer">
       <div className="pt-quicks pt-quicks-bar">
         <span className="pt-quicks-lbl">Quick</span>
-        {MOCK_QUICK_REPLIES.slice(0, 5).map(q => (
-          <button key={q.id} className="pt-quick" onClick={() => insertQuick(q.text)}>{q.label}</button>
+        {quickReplies.slice(0, 5).map(q => (
+          <button key={q.id} className="pt-quick" onClick={() => insertQuick(q.content)}>{q.label}</button>
         ))}
-        <button className="pt-quick pt-quick-more">+{MOCK_QUICK_REPLIES.length - 5} more</button>
+        {quickReplies.length > 5 && (
+          <button className="pt-quick pt-quick-more">+{quickReplies.length - 5} more</button>
+        )}
       </div>
       <div className="pt-composer-field">
         <textarea
@@ -201,9 +232,9 @@ function Composer({ thread, onSend }: { thread: MockThread; onSend: (text: strin
           <div className="pt-composer-r">
             <span className="pt-composer-hint">⌘↵ to send</span>
             <button
-              className={`pt-btn pt-btn-primary ${sending ? 'is-sending' : ''}`}
+              className={`pt-btn pt-btn-primary ${isSending ? 'is-sending' : ''}`}
               onClick={send}
-              disabled={!draft.trim()}
+              disabled={!draft.trim() || isSending}
             >
               <Icons.send size={12} /> Send
             </button>
@@ -216,11 +247,13 @@ function Composer({ thread, onSend }: { thread: MockThread; onSend: (text: strin
 
 // ─── Conversation pane ───────────────────────────────────────────────────────
 
-function ConversationPane({ thread, messages, onSend }: {
-  thread: MockThread
-  messages: MockMessage[]
+function ConversationPane({ thread, messages, onSend, isSending }: {
+  thread: InboxThread
+  messages: InboxMessage[]
   onSend: (text: string) => void
+  isSending: boolean
 }) {
+  const { snooze, markDone } = useInbox()
   const scrollRef = useRef<HTMLDivElement>(null)
   const ChIcon = CH_ICONS[thread.channel]
 
@@ -248,8 +281,8 @@ function ConversationPane({ thread, messages, onSend }: {
           </div>
         </div>
         <div className="pt-ix-conv-actions">
-          <button className="pt-btn pt-btn-ghost"><Icons.clock size={12} /> Snooze</button>
-          <button className="pt-btn pt-btn-ghost"><Icons.check size={12} /> Mark done</button>
+          <button className="pt-btn pt-btn-ghost" onClick={snooze}><Icons.clock size={12} /> Snooze</button>
+          <button className="pt-btn pt-btn-ghost" onClick={markDone}><Icons.check size={12} /> Mark done</button>
           <button className="pt-iconbtn"><Icons.more size={14} /></button>
         </div>
       </div>
@@ -263,14 +296,15 @@ function ConversationPane({ thread, messages, onSend }: {
         </div>
       </div>
 
-      <Composer thread={thread} onSend={onSend} />
+      <Composer thread={thread} onSend={onSend} isSending={isSending} />
     </div>
   )
 }
 
 // ─── Conversation right rail ─────────────────────────────────────────────────
 
-function ConversationRail({ thread }: { thread: MockThread }) {
+function ConversationRail({ thread }: { thread: InboxThread }) {
+  const { notes } = useInbox()
   const trustCls = thread.trust >= 85 ? 'hi' : thread.trust >= 65 ? 'md' : 'lo'
   return (
     <aside className="pt-ix-rail">
@@ -289,7 +323,6 @@ function ConversationRail({ thread }: { thread: MockThread }) {
         </div>
         <div className="pt-cust-stats">
           <div><div className="lbl">LTV</div><div className="val mono">${thread.ltv.toLocaleString()}</div></div>
-          <div><div className="lbl">Last</div><div className="val mono">{thread.lastOrder}</div></div>
           <div><div className="lbl">Channel</div><div className="val">{CH_NAMES[thread.channel]}</div></div>
         </div>
         <div className="pt-cust-tags">
@@ -328,14 +361,12 @@ function ConversationRail({ thread }: { thread: MockThread }) {
       {/* Notes */}
       <div className="pt-right-section">
         <div className="pt-right-hd"><span>Notes</span><button className="pt-right-add"><Icons.plus size={11} /></button></div>
-        <div className="pt-rail-note">
-          <div className="pt-rail-note-meta">3w ago</div>
-          <div>prefers tues/thurs ship. uses signal if WA goes down — handle <span className="mono">@gymrat84</span></div>
-        </div>
-        <div className="pt-rail-note">
-          <div className="pt-rail-note-meta">2mo ago</div>
-          <div>asked about tirz/reta stack. sent dosing protocol v2.</div>
-        </div>
+        {notes.map(note => (
+          <div key={note.id} className="pt-rail-note">
+            <div className="pt-rail-note-meta">{fmtRelative(note.created_at)}</div>
+            <div>{note.content}</div>
+          </div>
+        ))}
       </div>
 
       {/* Activity */}
@@ -352,51 +383,45 @@ function ConversationRail({ thread }: { thread: MockThread }) {
   )
 }
 
-// ─── Main InboxView ──────────────────────────────────────────────────────────
+// ─── Inner layout (consumes context) ────────────────────────────────────────
 
-export function InboxView() {
-  const [threads] = useState(MOCK_THREADS)
-  const [activeId, setActiveId] = useState(MOCK_THREADS[0].id)
-  const [filter, setFilter] = useState('all')
-  const [messages, setMessages] = useState<Record<string, MockMessage[]>>(MOCK_MESSAGES)
-
+function InboxLayout() {
+  const { threads, activeId, setActiveId, filter, setFilter, messages, isSending, sendMessage } = useInbox()
   const activeThread = threads.find(t => t.id === activeId) ?? threads[0]
-
-  const handleSend = useCallback((text: string) => {
-    const newMsg: MockMessage = {
-      id: `m${Date.now()}`,
-      from: 'me',
-      at: 'Today · just now',
-      text,
-      optimistic: true,
-    }
-    setMessages(prev => ({
-      ...prev,
-      [activeId]: [...(prev[activeId] ?? []), newMsg],
-    }))
-    setTimeout(() => {
-      setMessages(prev => ({
-        ...prev,
-        [activeId]: (prev[activeId] ?? []).map(m => m.id === newMsg.id ? { ...m, optimistic: false } : m),
-      }))
-    }, 600)
-  }, [activeId])
 
   return (
     <div className="pt-inbox">
       <ThreadColumn
         threads={threads}
-        activeId={activeThread.id}
+        activeId={activeThread?.id ?? ''}
         onSelect={setActiveId}
         filter={filter}
         setFilter={setFilter}
       />
-      <ConversationPane
-        thread={activeThread}
-        messages={messages[activeThread.id] ?? []}
-        onSend={handleSend}
-      />
-      <ConversationRail thread={activeThread} />
+      {activeThread && (
+        <ConversationPane
+          thread={activeThread}
+          messages={messages}
+          onSend={sendMessage}
+          isSending={isSending}
+        />
+      )}
+      {activeThread && <ConversationRail thread={activeThread} />}
     </div>
+  )
+}
+
+// ─── Main InboxView ──────────────────────────────────────────────────────────
+
+interface InboxViewProps {
+  initialConversations: DbConversation[]
+  quickReplies: DbQuickReply[]
+}
+
+export function InboxView({ initialConversations, quickReplies }: InboxViewProps) {
+  return (
+    <InboxProvider initialConversations={initialConversations} quickReplies={quickReplies}>
+      <InboxLayout />
+    </InboxProvider>
   )
 }
