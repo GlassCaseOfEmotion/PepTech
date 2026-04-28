@@ -4,14 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
 import { InboxProvider, useInbox } from './InboxProvider'
-import type { DbConversation, DbQuickReply, InboxThread, InboxMessage, DbNote } from '@/types/inbox'
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-function initials(name: string) {
-  const up = name.match(/[A-Z]/g)
-  return (up && up.length >= 2 ? up.slice(0, 2) : [name[0]]).join('')
-}
+import type { DbConversation, DbQuickReply, InboxThread, InboxMessage } from '@/types/inbox'
+import { initials } from '@/types/inbox'
 
 function fmtMins(m: number) {
   if (m < 60) return `${m}m`
@@ -300,12 +294,7 @@ function ConversationPane({ thread, messages, onSend, isSending }: {
       </div>
 
       <div ref={scrollRef} className="pt-ix-stream">
-        <div className="pt-ix-day">Apr 18, 2026</div>
         {messages.map(m => <Bubble key={m.id} m={m} />)}
-        <div className="pt-ix-typing">
-          <span className="pt-typing-dot" /><span className="pt-typing-dot" /><span className="pt-typing-dot" />
-          <span className="pt-typing-lbl">{thread.name.split(' ')[0]} is typing…</span>
-        </div>
       </div>
 
       <Composer thread={thread} onSend={onSend} isSending={isSending} />
@@ -339,34 +328,6 @@ function ConversationRail({ thread }: { thread: InboxThread }) {
         </div>
         <div className="pt-cust-tags">
           {thread.tags.map(tag => <span key={tag} className="pt-tag pt-tag-soft">{tag}</span>)}
-        </div>
-      </div>
-
-      {/* Open order */}
-      <div className="pt-right-section">
-        <div className="pt-right-hd"><span>Open order</span><button className="pt-link">Order →</button></div>
-        <div className="pt-rail-order">
-          <div className="pt-rail-order-row">
-            <span className="mono pt-rail-order-id">#A-2241</span>
-            <span className="pt-tag pt-tag-warn">awaiting payment</span>
-          </div>
-          <ul className="pt-rail-items">
-            <li><span>Retatrutide 10mg</span><span className="mono">×2</span><span className="mono">$330</span></li>
-          </ul>
-          <div className="pt-rail-order-meta">
-            <div><span className="lbl">Lot</span><span className="mono">L24-131</span></div>
-            <div><span className="lbl">Ship to</span><span>same as #A-2188</span></div>
-          </div>
-          <div className="pt-rail-order-pay">
-            <div className="pt-rail-pay-row">
-              <span className="pt-pay-asset" data-asset="USDT">USDT</span>
-              <div className="pt-rail-pay-mid">
-                <div className="pt-rail-pay-state">2/3 confirmations · 4m ago</div>
-                <div className="pt-confbar"><div className="pt-confbar-fill" style={{ width: '66%' }} /></div>
-              </div>
-              <button className="pt-btn pt-btn-primary pt-btn-sm">Mark paid</button>
-            </div>
-          </div>
         </div>
       </div>
 
