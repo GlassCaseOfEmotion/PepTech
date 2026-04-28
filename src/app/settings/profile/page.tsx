@@ -1,9 +1,9 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getServerUser } from '@/lib/supabase/server'
 import { initials } from '@/types/inbox'
 
 export default async function ProfilePage() {
+  const user = await getServerUser()
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
 
   const { data: userRow } = await supabase
     .from('users')

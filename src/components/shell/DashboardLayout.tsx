@@ -11,8 +11,11 @@ interface DashboardLayoutProps {
   connectedChannels: string[]
 }
 
+const MOCK_CHANNELS = ['whatsapp', 'telegram']
+
 export function DashboardLayout({ displayName, connectedChannels }: DashboardLayoutProps) {
   const [rightOpen, setRightOpen] = useState(true)
+  const channels = connectedChannels.length > 0 ? connectedChannels : MOCK_CHANNELS
 
   return (
     <div className={`pt-root${rightOpen ? '' : ' no-right'}`}>
@@ -20,7 +23,7 @@ export function DashboardLayout({ displayName, connectedChannels }: DashboardLay
       <main className="pt-main">
         <TopBar
           section="Dashboard"
-          connectedChannels={connectedChannels}
+          connectedChannels={channels}
           rightOpen={rightOpen}
           onRightToggle={() => setRightOpen(o => !o)}
         />

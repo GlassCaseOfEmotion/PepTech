@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getServerUser } from '@/lib/supabase/server'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 
@@ -10,25 +10,18 @@ interface ShellProps {
 }
 
 export async function Shell({ children, section, isInbox = false, rightRail }: ShellProps) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getServerUser()
 
   let displayName = 'User'
   let connectedChannels: string[] = []
 
   if (user) {
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('display_name')
-      .eq('id', user.id)
-      .single()
-
+    const supabase = await createClient()
+    const [{ data: userRow }, { data: channels }] = await Promise.all([
+      supabase.from('users').select('display_name').eq('id', user.id).single(),
+      supabase.from('tenant_channels').select('channel_type').eq('is_active', true),
+    ])
     displayName = userRow?.display_name ?? user.email?.split('@')[0] ?? 'User'
-
-    const { data: channels } = await supabase
-      .from('tenant_channels')
-      .select('channel_type')
-      .eq('is_active', true)
     connectedChannels = (channels ?? []).map((c) => c.channel_type)
   }
 

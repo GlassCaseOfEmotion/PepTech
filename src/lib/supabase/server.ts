@@ -1,8 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { cache } from 'react'
 import type { Database } from '@/types/database'
 
-export async function createClient() {
+// Cached per request — multiple Server Components calling this get the same client instance
+export const createClient = cache(async function createClient() {
   const cookieStore = await cookies()
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,7 +21,14 @@ export async function createClient() {
       },
     }
   )
-}
+})
+
+// Cached per request — avoids redundant auth.getUser() network calls across Server Components
+export const getServerUser = cache(async function getServerUser() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user
+})
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 

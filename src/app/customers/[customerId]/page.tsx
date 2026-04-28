@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getServerUser } from '@/lib/supabase/server'
 import { Shell } from '@/components/shell/Shell'
 import { initials } from '@/types/inbox'
 
@@ -10,9 +10,9 @@ export default async function CustomerPage({
   params: Promise<{ customerId: string }>
 }) {
   const { customerId } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getServerUser()
   if (!user) redirect('/login')
+  const supabase = await createClient()
 
   const { data: customer } = await supabase
     .from('customers')

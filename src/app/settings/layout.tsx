@@ -1,13 +1,13 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getServerUser } from '@/lib/supabase/server'
 import { Shell } from '@/components/shell/Shell'
 import { SettingsNav } from '@/components/settings/SettingsNav'
 
 export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getServerUser()
   if (!user) redirect('/login')
 
+  const supabase = await createClient()
   const { data: userRow } = await supabase
     .from('users')
     .select('display_name')

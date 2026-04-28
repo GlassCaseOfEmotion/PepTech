@@ -182,6 +182,7 @@ kbd {
   font-size: 12.5px;
   cursor: pointer;
   text-align: left;
+  text-decoration: none;
 }
 .pt-nav-item:hover { background: oklch(from var(--pt-fg) l c h / 0.05); color: var(--pt-fg); }
 .pt-nav-item.is-on {
@@ -214,6 +215,7 @@ kbd {
   background: transparent; border: 0; cursor: pointer;
   border-radius: 6px;
   text-align: left;
+  text-decoration: none;
   color: var(--pt-fg-2);
 }
 .pt-pin:hover { background: oklch(from var(--pt-fg) l c h / 0.05); }
