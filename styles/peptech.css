@@ -548,6 +548,9 @@ kbd {
 .pt-pay-act:hover { text-decoration: underline; }
 .pt-pay-confirmed .pt-pay-amt { color: var(--pt-ok); }
 
+@keyframes pt-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+.pt-skel { border-radius: 4px; background: oklch(from var(--pt-fg) l c h / 0.08); animation: pt-pulse 1.4s ease-in-out infinite; }
+
 /* ─── Reorders ───────────────────────────────────────────────────────────── */
 .pt-reorder-list { list-style: none; margin: 0; padding: 0; }
 .pt-reorder {
