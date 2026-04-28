@@ -1,7 +1,7 @@
 // src/components/inbox/InboxProvider.tsx
 'use client'
 
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   dbConversationToThread, dbMessageToInboxMessage,
@@ -38,7 +38,7 @@ interface Props {
 }
 
 export function InboxProvider({ initialConversations, quickReplies, children }: Props) {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [threads, setThreads] = useState<InboxThread[]>(
     initialConversations.map(dbConversationToThread)
   )
@@ -135,7 +135,13 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
           last_message_snippet: snippet,
           status: 'in_progress',
         }).eq('id', activeId)
+      } else {
+        // Insert succeeded but returned no row — remove optimistic
+        setMessages(prev => prev.filter(m => m.id !== tempId))
       }
+    } catch {
+      // Remove ghost optimistic message on insert failure
+      setMessages(prev => prev.filter(m => m.id !== tempId))
     } finally {
       setIsSending(false)
     }
@@ -152,15 +158,10 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
   const markDone = useCallback(async () => {
     if (!activeId) return
     await supabase.from('conversations').update({ status: 'resolved' }).eq('id', activeId)
-    setThreads(prev => {
-      const remaining = prev.filter(t => t.id !== activeId)
-      if (remaining.length > 0) {
-        // Select the next conversation after a short tick
-        setTimeout(() => setActiveIdRaw(remaining[0].id), 0)
-      }
-      return remaining
-    })
-  }, [activeId, supabase])
+    setThreads(prev => prev.filter(t => t.id !== activeId))
+    const remaining = threads.filter(t => t.id !== activeId)
+    if (remaining.length > 0) setActiveId(remaining[0].id)
+  }, [activeId, threads, supabase, setActiveId])
 
   // ── Load initial messages on mount ─────────────────────────────────────────
   useEffect(() => {
