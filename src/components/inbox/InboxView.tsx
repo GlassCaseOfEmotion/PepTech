@@ -131,18 +131,20 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
 
 // ─── Message bubbles ─────────────────────────────────────────────────────────
 
-function Bubble({ m, channel }: { m: InboxMessage; channel: string }) {
+function Bubble({ m }: { m: InboxMessage }) {
   if (m.kind === 'wallet') {
+    const { asset, network, address, amount } = m.metadata ?? {}
     return (
       <div className={`pt-bubble pt-bubble-${m.from} pt-bubble-card`}>
         <div className="pt-cardbubble">
           <div className="pt-cardbubble-hd">
-            <span className="pt-cardbubble-asset">USDT · TRC20</span>
-            <span className="pt-cardbubble-amt mono">$330.00</span>
+            <span className="pt-cardbubble-asset">{asset ?? 'USDT'} · {network ?? 'TRC20'}</span>
+            <span className="pt-cardbubble-amt mono">${amount?.toFixed(2) ?? '—'}</span>
           </div>
-          <div className="pt-cardbubble-addr mono">T9XbnH4kQ4fM2pLrGv8WqRcXm6tPxJjN8a</div>
+          <div className="pt-cardbubble-addr mono">{address ?? '—'}</div>
           <div className="pt-cardbubble-actions">
-            <button className="pt-btn pt-btn-ghost">Copy</button>
+            <button className="pt-btn pt-btn-ghost"
+              onClick={() => address && navigator.clipboard.writeText(address)}>Copy</button>
             <button className="pt-btn pt-btn-ghost">QR</button>
           </div>
         </div>
@@ -150,20 +152,30 @@ function Bubble({ m, channel }: { m: InboxMessage; channel: string }) {
       </div>
     )
   }
+
   if (m.kind === 'tx') {
+    const { asset, tx_id, confirmations, required_confirmations, state } = m.metadata ?? {}
+    const conf = confirmations ?? 0
+    const req = required_confirmations ?? 3
+    const pct = Math.min(1, conf / req)
     return (
       <div className={`pt-bubble pt-bubble-${m.from}`}>
         <div className="pt-tx">
           <div className="pt-tx-row">
-            <span className="pt-tx-asset">USDT</span>
-            <span className="pt-tx-id mono">0xb39…e21</span>
-            <span className="pt-tx-state"><i className="pt-dot pt-dot-warn" /> 2/3 conf</span>
+            <span className="pt-tx-asset">{asset ?? 'USDT'}</span>
+            <span className="pt-tx-id mono">{tx_id ? `${tx_id.slice(0, 6)}…${tx_id.slice(-4)}` : '—'}</span>
+            <span className={`pt-tx-state ${state === 'confirmed' ? 'is-ok' : 'is-warn'}`}>
+              <i className={`pt-dot pt-dot-${state === 'confirmed' ? 'cool' : 'warn'}`} />
+              {conf}/{req} conf
+            </span>
           </div>
+          <div className="pt-confbar"><div className="pt-confbar-fill" style={{ width: `${pct * 100}%` }} /></div>
         </div>
-        <div className="pt-bubble-meta">{m.at} · pending</div>
+        <div className="pt-bubble-meta">{m.at} · {state ?? 'pending'}</div>
       </div>
     )
   }
+
   return (
     <div className={`pt-bubble pt-bubble-${m.from} ${m.optimistic ? 'is-optimistic' : ''}`}>
       <div className="pt-bubble-text">{m.text}</div>
@@ -289,7 +301,7 @@ function ConversationPane({ thread, messages, onSend, isSending }: {
 
       <div ref={scrollRef} className="pt-ix-stream">
         <div className="pt-ix-day">Apr 18, 2026</div>
-        {messages.map(m => <Bubble key={m.id} m={m} channel={thread.channel} />)}
+        {messages.map(m => <Bubble key={m.id} m={m} />)}
         <div className="pt-ix-typing">
           <span className="pt-typing-dot" /><span className="pt-typing-dot" /><span className="pt-typing-dot" />
           <span className="pt-typing-lbl">{thread.name.split(' ')[0]} is typing…</span>
