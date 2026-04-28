@@ -107,7 +107,7 @@ export type InboxThread = {
   snippet: string
   minsAgo: number
   unread: number
-  status: string
+  status: 'new' | 'needs_reply' | 'in_progress' | 'resolved' | 'snoozed'
   tags: string[]
   trust: number
   ltv: number
@@ -164,7 +164,7 @@ export function dbMessageToInboxMessage(m: DbMessage): InboxMessage {
     from: m.direction === 'outbound' ? 'me' : 'them',
     at,
     text: m.content,
-    kind: (m.metadata?.kind as InboxMessage['kind']) ?? 'text',
+    kind: m.metadata?.kind ?? 'text',
     optimistic: m.status === 'sending',
     status: m.status,
     metadata: m.metadata,
