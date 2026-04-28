@@ -175,6 +175,85 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // intentionally run once on mount only
 
+  // ── Real-time: messages for active conversation ────────────────────────────
+  useEffect(() => {
+    if (!activeId) return
+
+    const channel = supabase
+      .channel(`messages:${activeId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${activeId}`,
+        },
+        (payload) => {
+          const newMsg = dbMessageToInboxMessage(payload.new as any)
+          setMessages(prev => {
+            // Avoid duplicating our own optimistic sends
+            if (prev.some(m => m.id === newMsg.id)) return prev
+            return [...prev, newMsg]
+          })
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [activeId, supabase])
+
+  // ── Real-time: conversation list updates ──────────────────────────────────
+  useEffect(() => {
+    const channel = supabase
+      .channel('conversations:list')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'conversations' },
+        (payload) => {
+          const updated = payload.new as any
+          setThreads(prev => prev.map(t => {
+            if (t.id !== updated.id) return t
+            return {
+              ...t,
+              snippet: updated.last_message_snippet ?? t.snippet,
+              unread: updated.unread_count ?? t.unread,
+              status: updated.status,
+              minsAgo: updated.last_message_at
+                ? Math.floor((Date.now() - new Date(updated.last_message_at).getTime()) / 60000)
+                : t.minsAgo,
+            }
+          }))
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'conversations' },
+        async (payload) => {
+          // New inbound conversation — fetch it with full customer join
+          const { data } = await supabase
+            .from('conversations')
+            .select(`
+              id, status, unread_count, last_message_at, last_message_snippet,
+              channel_type, channel_identifier,
+              customers (
+                id, display_name, trust_score, ltv,
+                customer_tags (tag),
+                customer_channels (channel_type, display_handle, is_primary)
+              )
+            `)
+            .eq('id', payload.new.id)
+            .single()
+          if (data) {
+            setThreads(prev => [dbConversationToThread(data as any), ...prev])
+          }
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [supabase])
+
   return (
     <InboxContext.Provider value={{
       threads, activeId, setActiveId, filter, setFilter,
