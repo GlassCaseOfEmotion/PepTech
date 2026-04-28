@@ -151,8 +151,10 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
   const snooze = useCallback(async () => {
     if (!activeId) return
     await supabase.from('conversations').update({ status: 'snoozed' }).eq('id', activeId)
-    setThreads(prev => prev.map(t => t.id === activeId ? { ...t, status: 'snoozed' } : t))
-  }, [activeId, supabase])
+    setThreads(prev => prev.map(t => t.id === activeId ? { ...t, status: 'snoozed' as const } : t))
+    const remaining = threads.filter(t => t.id !== activeId)
+    if (remaining.length > 0) setActiveId(remaining[0].id)
+  }, [activeId, threads, supabase, setActiveId])
 
   // ── Mark active conversation done ──────────────────────────────────────────
   const markDone = useCallback(async () => {
