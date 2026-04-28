@@ -25,16 +25,16 @@ DECLARE
   v_c9  uuid := 'c9000000-0000-0000-0000-000000000000';  -- cole_d
 
   -- ── Conversations ────────────────────────────────────────
-  v_v1  uuid := 'v1000000-0000-0000-0000-000000000000';  -- gymrat_84  (wa, active)
-  v_v2  uuid := 'v2000000-0000-0000-0000-000000000000';  -- swolepriest (tg, active)
-  v_v3  uuid := 'v3000000-0000-0000-0000-000000000000';  -- Dani V.    (tg, active)
-  v_v4  uuid := 'v4000000-0000-0000-0000-000000000000';  -- J.          (wa, new)
-  v_v5  uuid := 'v5000000-0000-0000-0000-000000000000';  -- T.B.        (wa, in_progress)
-  v_v6  uuid := 'v6000000-0000-0000-0000-000000000000';  -- rxqueen     (tg, needs_reply)
-  v_v7  uuid := 'v7000000-0000-0000-0000-000000000000';  -- marcus_r    (tg, in_progress)
-  v_v8  uuid := 'v8000000-0000-0000-0000-000000000000';  -- anon_2k     (wa, resolved)
-  v_v9  uuid := 'v9000000-0000-0000-0000-000000000000';  -- cole_d      (email, snoozed)
-  v_v10 uuid := 'v0000000-0000-0000-0000-000000000010';  -- gymrat_84   (wa, older resolved)
+  v_v1  uuid := 'e1000000-0000-0000-0000-000000000000';  -- gymrat_84  (wa, active)
+  v_v2  uuid := 'e2000000-0000-0000-0000-000000000000';  -- swolepriest (tg, active)
+  v_v3  uuid := 'e3000000-0000-0000-0000-000000000000';  -- Dani V.    (tg, active)
+  v_v4  uuid := 'e4000000-0000-0000-0000-000000000000';  -- J.          (wa, new)
+  v_v5  uuid := 'e5000000-0000-0000-0000-000000000000';  -- T.B.        (wa, in_progress)
+  v_v6  uuid := 'e6000000-0000-0000-0000-000000000000';  -- rxqueen     (tg, needs_reply)
+  v_v7  uuid := 'e7000000-0000-0000-0000-000000000000';  -- marcus_r    (tg, in_progress)
+  v_v8  uuid := 'e8000000-0000-0000-0000-000000000000';  -- anon_2k     (wa, resolved)
+  v_v9  uuid := 'e9000000-0000-0000-0000-000000000000';  -- cole_d      (email, snoozed)
+  v_v10 uuid := 'ea000000-0000-0000-0000-000000000000';  -- gymrat_84   (wa, older resolved)
 
 BEGIN
 
