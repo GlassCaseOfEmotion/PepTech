@@ -47,6 +47,20 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
   const [messages, setMessages] = useState<InboxMessage[]>([])
   const [notes, setNotes] = useState<DbNote[]>([])
   const [isSending, setIsSending] = useState(false)
+  const [tenantId, setTenantId] = useState<string | null>(null)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.access_token) {
+        try {
+          const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+          setTenantId(payload.tenant_id ?? null)
+        } catch {
+          // ignore decode errors
+        }
+      }
+    })
+  }, [supabase])
 
   // ── Fetch messages for a conversation ──────────────────────────────────────
   const fetchMessages = useCallback(async (conversationId: string) => {
@@ -103,6 +117,7 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
           content: text,
           status: 'sent',
           sent_at: now,
+          ...(tenantId ? { tenant_id: tenantId } : {}),
         } as any)
         .select('id, direction, content, sent_at, status, metadata')
         .single()
@@ -124,7 +139,7 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
     } finally {
       setIsSending(false)
     }
-  }, [activeId, supabase])
+  }, [activeId, supabase, tenantId])
 
   // ── Snooze active conversation ─────────────────────────────────────────────
   const snooze = useCallback(async () => {
