@@ -131,8 +131,6 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
           t.id === activeId ? { ...t, snippet, minsAgo: 0 } : t
         ))
         await supabase.from('conversations').update({
-          last_message_at: now,
-          last_message_snippet: snippet,
           status: 'in_progress',
         }).eq('id', activeId)
       } else {
