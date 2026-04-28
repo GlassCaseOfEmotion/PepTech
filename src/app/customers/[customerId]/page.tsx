@@ -2,160 +2,312 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, getServerUser } from '@/lib/supabase/server'
 import { Shell } from '@/components/shell/Shell'
-import { initials } from '@/types/inbox'
+import { Icons } from '@/lib/icons'
 
-export default async function CustomerPage({
-  params,
-}: {
-  params: Promise<{ customerId: string }>
-}) {
+const CH_LABEL: Record<string, string> = { whatsapp: 'WhatsApp', telegram: 'Telegram', email: 'Email' }
+const CH_KEY: Record<string, string> = { whatsapp: 'wa', telegram: 'tg', email: 'em' }
+
+function initials(name: string) {
+  const up = name.match(/[A-Z]/g)
+  return (up && up.length >= 2 ? up.slice(0, 2) : [name[0]]).join('')
+}
+
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })
+}
+
+// ─── Mock data for sections not yet backed by the DB ────────────────────────
+
+const MOCK_ORDER_HISTORY = [
+  { id: 'A-2241', date: 'Apr 18', items: 'Reta 10mg ×2',         amt: 330, pay: 'USDT', state: 'confirming' },
+  { id: 'A-2188', date: 'Mar 30', items: 'BPC-157 5mg ×3',       amt: 114, pay: 'USDT', state: 'delivered'  },
+  { id: 'A-2103', date: 'Mar 11', items: 'Tirz 30mg ×1',         amt: 220, pay: 'BTC',  state: 'delivered'  },
+  { id: 'A-2044', date: 'Feb 22', items: 'Reta 10mg ×1, GHK ×2', amt: 275, pay: 'USDT', state: 'delivered'  },
+  { id: 'A-1998', date: 'Feb 03', items: 'BPC-157 5mg ×4',       amt: 152, pay: 'Cash', state: 'delivered'  },
+  { id: 'A-1921', date: 'Jan 14', items: 'Tirz 30mg ×1',         amt: 220, pay: 'USDT', state: 'delivered'  },
+]
+
+const MOCK_CYCLES = [
+  { product: 'BPC-157', start: 'Apr 1',  end: 'May 27', weeks: 8,  progress: 0.55 },
+  { product: 'Reta',    start: 'Apr 18', end: 'Aug 8',  weeks: 16, progress: 0.18 },
+  { product: 'Tirz',    start: 'Mar 11', end: 'Jun 3',  weeks: 12, progress: 0.55 },
+]
+
+const MOCK_TRUST_FACTORS = [
+  { label: 'On-time payments',    v: 14, of: 14, w: 30, neg: false },
+  { label: 'Repeat ordering',     v: 11, of: 12, w: 24, neg: false },
+  { label: 'Address consistency', v: 1,  of: 1,  w: 16, neg: false },
+  { label: 'Acct age (20mo)',     v: 20, of: 24, w: 12, neg: false },
+  { label: 'Disputes/refunds',    v: 0,  of: 0,  w: 10, neg: true  },
+]
+
+const MOCK_ACTIVITY = [
+  { dot: 'cool', text: 'USDT received · $330 · 4m ago' },
+  { dot: '',     text: 'Order #A-2241 placed · today 13:18' },
+  { dot: '',     text: 'Replied to broadcast "restock" · yesterday' },
+  { dot: 'warn', text: 'Reorder ping sent · 4d ago' },
+  { dot: '',     text: 'Order #A-2188 delivered · Apr 2' },
+]
+
+const MOCK_PAY_METHODS = ['USDT (TRC20)', 'BTC', 'Cash']
+
+function OrderState({ state }: { state: string }) {
+  const map: Record<string, { cls: string; label: string }> = {
+    delivered:  { cls: 'ok',   label: 'Delivered'  },
+    confirming: { cls: 'warn', label: 'Confirming' },
+    shipped:    { cls: 'cool', label: 'Shipped'    },
+  }
+  const s = map[state] ?? { cls: '', label: state }
+  return <span className={`pt-cu-state pt-cu-state-${s.cls}`}><i />{s.label}</span>
+}
+
+export default async function CustomerPage({ params }: { params: Promise<{ customerId: string }> }) {
   const { customerId } = await params
   const user = await getServerUser()
   if (!user) redirect('/login')
+
   const supabase = await createClient()
+  const [{ data: customer }, { data: notes }] = await Promise.all([
+    supabase
+      .from('customers')
+      .select('id, display_name, trust_score, ltv, created_at, customer_channels(channel_type, display_handle, is_primary), customer_tags(tag)')
+      .eq('id', customerId)
+      .single(),
+    supabase
+      .from('notes')
+      .select('id, content, created_at')
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false })
+      .limit(10),
+  ])
 
-  const { data: customer } = await supabase
-    .from('customers')
-    .select('id, display_name, trust_score, ltv, customer_channels(channel_type, display_handle, is_primary), customer_tags(tag)')
-    .eq('id', customerId)
-    .single()
+  if (!customer) redirect('/customers')
 
-  if (!customer) redirect('/inbox')
-
-  const { data: customerNotes } = await supabase
-    .from('notes')
-    .select('id, content, created_at')
-    .eq('customer_id', customerId)
-    .order('created_at', { ascending: false })
-    .limit(5)
-
-  const primaryChannel = customer.customer_channels?.find((c) => c.is_primary) ?? customer.customer_channels?.[0]
+  const primary = customer.customer_channels?.find(c => c.is_primary) ?? customer.customer_channels?.[0]
+  const chKey = primary ? CH_KEY[primary.channel_type] ?? 'wa' : 'wa'
+  const chLabel = primary ? CH_LABEL[primary.channel_type] ?? '—' : '—'
   const trustCls = customer.trust_score >= 85 ? 'hi' : customer.trust_score >= 65 ? 'md' : 'lo'
-
-  const channelLabel = (ct: string) =>
-    ct === 'whatsapp' ? 'WhatsApp' : ct === 'telegram' ? 'Telegram' : 'Email'
+  const tags = customer.customer_tags?.map(t => t.tag) ?? []
+  const totalOrders = MOCK_ORDER_HISTORY.length
+  const avgOrder = Math.round(customer.ltv / Math.max(1, totalOrders))
+  const joined = customer.created_at ? new Date(customer.created_at).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) : '—'
+  const ChIcon = chKey === 'wa' ? Icons.wa : chKey === 'tg' ? Icons.tg : Icons.em
 
   return (
     <Shell section="Customers">
       <div className="pt-cu">
-        {/* Header */}
+
+        {/* ── Header ── */}
         <div className="pt-cu-hd">
-          <Link href="/inbox" className="pt-ix-back" title="Back to inbox">
+          <Link href="/customers" className="pt-ix-back" title="Back">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 6l-6 6 6 6"/>
             </svg>
           </Link>
           <div className="pt-cu-hd-id">
-            <div className="pt-cu-hd-av" data-channel={primaryChannel?.channel_type}>
-              {initials(customer.display_name)}
-            </div>
+            <div className="pt-cu-hd-av" data-channel={chKey}>{initials(customer.display_name)}</div>
             <div>
               <div className="pt-cu-hd-name">
                 {customer.display_name}
-                {customer.customer_tags?.some((t) => t.tag === 'vip') && (
-                  <span className="pt-tag pt-tag-vip">VIP</span>
-                )}
+                {tags.includes('vip')      && <span className="pt-tag pt-tag-vip">VIP</span>}
+                {tags.includes('waitlist') && <span className="pt-tag">waitlist</span>}
+                {tags.includes('new')      && <span className="pt-tag pt-tag-new">new</span>}
               </div>
               <div className="pt-cu-hd-handle mono">
-                {primaryChannel?.display_handle ?? '—'}
-                {primaryChannel && ` · ${channelLabel(primaryChannel.channel_type)}`}
+                {primary?.display_handle ?? '—'} · {chLabel} · joined {joined}
               </div>
             </div>
+          </div>
+          <div className="pt-cu-hd-actions">
+            <button className="pt-btn pt-btn-ghost">Add note</button>
+            <button className="pt-btn pt-btn-ghost">Add tag</button>
+            <button className="pt-btn pt-btn-primary">
+              <ChIcon size={12} /> Message
+            </button>
           </div>
         </div>
 
         <div className="pt-cu-body">
-          {/* Stats strip */}
+
+          {/* ── Stats strip ── */}
           <div className="pt-cu-strip">
-            <div className={`pt-cu-stat pt-cu-trust pt-trust-${trustCls}`}>
-              <div className="lbl">Trust</div>
-              <div className="val">{customer.trust_score}</div>
-            </div>
             <div className="pt-cu-stat">
               <div className="lbl">LTV</div>
               <div className="val mono">${customer.ltv.toLocaleString()}</div>
             </div>
-            {customer.customer_channels?.map((ch) => (
-              <div key={ch.channel_type} className="pt-cu-stat">
-                <div className="lbl">{channelLabel(ch.channel_type)}</div>
-                <div className="val" style={{ fontSize: 13 }}>{ch.display_handle}</div>
-              </div>
-            ))}
+            <div className="pt-cu-stat">
+              <div className="lbl">Orders</div>
+              <div className="val mono">{totalOrders}</div>
+            </div>
+            <div className="pt-cu-stat">
+              <div className="lbl">Avg order</div>
+              <div className="val mono">${avgOrder}</div>
+            </div>
+            <div className="pt-cu-stat">
+              <div className="lbl">Last order</div>
+              <div className="val">{MOCK_ORDER_HISTORY[0].date}</div>
+            </div>
+            <div className="pt-cu-stat">
+              <div className="lbl">Channel</div>
+              <div className="val pt-cu-stat-ch"><ChIcon size={11} /> {chLabel}</div>
+            </div>
+            <div className={`pt-cu-stat pt-cu-trust pt-trust-${trustCls}`}>
+              <div className="lbl">Trust</div>
+              <div className="val mono">{customer.trust_score}<span>/100</span></div>
+            </div>
           </div>
 
           <div className="pt-cu-grid">
+
+            {/* ── Left column ── */}
             <div className="pt-cu-col">
 
-              {/* Tags */}
-              <div className="pt-card">
-                <div className="pt-card-hd"><h3>Tags</h3></div>
-                <div className="pt-card-body" style={{ padding: '4px 14px 12px' }}>
-                  <div className="pt-cu-tags">
-                    {customer.customer_tags?.length ? (
-                      customer.customer_tags.map((t) => (
-                        <span key={t.tag} className="pt-tag">{t.tag}</span>
-                      ))
-                    ) : (
-                      <span style={{ color: 'var(--pt-fg-4)', fontSize: 12 }}>No tags</span>
-                    )}
-                  </div>
+              {/* Order history */}
+              <section className="pt-card">
+                <header className="pt-card-hd">
+                  <div><h3>Order history</h3><p>{totalOrders} total · ${customer.ltv.toLocaleString()} LTV</p></div>
+                  <button className="pt-link">Export CSV →</button>
+                </header>
+                <div className="pt-card-body" style={{ padding: 0 }}>
+                  <table className="pt-cu-orders">
+                    <thead>
+                      <tr><th>Order</th><th>Date</th><th>Items</th><th>Pay</th><th className="r">Amount</th><th>State</th></tr>
+                    </thead>
+                    <tbody>
+                      {MOCK_ORDER_HISTORY.map(o => (
+                        <tr key={o.id}>
+                          <td className="mono">#{o.id}</td>
+                          <td>{o.date}</td>
+                          <td className="pt-cu-items">{o.items}</td>
+                          <td><span className="pt-pay-asset" data-asset={o.pay}>{o.pay}</span></td>
+                          <td className="r mono">${o.amt}</td>
+                          <td><OrderState state={o.state} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
+              </section>
+
+              {/* Active cycles */}
+              <section className="pt-card">
+                <header className="pt-card-hd">
+                  <div><h3>Active cycles</h3><p>Inferred from order cadence + product half-life</p></div>
+                </header>
+                <div className="pt-card-body" style={{ padding: 0 }}>
+                  <ul className="pt-cu-cycles">
+                    {MOCK_CYCLES.map((cy, i) => (
+                      <li key={i} className="pt-cu-cycle">
+                        <div className="pt-cu-cycle-prod">{cy.product}</div>
+                        <div className="pt-cu-cycle-bar">
+                          <div className="pt-cu-cycle-fill" style={{ width: `${cy.progress * 100}%` }} />
+                          <span className="pt-cu-cycle-marker" style={{ left: `${cy.progress * 100}%` }} />
+                        </div>
+                        <div className="pt-cu-cycle-meta mono">
+                          wk {Math.round(cy.progress * cy.weeks)}/{cy.weeks} · {cy.start}→{cy.end}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
 
               {/* Notes */}
-              <div className="pt-card">
-                <div className="pt-card-hd"><h3>Notes</h3></div>
-                <ul className="pt-cu-notes">
-                  {customerNotes && customerNotes.length > 0 ? (
-                    customerNotes.map((n) => (
+              <section className="pt-card">
+                <header className="pt-card-hd">
+                  <div><h3>Notes</h3><p>Internal — never sent to customer</p></div>
+                  <button className="pt-link">+ Add note</button>
+                </header>
+                <div className="pt-card-body" style={{ padding: 0 }}>
+                  <ul className="pt-cu-notes">
+                    {notes && notes.length > 0 ? notes.map(n => (
                       <li key={n.id}>
-                        <div className="pt-cu-note-at mono">
-                          {new Date(n.created_at).toLocaleDateString()}
-                        </div>
+                        <div className="pt-cu-note-at mono">{fmtDate(n.created_at)}</div>
                         <div className="pt-cu-note-text">{n.content}</div>
                       </li>
-                    ))
-                  ) : (
-                    <li style={{ padding: '12px 14px', color: 'var(--pt-fg-4)', fontSize: 12 }}>
-                      No notes yet
-                    </li>
-                  )}
-                </ul>
-              </div>
+                    )) : (
+                      <li style={{ padding: '12px 14px', color: 'var(--pt-fg-4)', fontSize: 12 }}>No notes yet</li>
+                    )}
+                  </ul>
+                </div>
+              </section>
 
             </div>
 
+            {/* ── Right column ── */}
             <div className="pt-cu-col">
 
-              {/* Channels */}
-              <div className="pt-card">
-                <div className="pt-card-hd"><h3>Channels</h3></div>
-                <div className="pt-card-body" style={{ padding: '4px 14px 12px' }}>
-                  {customer.customer_channels?.map((ch) => (
-                    <div key={ch.channel_type} style={{ display: 'flex', gap: 8, padding: '4px 0', fontSize: 12 }}>
-                      <span style={{ color: 'var(--pt-fg-4)', width: 80 }}>{channelLabel(ch.channel_type)}</span>
-                      <span className="mono">{ch.display_handle}</span>
-                      {ch.is_primary && <span className="pt-tag pt-tag-soft">primary</span>}
-                    </div>
-                  ))}
-                  {!customer.customer_channels?.length && (
-                    <span style={{ color: 'var(--pt-fg-4)', fontSize: 12 }}>No channels</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Order history — stubbed until orders are built */}
-              <div className="pt-card">
-                <div className="pt-card-hd">
-                  <h3>Orders</h3>
-                  <p>Coming in Phase 3</p>
-                </div>
-                <div className="pt-card-body" style={{ padding: '8px 14px 14px' }}>
-                  <div style={{ color: 'var(--pt-fg-4)', fontSize: 12 }}>
-                    LTV ${customer.ltv.toLocaleString()} · order history available after Phase 3
+              {/* Trust score */}
+              <section className="pt-card">
+                <header className="pt-card-hd">
+                  <div><h3>Trust score</h3><p>Weighted factors</p></div>
+                  <div className={`pt-trust pt-trust-${trustCls}`}>
+                    <div className="pt-trust-num">{customer.trust_score}</div>
+                    <div className="pt-trust-lbl">TRUST</div>
                   </div>
+                </header>
+                <div className="pt-card-body" style={{ padding: 0 }}>
+                  <ul className="pt-cu-factors">
+                    {MOCK_TRUST_FACTORS.map((f, i) => {
+                      const pct = Math.min(1, f.v / Math.max(1, f.of || f.v || 1))
+                      return (
+                        <li key={i}>
+                          <div className="pt-cu-factor-row1">
+                            <span className="pt-cu-factor-lbl">{f.label}</span>
+                            <span className="pt-cu-factor-v mono">{f.v}{f.of ? `/${f.of}` : ''}</span>
+                            <span className="pt-cu-factor-w mono">×{f.w}</span>
+                          </div>
+                          <div className="pt-cu-factor-bar">
+                            <div className={`pt-cu-factor-fill${f.neg && f.v > 0 ? ' is-neg' : ''}`}
+                                 style={{ width: `${pct * 100}%` }} />
+                          </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
                 </div>
-              </div>
+              </section>
+
+              {/* Details */}
+              <section className="pt-card">
+                <header className="pt-card-hd"><div><h3>Details</h3></div></header>
+                <div className="pt-card-body" style={{ padding: 0 }}>
+                  <dl className="pt-cu-dl">
+                    <dt>Tags</dt>
+                    <dd className="pt-cu-tags">
+                      {tags.length > 0
+                        ? tags.map(tg => <span key={tg} className="pt-tag pt-tag-soft">{tg}</span>)
+                        : <span style={{ color: 'var(--pt-fg-4)', fontSize: 12 }}>None</span>}
+                      <button className="pt-cu-add-tag">+</button>
+                    </dd>
+                    <dt>Address</dt>
+                    <dd>K. — REDACTED, IL 60•••</dd>
+                    <dt>Pay methods</dt>
+                    <dd>
+                      <ul className="pt-cu-pay-list">
+                        {MOCK_PAY_METHODS.map(p => <li key={p} className="mono">{p}</li>)}
+                      </ul>
+                    </dd>
+                    <dt>Joined</dt>
+                    <dd>{joined}</dd>
+                  </dl>
+                </div>
+              </section>
+
+              {/* Activity */}
+              <section className="pt-card">
+                <header className="pt-card-hd"><div><h3>Activity</h3><p>Recent events</p></div></header>
+                <div className="pt-card-body" style={{ padding: 0 }}>
+                  <ul className="pt-cu-act">
+                    {MOCK_ACTIVITY.map((a, i) => (
+                      <li key={i}>
+                        <i className={`pt-cu-act-dot${a.dot ? ` pt-bul-${a.dot}` : ''}`} />
+                        <div dangerouslySetInnerHTML={{ __html: a.text.replace(/^(\w[^·]+)/, '<b>$1</b>') }} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
 
             </div>
           </div>
