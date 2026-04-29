@@ -80,9 +80,9 @@ export default async function ChannelsPage() {
                   <details style={{ width: '100%' }}>
                     <summary className="pt-btn pt-btn-ghost" style={{ cursor: 'pointer', fontSize: 12 }}>Connect</summary>
                     <form action={connectWhatsAppNumber} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
-                      <input name="phoneNumber" placeholder="+1 555 000 0000" required style={inputStyle} />
+                      <input name="phoneNumber" placeholder="+15550001234" required style={inputStyle} />
                       <p style={{ fontSize: 11, color: 'var(--pt-fg-4)', margin: 0 }}>
-                        Your WhatsApp Business number in international format. Twilio will route messages to this number.
+                        E.164 format: +[country code][number], e.g. +15550001234. Spaces and dashes are stripped automatically.
                       </p>
                       <button type="submit" className="pt-btn pt-btn-primary" style={{ alignSelf: 'flex-start', fontSize: 12 }}>Connect</button>
                     </form>

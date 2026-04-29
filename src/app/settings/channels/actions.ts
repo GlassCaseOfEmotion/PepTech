@@ -38,7 +38,9 @@ export async function saveTelegramCredentials(formData: FormData) {
 export async function connectWhatsAppNumber(formData: FormData) {
   const raw = (formData.get('phoneNumber') as string)?.trim()
   if (!raw) return { error: 'Phone number is required' }
-  const phoneNumber = raw.startsWith('+') ? raw : `+${raw}`
+  const digits = raw.replace(/\D/g, '')
+  if (!digits) return { error: 'Phone number is required' }
+  const phoneNumber = `+${digits}`
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
