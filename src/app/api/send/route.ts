@@ -42,8 +42,7 @@ export async function POST(request: Request) {
   const text = body.content
 
   if (conv.channel_type === 'whatsapp') {
-    const creds = channel.credentials as { api_key: string }
-    await sendWhatsAppMessage(creds.api_key, to, text)
+    await sendWhatsAppMessage(to, text)
   } else if (conv.channel_type === 'telegram') {
     const creds = channel.credentials as { bot_token: string }
     await sendTelegramMessage(creds.bot_token, to, text)
