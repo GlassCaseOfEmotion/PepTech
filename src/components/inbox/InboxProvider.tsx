@@ -180,7 +180,9 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
           })
         }
       )
-      .subscribe()
+      .subscribe((status, err) => {
+        console.log('[RT] messages subscription:', status, err ?? '')
+      })
 
     return () => { supabase.removeChannel(channel) }
   }, [activeId, supabase])
@@ -231,7 +233,9 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
           }
         }
       )
-      .subscribe()
+      .subscribe((status, err) => {
+        console.log('[RT] conversations subscription:', status, err ?? '')
+      })
 
     return () => { supabase.removeChannel(channel) }
   }, [supabase])
