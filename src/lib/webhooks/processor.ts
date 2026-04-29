@@ -90,30 +90,27 @@ export async function processInboundMessage(
     currentStatus = 'new'
   }
 
-  // 3. Insert message — idempotent via external_id unique index
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: message, error: msgErr } = await (supabase as any)
+  // 3. Insert message — idempotent: catch duplicate external_id (23505) and skip
+  const { data: message, error: msgErr } = await supabase
     .from('messages')
-    .upsert(
-      {
-        tenant_id: tenantId,
-        conversation_id: conversationId,
-        direction: 'inbound',
-        content,
-        sent_at: sentAt,
-        status: 'delivered',
-        external_id: externalId,
-        metadata: metadata ?? null,
-      },
-      { onConflict: 'tenant_id,external_id', ignoreDuplicates: true },
-    )
+    .insert({
+      tenant_id: tenantId,
+      conversation_id: conversationId,
+      direction: 'inbound',
+      content,
+      sent_at: sentAt,
+      status: 'delivered',
+      external_id: externalId,
+      metadata: (metadata ?? null) as never,
+    })
     .select('id')
     .single()
 
-  if (msgErr) throw new Error(`Failed to insert message: ${msgErr.message}`)
-
-  // Duplicate message (external_id already exists) — skip side effects
-  if (!message) return { conversationId, messageId: '' }
+  if (msgErr) {
+    // 23505 = unique_violation: message already processed, skip side effects
+    if (msgErr.code === '23505') return { conversationId, messageId: '' }
+    throw new Error(`Failed to insert message: ${msgErr.message}`)
+  }
 
   // 4. Atomically increment unread count
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
