@@ -35,11 +35,10 @@ export async function saveTelegramCredentials(formData: FormData) {
   return { success: true }
 }
 
-export async function saveWhatsAppCredentials(formData: FormData) {
-  const apiKey = (formData.get('apiKey') as string)?.trim()
-  const phoneNumberId = (formData.get('phoneNumberId') as string)?.trim()
-  const webhookSecret = (formData.get('webhookSecret') as string)?.trim()
-  if (!apiKey || !phoneNumberId) return { error: 'API key and phone number ID are required' }
+export async function connectWhatsAppNumber(formData: FormData) {
+  const raw = (formData.get('phoneNumber') as string)?.trim()
+  if (!raw) return { error: 'Phone number is required' }
+  const phoneNumber = raw.startsWith('+') ? raw : `+${raw}`
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -51,9 +50,8 @@ export async function saveWhatsAppCredentials(formData: FormData) {
   await supabase.from('tenant_channels').upsert({
     tenant_id: userRow.tenant_id,
     channel_type: 'whatsapp',
-    identifier: phoneNumberId,
-    credentials: { api_key: apiKey, phone_number_id: phoneNumberId },
-    webhook_secret: webhookSecret || null,
+    identifier: phoneNumber,
+    credentials: { phone_number: phoneNumber },
     is_active: true,
   }, { onConflict: 'tenant_id,channel_type' })
 

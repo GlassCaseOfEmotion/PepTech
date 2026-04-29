@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { saveTelegramCredentials, saveWhatsAppCredentials, disconnectChannel } from './actions'
+import { saveTelegramCredentials, connectWhatsAppNumber, disconnectChannel } from './actions'
 
 const CHANNEL_META: Record<string, { label: string; color: string; initial: string }> = {
   whatsapp: { label: 'WhatsApp', color: 'oklch(0.62 0.13 150)', initial: 'W' },
@@ -79,11 +79,12 @@ export default async function ChannelsPage() {
                 ) : (
                   <details style={{ width: '100%' }}>
                     <summary className="pt-btn pt-btn-ghost" style={{ cursor: 'pointer', fontSize: 12 }}>Connect</summary>
-                    <form action={saveWhatsAppCredentials} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
-                      <input name="apiKey" placeholder="360dialog API key" required style={inputStyle} />
-                      <input name="phoneNumberId" placeholder="Phone number ID" required style={inputStyle} />
-                      <input name="webhookSecret" placeholder="Webhook secret (optional)" style={inputStyle} />
-                      <button type="submit" className="pt-btn pt-btn-primary" style={{ alignSelf: 'flex-start', fontSize: 12 }}>Save</button>
+                    <form action={connectWhatsAppNumber} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+                      <input name="phoneNumber" placeholder="+1 555 000 0000" required style={inputStyle} />
+                      <p style={{ fontSize: 11, color: 'var(--pt-fg-4)', margin: 0 }}>
+                        Your WhatsApp Business number in international format. Twilio will route messages to this number.
+                      </p>
+                      <button type="submit" className="pt-btn pt-btn-primary" style={{ alignSelf: 'flex-start', fontSize: 12 }}>Connect</button>
                     </form>
                   </details>
                 )}
