@@ -305,8 +305,18 @@ function ConversationPane({ thread, messages, onSend, isSending }: {
 // ─── Conversation right rail ─────────────────────────────────────────────────
 
 function ConversationRail({ thread }: { thread: InboxThread }) {
-  const { notes } = useInbox()
+  const { notes, addNote } = useInbox()
+  const [addingNote, setAddingNote] = useState(false)
+  const [noteText, setNoteText] = useState('')
   const trustCls = thread.trust >= 85 ? 'hi' : thread.trust >= 65 ? 'md' : 'lo'
+
+  const submitNote = async () => {
+    if (!noteText.trim()) return
+    await addNote(noteText)
+    setNoteText('')
+    setAddingNote(false)
+  }
+
   return (
     <aside className="pt-ix-rail">
       {/* Customer card */}
@@ -333,7 +343,28 @@ function ConversationRail({ thread }: { thread: InboxThread }) {
 
       {/* Notes */}
       <div className="pt-right-section">
-        <div className="pt-right-hd"><span>Notes</span><button className="pt-right-add"><Icons.plus size={11} /></button></div>
+        <div className="pt-right-hd">
+          <span>Notes</span>
+          <button className="pt-right-add" onClick={() => { setAddingNote(v => !v); setNoteText('') }}>
+            <Icons.plus size={11} />
+          </button>
+        </div>
+        {addingNote && (
+          <div className="pt-note-form">
+            <textarea
+              className="pt-note-input"
+              placeholder="Add an internal note…"
+              value={noteText}
+              onChange={e => setNoteText(e.target.value)}
+              rows={3}
+              autoFocus
+            />
+            <div className="pt-note-actions">
+              <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11 }} onClick={() => { setAddingNote(false); setNoteText('') }}>Cancel</button>
+              <button className="pt-btn pt-btn-primary" style={{ fontSize: 11 }} onClick={submitNote} disabled={!noteText.trim()}>Save</button>
+            </div>
+          </div>
+        )}
         {notes.map(note => (
           <div key={note.id} className="pt-rail-note">
             <div className="pt-rail-note-meta">{fmtRelative(note.created_at)}</div>

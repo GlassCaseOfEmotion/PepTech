@@ -19,6 +19,7 @@ type InboxCtx = {
   quickReplies: DbQuickReply[]
   isSending: boolean
   sendMessage: (text: string) => Promise<void>
+  addNote: (content: string) => Promise<void>
   snooze: () => Promise<void>
   markDone: () => Promise<void>
 }
@@ -138,6 +139,19 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
     if (remaining.length > 0) setActiveId(remaining[0].id)
   }, [activeId, threads, supabase, setActiveId])
 
+  // ── Add a note to the active conversation's customer ─────────────────────
+  const addNote = useCallback(async (content: string) => {
+    if (!content.trim() || !activeId || !tenantId) return
+    const thread = threads.find(t => t.id === activeId)
+    if (!thread?.customerId) return
+    const { data: note } = await supabase
+      .from('notes')
+      .insert({ tenant_id: tenantId, customer_id: thread.customerId, content: content.trim() })
+      .select('id, content, created_at')
+      .single()
+    if (note) setNotes(prev => [note as DbNote, ...prev])
+  }, [activeId, threads, tenantId, supabase])
+
   // ── Mark active conversation done ──────────────────────────────────────────
   const markDone = useCallback(async () => {
     if (!activeId) return
@@ -247,7 +261,7 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
   return (
     <InboxContext.Provider value={{
       threads, activeId, setActiveId, filter, setFilter,
-      messages, notes, quickReplies, isSending, sendMessage, snooze, markDone,
+      messages, notes, quickReplies, isSending, sendMessage, addNote, snooze, markDone,
     }}>
       {children}
     </InboxContext.Provider>
