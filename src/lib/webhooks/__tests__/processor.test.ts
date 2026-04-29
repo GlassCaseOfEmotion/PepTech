@@ -119,7 +119,7 @@ describe('processInboundMessage', () => {
       const fromSequence = [
         { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { customer_id: CUSTOMER_ID }, error: null }) },
         { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { id: CONV_ID, status: 'resolved', unread_count: 0 }, error: null }) },
-        { upsert: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { id: MSG_ID }, error: null }) },
+        { insert: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { id: MSG_ID }, error: null }) },
         updateChain,
       ]
 
