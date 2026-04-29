@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
 import { InboxProvider, useInbox } from './InboxProvider'
+import { TemplatePicker } from './TemplatePicker'
 import type { DbConversation, DbQuickReply, DbTemplate, InboxThread, InboxMessage } from '@/types/inbox'
 import { initials } from '@/types/inbox'
 
@@ -210,8 +211,9 @@ function Bubble({ m }: { m: InboxMessage }) {
 // ─── Composer ────────────────────────────────────────────────────────────────
 
 function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: (text: string) => void; isSending: boolean }) {
-  const { quickReplies } = useInbox()
+  const { quickReplies, templates } = useInbox()
   const [draft, setDraft] = useState('')
+  const [showTemplates, setShowTemplates] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   const send = useCallback(() => {
@@ -232,6 +234,13 @@ function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: 
 
   return (
     <div className="pt-ix-composer">
+      {showTemplates && (
+        <TemplatePicker
+          templates={templates}
+          onSelect={content => { setDraft(d => d ? `${d}\n\n${content}` : content); setTimeout(() => taRef.current?.focus(), 0) }}
+          onClose={() => setShowTemplates(false)}
+        />
+      )}
       <div className="pt-quicks pt-quicks-bar">
         <span className="pt-quicks-lbl">Quick</span>
         {quickReplies.slice(0, 5).map(q => (
@@ -258,7 +267,11 @@ function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: 
             <button className="pt-iconbtn" title="Drop COA"><Icons.flask size={14} /></button>
             <button className="pt-iconbtn" title="Send wallet"><Icons.vault size={14} /></button>
             <span className="pt-composer-sep" />
-            <button className="pt-tag pt-tag-soft" title="Templates">{'{{ template }}'}</button>
+            <button
+              className={`pt-tag pt-tag-soft ${showTemplates ? 'is-on' : ''}`}
+              title="Templates"
+              onClick={() => setShowTemplates(v => !v)}
+            >{'{{ template }}'}</button>
           </div>
           <div className="pt-composer-r">
             <span className="pt-composer-hint">⌘↵ to send</span>
