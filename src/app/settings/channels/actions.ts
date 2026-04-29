@@ -40,6 +40,7 @@ export async function connectWhatsAppNumber(formData: FormData) {
   if (!raw) return { error: 'Phone number is required' }
   const digits = raw.replace(/\D/g, '')
   if (!digits) return { error: 'Phone number is required' }
+  if (digits.length < 7) return { error: 'Phone number is too short' }
   const phoneNumber = `+${digits}`
 
   const supabase = await createClient()

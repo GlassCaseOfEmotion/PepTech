@@ -34,6 +34,8 @@ export async function POST(request: Request) {
     .eq('channel_type', conv.channel_type)
     .single()
 
+  // For WhatsApp, credentials holds {phone_number} and Twilio creds come from env vars.
+  // The guard here validates channel existence and activation, not credential use.
   if (!channel?.is_active || !channel.credentials) {
     return NextResponse.json({ error: 'Channel not connected' }, { status: 422 })
   }
