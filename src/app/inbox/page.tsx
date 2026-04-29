@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { redirect } from 'next/navigation'
 import { createClient, getServerUser } from '@/lib/supabase/server'
 import { InboxView } from '@/components/inbox/InboxView'
-import type { DbConversation, DbQuickReply } from '@/types/inbox'
+import type { DbConversation, DbQuickReply, DbTemplate } from '@/types/inbox'
 
 export default async function InboxPage() {
   const user = await getServerUser()
@@ -11,7 +11,7 @@ export default async function InboxPage() {
 
   const supabase = await createClient()
 
-  const [{ data: conversations }, { data: quickReplies }] = await Promise.all([
+  const [{ data: conversations }, { data: quickReplies }, { data: templates }] = await Promise.all([
     supabase
       .from('conversations')
       .select(`
@@ -29,12 +29,17 @@ export default async function InboxPage() {
       .from('quick_replies')
       .select('id, label, content, sort_order')
       .order('sort_order'),
+    supabase
+      .from('templates')
+      .select('id, tenant_id, title, content, sort_order')
+      .order('sort_order'),
   ])
 
   return (
     <InboxView
       initialConversations={(conversations ?? []) as DbConversation[]}
       quickReplies={(quickReplies ?? []) as DbQuickReply[]}
+      templates={(templates ?? []) as DbTemplate[]}
     />
   )
 }

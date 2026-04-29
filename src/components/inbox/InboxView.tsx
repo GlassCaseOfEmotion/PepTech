@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
 import { InboxProvider, useInbox } from './InboxProvider'
-import type { DbConversation, DbQuickReply, InboxThread, InboxMessage } from '@/types/inbox'
+import type { DbConversation, DbQuickReply, DbTemplate, InboxThread, InboxMessage } from '@/types/inbox'
 import { initials } from '@/types/inbox'
 
 function fmtMins(m: number) {
@@ -484,11 +484,12 @@ function InboxLayout() {
 interface InboxViewProps {
   initialConversations: DbConversation[]
   quickReplies: DbQuickReply[]
+  templates: DbTemplate[]
 }
 
-export function InboxView({ initialConversations, quickReplies }: InboxViewProps) {
+export function InboxView({ initialConversations, quickReplies, templates }: InboxViewProps) {
   return (
-    <InboxProvider initialConversations={initialConversations} quickReplies={quickReplies}>
+    <InboxProvider initialConversations={initialConversations} quickReplies={quickReplies} templates={templates}>
       <InboxLayout />
     </InboxProvider>
   )

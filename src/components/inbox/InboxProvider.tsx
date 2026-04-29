@@ -5,7 +5,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useMemo, t
 import { createClient } from '@/lib/supabase/client'
 import {
   dbConversationToThread, dbMessageToInboxMessage,
-  type DbConversation, type DbMessage, type DbQuickReply, type InboxThread, type InboxMessage, type DbNote
+  type DbConversation, type DbMessage, type DbQuickReply, type InboxThread, type InboxMessage, type DbNote, type DbTemplate
 } from '@/types/inbox'
 
 const CONV_SELECT = `
@@ -27,6 +27,7 @@ type InboxCtx = {
   messages: InboxMessage[]
   notes: DbNote[]
   quickReplies: DbQuickReply[]
+  templates: DbTemplate[]
   isSending: boolean
   sendMessage: (text: string) => Promise<void>
   addNote: (content: string) => Promise<void>
@@ -46,10 +47,11 @@ export function useInbox() {
 interface Props {
   initialConversations: DbConversation[]
   quickReplies: DbQuickReply[]
+  templates: DbTemplate[]
   children: ReactNode
 }
 
-export function InboxProvider({ initialConversations, quickReplies, children }: Props) {
+export function InboxProvider({ initialConversations, quickReplies, templates, children }: Props) {
   const supabase = useMemo(() => createClient(), [])
   const [threads, setThreads] = useState<InboxThread[]>(
     initialConversations.map(dbConversationToThread)
@@ -300,7 +302,7 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
   return (
     <InboxContext.Provider value={{
       threads, activeId, setActiveId, filter, setFilter,
-      messages, notes, quickReplies, isSending, sendMessage, addNote, snooze, markDone, reopen,
+      messages, notes, quickReplies, templates, isSending, sendMessage, addNote, snooze, markDone, reopen,
     }}>
       {children}
     </InboxContext.Provider>

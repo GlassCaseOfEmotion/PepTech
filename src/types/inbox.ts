@@ -97,6 +97,14 @@ export type DbNote = {
   created_at: string
 }
 
+export type DbTemplate = {
+  id: string
+  tenant_id: string | null
+  title: string
+  content: string
+  sort_order: number
+}
+
 // Display shape used by InboxView components
 export type InboxThread = {
   id: string              // conversation id
