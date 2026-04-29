@@ -15,12 +15,13 @@ export async function createTemplate(formData: FormData) {
   const { data: userRow } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
   if (!userRow) return { error: 'User not found' }
 
-  await supabase.from('templates').insert({
+  const { error } = await supabase.from('templates').insert({
     tenant_id: userRow.tenant_id,
     title,
     content,
     sort_order: Date.now(),
   })
+  if (error) return { error: error.message }
   revalidatePath('/settings/templates')
   return { success: true }
 }
@@ -40,16 +41,18 @@ export async function updateTemplate(formData: FormData) {
   if (!userRow) return { error: 'User not found' }
 
   if (isPlatform) {
-    await supabase.from('templates').insert({
+    const { error } = await supabase.from('templates').insert({
       tenant_id: userRow.tenant_id,
       title,
       content,
       sort_order: Date.now(),
     })
+    if (error) return { error: error.message }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any).rpc('hide_platform_template', { template_id: id })
   } else {
-    await supabase.from('templates').update({ title, content }).eq('id', id)
+    const { error } = await supabase.from('templates').update({ title, content }).eq('id', id)
+    if (error) return { error: error.message }
   }
   revalidatePath('/settings/templates')
   return { success: true }
@@ -60,7 +63,11 @@ export async function deleteTemplate(formData: FormData) {
   if (!id) return { error: 'Missing id' }
 
   const supabase = await createClient()
-  await supabase.from('templates').delete().eq('id', id)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { error } = await supabase.from('templates').delete().eq('id', id)
+  if (error) return { error: error.message }
   revalidatePath('/settings/templates')
   return { success: true }
 }
