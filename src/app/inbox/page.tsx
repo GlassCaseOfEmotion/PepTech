@@ -1,5 +1,8 @@
+export const dynamic = 'force-dynamic'
+
 import { redirect } from 'next/navigation'
 import { createClient, getServerUser } from '@/lib/supabase/server'
+import { Shell } from '@/components/shell/Shell'
 import { InboxView } from '@/components/inbox/InboxView'
 import type { DbConversation, DbQuickReply } from '@/types/inbox'
 
@@ -30,9 +33,11 @@ export default async function InboxPage() {
   ])
 
   return (
-    <InboxView
-      initialConversations={(conversations ?? []) as DbConversation[]}
-      quickReplies={(quickReplies ?? []) as DbQuickReply[]}
-    />
+    <Shell section="Inbox" isInbox>
+      <InboxView
+        initialConversations={(conversations ?? []) as DbConversation[]}
+        quickReplies={(quickReplies ?? []) as DbQuickReply[]}
+      />
+    </Shell>
   )
 }
