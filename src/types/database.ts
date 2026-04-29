@@ -49,6 +49,7 @@ export type Database = {
           id: string
           last_message_at: string | null
           last_message_snippet: string | null
+          snoozed_until: string | null
           status: string
           tenant_id: string
           unread_count: number
@@ -63,6 +64,7 @@ export type Database = {
           id?: string
           last_message_at?: string | null
           last_message_snippet?: string | null
+          snoozed_until?: string | null
           status?: string
           tenant_id: string
           unread_count?: number
@@ -77,6 +79,7 @@ export type Database = {
           id?: string
           last_message_at?: string | null
           last_message_snippet?: string | null
+          snoozed_until?: string | null
           status?: string
           tenant_id?: string
           unread_count?: number
@@ -372,6 +375,44 @@ export type Database = {
           },
         ]
       }
+      templates: {
+        Row: {
+          content: string
+          created_at: string
+          hidden_by_tenants: string[]
+          id: string
+          sort_order: number
+          tenant_id: string | null
+          title: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          hidden_by_tenants?: string[]
+          id?: string
+          sort_order?: number
+          tenant_id?: string | null
+          title: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          hidden_by_tenants?: string[]
+          id?: string
+          sort_order?: number
+          tenant_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_channels: {
         Row: {
           channel_type: string
@@ -485,6 +526,16 @@ export type Database = {
     Functions: {
       auth_tenant_id: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      get_tenant_id_for_user: { Args: { user_id: string }; Returns: string }
+      hide_platform_template: {
+        Args: { template_id: string }
+        Returns: undefined
+      }
+      increment_unread_count: {
+        Args: { conv_id: string; tenant: string }
+        Returns: undefined
+      }
+      unsnooze_expired: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

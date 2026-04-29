@@ -122,7 +122,7 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
           </button>
         ))}
       </div>
-      <div className="pt-ix-filters pt-ix-chan-filters">
+      <div className="pt-ix-filters">
         {(['all', 'wa', 'tg', 'em'] as const).map(ch => (
           <button
             key={ch}
