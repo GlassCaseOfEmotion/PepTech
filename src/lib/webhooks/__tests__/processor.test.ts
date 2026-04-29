@@ -62,8 +62,8 @@ describe('processInboundMessage', () => {
         { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: null, error: { code: 'PGRST116' } }) },
         // 5. conversations insert → returns conversation
         { insert: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { id: CONV_ID, status: 'new', unread_count: 0 }, error: null }) },
-        // 6. messages upsert → returns message
-        { upsert: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { id: MSG_ID }, error: null }) },
+        // 6. messages insert → returns message
+        { insert: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { id: MSG_ID }, error: null }) },
         // 7. conversations update (snippet)
         makeUpdateChain(),
       ]
@@ -92,8 +92,8 @@ describe('processInboundMessage', () => {
         { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { customer_id: CUSTOMER_ID }, error: null }) },
         // 2. conversations lookup → found
         { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { id: CONV_ID, status: 'in_progress', unread_count: 1 }, error: null }) },
-        // 3. messages upsert
-        { upsert: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { id: MSG_ID }, error: null }) },
+        // 3. messages insert
+        { insert: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { id: MSG_ID }, error: null }) },
         // 4. conversations update
         makeUpdateChain(),
       ]
