@@ -288,7 +288,19 @@ function ConversationPane({ thread, messages, onSend, isSending }: {
 }) {
   const { snooze, markDone } = useInbox()
   const [showSnooze, setShowSnooze] = useState(false)
+  const snoozeRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!showSnooze) return
+    const handler = (e: MouseEvent) => {
+      if (snoozeRef.current && !snoozeRef.current.contains(e.target as Node)) {
+        setShowSnooze(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showSnooze])
   const ChIcon = CH_ICONS[thread.channel]
 
   useEffect(() => {
@@ -315,7 +327,7 @@ function ConversationPane({ thread, messages, onSend, isSending }: {
           </div>
         </div>
         <div className="pt-ix-conv-actions">
-          <div style={{ position: 'relative' }}>
+          <div ref={snoozeRef} style={{ position: 'relative' }}>
             <button className="pt-btn pt-btn-ghost" onClick={() => setShowSnooze(v => !v)}>
               <Icons.clock size={12} /> Snooze
             </button>
