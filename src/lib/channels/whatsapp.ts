@@ -23,7 +23,7 @@ export function extractTwilioMessage(params: Record<string, string>): {
   content: string
   sentAt: string
 } | null {
-  const { MessageSid, From, Body, ProfileName } = params
+  const { MessageSid, From, Body, ProfileName, DateSent } = params
   if (!MessageSid || !From || !Body) return null
   const from = From.replace(/^whatsapp:/, '')
   return {
@@ -31,11 +31,12 @@ export function extractTwilioMessage(params: Record<string, string>): {
     from,
     displayName: ProfileName ?? from,
     content: Body,
-    sentAt: new Date().toISOString(),
+    sentAt: DateSent ? new Date(DateSent).toISOString() : new Date().toISOString(),
   }
 }
 
 export async function sendWhatsAppMessage(to: string, text: string): Promise<void> {
+  if (!to?.trim() || !text?.trim()) throw new Error('sendWhatsAppMessage: to and text are required')
   const accountSid = process.env.TWILIO_ACCOUNT_SID!
   const authToken = process.env.TWILIO_AUTH_TOKEN!
   const from = process.env.TWILIO_WHATSAPP_NUMBER!
