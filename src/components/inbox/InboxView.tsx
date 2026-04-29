@@ -66,6 +66,7 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
   filter: string; setFilter: (f: string) => void
 }) {
   const [search, setSearch] = useState('')
+  const [chanFilter, setChanFilter] = useState<'all' | 'wa' | 'tg' | 'em'>('all')
 
   const counts = {
     all: threads.filter(t => t.status !== 'resolved').length,
@@ -84,11 +85,9 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
   ]
 
   const visible = threads.filter(t => {
-    if (filter === 'all') {
-      if (t.status === 'resolved') return false
-    } else if (t.status !== filter) {
-      return false
-    }
+    if (filter === 'all') { if (t.status === 'resolved') return false }
+    else if (t.status !== filter) return false
+    if (chanFilter !== 'all' && t.channel !== chanFilter) return false
     if (search) {
       const q = search.toLowerCase()
       return t.name.toLowerCase().includes(q) || t.handle.toLowerCase().includes(q)
@@ -119,6 +118,17 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
         {filters.map(f => (
           <button key={f.id} className={`pt-pill ${filter === f.id ? 'is-on' : ''}`} onClick={() => setFilter(f.id)}>
             {f.label}<span className="pt-pill-num">{f.count}</span>
+          </button>
+        ))}
+      </div>
+      <div className="pt-ix-filters pt-ix-chan-filters">
+        {(['all', 'wa', 'tg', 'em'] as const).map(ch => (
+          <button
+            key={ch}
+            className={`pt-pill ${chanFilter === ch ? 'is-on' : ''}`}
+            onClick={() => setChanFilter(ch)}
+          >
+            {ch === 'all' ? 'All channels' : ch === 'wa' ? 'WhatsApp' : ch === 'tg' ? 'Telegram' : 'Email'}
           </button>
         ))}
       </div>
@@ -321,8 +331,6 @@ function ConversationPane({ thread, messages, onSend, isSending }: {
               <span className="mono">{thread.handle}</span>
               <span className="pt-dot pt-dot-cool" />
               <span>{CH_NAMES[thread.channel]}</span>
-              <span className="pt-dot pt-dot-cool" />
-              <span><i className="pt-dot pt-dot-ok" /> e2e encrypted</span>
             </div>
           </div>
         </div>
