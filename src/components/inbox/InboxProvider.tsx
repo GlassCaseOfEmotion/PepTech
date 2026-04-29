@@ -101,7 +101,6 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
   const sendMessage = useCallback(async (text: string) => {
     if (!activeId || !text.trim()) return
     const tempId = `tmp-${Date.now()}`
-    const now = new Date().toISOString()
     const optimistic: InboxMessage = {
       id: tempId, from: 'me', at: 'Today · just now',
       text, kind: 'text', optimistic: true,
@@ -109,42 +108,26 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
     setMessages(prev => [...prev, optimistic])
     setIsSending(true)
     try {
-      const { data: msg } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: activeId,
-          direction: 'outbound',
-          content: text,
-          status: 'sent',
-          sent_at: now,
-          ...(tenantId ? { tenant_id: tenantId } : {}),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any)
-        .select('id, direction, content, sent_at, status, metadata')
-        .single()
-
-      if (msg) {
-        setMessages(prev => prev.map(m =>
-          m.id === tempId ? dbMessageToInboxMessage(msg as unknown as DbMessage) : m
-        ))
-        const snippet = text.slice(0, 120)
-        setThreads(prev => prev.map(t =>
-          t.id === activeId ? { ...t, snippet, minsAgo: 0 } : t
-        ))
-        await supabase.from('conversations').update({
-          status: 'in_progress',
-        }).eq('id', activeId)
-      } else {
-        // Insert succeeded but returned no row — remove optimistic
-        setMessages(prev => prev.filter(m => m.id !== tempId))
-      }
+      const res = await fetch('/api/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: activeId, content: text }),
+      })
+      if (!res.ok) throw new Error(`Send failed: ${res.status}`)
+      const { messageId } = await res.json() as { messageId: string }
+      // Replace temp ID with real one so real-time subscription deduplicates correctly
+      setMessages(prev => prev.map(m =>
+        m.id === tempId ? { ...m, id: messageId, optimistic: false } : m
+      ))
+      setThreads(prev => prev.map(t =>
+        t.id === activeId ? { ...t, snippet: text.slice(0, 120), minsAgo: 0 } : t
+      ))
     } catch {
-      // Remove ghost optimistic message on insert failure
       setMessages(prev => prev.filter(m => m.id !== tempId))
     } finally {
       setIsSending(false)
     }
-  }, [activeId, supabase, tenantId])
+  }, [activeId])
 
   // ── Snooze active conversation ─────────────────────────────────────────────
   const snooze = useCallback(async () => {
