@@ -286,7 +286,7 @@ function ConversationPane({ thread, messages, onSend, isSending }: {
   onSend: (text: string) => void
   isSending: boolean
 }) {
-  const { snooze, markDone } = useInbox()
+  const { snooze, markDone, reopen } = useInbox()
   const [showSnooze, setShowSnooze] = useState(false)
   const snoozeRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -341,7 +341,10 @@ function ConversationPane({ thread, messages, onSend, isSending }: {
               </div>
             )}
           </div>
-          <button className="pt-btn pt-btn-ghost" onClick={markDone}><Icons.check size={12} /> Mark done</button>
+          {thread.status === 'resolved'
+            ? <button className="pt-btn pt-btn-ghost" onClick={reopen}><Icons.rotate size={12} /> Reopen</button>
+            : <button className="pt-btn pt-btn-ghost" onClick={markDone}><Icons.check size={12} /> Mark done</button>
+          }
           <button className="pt-iconbtn"><Icons.more size={14} /></button>
         </div>
       </div>

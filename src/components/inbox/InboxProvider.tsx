@@ -32,6 +32,7 @@ type InboxCtx = {
   addNote: (content: string) => Promise<void>
   snooze: (until: Date) => Promise<void>
   markDone: () => Promise<void>
+  reopen: () => Promise<void>
 }
 
 const InboxContext = createContext<InboxCtx | null>(null)
@@ -217,6 +218,15 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
     if (remaining.length > 0) setActiveId(remaining[0].id)
   }, [activeId, threads, supabase, setActiveId])
 
+  // ── Reopen a resolved conversation ────────────────────────────────────────
+  const reopen = useCallback(async () => {
+    if (!activeId) return
+    await supabase.from('conversations').update({ status: 'needs_reply' }).eq('id', activeId)
+    setThreads(prev => prev.map(t =>
+      t.id === activeId ? { ...t, status: 'needs_reply' as const } : t
+    ))
+  }, [activeId, supabase])
+
   // ── Load initial messages on mount ─────────────────────────────────────────
   useEffect(() => {
     if (activeId) {
@@ -290,7 +300,7 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
   return (
     <InboxContext.Provider value={{
       threads, activeId, setActiveId, filter, setFilter,
-      messages, notes, quickReplies, isSending, sendMessage, addNote, snooze, markDone,
+      messages, notes, quickReplies, isSending, sendMessage, addNote, snooze, markDone, reopen,
     }}>
       {children}
     </InboxContext.Provider>
