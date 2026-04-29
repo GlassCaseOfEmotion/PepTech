@@ -11,7 +11,7 @@ export default async function CustomersPage() {
   const { data: customers } = await supabase
     .from('customers')
     .select('id, display_name, trust_score, ltv, customer_channels(channel_type, display_handle, is_primary), customer_tags(tag)')
-    .order('ltv', { ascending: false })
+    .order('created_at', { ascending: false })
 
   return (
     <Shell section="Customers">
