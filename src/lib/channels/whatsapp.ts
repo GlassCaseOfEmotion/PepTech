@@ -1,32 +1,14 @@
 import { createHmac, timingSafeEqual } from 'crypto'
 
-export interface WhatsAppMessage {
-  id: string
-  from: string
-  timestamp: string
-  text?: { body: string }
-  type: string
-}
-
-export interface WhatsAppContact {
-  profile: { name: string }
-  wa_id: string
-}
-
-export interface WhatsAppWebhookPayload {
-  object: string
-  entry: Array<{
-    changes: Array<{
-      value: {
-        messages?: WhatsAppMessage[]
-        contacts?: WhatsAppContact[]
-      }
-    }>
-  }>
-}
-
-export function verifyWhatsAppSignature(body: string, signature: string, secret: string): boolean {
-  const expected = 'sha256=' + createHmac('sha256', secret).update(body).digest('hex')
+export function verifyTwilioSignature(
+  authToken: string,
+  url: string,
+  params: Record<string, string>,
+  signature: string,
+): boolean {
+  const sortedKeys = Object.keys(params).sort()
+  const str = url + sortedKeys.map(k => k + params[k]).join('')
+  const expected = createHmac('sha1', authToken).update(str).digest('base64')
   try {
     return timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
   } catch {
@@ -34,39 +16,46 @@ export function verifyWhatsAppSignature(body: string, signature: string, secret:
   }
 }
 
-export function extractMessages(payload: WhatsAppWebhookPayload): Array<{
+export function extractTwilioMessage(params: Record<string, string>): {
   externalId: string
   from: string
   displayName: string
   content: string
   sentAt: string
-}> {
-  const results = []
-  for (const entry of payload.entry ?? []) {
-    for (const change of entry.changes ?? []) {
-      const messages = change.value?.messages ?? []
-      const contacts = change.value?.contacts ?? []
-      for (const msg of messages) {
-        if (msg.type !== 'text' || !msg.text?.body) continue
-        const contact = contacts.find((c) => c.wa_id === msg.from)
-        results.push({
-          externalId: msg.id,
-          from: msg.from,
-          displayName: contact?.profile?.name ?? `+${msg.from}`,
-          content: msg.text.body,
-          sentAt: new Date(parseInt(msg.timestamp) * 1000).toISOString(),
-        })
-      }
-    }
+} | null {
+  const { MessageSid, From, Body, ProfileName } = params
+  if (!MessageSid || !From || !Body) return null
+  const from = From.replace(/^whatsapp:/, '')
+  return {
+    externalId: MessageSid,
+    from,
+    displayName: ProfileName ?? from,
+    content: Body,
+    sentAt: new Date().toISOString(),
   }
-  return results
 }
 
-export async function sendWhatsAppMessage(apiKey: string, to: string, text: string): Promise<void> {
-  const res = await fetch('https://waba.360dialog.io/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'D360-API-KEY': apiKey },
-    body: JSON.stringify({ recipient_type: 'individual', to, type: 'text', text: { body: text } }),
+export async function sendWhatsAppMessage(to: string, text: string): Promise<void> {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID!
+  const authToken = process.env.TWILIO_AUTH_TOKEN!
+  const from = process.env.TWILIO_WHATSAPP_NUMBER!
+
+  const body = new URLSearchParams({
+    From: from.startsWith('whatsapp:') ? from : `whatsapp:${from}`,
+    To: to.startsWith('whatsapp:') ? to : `whatsapp:${to}`,
+    Body: text,
   })
-  if (!res.ok) throw new Error(`360dialog send failed: ${res.status} ${await res.text()}`)
+
+  const res = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
+      },
+      body: body.toString(),
+    },
+  )
+  if (!res.ok) throw new Error(`Twilio send failed: ${res.status} ${await res.text()}`)
 }
