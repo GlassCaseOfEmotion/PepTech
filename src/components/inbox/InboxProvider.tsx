@@ -174,8 +174,12 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
         (payload) => {
           const newMsg = dbMessageToInboxMessage(payload.new as unknown as DbMessage)
           setMessages(prev => {
-            // Avoid duplicating our own optimistic sends
             if (prev.some(m => m.id === newMsg.id)) return prev
+            // Real-time arrived before HTTP response — replace the optimistic placeholder
+            if (newMsg.from === 'me') {
+              const optIdx = prev.findIndex(m => m.optimistic && m.text === newMsg.text)
+              if (optIdx >= 0) return prev.map((m, i) => i === optIdx ? newMsg : m)
+            }
             return [...prev, newMsg]
           })
         }
