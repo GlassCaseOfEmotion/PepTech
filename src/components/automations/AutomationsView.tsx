@@ -29,10 +29,6 @@ const AUTOMATIONS_DATA: Automation[] = [
   { id: 'a8', name: 'Reagent test reminder', icon: 'flask', state: 'off', triggerLabel: 'Lot in stock 30d', actionLabel: 'Operator task', runs7d: 0, runs24h: 0, lastRun: '—', description: 'Reminds you to reagent-test any lot that\'s been on the shelf for 30+ days, before it ships.', flow: { trigger: { kind: 'shelf_age', label: 'Lot age ≥ 30 days', detail: 'From Catalog batches table' }, conditions: [], action: { kind: 'operator_task', label: 'Add task', detail: 'Goes into operator todo, not customer-facing' } }, recent: [] },
 ]
 
-const ICON_MAP: Record<string, React.FC<{ size?: number }>> = {
-  send: Icons.send, check: Icons.check, alert: Icons.alert, wave: Icons.wave,
-  shield: Icons.shield, rotate: Icons.rotate, sun: Icons.sun, flask: Icons.flask,
-}
 
 export function AutomationsView() {
   const [selectedId, setSelectedId] = useState('a1')
@@ -133,7 +129,7 @@ export function AutomationsView() {
                 <span className="pt-au-runs-count">{sel.recent.length} {sel.recent.length === 1 ? 'run' : 'runs'}</span>
               </div>
               {sel.recent.length === 0 ? (
-                <div className="pt-au-runs-empty">Hasn't fired yet — turn it on to start collecting runs.</div>
+                <div className="pt-au-runs-empty">Hasn&apos;t fired yet — turn it on to start collecting runs.</div>
               ) : (
                 <ul className="pt-au-runs-list">
                   {sel.recent.map((r, i) => (

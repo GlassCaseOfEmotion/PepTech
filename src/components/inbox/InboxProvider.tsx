@@ -5,7 +5,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useMemo, t
 import { createClient } from '@/lib/supabase/client'
 import {
   dbConversationToThread, dbMessageToInboxMessage,
-  type DbConversation, type DbQuickReply, type InboxThread, type InboxMessage, type DbNote
+  type DbConversation, type DbMessage, type DbQuickReply, type InboxThread, type InboxMessage, type DbNote
 } from '@/types/inbox'
 
 type InboxCtx = {
@@ -70,7 +70,7 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
       .eq('conversation_id', conversationId)
       .order('sent_at', { ascending: true })
       .limit(100)
-    setMessages((data ?? []).map(m => dbMessageToInboxMessage(m as any)))
+    setMessages((data ?? []).map(m => dbMessageToInboxMessage(m as unknown as DbMessage)))
   }, [supabase])
 
   // ── Fetch notes for a customer ─────────────────────────────────────────────
@@ -118,13 +118,14 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
           status: 'sent',
           sent_at: now,
           ...(tenantId ? { tenant_id: tenantId } : {}),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any)
         .select('id, direction, content, sent_at, status, metadata')
         .single()
 
       if (msg) {
         setMessages(prev => prev.map(m =>
-          m.id === tempId ? dbMessageToInboxMessage(msg as any) : m
+          m.id === tempId ? dbMessageToInboxMessage(msg as unknown as DbMessage) : m
         ))
         const snippet = text.slice(0, 120)
         setThreads(prev => prev.map(t =>
@@ -188,7 +189,7 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
           filter: `conversation_id=eq.${activeId}`,
         },
         (payload) => {
-          const newMsg = dbMessageToInboxMessage(payload.new as any)
+          const newMsg = dbMessageToInboxMessage(payload.new as unknown as DbMessage)
           setMessages(prev => {
             // Avoid duplicating our own optimistic sends
             if (prev.some(m => m.id === newMsg.id)) return prev
@@ -209,7 +210,7 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'conversations' },
         (payload) => {
-          const updated = payload.new as any
+          const updated = payload.new as unknown as DbConversation
           setThreads(prev => prev.map(t => {
             if (t.id !== updated.id) return t
             return {
@@ -243,7 +244,7 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
             .eq('id', payload.new.id)
             .single()
           if (data) {
-            setThreads(prev => [dbConversationToThread(data as any), ...prev])
+            setThreads(prev => [dbConversationToThread(data as unknown as DbConversation), ...prev])
           }
         }
       )
