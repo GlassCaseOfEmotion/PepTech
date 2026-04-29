@@ -11,7 +11,7 @@ const SECTIONS = [
   { id: 'trust',         label: 'Trust & risk',         icon: Icons.shield,  href: '/settings/trust',         built: false },
   { id: 'inventory',     label: 'Inventory defaults',   icon: Icons.box,     href: '/settings/inventory',     built: false },
   { id: 'notifications', label: 'Notifications',        icon: Icons.bell,    href: '/settings/notifications', built: false },
-  { id: 'templates',     label: 'Message templates',    icon: Icons.doc,     href: '/settings/templates',     built: false },
+  { id: 'templates',     label: 'Message templates',    icon: Icons.doc,     href: '/settings/templates',     built: true },
   { id: 'devices',       label: 'Devices & sessions',   icon: Icons.lock,    href: '/settings/devices',       built: false },
   { id: 'billing',       label: 'Plan & billing',       icon: Icons.card,    href: '/settings/billing',       built: false },
 ]
