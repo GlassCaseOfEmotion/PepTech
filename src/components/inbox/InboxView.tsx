@@ -68,21 +68,27 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
   const [search, setSearch] = useState('')
 
   const counts = {
-    all: threads.length,
+    all: threads.filter(t => t.status !== 'resolved').length,
     needs_reply: threads.filter(t => t.status === 'needs_reply').length,
     new: threads.filter(t => t.status === 'new').length,
     snoozed: threads.filter(t => t.status === 'snoozed').length,
+    resolved: threads.filter(t => t.status === 'resolved').length,
   }
 
   const filters = [
-    { id: 'all',         label: 'All',         count: counts.all },
-    { id: 'needs_reply', label: 'Needs reply',  count: counts.needs_reply },
-    { id: 'new',         label: 'New',          count: counts.new },
-    { id: 'snoozed',     label: 'Snoozed',      count: counts.snoozed },
+    { id: 'all',         label: 'All',          count: counts.all },
+    { id: 'needs_reply', label: 'Needs reply',   count: counts.needs_reply },
+    { id: 'new',         label: 'New',           count: counts.new },
+    { id: 'snoozed',     label: 'Snoozed',       count: counts.snoozed },
+    { id: 'resolved',    label: 'Resolved',      count: counts.resolved },
   ]
 
   const visible = threads.filter(t => {
-    if (filter !== 'all' && t.status !== filter) return false
+    if (filter === 'all') {
+      if (t.status === 'resolved') return false
+    } else if (t.status !== filter) {
+      return false
+    }
     if (search) {
       const q = search.toLowerCase()
       return t.name.toLowerCase().includes(q) || t.handle.toLowerCase().includes(q)
@@ -118,6 +124,15 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
       </div>
       <ul className="pt-ix-threads">
         {visible.map(t => <IxThread key={t.id} t={t} active={t.id === activeId} onClick={() => onSelect(t.id)} />)}
+        {visible.length === 0 && (
+          <li className="pt-ix-empty">
+            {filter === 'all' && 'Inbox is clear'}
+            {filter === 'needs_reply' && 'Nothing needs a reply'}
+            {filter === 'new' && 'No new conversations'}
+            {filter === 'snoozed' && 'No snoozed conversations'}
+            {filter === 'resolved' && 'No resolved conversations'}
+          </li>
+        )}
       </ul>
     </div>
   )
@@ -253,6 +268,18 @@ function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: 
 
 // ─── Conversation pane ───────────────────────────────────────────────────────
 
+function snoozeOptions() {
+  const now = new Date()
+  const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1); tomorrow.setHours(9, 0, 0, 0)
+  const nextWeek = new Date(now); nextWeek.setDate(nextWeek.getDate() + 7); nextWeek.setHours(9, 0, 0, 0)
+  return [
+    { label: '1 hour',        until: new Date(now.getTime() + 60 * 60 * 1000) },
+    { label: '4 hours',       until: new Date(now.getTime() + 4 * 60 * 60 * 1000) },
+    { label: 'Tomorrow 9am',  until: tomorrow },
+    { label: 'Next week',     until: nextWeek },
+  ]
+}
+
 function ConversationPane({ thread, messages, onSend, isSending }: {
   thread: InboxThread
   messages: InboxMessage[]
@@ -260,6 +287,7 @@ function ConversationPane({ thread, messages, onSend, isSending }: {
   isSending: boolean
 }) {
   const { snooze, markDone } = useInbox()
+  const [showSnooze, setShowSnooze] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const ChIcon = CH_ICONS[thread.channel]
 
@@ -287,7 +315,20 @@ function ConversationPane({ thread, messages, onSend, isSending }: {
           </div>
         </div>
         <div className="pt-ix-conv-actions">
-          <button className="pt-btn pt-btn-ghost" onClick={snooze}><Icons.clock size={12} /> Snooze</button>
+          <div style={{ position: 'relative' }}>
+            <button className="pt-btn pt-btn-ghost" onClick={() => setShowSnooze(v => !v)}>
+              <Icons.clock size={12} /> Snooze
+            </button>
+            {showSnooze && (
+              <div className="pt-snooze-menu">
+                {snoozeOptions().map(opt => (
+                  <button key={opt.label} className="pt-snooze-opt" onClick={() => { snooze(opt.until); setShowSnooze(false) }}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button className="pt-btn pt-btn-ghost" onClick={markDone}><Icons.check size={12} /> Mark done</button>
           <button className="pt-iconbtn"><Icons.more size={14} /></button>
         </div>

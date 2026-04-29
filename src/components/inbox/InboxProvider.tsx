@@ -8,6 +8,16 @@ import {
   type DbConversation, type DbMessage, type DbQuickReply, type InboxThread, type InboxMessage, type DbNote
 } from '@/types/inbox'
 
+const CONV_SELECT = `
+  id, status, unread_count, last_message_at, last_message_snippet,
+  channel_type, channel_identifier,
+  customers (
+    id, display_name, trust_score, ltv,
+    customer_tags (tag),
+    customer_channels (channel_type, display_handle, is_primary)
+  )
+`
+
 type InboxCtx = {
   threads: InboxThread[]
   activeId: string
@@ -20,7 +30,7 @@ type InboxCtx = {
   isSending: boolean
   sendMessage: (text: string) => Promise<void>
   addNote: (content: string) => Promise<void>
-  snooze: () => Promise<void>
+  snooze: (until: Date) => Promise<void>
   markDone: () => Promise<void>
 }
 
@@ -49,6 +59,7 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
   const [notes, setNotes] = useState<DbNote[]>([])
   const [isSending, setIsSending] = useState(false)
   const [tenantId, setTenantId] = useState<string | null>(null)
+  const [resolvedLoaded, setResolvedLoaded] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -56,12 +67,27 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
         try {
           const payload = JSON.parse(atob(session.access_token.split('.')[1]))
           setTenantId(payload.tenant_id ?? null)
-        } catch {
-          // ignore decode errors
-        }
+        } catch { /* ignore */ }
       }
     })
   }, [supabase])
+
+  // ── Unsnooze any expired conversations on mount ────────────────────────────
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(supabase as any).rpc('unsnooze_expired').then(() => {
+      // Re-fetch threads to pick up any newly unsnoozed conversations
+      supabase
+        .from('conversations')
+        .select(CONV_SELECT)
+        .in('status', ['new', 'needs_reply', 'in_progress', 'snoozed'])
+        .order('last_message_at', { ascending: false, nullsFirst: false })
+        .then(({ data }) => {
+          if (data) setThreads(data.map(c => dbConversationToThread(c as unknown as DbConversation)))
+        })
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Fetch messages for a conversation ──────────────────────────────────────
   const fetchMessages = useCallback(async (conversationId: string) => {
@@ -85,6 +111,30 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
     setNotes((data ?? []) as DbNote[])
   }, [supabase])
 
+  // ── Load resolved conversations on demand ──────────────────────────────────
+  const loadResolved = useCallback(async () => {
+    const { data } = await supabase
+      .from('conversations')
+      .select(CONV_SELECT)
+      .eq('status', 'resolved')
+      .order('last_message_at', { ascending: false, nullsFirst: false })
+      .limit(50)
+    if (data) {
+      setThreads(prev => {
+        const existingIds = new Set(prev.map(t => t.id))
+        const incoming = (data as unknown as DbConversation[])
+          .filter(c => !existingIds.has(c.id))
+          .map(dbConversationToThread)
+        return [...prev, ...incoming]
+      })
+      setResolvedLoaded(true)
+    }
+  }, [supabase])
+
+  useEffect(() => {
+    if (filter === 'resolved' && !resolvedLoaded) loadResolved()
+  }, [filter, resolvedLoaded, loadResolved])
+
   // ── Select a conversation ──────────────────────────────────────────────────
   const setActiveId = useCallback((id: string) => {
     setActiveIdRaw(id)
@@ -93,7 +143,6 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
     fetchMessages(id)
     const thread = threads.find(t => t.id === id)
     if (thread?.customerId) fetchNotes(thread.customerId)
-    // Reset unread count locally and in DB
     setThreads(prev => prev.map(t => t.id === id ? { ...t, unread: 0 } : t))
     supabase.from('conversations').update({ unread_count: 0 }).eq('id', id)
   }, [threads, fetchMessages, fetchNotes, supabase])
@@ -116,7 +165,6 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
       })
       if (!res.ok) throw new Error(`Send failed: ${res.status}`)
       const { messageId } = await res.json() as { messageId: string }
-      // Replace temp ID with real one so real-time subscription deduplicates correctly
       setMessages(prev => prev.map(m =>
         m.id === tempId ? { ...m, id: messageId, optimistic: false } : m
       ))
@@ -130,16 +178,21 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
     }
   }, [activeId])
 
-  // ── Snooze active conversation ─────────────────────────────────────────────
-  const snooze = useCallback(async () => {
+  // ── Snooze active conversation until a given time ──────────────────────────
+  const snooze = useCallback(async (until: Date) => {
     if (!activeId) return
-    await supabase.from('conversations').update({ status: 'snoozed' }).eq('id', activeId)
-    setThreads(prev => prev.map(t => t.id === activeId ? { ...t, status: 'snoozed' as const } : t))
-    const remaining = threads.filter(t => t.id !== activeId)
+    await supabase.from('conversations').update({
+      status: 'snoozed',
+      snoozed_until: until.toISOString(),
+    } as never).eq('id', activeId)
+    setThreads(prev => prev.map(t =>
+      t.id === activeId ? { ...t, status: 'snoozed' as const } : t
+    ))
+    const remaining = threads.filter(t => t.id !== activeId && t.status !== 'snoozed')
     if (remaining.length > 0) setActiveId(remaining[0].id)
   }, [activeId, threads, supabase, setActiveId])
 
-  // ── Add a note to the active conversation's customer ─────────────────────
+  // ── Add a note to the active conversation's customer ──────────────────────
   const addNote = useCallback(async (content: string) => {
     if (!content.trim() || !activeId || !tenantId) return
     const thread = threads.find(t => t.id === activeId)
@@ -156,8 +209,11 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
   const markDone = useCallback(async () => {
     if (!activeId) return
     await supabase.from('conversations').update({ status: 'resolved' }).eq('id', activeId)
-    setThreads(prev => prev.filter(t => t.id !== activeId))
-    const remaining = threads.filter(t => t.id !== activeId)
+    // Keep in threads state as 'resolved' so resolved filter can show it
+    setThreads(prev => prev.map(t =>
+      t.id === activeId ? { ...t, status: 'resolved' as const } : t
+    ))
+    const remaining = threads.filter(t => t.id !== activeId && t.status !== 'resolved')
     if (remaining.length > 0) setActiveId(remaining[0].id)
   }, [activeId, threads, supabase, setActiveId])
 
@@ -168,40 +224,31 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
       const thread = threads.find(t => t.id === activeId)
       if (thread?.customerId) fetchNotes(thread.customerId)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // intentionally run once on mount only
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Real-time: messages for active conversation ────────────────────────────
   useEffect(() => {
     if (!activeId) return
-
     const channel = supabase
       .channel(`messages:${activeId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${activeId}`,
-        },
-        (payload) => {
-          const newMsg = dbMessageToInboxMessage(payload.new as unknown as DbMessage)
-          setMessages(prev => {
-            if (prev.some(m => m.id === newMsg.id)) return prev
-            // Real-time arrived before HTTP response — replace the optimistic placeholder
-            if (newMsg.from === 'me') {
-              const optIdx = prev.findIndex(m => m.optimistic && m.text === newMsg.text)
-              if (optIdx >= 0) return prev.map((m, i) => i === optIdx ? newMsg : m)
-            }
-            return [...prev, newMsg]
-          })
-        }
-      )
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'messages',
+        filter: `conversation_id=eq.${activeId}`,
+      }, (payload) => {
+        const newMsg = dbMessageToInboxMessage(payload.new as unknown as DbMessage)
+        setMessages(prev => {
+          if (prev.some(m => m.id === newMsg.id)) return prev
+          if (newMsg.from === 'me') {
+            const optIdx = prev.findIndex(m => m.optimistic && m.text === newMsg.text)
+            if (optIdx >= 0) return prev.map((m, i) => i === optIdx ? newMsg : m)
+          }
+          return [...prev, newMsg]
+        })
+      })
       .subscribe((status, err) => {
         console.log('[RT] messages subscription:', status, err ?? '')
       })
-
     return () => { supabase.removeChannel(channel) }
   }, [activeId, supabase])
 
@@ -209,52 +256,34 @@ export function InboxProvider({ initialConversations, quickReplies, children }: 
   useEffect(() => {
     const channel = supabase
       .channel('conversations:list')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'conversations' },
-        (payload) => {
-          const updated = payload.new as unknown as DbConversation
-          setThreads(prev => prev.map(t => {
-            if (t.id !== updated.id) return t
-            return {
-              ...t,
-              snippet: updated.last_message_snippet ?? t.snippet,
-              unread: updated.unread_count ?? t.unread,
-              status: updated.status,
-              minsAgo: updated.last_message_at
-                ? Math.floor((Date.now() - new Date(updated.last_message_at).getTime()) / 60000)
-                : t.minsAgo,
-            }
-          }))
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'conversations' },
-        async (payload) => {
-          // New inbound conversation — fetch it with full customer join
-          const { data } = await supabase
-            .from('conversations')
-            .select(`
-              id, status, unread_count, last_message_at, last_message_snippet,
-              channel_type, channel_identifier,
-              customers (
-                id, display_name, trust_score, ltv,
-                customer_tags (tag),
-                customer_channels (channel_type, display_handle, is_primary)
-              )
-            `)
-            .eq('id', payload.new.id)
-            .single()
-          if (data) {
-            setThreads(prev => [dbConversationToThread(data as unknown as DbConversation), ...prev])
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations' }, (payload) => {
+        const updated = payload.new as unknown as DbConversation
+        setThreads(prev => prev.map(t => {
+          if (t.id !== updated.id) return t
+          return {
+            ...t,
+            snippet: updated.last_message_snippet ?? t.snippet,
+            unread: updated.unread_count ?? t.unread,
+            status: updated.status,
+            minsAgo: updated.last_message_at
+              ? Math.floor((Date.now() - new Date(updated.last_message_at).getTime()) / 60000)
+              : t.minsAgo,
           }
+        }))
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversations' }, async (payload) => {
+        const { data } = await supabase
+          .from('conversations')
+          .select(CONV_SELECT)
+          .eq('id', payload.new.id)
+          .single()
+        if (data) {
+          setThreads(prev => [dbConversationToThread(data as unknown as DbConversation), ...prev])
         }
-      )
+      })
       .subscribe((status, err) => {
         console.log('[RT] conversations subscription:', status, err ?? '')
       })
-
     return () => { supabase.removeChannel(channel) }
   }, [supabase])
 
