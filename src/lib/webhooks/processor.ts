@@ -91,7 +91,8 @@ export async function processInboundMessage(
   }
 
   // 3. Insert message — idempotent via external_id unique index
-  const { data: message, error: msgErr } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: message, error: msgErr } = await (supabase as any)
     .from('messages')
     .upsert(
       {
@@ -115,7 +116,8 @@ export async function processInboundMessage(
   if (!message) return { conversationId, messageId: '' }
 
   // 4. Atomically increment unread count
-  await supabase.rpc('increment_unread_count', { conv_id: conversationId, tenant: tenantId })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase as any).rpc('increment_unread_count', { conv_id: conversationId, tenant: tenantId })
 
   // 5. Update conversation snippet + status
   const newStatus = ['resolved', 'snoozed'].includes(currentStatus) ? 'needs_reply'

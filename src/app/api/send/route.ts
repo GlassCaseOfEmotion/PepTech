@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     const creds = channel.credentials as { bot_token: string }
     await sendTelegramMessage(creds.bot_token, to, text)
   } else if (conv.channel_type === 'email') {
-    const creds = channel.credentials as GoogleCredentials | MicrosoftCredentials
+    const creds = channel.credentials as unknown as GoogleCredentials | MicrosoftCredentials
     if (creds.provider === 'google') {
       await sendGmailMessage(creds as GoogleCredentials, to, 'Re: your message', text)
     } else {

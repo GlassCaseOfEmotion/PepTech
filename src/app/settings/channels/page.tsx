@@ -73,13 +73,13 @@ export default async function ChannelsPage() {
               </div>
               <div className="pt-st-chan-r">
                 {connected.whatsapp?.is_active ? (
-                  <form action={disconnectChannel.bind(null, 'whatsapp')}>
+                  <form action={disconnectChannel.bind(null, 'whatsapp') as never}>
                     <button type="submit" className="pt-st-mini pt-st-mini-warn">Disconnect</button>
                   </form>
                 ) : (
                   <details style={{ width: '100%' }}>
                     <summary className="pt-btn pt-btn-ghost" style={{ cursor: 'pointer', fontSize: 12 }}>Connect</summary>
-                    <form action={connectWhatsAppNumber} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+                    <form action={connectWhatsAppNumber as never} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
                       <input name="phoneNumber" placeholder="+15550001234" required style={inputStyle} />
                       <p style={{ fontSize: 11, color: 'var(--pt-fg-4)', margin: 0 }}>
                         E.164 format: +[country code][number], e.g. +15550001234. Spaces and dashes are stripped automatically.
@@ -111,13 +111,13 @@ export default async function ChannelsPage() {
               </div>
               <div className="pt-st-chan-r">
                 {connected.telegram?.is_active ? (
-                  <form action={disconnectChannel.bind(null, 'telegram')}>
+                  <form action={disconnectChannel.bind(null, 'telegram') as never}>
                     <button type="submit" className="pt-st-mini pt-st-mini-warn">Disconnect</button>
                   </form>
                 ) : (
                   <details style={{ width: '100%' }}>
                     <summary className="pt-btn pt-btn-ghost" style={{ cursor: 'pointer', fontSize: 12 }}>Connect</summary>
-                    <form action={saveTelegramCredentials} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+                    <form action={saveTelegramCredentials as never} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
                       <input name="botToken" placeholder="Bot token from @BotFather" required style={inputStyle} />
                       <button type="submit" className="pt-btn pt-btn-primary" style={{ alignSelf: 'flex-start', fontSize: 12 }}>Save</button>
                     </form>
@@ -146,7 +146,7 @@ export default async function ChannelsPage() {
               </div>
               <div className="pt-st-chan-r">
                 {connected.email?.is_active ? (
-                  <form action={disconnectChannel.bind(null, 'email')}>
+                  <form action={disconnectChannel.bind(null, 'email') as never}>
                     <button type="submit" className="pt-st-mini pt-st-mini-warn">Disconnect</button>
                   </form>
                 ) : (

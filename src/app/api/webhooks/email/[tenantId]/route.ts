@@ -20,7 +20,7 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   if (!channel?.credentials) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const creds = channel.credentials as GoogleCredentials | MicrosoftCredentials
+  const creds = channel.credentials as unknown as GoogleCredentials | MicrosoftCredentials
 
   if (creds.provider === 'google') {
     const pubsubMsg = body.message as { data?: string } | undefined

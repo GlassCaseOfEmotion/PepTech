@@ -218,7 +218,7 @@ export function CatalogView() {
           <ul>
             {sorted.map(p => {
               const stockPct = Math.min(1, p.stock / (p.threshold * 2))
-              const flagInfo = { critical: { cls: 'critical', label: 'critical' }, oos: { cls: 'oos', label: 'out of stock' }, low: { cls: 'low', label: 'below threshold' } }[p.flag ?? '']
+              const flagInfo = p.flag ? ({ critical: { cls: 'critical', label: 'critical' }, oos: { cls: 'oos', label: 'out of stock' }, low: { cls: 'low', label: 'below threshold' } } as Record<string, { cls: string; label: string }>)[p.flag] : undefined
               return (
                 <li key={p.sku} className={`pt-cat-row ${selectedSku === p.sku ? 'is-active' : ''} ${p.flag ? `pt-cat-row-${p.flag}` : ''}`} onClick={() => setSelectedSku(p.sku)}>
                   <div className="pt-cat-cell-name">
