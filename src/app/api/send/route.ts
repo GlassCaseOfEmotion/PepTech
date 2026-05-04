@@ -55,9 +55,21 @@ export async function POST(request: Request) {
   } else if (conv.channel_type === 'telegram') {
     const creds = channel.credentials as { bot_token: string; business_connection_id?: string }
     if (storagePath) {
-      const { data: blob } = await supabase.storage.from('media').download(storagePath)
-      if (!blob) throw new Error('Failed to download media from storage')
-      await sendTelegramPhoto(creds.bot_token, to, blob, creds.business_connection_id)
+      try {
+        const { data: blob } = await supabase.storage.from('media').download(storagePath)
+        if (!blob) throw new Error('Failed to download media from storage')
+        await sendTelegramPhoto(creds.bot_token, to, blob, creds.business_connection_id)
+      } catch {
+        await supabase.from('messages').insert({
+          tenant_id: conv.tenant_id,
+          conversation_id: conv.id,
+          direction: 'outbound' as const,
+          content: '[Photo — send failed]',
+          status: 'failed',
+          metadata: { kind: 'photo', storagePath },
+        })
+        return NextResponse.json({ error: 'Failed to send photo' }, { status: 500 })
+      }
     } else {
       await sendTelegramMessage(creds.bot_token, to, text, creds.business_connection_id)
     }

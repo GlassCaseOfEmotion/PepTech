@@ -40,6 +40,8 @@ export async function POST(request: Request, { params }: RouteContext) {
       const storagePath = `${tenantId}/${msg.externalId}.${ext}`
       await uploadToStorage(supabase, buffer, storagePath, msg.mimeType)
       metadata = { kind: 'photo', storagePath }
+    } else {
+      metadata = { kind: 'photo', error: 'download_failed' }
     }
   }
 
@@ -58,7 +60,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     channelType: 'whatsapp',
     identifier: msg.from,
     displayHandle: msg.displayName,
-    content: metadata ? '[Photo]' : msg.content,
+    content: metadata?.kind === 'photo' ? '[Photo]' : msg.content,
     externalId: msg.externalId,
     sentAt: msg.sentAt,
     metadata,
