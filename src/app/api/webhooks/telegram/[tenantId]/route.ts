@@ -20,9 +20,31 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (!channel) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const update = await request.json() as TelegramUpdate
-  const extracted = extractTelegramMessage(update)
+  const creds = (channel.credentials ?? {}) as Record<string, unknown>
 
+  // business_connection event fires when the tenant links/unlinks their bot in Telegram Business settings
+  if (update.business_connection) {
+    if (update.business_connection.is_enabled && !creds.business_connection_id) {
+      await supabase
+        .from('tenant_channels')
+        .update({ credentials: { ...creds, business_connection_id: update.business_connection.id } })
+        .eq('tenant_id', tenantId)
+        .eq('channel_type', 'telegram')
+    }
+    return NextResponse.json({ ok: true })
+  }
+
+  const extracted = extractTelegramMessage(update)
   if (!extracted) return NextResponse.json({ ok: true })
+
+  // Auto-capture business_connection_id from first business message if not yet stored
+  if (extracted.businessConnectionId && !creds.business_connection_id) {
+    await supabase
+      .from('tenant_channels')
+      .update({ credentials: { ...creds, business_connection_id: extracted.businessConnectionId } })
+      .eq('tenant_id', tenantId)
+      .eq('channel_type', 'telegram')
+  }
 
   await processInboundMessage(supabase, {
     tenantId,
