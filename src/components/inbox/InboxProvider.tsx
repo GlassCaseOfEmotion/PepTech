@@ -100,7 +100,17 @@ export function InboxProvider({ initialConversations, quickReplies, templates, c
       .eq('conversation_id', conversationId)
       .order('sent_at', { ascending: true })
       .limit(100)
-    setMessages((data ?? []).map(m => dbMessageToInboxMessage(m as unknown as DbMessage)))
+    const mapped = (data ?? []).map(m => dbMessageToInboxMessage(m as unknown as DbMessage))
+    const withUrls = await Promise.all(mapped.map(async msg => {
+      if (msg.kind === 'photo' && msg.metadata?.storagePath) {
+        const { data: urlData } = await supabase.storage
+          .from('media')
+          .createSignedUrl(msg.metadata.storagePath as string, 3600)
+        return { ...msg, metadata: { ...msg.metadata, mediaUrl: urlData?.signedUrl } }
+      }
+      return msg
+    }))
+    setMessages(withUrls)
   }, [supabase])
 
   // ── Fetch notes for a customer ─────────────────────────────────────────────
@@ -247,8 +257,14 @@ export function InboxProvider({ initialConversations, quickReplies, templates, c
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'messages',
         filter: `conversation_id=eq.${activeId}`,
-      }, (payload) => {
-        const newMsg = dbMessageToInboxMessage(payload.new as unknown as DbMessage)
+      }, async (payload) => {
+        let newMsg = dbMessageToInboxMessage(payload.new as unknown as DbMessage)
+        if (newMsg.kind === 'photo' && newMsg.metadata?.storagePath) {
+          const { data: urlData } = await supabase.storage
+            .from('media')
+            .createSignedUrl(newMsg.metadata.storagePath as string, 3600)
+          newMsg = { ...newMsg, metadata: { ...newMsg.metadata, mediaUrl: urlData?.signedUrl } }
+        }
         setMessages(prev => {
           if (prev.some(m => m.id === newMsg.id)) return prev
           if (newMsg.from === 'me') {
