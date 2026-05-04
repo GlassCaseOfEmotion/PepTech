@@ -260,10 +260,14 @@ export function InboxProvider({ initialConversations, quickReplies, templates, c
       }, async (payload) => {
         let newMsg = dbMessageToInboxMessage(payload.new as unknown as DbMessage)
         if (newMsg.kind === 'photo' && newMsg.metadata?.storagePath) {
-          const { data: urlData } = await supabase.storage
-            .from('media')
-            .createSignedUrl(newMsg.metadata.storagePath as string, 3600)
-          newMsg = { ...newMsg, metadata: { ...newMsg.metadata, mediaUrl: urlData?.signedUrl } }
+          try {
+            const { data: urlData } = await supabase.storage
+              .from('media')
+              .createSignedUrl(newMsg.metadata.storagePath as string, 3600)
+            if (urlData?.signedUrl) {
+              newMsg = { ...newMsg, metadata: { ...newMsg.metadata, mediaUrl: urlData.signedUrl } }
+            }
+          } catch { /* show placeholder if signing fails */ }
         }
         setMessages(prev => {
           if (prev.some(m => m.id === newMsg.id)) return prev

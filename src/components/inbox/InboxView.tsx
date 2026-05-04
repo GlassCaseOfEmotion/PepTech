@@ -239,29 +239,44 @@ function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: 
   const taRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null)
 
-  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file || !activeId) return
+    if (!file) return
+    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl)
+    setPendingFile(file)
+    setPendingPreviewUrl(URL.createObjectURL(file))
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }, [pendingPreviewUrl])
+
+  const clearPendingFile = useCallback(() => {
+    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl)
+    setPendingFile(null)
+    setPendingPreviewUrl(null)
+  }, [pendingPreviewUrl])
+
+  const sendPhoto = useCallback(async () => {
+    if (!pendingFile || !activeId) return
     setIsUploading(true)
     try {
       const form = new FormData()
-      form.append('file', file)
+      form.append('file', pendingFile)
       form.append('conversationId', activeId)
       const uploadRes = await fetch('/api/upload', { method: 'POST', body: form })
       if (!uploadRes.ok) throw new Error('Upload failed')
       const { storagePath } = await uploadRes.json() as { storagePath: string }
-      const sendRes = await fetch('/api/send', {
+      await fetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conversationId: activeId, storagePath }),
       })
-      if (!sendRes.ok) throw new Error('Send failed')
+      clearPendingFile()
     } finally {
       setIsUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
     }
-  }, [activeId])
+  }, [pendingFile, activeId, clearPendingFile])
 
   const send = useCallback(() => {
     const text = draft.trim()
@@ -271,7 +286,11 @@ function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: 
   }, [draft, onSend])
 
   const onKey = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send() }
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      if (pendingFile) void sendPhoto()
+      else send()
+    }
   }
 
   const insertQuick = (content: string) => {
@@ -297,6 +316,12 @@ function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: 
           <button className="pt-quick pt-quick-more">+{quickReplies.length - 5} more</button>
         )}
       </div>
+      {pendingPreviewUrl && (
+        <div className="pt-composer-photo-preview">
+          <img src={pendingPreviewUrl} alt="Photo to send" className="pt-composer-photo-thumb" />
+          <button className="pt-composer-photo-clear" onClick={clearPendingFile} title="Remove">✕</button>
+        </div>
+      )}
       <div className="pt-composer-field">
         <textarea
           ref={taRef}
@@ -337,9 +362,9 @@ function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: 
           <div className="pt-composer-r">
             <span className="pt-composer-hint">⌘↵ to send</span>
             <button
-              className={`pt-btn pt-btn-primary ${isSending ? 'is-sending' : ''}`}
-              onClick={send}
-              disabled={!draft.trim() || isSending}
+              className={`pt-btn pt-btn-primary ${(isSending || isUploading) ? 'is-sending' : ''}`}
+              onClick={pendingFile ? () => void sendPhoto() : send}
+              disabled={pendingFile ? isUploading : (!draft.trim() || isSending)}
             >
               <Icons.send size={12} /> Send
             </button>
