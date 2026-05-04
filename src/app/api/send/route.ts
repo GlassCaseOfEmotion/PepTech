@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { sendWhatsAppMessage } from '@/lib/channels/whatsapp'
-import { sendTelegramMessage } from '@/lib/channels/telegram'
+import { sendWhatsAppMessage, sendWhatsAppMedia } from '@/lib/channels/whatsapp'
+import { sendTelegramMessage, sendTelegramPhoto } from '@/lib/channels/telegram'
 import { sendGmailMessage, sendMicrosoftMessage } from '@/lib/channels/email'
 import type { GoogleCredentials, MicrosoftCredentials } from '@/lib/channels/email'
+import { generateSignedUrl } from '@/lib/media/storage'
 
 export async function POST(request: Request) {
-  const body = await request.json() as { conversationId?: string; content?: string }
+  const body = await request.json() as { conversationId?: string; content?: string; storagePath?: string }
 
-  if (!body.conversationId || !body.content?.trim()) {
-    return NextResponse.json({ error: 'conversationId and content are required' }, { status: 400 })
+  if (!body.conversationId || (!body.content?.trim() && !body.storagePath)) {
+    return NextResponse.json({ error: 'conversationId and content or storagePath are required' }, { status: 400 })
   }
 
   const supabase = await createClient()
@@ -41,13 +42,25 @@ export async function POST(request: Request) {
   }
 
   const to = conv.channel_identifier
-  const text = body.content
+  const text = body.content ?? ''
+  const { storagePath } = body
 
   if (conv.channel_type === 'whatsapp') {
-    await sendWhatsAppMessage(to, text)
+    if (storagePath) {
+      const signedUrl = await generateSignedUrl(supabase, storagePath)
+      await sendWhatsAppMedia(signedUrl, to)
+    } else {
+      await sendWhatsAppMessage(to, text)
+    }
   } else if (conv.channel_type === 'telegram') {
     const creds = channel.credentials as { bot_token: string; business_connection_id?: string }
-    await sendTelegramMessage(creds.bot_token, to, text, creds.business_connection_id)
+    if (storagePath) {
+      const { data: blob } = await supabase.storage.from('media').download(storagePath)
+      if (!blob) throw new Error('Failed to download media from storage')
+      await sendTelegramPhoto(creds.bot_token, to, blob, creds.business_connection_id)
+    } else {
+      await sendTelegramMessage(creds.bot_token, to, text, creds.business_connection_id)
+    }
   } else if (conv.channel_type === 'email') {
     const creds = channel.credentials as unknown as GoogleCredentials | MicrosoftCredentials
     if (creds.provider === 'google') {
@@ -64,8 +77,9 @@ export async function POST(request: Request) {
       tenant_id: conv.tenant_id,
       conversation_id: conv.id,
       direction: 'outbound',
-      content: text,
+      content: storagePath ? '[Photo]' : text,
       status: 'sent',
+      metadata: storagePath ? { kind: 'photo', storagePath } : null,
     })
     .select('id')
     .single()
@@ -76,7 +90,7 @@ export async function POST(request: Request) {
     .update({
       status: 'in_progress',
       last_message_at: new Date().toISOString(),
-      last_message_snippet: `You: ${text.slice(0, 97)}`,
+      last_message_snippet: storagePath ? 'You: [Photo]' : `You: ${text.slice(0, 97)}`,
     })
     .eq('id', conv.id)
 
