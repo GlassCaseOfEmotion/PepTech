@@ -196,6 +196,28 @@ function Bubble({ m }: { m: InboxMessage }) {
     )
   }
 
+  if (m.kind === 'photo') {
+    return (
+      <div className={`pt-bubble pt-bubble-${m.from} pt-bubble-photo`}>
+        {m.metadata?.mediaUrl ? (
+          <a href={m.metadata.mediaUrl as string} target="_blank" rel="noopener noreferrer" className="pt-bubble-img-link">
+            <img
+              src={m.metadata.mediaUrl as string}
+              alt="Photo"
+              className="pt-bubble-img"
+            />
+          </a>
+        ) : (
+          <div className="pt-bubble-img-placeholder">📷</div>
+        )}
+        <div className="pt-bubble-meta">
+          {m.at}
+          {m.from === 'me' && !m.optimistic && <span className="pt-bubble-read"> · sent</span>}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={`pt-bubble pt-bubble-${m.from} ${m.optimistic ? 'is-optimistic' : ''}`}>
       <div className="pt-bubble-text">{m.text}</div>
@@ -211,10 +233,35 @@ function Bubble({ m }: { m: InboxMessage }) {
 // ─── Composer ────────────────────────────────────────────────────────────────
 
 function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: (text: string) => void; isSending: boolean }) {
-  const { quickReplies, templates } = useInbox()
+  const { quickReplies, templates, activeId } = useInbox()
   const [draft, setDraft] = useState('')
   const [showTemplates, setShowTemplates] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isUploading, setIsUploading] = useState(false)
+
+  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !activeId) return
+    setIsUploading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('conversationId', activeId)
+      const uploadRes = await fetch('/api/upload', { method: 'POST', body: form })
+      if (!uploadRes.ok) throw new Error('Upload failed')
+      const { storagePath } = await uploadRes.json() as { storagePath: string }
+      const sendRes = await fetch('/api/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: activeId, storagePath }),
+      })
+      if (!sendRes.ok) throw new Error('Send failed')
+    } finally {
+      setIsUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }, [activeId])
 
   const send = useCallback(() => {
     const text = draft.trim()
@@ -261,9 +308,23 @@ function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: 
         />
         <div className="pt-composer-tools">
           <div className="pt-composer-l">
-            <button className="pt-iconbtn" title="Attach">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21 12-8.5 8.5a5 5 0 0 1-7-7L14 5a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-2.8-2.8L15 8.5"/></svg>
-            </button>
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+              />
+              <button
+                className="pt-iconbtn"
+                title="Attach photo"
+                disabled={isUploading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21 12-8.5 8.5a5 5 0 0 1-7-7L14 5a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-2.8-2.8L15 8.5"/></svg>
+              </button>
+            </>
             <button className="pt-iconbtn" title="Drop COA"><Icons.flask size={14} /></button>
             <button className="pt-iconbtn" title="Send wallet"><Icons.vault size={14} /></button>
             <span className="pt-composer-sep" />

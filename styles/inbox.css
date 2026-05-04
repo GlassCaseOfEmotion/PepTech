@@ -402,3 +402,19 @@
 .pt-tpl-title { font-size: 12px; font-weight: 500; color: var(--pt-fg); margin-bottom: 2px; }
 .pt-tpl-preview { font-size: 11px; color: var(--pt-fg-4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pt-tpl-empty { padding: 12px 14px; font-size: 12px; color: var(--pt-fg-4); }
+
+/* ── Photo bubble ─────────────────────────────────────────────────────────── */
+.pt-bubble-photo { padding: 4px 4px 0; }
+.pt-bubble-img-link { display: block; }
+.pt-bubble-img {
+  display: block; max-width: 240px; width: 100%;
+  border-radius: 6px; cursor: pointer;
+  transition: opacity 0.15s;
+}
+.pt-bubble-img:hover { opacity: 0.88; }
+.pt-bubble-img-placeholder {
+  display: flex; align-items: center; justify-content: center;
+  width: 240px; height: 160px; border-radius: 6px;
+  background: oklch(from var(--pt-fg) l c h / 0.06);
+  font-size: 24px;
+}
