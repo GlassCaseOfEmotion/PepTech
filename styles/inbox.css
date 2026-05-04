@@ -428,16 +428,16 @@
 
 /* ── Photo bubble ─────────────────────────────────────────────────────────── */
 .pt-bubble-photo { padding: 4px 4px 0; }
-.pt-bubble-img-link { display: block; }
+.pt-bubble-img-link { display: block; width: 260px; height: 200px; }
 .pt-bubble-img {
-  display: block; max-width: 240px; width: 100%;
-  border-radius: 6px; cursor: pointer;
+  display: block; width: 260px; height: 200px;
+  object-fit: cover; border-radius: 6px; cursor: pointer;
   transition: opacity 0.15s;
 }
 .pt-bubble-img:hover { opacity: 0.88; }
 .pt-bubble-img-placeholder {
   display: flex; align-items: center; justify-content: center;
-  width: 240px; height: 160px; border-radius: 6px;
+  width: 260px; height: 200px; border-radius: 6px;
   background: oklch(from var(--pt-fg) l c h / 0.06);
   font-size: 24px;
 }
