@@ -11,7 +11,7 @@ export default async function InboxPage() {
 
   const supabase = await createClient()
 
-  const [{ data: conversations }, { data: quickReplies }, { data: templates }] = await Promise.all([
+  const [{ data: conversations }, { data: quickReplies }, { data: templates }, { count: resolvedCount }] = await Promise.all([
     supabase
       .from('conversations')
       .select(`
@@ -33,6 +33,10 @@ export default async function InboxPage() {
       .from('templates')
       .select('id, tenant_id, title, content, sort_order')
       .order('sort_order'),
+    supabase
+      .from('conversations')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'resolved'),
   ])
 
   return (
@@ -40,6 +44,7 @@ export default async function InboxPage() {
       initialConversations={(conversations ?? []) as DbConversation[]}
       quickReplies={(quickReplies ?? []) as DbQuickReply[]}
       templates={(templates ?? []) as DbTemplate[]}
+      initialResolvedCount={resolvedCount ?? 0}
     />
   )
 }

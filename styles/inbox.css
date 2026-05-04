@@ -67,6 +67,9 @@
   position: relative;
 }
 .pt-ixt:hover { background: oklch(from var(--pt-fg) l c h / 0.025); }
+.pt-ixt.is-snoozed { opacity: 0.6; }
+.pt-ixt.is-snoozed:hover { opacity: 0.85; }
+.pt-tag-snoozed { font-size: 10px; }
 .pt-ixt.is-active {
   background: var(--pt-accent-soft);
 }

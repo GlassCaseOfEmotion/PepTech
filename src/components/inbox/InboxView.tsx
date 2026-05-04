@@ -31,7 +31,7 @@ const CH_NAMES: Record<string, string> = { wa: 'WhatsApp', tg: 'Telegram', em: '
 function IxThread({ t, active, onClick }: { t: InboxThread; active: boolean; onClick: () => void }) {
   const ChIcon = CH_ICONS[t.channel]
   return (
-    <li className={`pt-ixt ${active ? 'is-active' : ''} ${t.unread ? 'is-unread' : ''}`} onClick={onClick}>
+    <li className={`pt-ixt ${active ? 'is-active' : ''} ${t.unread ? 'is-unread' : ''} ${t.status === 'snoozed' ? 'is-snoozed' : ''}`} onClick={onClick}>
       <div className="pt-ixt-av" data-channel={t.channel}>
         <span>{initials(t.name)}</span>
         <i className={`pt-thread-ch pt-ch-${t.channel}`}>{ChIcon && <ChIcon size={9} />}</i>
@@ -46,6 +46,7 @@ function IxThread({ t, active, onClick }: { t: InboxThread; active: boolean; onC
           {t.unread > 0 && <span className="pt-thread-unread">{t.unread}</span>}
         </div>
         <div className="pt-ixt-row3">
+          {t.status === 'snoozed'       && <span className="pt-tag pt-tag-soft pt-tag-snoozed">⏰ snoozed</span>}
           {t.tags.includes('vip')      && <span className="pt-tag pt-tag-vip">VIP</span>}
           {t.tags.includes('new')      && <span className="pt-tag pt-tag-new">new</span>}
           {t.tags.includes('waitlist') && <span className="pt-tag">waitlist</span>}
@@ -66,6 +67,7 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
   threads: InboxThread[]; activeId: string; onSelect: (id: string) => void
   filter: string; setFilter: (f: string) => void
 }) {
+  const { resolvedCount } = useInbox()
   const [search, setSearch] = useState('')
   const [chanFilter, setChanFilter] = useState<'all' | 'wa' | 'tg' | 'em'>('all')
 
@@ -74,7 +76,7 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
     needs_reply: threads.filter(t => t.status === 'needs_reply').length,
     new: threads.filter(t => t.status === 'new').length,
     snoozed: threads.filter(t => t.status === 'snoozed').length,
-    resolved: threads.filter(t => t.status === 'resolved').length,
+    resolved: resolvedCount,
   }
 
   const filters = [
@@ -587,11 +589,12 @@ interface InboxViewProps {
   initialConversations: DbConversation[]
   quickReplies: DbQuickReply[]
   templates: DbTemplate[]
+  initialResolvedCount?: number
 }
 
-export function InboxView({ initialConversations, quickReplies, templates }: InboxViewProps) {
+export function InboxView({ initialConversations, quickReplies, templates, initialResolvedCount = 0 }: InboxViewProps) {
   return (
-    <InboxProvider initialConversations={initialConversations} quickReplies={quickReplies} templates={templates}>
+    <InboxProvider initialConversations={initialConversations} quickReplies={quickReplies} templates={templates} initialResolvedCount={initialResolvedCount}>
       <InboxLayout />
     </InboxProvider>
   )

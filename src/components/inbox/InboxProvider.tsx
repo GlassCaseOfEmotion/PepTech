@@ -29,6 +29,7 @@ type InboxCtx = {
   quickReplies: DbQuickReply[]
   templates: DbTemplate[]
   isSending: boolean
+  resolvedCount: number
   sendMessage: (text: string) => Promise<void>
   addNote: (content: string) => Promise<void>
   snooze: (until: Date) => Promise<void>
@@ -48,10 +49,11 @@ interface Props {
   initialConversations: DbConversation[]
   quickReplies: DbQuickReply[]
   templates: DbTemplate[]
+  initialResolvedCount?: number
   children: ReactNode
 }
 
-export function InboxProvider({ initialConversations, quickReplies, templates, children }: Props) {
+export function InboxProvider({ initialConversations, quickReplies, templates, initialResolvedCount = 0, children }: Props) {
   const supabase = useMemo(() => createClient(), [])
   const [threads, setThreads] = useState<InboxThread[]>(
     initialConversations.map(dbConversationToThread)
@@ -59,6 +61,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, c
   const [activeId, setActiveIdRaw] = useState(threads[0]?.id ?? '')
   const [filter, setFilter] = useState('all')
   const [messages, setMessages] = useState<InboxMessage[]>([])
+  const [resolvedCount, setResolvedCount] = useState(initialResolvedCount)
   const signedUrlsRef = useRef<Set<string>>(new Set())
   const [notes, setNotes] = useState<DbNote[]>([])
   const [isSending, setIsSending] = useState(false)
@@ -143,6 +146,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, c
           .map(dbConversationToThread)
         return [...prev, ...incoming]
       })
+      setResolvedCount(data.length)
       setResolvedLoaded(true)
     }
   }, [supabase])
@@ -225,10 +229,10 @@ export function InboxProvider({ initialConversations, quickReplies, templates, c
   const markDone = useCallback(async () => {
     if (!activeId) return
     await supabase.from('conversations').update({ status: 'resolved' }).eq('id', activeId)
-    // Keep in threads state as 'resolved' so resolved filter can show it
     setThreads(prev => prev.map(t =>
       t.id === activeId ? { ...t, status: 'resolved' as const } : t
     ))
+    setResolvedCount(c => c + 1)
     const remaining = threads.filter(t => t.id !== activeId && t.status !== 'resolved')
     if (remaining.length > 0) setActiveId(remaining[0].id)
   }, [activeId, threads, supabase, setActiveId])
@@ -335,7 +339,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, c
   return (
     <InboxContext.Provider value={{
       threads, activeId, setActiveId, filter, setFilter,
-      messages, notes, quickReplies, templates, isSending, sendMessage, addNote, snooze, markDone, reopen,
+      messages, notes, quickReplies, templates, isSending, resolvedCount, sendMessage, addNote, snooze, markDone, reopen,
     }}>
       {children}
     </InboxContext.Provider>
