@@ -34,7 +34,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       const { business_connection_id: _, ...rest } = creds
       await supabase
         .from('tenant_channels')
-        .update({ credentials: rest })
+        .update({ credentials: rest as never })
         .eq('tenant_id', tenantId)
         .eq('channel_type', 'telegram')
     }
