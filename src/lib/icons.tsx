@@ -56,6 +56,7 @@ export const Icons = {
   doc:     (p: IconProps) => <PtIcon {...p} d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z M14 3v6h6 M8 13h8 M8 17h6" />,
   lock:    (p: IconProps) => <PtIcon {...p}><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></PtIcon>,
   card:    (p: IconProps) => <PtIcon {...p}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18 M7 15h3"/></PtIcon>,
+  pin:     (p: IconProps) => <PtIcon {...p} d="M12 2a4 4 0 0 1 4 4c0 1.5-.5 2.8-1.3 3.7L16 17H8l1.3-7.3A5.4 5.4 0 0 1 8 6a4 4 0 0 1 4-4Z M12 17v5" />,
 }
 
 export function ChannelIcon({ channelType, size = 9 }: { channelType: 'whatsapp' | 'telegram' | 'email'; size?: number }) {

@@ -7,7 +7,7 @@ describe('dbConversationToThread', () => {
       id: 'c1', status: 'needs_reply', unread_count: 2,
       last_message_at: new Date().toISOString(),
       last_message_snippet: 'hey', channel_type: 'whatsapp',
-      channel_identifier: '+1234',
+      channel_identifier: '+1234', is_pinned: false,
       customers: { id: 'u1', display_name: 'Alice', trust_score: 80, ltv: 500,
         customer_tags: [{ tag: 'vip' }],
         customer_channels: [{ channel_type: 'whatsapp', display_handle: '+1 ••• 4421', is_primary: true }] }
@@ -23,7 +23,7 @@ describe('dbConversationToThread', () => {
     const thread = dbConversationToThread({
       id: 'c2', status: 'new', unread_count: 0,
       last_message_at: null, last_message_snippet: null,
-      channel_type: 'telegram', channel_identifier: '@swolepriest',
+      channel_type: 'telegram', channel_identifier: '@swolepriest', is_pinned: false,
       customers: { id: 'u2', display_name: 'Bob', trust_score: 70, ltv: 200,
         customer_tags: [], customer_channels: [] }
     })

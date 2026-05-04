@@ -47,6 +47,7 @@ export type Database = {
           created_at: string
           customer_id: string
           id: string
+          is_pinned: boolean
           last_message_at: string | null
           last_message_snippet: string | null
           snoozed_until: string | null
@@ -62,6 +63,7 @@ export type Database = {
           created_at?: string
           customer_id: string
           id?: string
+          is_pinned?: boolean
           last_message_at?: string | null
           last_message_snippet?: string | null
           snoozed_until?: string | null
@@ -77,6 +79,7 @@ export type Database = {
           created_at?: string
           customer_id?: string
           id?: string
+          is_pinned?: boolean
           last_message_at?: string | null
           last_message_snippet?: string | null
           snoozed_until?: string | null

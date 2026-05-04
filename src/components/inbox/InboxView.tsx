@@ -29,9 +29,10 @@ const CH_NAMES: Record<string, string> = { wa: 'WhatsApp', tg: 'Telegram', em: '
 // ─── Thread item ─────────────────────────────────────────────────────────────
 
 function IxThread({ t, active, onClick }: { t: InboxThread; active: boolean; onClick: () => void }) {
+  const { togglePin } = useInbox()
   const ChIcon = CH_ICONS[t.channel]
   return (
-    <li className={`pt-ixt ${active ? 'is-active' : ''} ${t.unread ? 'is-unread' : ''} ${t.status === 'snoozed' ? 'is-snoozed' : ''}`} onClick={onClick}>
+    <li className={`pt-ixt ${active ? 'is-active' : ''} ${t.unread ? 'is-unread' : ''} ${t.status === 'snoozed' ? 'is-snoozed' : ''} ${t.pinned ? 'is-pinned' : ''}`} onClick={onClick}>
       <div className="pt-ixt-av" data-channel={t.channel}>
         <span>{initials(t.name)}</span>
         <i className={`pt-thread-ch pt-ch-${t.channel}`}>{ChIcon && <ChIcon size={9} />}</i>
@@ -39,6 +40,13 @@ function IxThread({ t, active, onClick }: { t: InboxThread; active: boolean; onC
       <div className="pt-ixt-mid">
         <div className="pt-ixt-row1">
           <span className="pt-ixt-name">{t.name}</span>
+          <button
+            className={`pt-ixt-pin ${t.pinned ? 'is-pinned' : ''}`}
+            title={t.pinned ? 'Unpin' : 'Pin'}
+            onClick={e => { e.stopPropagation(); void togglePin(t.id) }}
+          >
+            <Icons.pin size={10} />
+          </button>
           <span className="pt-ixt-time mono">{fmtMins(t.minsAgo)}</span>
         </div>
         <div className="pt-ixt-row2">

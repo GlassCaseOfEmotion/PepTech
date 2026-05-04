@@ -51,6 +51,7 @@ export type DbConversation = {
   last_message_snippet: string | null
   channel_type: 'whatsapp' | 'telegram' | 'email'
   channel_identifier: string
+  is_pinned: boolean
   customers: {
     id: string
     display_name: string
@@ -123,6 +124,7 @@ export type InboxThread = {
   tags: string[]
   trust: number
   ltv: number
+  pinned: boolean
 }
 
 export type InboxMessage = {
@@ -160,6 +162,7 @@ export function dbConversationToThread(c: DbConversation): InboxThread {
     tags: c.customers?.customer_tags?.map(t => t.tag) ?? [],
     trust: c.customers?.trust_score ?? 0,
     ltv: c.customers?.ltv ?? 0,
+    pinned: c.is_pinned,
   }
 }
 

@@ -10,7 +10,7 @@ import {
 
 const CONV_SELECT = `
   id, status, unread_count, last_message_at, last_message_snippet,
-  channel_type, channel_identifier,
+  channel_type, channel_identifier, is_pinned,
   customers (
     id, display_name, trust_score, ltv,
     customer_tags (tag),
@@ -35,6 +35,7 @@ type InboxCtx = {
   snooze: (until: Date) => Promise<void>
   markDone: () => Promise<void>
   reopen: () => Promise<void>
+  togglePin: (id: string) => Promise<void>
 }
 
 const InboxContext = createContext<InboxCtx | null>(null)
@@ -237,6 +238,15 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
     if (remaining.length > 0) setActiveId(remaining[0].id)
   }, [activeId, threads, supabase, setActiveId])
 
+  // ── Pin / unpin a conversation ────────────────────────────────────────────
+  const togglePin = useCallback(async (id: string) => {
+    const thread = threads.find(t => t.id === id)
+    if (!thread) return
+    const newVal = !thread.pinned
+    setThreads(prev => prev.map(t => t.id === id ? { ...t, pinned: newVal } : t))
+    await supabase.from('conversations').update({ is_pinned: newVal } as never).eq('id', id)
+  }, [threads, supabase])
+
   // ── Reopen a resolved conversation ────────────────────────────────────────
   const reopen = useCallback(async () => {
     if (!activeId) return
@@ -294,6 +304,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
             snippet: updated.last_message_snippet ?? t.snippet,
             unread: updated.unread_count ?? t.unread,
             status: updated.status,
+            pinned: updated.is_pinned ?? t.pinned,
             minsAgo: updated.last_message_at
               ? Math.floor((Date.now() - new Date(updated.last_message_at).getTime()) / 60000)
               : t.minsAgo,
@@ -339,7 +350,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
   return (
     <InboxContext.Provider value={{
       threads, activeId, setActiveId, filter, setFilter,
-      messages, notes, quickReplies, templates, isSending, resolvedCount, sendMessage, addNote, snooze, markDone, reopen,
+      messages, notes, quickReplies, templates, isSending, resolvedCount, sendMessage, addNote, snooze, markDone, reopen, togglePin,
     }}>
       {children}
     </InboxContext.Provider>
