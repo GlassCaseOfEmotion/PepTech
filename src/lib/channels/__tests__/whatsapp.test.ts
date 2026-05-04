@@ -4,6 +4,7 @@ import {
   verifyTwilioSignature,
   extractTwilioMessage,
   sendWhatsAppMessage,
+  sendWhatsAppMedia,
 } from '../whatsapp'
 
 const AUTH_TOKEN = 'test-auth-token'
@@ -132,5 +133,72 @@ describe('sendWhatsAppMessage', () => {
   it('throws when Twilio responds with an error', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 400, text: async () => 'Bad Request' }))
     await expect(sendWhatsAppMessage('+15005550001', 'Hello')).rejects.toThrow('Twilio send failed')
+  })
+})
+
+describe('extractTwilioMessage — photo', () => {
+  it('returns mediaUrl and mimeType when NumMedia is 1', () => {
+    const params = {
+      MessageSid: 'MM001',
+      From: 'whatsapp:+15005550001',
+      To: 'whatsapp:+14155551234',
+      Body: '',
+      NumMedia: '1',
+      MediaUrl0: 'https://api.twilio.com/media/ME001',
+      MediaContentType0: 'image/jpeg',
+    }
+    const msg = extractTwilioMessage(params)
+    expect(msg).not.toBeNull()
+    expect(msg!.mediaUrl).toBe('https://api.twilio.com/media/ME001')
+    expect(msg!.mimeType).toBe('image/jpeg')
+    expect(msg!.content).toBe('')
+  })
+
+  it('returns no mediaUrl when NumMedia is 0 or absent', () => {
+    const params = {
+      MessageSid: 'SM002',
+      From: 'whatsapp:+15005550001',
+      To: 'whatsapp:+14155551234',
+      Body: 'Hello',
+    }
+    const msg = extractTwilioMessage(params)
+    expect(msg!.mediaUrl).toBeUndefined()
+    expect(msg!.mimeType).toBeUndefined()
+  })
+
+  it('returns null when MessageSid absent and no media', () => {
+    expect(extractTwilioMessage({ Body: 'Hi', From: 'whatsapp:+1500', NumMedia: '0' })).toBeNull()
+  })
+})
+
+describe('sendWhatsAppMedia', () => {
+  const originalEnv = process.env
+  beforeEach(() => {
+    process.env = {
+      ...originalEnv,
+      TWILIO_ACCOUNT_SID: 'ACtest123',
+      TWILIO_AUTH_TOKEN: 'authtoken123',
+      TWILIO_WHATSAPP_NUMBER: '+14155551234',
+    }
+  })
+  afterEach(() => { process.env = originalEnv; vi.restoreAllMocks() })
+
+  it('POSTs to Twilio with MediaUrl and no Body', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', mockFetch)
+    await sendWhatsAppMedia('https://sb.co/signed', '+15005550001')
+    const [url, options] = mockFetch.mock.calls[0]
+    expect(url).toBe('https://api.twilio.com/2010-04-01/Accounts/ACtest123/Messages.json')
+    const body = new URLSearchParams(options.body)
+    expect(body.get('MediaUrl')).toBe('https://sb.co/signed')
+    expect(body.get('To')).toBe('whatsapp:+15005550001')
+    expect(body.get('From')).toBe('whatsapp:+14155551234')
+    expect(body.get('Body')).toBeNull()
+  })
+
+  it('throws when Twilio responds with an error', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 400, text: async () => 'Bad Request' }))
+    await expect(sendWhatsAppMedia('https://sb.co/signed', '+15005550001'))
+      .rejects.toThrow('Twilio media send failed')
   })
 })
