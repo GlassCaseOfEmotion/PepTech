@@ -59,7 +59,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     tenantId,
     channelType: 'whatsapp',
     identifier: msg.from,
-    displayHandle: msg.displayName,
+    displayHandle: msg.from,
     content: metadata?.kind === 'photo' ? '[Photo]' : msg.content,
     externalId: msg.externalId,
     sentAt: msg.sentAt,
