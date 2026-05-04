@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { processInboundMessage } from '@/lib/webhooks/processor'
 import { verifyTwilioSignature, extractTwilioMessage } from '@/lib/channels/whatsapp'
+import { uploadToStorage } from '@/lib/media/storage'
 
 interface RouteContext { params: Promise<{ tenantId: string }> }
 
@@ -23,6 +24,25 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (!msg) return NextResponse.json({ ok: true })
 
   const supabase = createServiceClient()
+
+  let metadata: Record<string, unknown> | undefined
+
+  if (msg.mediaUrl && msg.mimeType) {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID ?? ''
+    const token = process.env.TWILIO_AUTH_TOKEN ?? ''
+    const mediaRes = await fetch(msg.mediaUrl, {
+      headers: { Authorization: 'Basic ' + Buffer.from(`${accountSid}:${token}`).toString('base64') },
+    })
+    if (mediaRes.ok) {
+      const buffer = Buffer.from(await mediaRes.arrayBuffer())
+      const rawExt = msg.mimeType.split('/')[1] ?? 'jpg'
+      const ext = rawExt === 'jpeg' ? 'jpg' : rawExt
+      const storagePath = `${tenantId}/${msg.externalId}.${ext}`
+      await uploadToStorage(supabase, buffer, storagePath, msg.mimeType)
+      metadata = { kind: 'photo', storagePath }
+    }
+  }
+
   const { data: channel } = await supabase
     .from('tenant_channels')
     .select('tenant_id')
@@ -38,9 +58,10 @@ export async function POST(request: Request, { params }: RouteContext) {
     channelType: 'whatsapp',
     identifier: msg.from,
     displayHandle: msg.displayName,
-    content: msg.content,
+    content: metadata ? '[Photo]' : msg.content,
     externalId: msg.externalId,
     sentAt: msg.sentAt,
+    metadata,
   })
 
   return NextResponse.json({ ok: true })
