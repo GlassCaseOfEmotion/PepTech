@@ -71,7 +71,7 @@ export type DbMessage = {
 }
 
 export type MessageMetadata = {
-  kind?: 'wallet' | 'tx'
+  kind?: 'wallet' | 'tx' | 'photo'
   // wallet
   asset?: string
   network?: string
@@ -82,6 +82,10 @@ export type MessageMetadata = {
   confirmations?: number
   required_confirmations?: number
   state?: 'pending' | 'confirmed' | 'failed'
+  // photo
+  storagePath?: string
+  mediaUrl?: string   // signed URL, populated client-side — not stored in DB
+  mimeType?: string
 }
 
 export type DbQuickReply = {
@@ -126,7 +130,7 @@ export type InboxMessage = {
   from: 'me' | 'them'
   at: string              // formatted timestamp
   text?: string
-  kind?: 'text' | 'wallet' | 'tx'
+  kind?: 'text' | 'wallet' | 'tx' | 'photo'
   optimistic?: boolean
   status?: string
   metadata?: MessageMetadata | null
