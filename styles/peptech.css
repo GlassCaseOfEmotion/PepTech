@@ -502,15 +502,21 @@ kbd {
   background: oklch(from var(--pt-fg) l c h / 0.05);
   color: var(--pt-fg-3);
 }
-.pt-trust-hi { background: var(--pt-ok-soft); color: var(--pt-ok); }
-.pt-trust-md { background: var(--pt-warn-soft); color: var(--pt-warn); }
-.pt-trust-lo { background: oklch(0.96 0.04 25); color: var(--pt-danger); }
-.pt-trust { display: flex; flex-direction: column; align-items: flex-end; }
-.pt-trust .pt-trust-num { font-family: var(--pt-mono); font-size: 16px; font-weight: 600; line-height: 1; }
-.pt-trust .pt-trust-lbl { font-size: 9px; color: var(--pt-fg-4); text-transform: uppercase; letter-spacing: 0.06em; }
+.pt-trust {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 6px 10px; border-radius: 10px; min-width: 48px;
+}
+.pt-trust .pt-trust-num { font-family: var(--pt-mono); font-size: 15px; font-weight: 700; line-height: 1; }
+.pt-trust .pt-trust-lbl { font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; opacity: 0.65; }
+.pt-trust-hi { background: var(--pt-ok-soft); }
+.pt-trust-md { background: var(--pt-warn-soft); }
+.pt-trust-lo { background: oklch(from var(--pt-danger) l c h / 0.12); }
 .pt-trust-hi .pt-trust-num { color: var(--pt-ok); }
 .pt-trust-md .pt-trust-num { color: var(--pt-warn); }
 .pt-trust-lo .pt-trust-num { color: var(--pt-danger); }
+.pt-trust-hi .pt-trust-lbl { color: var(--pt-ok); }
+.pt-trust-md .pt-trust-lbl { color: var(--pt-warn); }
+.pt-trust-lo .pt-trust-lbl { color: var(--pt-danger); }
 
 /* ─── Payments ───────────────────────────────────────────────────────────── */
 .pt-pay-list { list-style: none; margin: 0; padding: 0; }
