@@ -119,6 +119,11 @@ export default async function ChannelsPage() {
                     <summary className="pt-btn pt-btn-ghost" style={{ cursor: 'pointer', fontSize: 12 }}>Connect</summary>
                     <form action={saveTelegramCredentials as never} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
                       <input name="botToken" placeholder="Bot token from @BotFather" required style={inputStyle} />
+                      <ol style={{ fontSize: 11, color: 'var(--pt-fg-4)', margin: '2px 0 0', paddingLeft: 16, lineHeight: 1.7 }}>
+                        <li>Create a silent bot via <span style={{ fontFamily: 'var(--pt-mono)' }}>@BotFather</span> and paste its token above.</li>
+                        <li>In Telegram: Settings → Telegram Business → Chatbots → search for your bot and tap Connect.</li>
+                        <li>Customers now message your personal account. The bot handles it silently in the background.</li>
+                      </ol>
                       <button type="submit" className="pt-btn pt-btn-primary" style={{ alignSelf: 'flex-start', fontSize: 12 }}>Save</button>
                     </form>
                   </details>
