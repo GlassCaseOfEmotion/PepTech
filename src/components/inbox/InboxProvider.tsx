@@ -160,7 +160,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, c
     const thread = threads.find(t => t.id === id)
     if (thread?.customerId) fetchNotes(thread.customerId)
     setThreads(prev => prev.map(t => t.id === id ? { ...t, unread: 0 } : t))
-    supabase.from('conversations').update({ unread_count: 0 }).eq('id', id)
+    void supabase.from('conversations').update({ unread_count: 0 }).eq('id', id).then()
   }, [threads, fetchMessages, fetchNotes, supabase])
 
   // ── Send a message ─────────────────────────────────────────────────────────
