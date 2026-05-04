@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { processInboundMessage } from '@/lib/webhooks/processor'
-import { extractTelegramMessage } from '@/lib/channels/telegram'
+import { extractTelegramMessage, getTelegramFileBuffer } from '@/lib/channels/telegram'
 import type { TelegramUpdate } from '@/lib/channels/telegram'
+import { uploadToStorage } from '@/lib/media/storage'
 
 interface RouteContext { params: Promise<{ tenantId: string }> }
 
@@ -22,13 +23,11 @@ export async function POST(request: Request, { params }: RouteContext) {
   const update = await request.json() as TelegramUpdate
   const creds = (channel.credentials ?? {}) as Record<string, unknown>
 
-  // business_connection event fires when the tenant links/unlinks their bot in Telegram Business settings
   if (update.business_connection) {
-    const bizId = update.business_connection.id
     if (update.business_connection.is_enabled && !creds.business_connection_id) {
       await supabase
         .from('tenant_channels')
-        .update({ credentials: { ...creds, business_connection_id: bizId } })
+        .update({ credentials: { ...creds, business_connection_id: update.business_connection.id } })
         .eq('tenant_id', tenantId)
         .eq('channel_type', 'telegram')
     } else if (!update.business_connection.is_enabled && creds.business_connection_id) {
@@ -45,7 +44,6 @@ export async function POST(request: Request, { params }: RouteContext) {
   const extracted = extractTelegramMessage(update)
   if (!extracted) return NextResponse.json({ ok: true })
 
-  // Auto-capture business_connection_id from first business message if not yet stored
   if (extracted.businessConnectionId && !creds.business_connection_id) {
     await supabase
       .from('tenant_channels')
@@ -54,14 +52,26 @@ export async function POST(request: Request, { params }: RouteContext) {
       .eq('channel_type', 'telegram')
   }
 
+  let metadata: Record<string, unknown> | undefined
+
+  if (extracted.photoFileId) {
+    const botToken = (creds.bot_token as string) ?? ''
+    const { buffer, mimeType } = await getTelegramFileBuffer(botToken, extracted.photoFileId)
+    const ext = mimeType.split('/')[1] ?? 'jpg'
+    const storagePath = `${tenantId}/${extracted.externalId}.${ext}`
+    await uploadToStorage(supabase, buffer, storagePath, mimeType)
+    metadata = { kind: 'photo', storagePath }
+  }
+
   await processInboundMessage(supabase, {
     tenantId,
     channelType: 'telegram',
     identifier: extracted.chatId,
     displayHandle: extracted.displayHandle,
-    content: extracted.content,
+    content: metadata ? '[Photo]' : extracted.content,
     externalId: extracted.externalId,
     sentAt: extracted.sentAt,
+    metadata,
   })
 
   return NextResponse.json({ ok: true })

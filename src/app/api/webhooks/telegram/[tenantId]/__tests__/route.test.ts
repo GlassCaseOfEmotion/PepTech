@@ -4,10 +4,25 @@ vi.mock('@/lib/supabase/server', () => ({ createServiceClient: vi.fn() }))
 vi.mock('@/lib/webhooks/processor', () => ({
   processInboundMessage: vi.fn().mockResolvedValue({ conversationId: 'c1', messageId: 'm1' }),
 }))
+vi.mock('@/lib/media/storage', () => ({
+  uploadToStorage: vi.fn().mockResolvedValue('tg-tenant-456/tg-50.jpg'),
+}))
+vi.mock('@/lib/channels/telegram', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/channels/telegram')>()
+  return {
+    ...actual,
+    getTelegramFileBuffer: vi.fn().mockResolvedValue({
+      buffer: Buffer.from('imgdata'),
+      mimeType: 'image/jpeg',
+    }),
+  }
+})
 
 const { POST } = await import('../route')
 const { createServiceClient } = await import('@/lib/supabase/server')
 const { processInboundMessage } = await import('@/lib/webhooks/processor')
+const { uploadToStorage } = await import('@/lib/media/storage')
+const { getTelegramFileBuffer } = await import('@/lib/channels/telegram')
 
 const TENANT_ID = 'tg-tenant-456'
 const BOT_TOKEN = '123456:ABC-DEF'
@@ -198,5 +213,44 @@ describe('Telegram webhook POST', () => {
     })
     const res = await POST(req, { params: Promise.resolve({ tenantId: TENANT_ID }) })
     expect(res.status).toBe(404)
+  })
+
+  it('downloads photo via getTelegramFileBuffer, uploads to storage, and passes photo metadata', async () => {
+    const channel = { tenant_id: TENANT_ID, credentials: { bot_token: BOT_TOKEN, business_connection_id: BIZ_CONN_ID } }
+    ;(createServiceClient as ReturnType<typeof vi.fn>).mockReturnValue(makeSupabase(channel))
+
+    const update = {
+      update_id: 10,
+      message: {
+        message_id: 50,
+        business_connection_id: BIZ_CONN_ID,
+        chat: { id: 11223344, type: 'private' },
+        from: { id: 11223344, username: 'customer1' },
+        date: 1714205000,
+        photo: [
+          { file_id: 'small_fid', file_unique_id: 'u1', width: 90, height: 90 },
+          { file_id: 'large_fid', file_unique_id: 'u2', width: 800, height: 600 },
+        ],
+      },
+    }
+    const req = new Request(`http://localhost/api/webhooks/telegram/${TENANT_ID}`, {
+      method: 'POST', body: JSON.stringify(update), headers: { 'Content-Type': 'application/json' },
+    })
+    const res = await POST(req, { params: Promise.resolve({ tenantId: TENANT_ID }) })
+    expect(res.status).toBe(200)
+    expect(getTelegramFileBuffer).toHaveBeenCalledWith(BOT_TOKEN, 'large_fid')
+    expect(uploadToStorage).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(Buffer),
+      expect.stringMatching(/^tg-tenant-456\/tg-50\.(jpg|jpeg)$/),
+      'image/jpeg',
+    )
+    expect(processInboundMessage).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        content: '[Photo]',
+        metadata: expect.objectContaining({ kind: 'photo' }),
+      }),
+    )
   })
 })
