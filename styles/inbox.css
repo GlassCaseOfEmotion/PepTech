@@ -112,7 +112,7 @@
 /* ── Conversation pane ──────────────────────────────────────────────── */
 .pt-ix-conv {
   display: flex; flex-direction: column;
-  min-height: 0;
+  min-height: 0; position: relative;
   background: var(--pt-bg);
 }
 .pt-ix-conv-hd {
@@ -425,6 +425,32 @@
 .pt-composer-photo-clear:hover { color: var(--pt-fg); }
 .pt-composer-photo-thumb.is-uploading { opacity: 0.5; }
 .pt-composer-photo-status { font-size: 11px; color: var(--pt-fg-4); margin-top: 2px; display: block; }
+
+/* ── Photo lightbox ───────────────────────────────────────────────────────── */
+.pt-lightbox {
+  position: absolute; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  background: oklch(from var(--pt-bg) l c h / 0.92);
+  backdrop-filter: blur(6px);
+  animation: pt-lb-in 0.15s ease;
+}
+@keyframes pt-lb-in { from { opacity: 0 } to { opacity: 1 } }
+.pt-lightbox-img {
+  max-width: 90%; max-height: 90%;
+  border-radius: 8px;
+  box-shadow: 0 24px 64px oklch(0 0 0 / 0.5);
+  object-fit: contain;
+}
+.pt-lightbox-close {
+  position: absolute; top: 16px; right: 16px;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: oklch(from var(--pt-fg) l c h / 0.12);
+  border: none; cursor: pointer; color: var(--pt-fg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; line-height: 1;
+  transition: background 0.12s;
+}
+.pt-lightbox-close:hover { background: oklch(from var(--pt-fg) l c h / 0.2); }
 
 /* ── Photo bubble ─────────────────────────────────────────────────────────── */
 .pt-bubble-photo { padding: 4px 4px 0; }

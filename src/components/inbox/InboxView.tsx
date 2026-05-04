@@ -164,7 +164,7 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
 
 // ─── Message bubbles ─────────────────────────────────────────────────────────
 
-function Bubble({ m }: { m: InboxMessage }) {
+function Bubble({ m, onImageClick }: { m: InboxMessage; onImageClick?: (url: string) => void }) {
   if (m.kind === 'wallet') {
     const { asset, network, address, amount } = m.metadata ?? {}
     return (
@@ -210,16 +210,13 @@ function Bubble({ m }: { m: InboxMessage }) {
   }
 
   if (m.kind === 'photo') {
+    const url = m.metadata?.mediaUrl as string | undefined
     return (
       <div className={`pt-bubble pt-bubble-${m.from} pt-bubble-photo`}>
-        {m.metadata?.mediaUrl ? (
-          <a href={m.metadata.mediaUrl as string} target="_blank" rel="noopener noreferrer" className="pt-bubble-img-link">
-            <img
-              src={m.metadata.mediaUrl as string}
-              alt="Photo"
-              className="pt-bubble-img"
-            />
-          </a>
+        {url ? (
+          <button className="pt-bubble-img-link" onClick={() => onImageClick?.(url)} style={{ border: 'none', padding: 0, background: 'none', cursor: 'zoom-in' }}>
+            <img src={url} alt="Photo" className="pt-bubble-img" />
+          </button>
         ) : (
           <div className="pt-bubble-img-placeholder">📷</div>
         )}
@@ -413,8 +410,16 @@ function ConversationPane({ thread, messages, onSend, isSending }: {
 }) {
   const { snooze, markDone, reopen } = useInbox()
   const [showSnooze, setShowSnooze] = useState(false)
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const snoozeRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!lightboxUrl) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setLightboxUrl(null) }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [lightboxUrl])
 
   useEffect(() => {
     if (!showSnooze) return
@@ -472,8 +477,15 @@ function ConversationPane({ thread, messages, onSend, isSending }: {
       </div>
 
       <div ref={scrollRef} className="pt-ix-stream">
-        {messages.map(m => <Bubble key={m.id} m={m} />)}
+        {messages.map(m => <Bubble key={m.id} m={m} onImageClick={setLightboxUrl} />)}
       </div>
+
+      {lightboxUrl && (
+        <div className="pt-lightbox" onClick={() => setLightboxUrl(null)}>
+          <img src={lightboxUrl} alt="Photo" className="pt-lightbox-img" onClick={e => e.stopPropagation()} />
+          <button className="pt-lightbox-close" onClick={() => setLightboxUrl(null)}>✕</button>
+        </div>
+      )}
 
       <Composer thread={thread} onSend={onSend} isSending={isSending} />
     </div>
