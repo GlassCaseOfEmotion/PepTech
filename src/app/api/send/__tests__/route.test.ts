@@ -55,7 +55,7 @@ describe('POST /api/send', () => {
     })
     const res = await POST(req)
     expect(res.status).toBe(200)
-    expect(sendTelegramMessage).toHaveBeenCalledWith('bot:TOKEN', '99887766', 'hello customer')
+    expect(sendTelegramMessage).toHaveBeenCalledWith('bot:TOKEN', '99887766', 'hello customer', undefined)
   })
 
   it('returns 400 for missing content', async () => {

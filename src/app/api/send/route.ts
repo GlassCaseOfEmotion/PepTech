@@ -46,8 +46,8 @@ export async function POST(request: Request) {
   if (conv.channel_type === 'whatsapp') {
     await sendWhatsAppMessage(to, text)
   } else if (conv.channel_type === 'telegram') {
-    const creds = channel.credentials as { bot_token: string }
-    await sendTelegramMessage(creds.bot_token, to, text)
+    const creds = channel.credentials as { bot_token: string; business_connection_id?: string }
+    await sendTelegramMessage(creds.bot_token, to, text, creds.business_connection_id)
   } else if (conv.channel_type === 'email') {
     const creds = channel.credentials as unknown as GoogleCredentials | MicrosoftCredentials
     if (creds.provider === 'google') {
