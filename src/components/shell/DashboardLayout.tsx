@@ -4,18 +4,20 @@ import { useState } from 'react'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { DashboardView, DashboardRightRail } from '@/components/dashboard/DashboardView'
-import { MOCK_THREADS } from '@/lib/mock-data'
+import type { InboxThread } from '@/types/inbox'
 
 interface DashboardLayoutProps {
   displayName: string
   connectedChannels: string[]
+  threads: InboxThread[]
 }
 
 const MOCK_CHANNELS = ['whatsapp', 'telegram']
 
-export function DashboardLayout({ displayName, connectedChannels }: DashboardLayoutProps) {
+export function DashboardLayout({ displayName, connectedChannels, threads }: DashboardLayoutProps) {
   const [rightOpen, setRightOpen] = useState(true)
   const channels = connectedChannels.length > 0 ? connectedChannels : MOCK_CHANNELS
+  const focusThread = threads.find(t => t.status === 'needs_reply') ?? threads[0] ?? null
 
   return (
     <div className={`pt-root${rightOpen ? '' : ' no-right'}`}>
@@ -27,9 +29,9 @@ export function DashboardLayout({ displayName, connectedChannels }: DashboardLay
           rightOpen={rightOpen}
           onRightToggle={() => setRightOpen(o => !o)}
         />
-        <DashboardView />
+        <DashboardView threads={threads} />
       </main>
-      {rightOpen && <DashboardRightRail focusThread={MOCK_THREADS[0]} />}
+      {rightOpen && <DashboardRightRail focusThread={focusThread} />}
     </div>
   )
 }

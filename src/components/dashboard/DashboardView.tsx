@@ -4,18 +4,15 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
 import {
-  MOCK_THREADS, MOCK_PAYMENTS, MOCK_PRODUCTS,
+  MOCK_PAYMENTS, MOCK_PRODUCTS,
   MOCK_REORDERS, MOCK_SHIPMENTS, MOCK_REVENUE_7D,
-  type MockThread, type MockPayment, type MockProduct,
+  type MockPayment, type MockProduct,
   type MockReorder, type MockShipment, type MockRevenueDay,
 } from '@/lib/mock-data'
+import type { InboxThread } from '@/types/inbox'
+import { initials } from '@/types/inbox'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-function initials(name: string) {
-  const up = name.match(/[A-Z]/g)
-  return up && up.length >= 2 ? up.slice(0, 2).join('') : name.slice(0, 2).toUpperCase()
-}
 
 function fmtMins(m: number) {
   if (m < 60) return `${m}m`
@@ -86,11 +83,11 @@ function DashCard({ title, subtitle, action, span, footer, scroll, children }: {
 
 // ─── KPI strip ──────────────────────────────────────────────────────────────
 
-function KpiRow() {
+function KpiRow({ active, needsReply }: { active: number; needsReply: number }) {
   const kpis = [
     { label: 'Revenue · 7d',          value: '$12,330', delta: 18.4,  spark: [3,4,3,5,4,7,8] },
     { label: 'Pending crypto',        value: '$895',    delta: null,  sub: '2 confirming · 1 pending' },
-    { label: 'Active conversations',  value: '23',      delta: 4,     sub: '7 need reply' },
+    { label: 'Active conversations',  value: String(active), delta: null, sub: `${needsReply} need reply` },
     { label: 'Reorders due · 7d',     value: '11',      delta: null,  sub: '3 high-confidence' },
   ]
   return (
@@ -120,7 +117,7 @@ const CHANNEL_ICONS: Record<string, React.FC<{ size?: number }>> = {
   wa: Icons.wa, tg: Icons.tg, em: Icons.em,
 }
 
-function InboxCard({ threads }: { threads: MockThread[] }) {
+function InboxCard({ threads }: { threads: InboxThread[] }) {
   const [filter, setFilter] = useState('needs_reply')
   const filters = [
     { id: 'needs_reply', label: 'Needs reply', count: threads.filter(t => t.status === 'needs_reply').length },
@@ -146,36 +143,42 @@ function InboxCard({ threads }: { threads: MockThread[] }) {
           ))}
         </div>
       }
+      footer={<Link href="/inbox" className="pt-link" style={{ fontSize: 12 }}>Open inbox →</Link>}
     >
       <ul className="pt-thread-list">
         {shown.map(t => {
           const ChIcon = CHANNEL_ICONS[t.channel]
           return (
-            <li key={t.id} className={`pt-thread ${t.unread ? 'is-unread' : ''}`}>
-              <div className="pt-thread-av" data-channel={t.channel}>
-                <span>{initials(t.name)}</span>
-                <i className={`pt-thread-ch pt-ch-${t.channel}`}>{ChIcon && <ChIcon size={9} />}</i>
-              </div>
-              <div className="pt-thread-mid">
-                <div className="pt-thread-row1">
-                  <span className="pt-thread-name">{t.name}</span>
-                  {t.tags.includes('vip') && <span className="pt-tag pt-tag-vip">VIP</span>}
-                  {t.tags.includes('new') && <span className="pt-tag pt-tag-new">new</span>}
-                  {t.tags.includes('waitlist') && <span className="pt-tag">waitlist</span>}
-                  {t.tags.includes('payment') && <span className="pt-tag pt-tag-warn">payment</span>}
-                  {t.tags.includes('repeat') && !t.tags.includes('vip') && <span className="pt-tag pt-tag-soft">repeat</span>}
+            <Link key={t.id} href="/inbox" style={{ textDecoration: 'none', color: 'inherit', display: 'contents' }}>
+              <li className={`pt-thread ${t.unread ? 'is-unread' : ''}`}>
+                <div className="pt-thread-av" data-channel={t.channel}>
+                  <span>{initials(t.name)}</span>
+                  <i className={`pt-thread-ch pt-ch-${t.channel}`}>{ChIcon && <ChIcon size={9} />}</i>
                 </div>
-                <div className="pt-thread-snip">{t.snippet}</div>
-              </div>
-              <div className="pt-thread-meta">
-                <div className="pt-thread-time">{fmtMins(t.minsAgo)}</div>
-                {t.unread > 0
-                  ? <div className="pt-thread-unread">{t.unread}</div>
-                  : <TrustPill score={t.trust} />}
-              </div>
-            </li>
+                <div className="pt-thread-mid">
+                  <div className="pt-thread-row1">
+                    <span className="pt-thread-name">{t.name}</span>
+                    {t.tags.includes('vip') && <span className="pt-tag pt-tag-vip">VIP</span>}
+                    {t.tags.includes('new') && <span className="pt-tag pt-tag-new">new</span>}
+                    {t.tags.includes('waitlist') && <span className="pt-tag">waitlist</span>}
+                    {t.tags.includes('payment') && <span className="pt-tag pt-tag-warn">payment</span>}
+                    {t.tags.includes('repeat') && !t.tags.includes('vip') && <span className="pt-tag pt-tag-soft">repeat</span>}
+                  </div>
+                  <div className="pt-thread-snip">{t.snippet}</div>
+                </div>
+                <div className="pt-thread-meta">
+                  <div className="pt-thread-time">{fmtMins(t.minsAgo)}</div>
+                  {t.unread > 0
+                    ? <div className="pt-thread-unread">{t.unread}</div>
+                    : <TrustPill score={t.trust} />}
+                </div>
+              </li>
+            </Link>
           )
         })}
+        {shown.length === 0 && (
+          <li className="pt-thread" style={{ opacity: 0.5, fontSize: 13 }}>No conversations</li>
+        )}
       </ul>
     </DashCard>
   )
@@ -351,7 +354,9 @@ function ShipmentsCard({ shipments }: { shipments: MockShipment[] }) {
 
 // ─── Right rail ──────────────────────────────────────────────────────────────
 
-export function DashboardRightRail({ focusThread }: { focusThread: MockThread }) {
+const CH_NAMES: Record<string, string> = { wa: 'WhatsApp', tg: 'Telegram', em: 'Email' }
+
+export function DashboardRightRail({ focusThread }: { focusThread: InboxThread | null }) {
   const t = focusThread
   return (
     <aside className="pt-right">
@@ -396,38 +401,38 @@ export function DashboardRightRail({ focusThread }: { focusThread: MockThread })
         </ul>
       </div>
 
-      <div className="pt-right-section">
-        <div className="pt-right-hd">
-          <span>Focus customer</span>
-          <Link href={`/inbox`} className="pt-link">Open →</Link>
-        </div>
-        <div className="pt-cust">
-          <div className="pt-cust-hd">
-            <div className="pt-cust-av" data-channel={t.channel}>{initials(t.name)}</div>
-            <div className="pt-cust-id">
-              <div className="pt-cust-name">{t.name}</div>
-              <div className="pt-cust-handle mono">{t.handle}</div>
+      {t && (
+        <div className="pt-right-section">
+          <div className="pt-right-hd">
+            <span>Focus customer</span>
+            <Link href="/inbox" className="pt-link">Open →</Link>
+          </div>
+          <Link href={`/customers/${t.customerId}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className="pt-cust">
+              <div className="pt-cust-hd">
+                <div className="pt-cust-av" data-channel={t.channel}>{initials(t.name)}</div>
+                <div className="pt-cust-id">
+                  <div className="pt-cust-name">{t.name}</div>
+                  <div className="pt-cust-handle mono">{t.handle}</div>
+                </div>
+                <TrustBlock score={t.trust} />
+              </div>
+              <div className="pt-cust-stats">
+                <div><div className="lbl">LTV</div><div className="val mono">${t.ltv.toLocaleString()}</div></div>
+                <div><div className="lbl">Channel</div><div className="val">{CH_NAMES[t.channel]}</div></div>
+              </div>
+              <div className="pt-cust-tags">
+                {t.tags.map(tag => <span key={tag} className="pt-tag pt-tag-soft">{tag}</span>)}
+              </div>
+              {t.snippet && (
+                <div style={{ fontSize: 12, opacity: 0.6, marginTop: 8, fontStyle: 'italic' }}>
+                  &ldquo;{t.snippet}&rdquo;
+                </div>
+              )}
             </div>
-            <TrustBlock score={t.trust} />
-          </div>
-          <div className="pt-cust-stats">
-            <div><div className="lbl">LTV</div><div className="val mono">${t.ltv.toLocaleString()}</div></div>
-            <div><div className="lbl">Last</div><div className="val mono">{t.lastOrder}</div></div>
-            <div><div className="lbl">Channel</div><div className="val">{{ wa: 'WhatsApp', tg: 'Telegram', em: 'Email' }[t.channel]}</div></div>
-          </div>
-          <div className="pt-cust-tags">
-            {t.tags.map(tag => <span key={tag} className="pt-tag pt-tag-soft">{tag}</span>)}
-          </div>
-          <div className="pt-cust-history">
-            <div className="pt-cust-hist-hd">Recent orders</div>
-            <ul>
-              <li><span className="mono">#A-2241</span><span>Reta 10mg ×2</span><span className="mono">$330</span></li>
-              <li><span className="mono">#A-2188</span><span>BPC 5mg ×3</span><span className="mono">$114</span></li>
-              <li><span className="mono">#A-2103</span><span>Tirz 30mg ×1</span><span className="mono">$220</span></li>
-            </ul>
-          </div>
+          </Link>
         </div>
-      </div>
+      )}
 
       <div className="pt-right-section">
         <div className="pt-right-hd"><span>Quick replies</span></div>
@@ -443,13 +448,16 @@ export function DashboardRightRail({ focusThread }: { focusThread: MockThread })
 
 // ─── Dashboard page content ──────────────────────────────────────────────────
 
-export function DashboardView() {
+export function DashboardView({ threads }: { threads: InboxThread[] }) {
+  const active = threads.length
+  const needsReply = threads.filter(t => t.status === 'needs_reply').length
+
   return (
     <div className="pt-page">
       <div className="pt-page-hd">
         <div>
           <h1>Dashboard</h1>
-          <p>23 active threads · 7 need a reply · 3 reorders due in &lt;48h</p>
+          <p>{active} active threads · {needsReply} need a reply · 3 reorders due in &lt;48h</p>
         </div>
         <div className="pt-page-actions">
           <button className="pt-btn pt-btn-ghost">Daily summary</button>
@@ -459,10 +467,10 @@ export function DashboardView() {
         </div>
       </div>
 
-      <KpiRow />
+      <KpiRow active={active} needsReply={needsReply} />
 
       <div className="pt-grid">
-        <InboxCard threads={MOCK_THREADS} />
+        <InboxCard threads={threads} />
         <PaymentsCard initialPayments={MOCK_PAYMENTS} />
         <RevenueCard data={MOCK_REVENUE_7D} />
         <ReordersCard reorders={MOCK_REORDERS} />
@@ -471,7 +479,7 @@ export function DashboardView() {
       </div>
 
       <footer className="pt-foot">
-        <span className="mono">v0.5.0 · mock data</span>
+        <span className="mono">v0.5.0</span>
         <span className="pt-foot-mid">For research use only · Not for human consumption.</span>
         <span className="mono">⌘K to search · ⌘N new msg</span>
       </footer>
