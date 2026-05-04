@@ -70,6 +70,18 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
   const { resolvedCount } = useInbox()
   const [search, setSearch] = useState('')
   const [chanFilter, setChanFilter] = useState<'all' | 'wa' | 'tg' | 'em'>('all')
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault()
+        searchRef.current?.focus()
+      }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [])
 
   const counts = {
     all: threads.filter(t => t.status !== 'resolved').length,
@@ -105,12 +117,11 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
         </Link>
         <span className="pt-ix-list-title">Inbox</span>
-        <button className="pt-iconbtn" title="Filter"><Icons.filter size={13} /></button>
-        <button className="pt-iconbtn" title="Compose"><Icons.plus size={13} /></button>
       </div>
       <div className="pt-ix-search">
         <Icons.search size={12} />
         <input
+          ref={searchRef}
           placeholder="search threads, names, txids…"
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -457,7 +468,6 @@ function ConversationPane({ thread, messages, onSend, isSending }: {
             ? <button className="pt-btn pt-btn-ghost" onClick={reopen}><Icons.rotate size={12} /> Reopen</button>
             : <button className="pt-btn pt-btn-ghost" onClick={markDone}><Icons.check size={12} /> Mark done</button>
           }
-          <button className="pt-iconbtn"><Icons.more size={14} /></button>
         </div>
       </div>
 
@@ -489,7 +499,7 @@ function ConversationRail({ thread }: { thread: InboxThread }) {
     <aside className="pt-ix-rail">
       {/* Customer card */}
       <div className="pt-cust">
-        <div className="pt-cust-hd">
+        <Link href={`/customers/${thread.customerId}`} className="pt-cust-hd" style={{ textDecoration: 'none', color: 'inherit' }}>
           <div className="pt-cust-av" data-channel={thread.channel}>{initials(thread.name)}</div>
           <div className="pt-cust-id">
             <div className="pt-cust-name">{thread.name}</div>
@@ -499,7 +509,7 @@ function ConversationRail({ thread }: { thread: InboxThread }) {
             <div className="pt-trust-num">{thread.trust}</div>
             <div className="pt-trust-lbl">trust</div>
           </div>
-        </div>
+        </Link>
         <div className="pt-cust-stats">
           <div><div className="lbl">LTV</div><div className="val mono">${thread.ltv.toLocaleString()}</div></div>
           <div><div className="lbl">Channel</div><div className="val">{CH_NAMES[thread.channel]}</div></div>

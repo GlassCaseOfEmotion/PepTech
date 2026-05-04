@@ -42,11 +42,11 @@ const MOCK_TRUST_FACTORS = [
 ]
 
 const MOCK_ACTIVITY = [
-  { dot: 'cool', text: 'USDT received · $330 · 4m ago' },
-  { dot: '',     text: 'Order #A-2241 placed · today 13:18' },
-  { dot: '',     text: 'Replied to broadcast "restock" · yesterday' },
-  { dot: 'warn', text: 'Reorder ping sent · 4d ago' },
-  { dot: '',     text: 'Order #A-2188 delivered · Apr 2' },
+  { dot: 'cool', bold: 'USDT received', rest: ' · $330 · 4m ago' },
+  { dot: '',     bold: 'Order #A-2241 placed', rest: ' · today 13:18' },
+  { dot: '',     bold: 'Replied to broadcast "restock"', rest: ' · yesterday' },
+  { dot: 'warn', bold: 'Reorder ping sent', rest: ' · 4d ago' },
+  { dot: '',     bold: 'Order #A-2188 delivered', rest: ' · Apr 2' },
 ]
 
 const MOCK_PAY_METHODS = ['USDT (TRC20)', 'BTC', 'Cash']
@@ -302,7 +302,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                     {MOCK_ACTIVITY.map((a, i) => (
                       <li key={i}>
                         <i className={`pt-cu-act-dot${a.dot ? ` pt-bul-${a.dot}` : ''}`} />
-                        <div dangerouslySetInnerHTML={{ __html: a.text.replace(/^(\w[^·]+)/, '<b>$1</b>') }} />
+                        <div><b>{a.bold}</b>{a.rest}</div>
                       </li>
                     ))}
                   </ul>
