@@ -318,8 +318,11 @@ function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: 
       </div>
       {pendingPreviewUrl && (
         <div className="pt-composer-photo-preview">
-          <img src={pendingPreviewUrl} alt="Photo to send" className="pt-composer-photo-thumb" />
-          <button className="pt-composer-photo-clear" onClick={clearPendingFile} title="Remove">✕</button>
+          <img src={pendingPreviewUrl} alt="Photo to send" className={`pt-composer-photo-thumb ${isUploading ? 'is-uploading' : ''}`} />
+          {isUploading
+            ? <span className="pt-composer-photo-status">Sending…</span>
+            : <button className="pt-composer-photo-clear" onClick={clearPendingFile} title="Remove">✕</button>
+          }
         </div>
       )}
       <div className="pt-composer-field">

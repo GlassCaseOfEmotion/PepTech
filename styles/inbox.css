@@ -420,6 +420,8 @@
   display: flex; align-items: center; justify-content: center;
 }
 .pt-composer-photo-clear:hover { color: var(--pt-fg); }
+.pt-composer-photo-thumb.is-uploading { opacity: 0.5; }
+.pt-composer-photo-status { font-size: 11px; color: var(--pt-fg-4); margin-top: 2px; display: block; }
 
 /* ── Photo bubble ─────────────────────────────────────────────────────────── */
 .pt-bubble-photo { padding: 4px 4px 0; }

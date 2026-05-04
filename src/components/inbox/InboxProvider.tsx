@@ -1,7 +1,7 @@
 // src/components/inbox/InboxProvider.tsx
 'use client'
 
-import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   dbConversationToThread, dbMessageToInboxMessage,
@@ -59,6 +59,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, c
   const [activeId, setActiveIdRaw] = useState(threads[0]?.id ?? '')
   const [filter, setFilter] = useState('all')
   const [messages, setMessages] = useState<InboxMessage[]>([])
+  const signedUrlsRef = useRef<Set<string>>(new Set())
   const [notes, setNotes] = useState<DbNote[]>([])
   const [isSending, setIsSending] = useState(false)
   const [tenantId, setTenantId] = useState<string | null>(null)
@@ -101,6 +102,8 @@ export function InboxProvider({ initialConversations, quickReplies, templates, c
       .order('sent_at', { ascending: true })
       .limit(100)
     const mapped = (data ?? []).map(m => dbMessageToInboxMessage(m as unknown as DbMessage))
+    // Track IDs so the signing effect doesn't re-process messages already signed at fetch time
+    mapped.forEach(m => { if (m.kind === 'photo') signedUrlsRef.current.add(m.id) })
     const withUrls = await Promise.all(mapped.map(async msg => {
       if (msg.kind === 'photo' && msg.metadata?.storagePath) {
         const { data: urlData } = await supabase.storage
@@ -257,18 +260,8 @@ export function InboxProvider({ initialConversations, quickReplies, templates, c
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'messages',
         filter: `conversation_id=eq.${activeId}`,
-      }, async (payload) => {
-        let newMsg = dbMessageToInboxMessage(payload.new as unknown as DbMessage)
-        if (newMsg.kind === 'photo' && newMsg.metadata?.storagePath) {
-          try {
-            const { data: urlData } = await supabase.storage
-              .from('media')
-              .createSignedUrl(newMsg.metadata.storagePath as string, 3600)
-            if (urlData?.signedUrl) {
-              newMsg = { ...newMsg, metadata: { ...newMsg.metadata, mediaUrl: urlData.signedUrl } }
-            }
-          } catch { /* show placeholder if signing fails */ }
-        }
+      }, (payload) => {
+        const newMsg = dbMessageToInboxMessage(payload.new as unknown as DbMessage)
         setMessages(prev => {
           if (prev.some(m => m.id === newMsg.id)) return prev
           if (newMsg.from === 'me') {
@@ -318,6 +311,26 @@ export function InboxProvider({ initialConversations, quickReplies, templates, c
       })
     return () => { supabase.removeChannel(channel) }
   }, [supabase])
+
+  // ── Generate signed URLs for photo messages that arrived without one ─────────
+  useEffect(() => {
+    const unsigned = messages.filter(
+      m => m.kind === 'photo' && m.metadata?.storagePath && !m.metadata?.mediaUrl
+        && !signedUrlsRef.current.has(m.id)
+    )
+    if (unsigned.length === 0) return
+    unsigned.forEach(msg => {
+      signedUrlsRef.current.add(msg.id)
+      supabase.storage.from('media').createSignedUrl(msg.metadata!.storagePath as string, 3600)
+        .then(({ data }) => {
+          if (!data?.signedUrl) return
+          setMessages(prev => prev.map(m =>
+            m.id === msg.id ? { ...m, metadata: { ...m.metadata, mediaUrl: data.signedUrl } } : m
+          ))
+        })
+        .catch(() => { /* keep placeholder */ })
+    })
+  }, [messages, supabase])
 
   return (
     <InboxContext.Provider value={{
