@@ -99,6 +99,33 @@ describe('Telegram webhook POST', () => {
     )
   })
 
+  it('removes business_connection_id when is_enabled is false (tenant unlinks bot)', async () => {
+    const channel = { tenant_id: TENANT_ID, credentials: { bot_token: BOT_TOKEN, business_connection_id: BIZ_CONN_ID } }
+    const supabaseMock = makeSupabase(channel)
+    ;(createServiceClient as ReturnType<typeof vi.fn>).mockReturnValue(supabaseMock)
+    const update = {
+      update_id: 7,
+      business_connection: {
+        id: BIZ_CONN_ID,
+        user: { id: 555, first_name: 'Dealer', username: 'dealer_99' },
+        user_chat_id: 555,
+        date: 1714204900,
+        is_enabled: false,
+      },
+    }
+    const req = new Request(`http://localhost/api/webhooks/telegram/${TENANT_ID}`, {
+      method: 'POST',
+      body: JSON.stringify(update),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const res = await POST(req, { params: Promise.resolve({ tenantId: TENANT_ID }) })
+    expect(res.status).toBe(200)
+    expect(processInboundMessage).not.toHaveBeenCalled()
+    const updatedCreds = supabaseMock._update.mock.calls[0][0].credentials
+    expect(updatedCreds.business_connection_id).toBeUndefined()
+    expect(updatedCreds.bot_token).toBe(BOT_TOKEN)
+  })
+
   it('auto-captures business_connection_id from first business message if not in credentials', async () => {
     const channel = { tenant_id: TENANT_ID, credentials: { bot_token: BOT_TOKEN } }
     const supabaseMock = makeSupabase(channel)

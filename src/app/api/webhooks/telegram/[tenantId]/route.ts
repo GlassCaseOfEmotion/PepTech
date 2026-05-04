@@ -24,10 +24,18 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   // business_connection event fires when the tenant links/unlinks their bot in Telegram Business settings
   if (update.business_connection) {
+    const bizId = update.business_connection.id
     if (update.business_connection.is_enabled && !creds.business_connection_id) {
       await supabase
         .from('tenant_channels')
-        .update({ credentials: { ...creds, business_connection_id: update.business_connection.id } })
+        .update({ credentials: { ...creds, business_connection_id: bizId } })
+        .eq('tenant_id', tenantId)
+        .eq('channel_type', 'telegram')
+    } else if (!update.business_connection.is_enabled && creds.business_connection_id) {
+      const { business_connection_id: _, ...rest } = creds
+      await supabase
+        .from('tenant_channels')
+        .update({ credentials: rest })
         .eq('tenant_id', tenantId)
         .eq('channel_type', 'telegram')
     }
