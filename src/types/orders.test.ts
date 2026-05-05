@@ -42,4 +42,12 @@ describe('dbOrderToCard', () => {
     expect(card.minsAgo).toBeGreaterThanOrEqual(7)
     expect(card.minsAgo).toBeLessThan(10)
   })
+
+  it('handles null customers gracefully', () => {
+    const card = dbOrderToCard({ ...BASE_ORDER, customers: null })
+    expect(card.customerId).toBe('')
+    expect(card.customerName).toBe('Unknown')
+    expect(card.channel).toBe('wa')
+    expect(card.handle).toBe('')
+  })
 })

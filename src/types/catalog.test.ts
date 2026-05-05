@@ -32,5 +32,7 @@ describe('dbProductToDisplay', () => {
     expect(result.sku).toBe('BPC-157-5MG')
     expect(result.productFamily).toBe('BPC-157')
     expect(result.unitPrice).toBe(38)
+    expect(result.isActive).toBe(true)
+    expect(result.description).toBeNull()
   })
 })

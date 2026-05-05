@@ -43,6 +43,7 @@ export type DbOrderRow = {
 
 export type DbOrderEvent = {
   id: string
+  tenant_id: string
   order_id: string
   actor: 'operator' | 'system'
   action: string
