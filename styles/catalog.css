@@ -111,10 +111,10 @@
   color: var(--pt-fg-3);
   flex-shrink: 0;
 }
-.pt-cat-cat-pill[data-cat="GLP-1"]    { background: oklch(0.95 0.05 30); color: oklch(0.45 0.15 30); }
-.pt-cat-cat-pill[data-cat="Healing"]  { background: oklch(0.95 0.05 145); color: oklch(0.40 0.13 145); }
-.pt-cat-cat-pill[data-cat="Cosmetic"] { background: oklch(0.95 0.05 320); color: oklch(0.45 0.15 320); }
-.pt-cat-cat-pill[data-cat="Mito"]     { background: oklch(0.95 0.05 240); color: oklch(0.45 0.15 240); }
+.pt-cat-cat-pill[data-cat="GLP-1"]    { background: oklch(0.95 0.05 30);  color: oklch(0.45 0.15 30);  }
+.pt-cat-cat-pill[data-cat="HEALING"]  { background: oklch(0.95 0.05 145); color: oklch(0.40 0.13 145); }
+.pt-cat-cat-pill[data-cat="COSMETIC"] { background: oklch(0.95 0.05 320); color: oklch(0.45 0.15 320); }
+.pt-cat-cat-pill[data-cat="MITO"]     { background: oklch(0.95 0.05 240); color: oklch(0.45 0.15 240); }
 .pt-cat-cat-pill[data-cat="GH"]       { background: oklch(0.95 0.05 90);  color: oklch(0.40 0.13 90);  }
 .pt-cat-prod-name { font-size: 13px; font-weight: 500;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

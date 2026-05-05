@@ -1,9 +1,22 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useMemo } from 'react'
 import { Icons } from '@/lib/icons'
 import { createProduct, createBatch, saveBatchCoaPath } from '@/app/catalog/actions'
 import type { CatalogProduct, DbBatch } from '@/types/catalog'
+
+// ── Mini sparkline (static placeholder — replace with real 7d velocity data) ─
+function MiniSparkline() {
+  return (
+    <svg className="pt-cat-spark" width="44" height="16" viewBox="0 0 44 16">
+      <polyline
+        points="0,10 6,8 12,11 18,6 24,9 30,7 36,10 44,8"
+        fill="none" stroke="var(--pt-ok)" strokeWidth="1.5"
+        strokeLinecap="round" strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
 
 // ── COA PDF opener ───────────────────────────────────────────────────────────
 async function openCoa(coaPath: string) {
@@ -133,8 +146,9 @@ function BatchRow({ batch }: { batch: DbBatch }) {
 // ── Product detail panel ─────────────────────────────────────────────────────
 function CatalogDetail({ product }: { product: CatalogProduct }) {
   const [showAddBatch, setShowAddBatch] = useState(false)
-  const lowStock = product.totalStock > 0 && product.totalStock < 20
-  const outOfStock = product.totalStock === 0
+  const flag = stockFlag(product.totalStock)
+  const outOfStock = flag === 'oos'
+  const lowStock = flag === 'low' || flag === 'critical'
 
   return (
     <aside className="pt-cat-detail">
@@ -199,26 +213,39 @@ function CatalogDetail({ product }: { product: CatalogProduct }) {
   )
 }
 
+const LOW_THRESHOLD = 25
+const CRITICAL_THRESHOLD = 10
+const BAR_MAX = 200
+
+function stockFlag(stock: number): 'oos' | 'critical' | 'low' | undefined {
+  if (stock === 0) return 'oos'
+  if (stock <= CRITICAL_THRESHOLD) return 'critical'
+  if (stock <= LOW_THRESHOLD) return 'low'
+  return undefined
+}
+
 // ── Main catalog view ────────────────────────────────────────────────────────
 export function CatalogView({ products }: { products: CatalogProduct[] }) {
   const [selectedId, setSelectedId] = useState(products[0]?.id ?? '')
   const [showAddProduct, setShowAddProduct] = useState(false)
   const [search, setSearch] = useState('')
 
-  const filtered = products.filter(p =>
+  const filtered = useMemo(() => products.filter(p =>
     !search ||
     p.sku.toLowerCase().includes(search.toLowerCase()) ||
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     p.productFamily.toLowerCase().includes(search.toLowerCase())
-  )
+  ), [products, search])
 
-  const families = Array.from(new Set(filtered.map(p => p.productFamily))).sort()
-  const byFamily = Object.fromEntries(families.map(f => [f, filtered.filter(p => p.productFamily === f)]))
+  const families = useMemo(() =>
+    Array.from(new Set(filtered.map(p => p.productFamily))).sort()
+  , [filtered])
+  const byFamily = useMemo(() =>
+    Object.fromEntries(families.map(f => [f, filtered.filter(p => p.productFamily === f)]))
+  , [families, filtered])
 
   const selected = products.find(p => p.id === selectedId) ?? products[0]
-  const outOfStockCount = products.filter(p => p.totalStock === 0).length
-  const lowStockCount = products.filter(p => p.totalStock > 0 && p.totalStock < 20).length
-  const needsAttentionCount = outOfStockCount + lowStockCount
+  const needsAttentionCount = products.filter(p => p.totalStock <= LOW_THRESHOLD).length
   const totalValue = products.reduce((s, p) => s + p.totalStock * p.unitPrice, 0)
 
   return (
@@ -259,15 +286,19 @@ export function CatalogView({ products }: { products: CatalogProduct[] }) {
           <div className="pt-cat-list-head">
             <div className="pt-cat-cell-name">Product</div>
             <div className="pt-cat-cell-stock">Stock</div>
+            <div className="pt-cat-cell-velocity">Vel · 7d</div>
+            <div className="pt-cat-cell-cover">Cover</div>
             <div className="pt-cat-cell-price">Price</div>
-            <div className="pt-cat-cell-velocity">Batches</div>
+            <div className="pt-cat-cell-margin">Batches</div>
           </div>
           <ul>
             {families.map(family => (
               <li key={family}>
                 <div className="pt-cat-family-hd">{family}</div>
                 {byFamily[family].map(p => {
-                  const flag = p.totalStock === 0 ? 'oos' : p.totalStock < 20 ? 'low' : undefined
+                  const flag = stockFlag(p.totalStock)
+                  const barPct = Math.min(100, (p.totalStock / BAR_MAX) * 100)
+                  const thrPct = (LOW_THRESHOLD / BAR_MAX) * 100
                   return (
                     <div
                       key={p.id}
@@ -275,21 +306,37 @@ export function CatalogView({ products }: { products: CatalogProduct[] }) {
                       onClick={() => setSelectedId(p.id)}
                     >
                       <div className="pt-cat-cell-name">
-                        <div className="pt-cat-prod-name">{p.name}</div>
+                        <div className="pt-cat-name-main">
+                          <span className="pt-cat-cat-pill" data-cat={p.productFamily}>{p.productFamily}</span>
+                          <div className="pt-cat-prod-name">{p.name}</div>
+                        </div>
                         <div className="pt-cat-sku mono">{p.sku}</div>
                       </div>
                       <div className="pt-cat-cell-stock">
-                        <span className={`pt-cat-stock-num mono ${flag === 'oos' ? 'is-zero' : ''}`}>
-                          {p.totalStock === 0 ? 'OUT' : p.totalStock}
-                        </span>
-                        {flag && (
-                          <span className={`pt-cat-flag pt-cat-flag-${flag}`}>
-                            {flag === 'oos' ? 'out of stock' : 'low'}
+                        <div className="pt-cat-stock-row">
+                          <span className={`pt-cat-stock-num mono ${flag === 'oos' ? 'is-zero' : ''}`}>
+                            {p.totalStock === 0 ? 'OUT' : p.totalStock}
                           </span>
-                        )}
+                          {flag && (
+                            <span className={`pt-cat-flag pt-cat-flag-${flag}`}>
+                              {flag === 'oos' ? 'out of stock' : flag === 'critical' ? 'critical' : 'below threshold'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="pt-cat-stock-bar">
+                          <div className={`pt-cat-stock-fill ${flag ? `is-${flag}` : ''}`} style={{ width: `${barPct}%` }} />
+                          <div className="pt-cat-stock-thr" style={{ left: `${thrPct}%` }} />
+                        </div>
                       </div>
-                      <div className="pt-cat-cell-price mono">${p.unitPrice.toFixed(2)}</div>
-                      <div className="pt-cat-cell-velocity mono">{p.batches.length}</div>
+                      <div className="pt-cat-cell-velocity">
+                        {p.totalStock > 0 ? <MiniSparkline /> : null}
+                        <span className="pt-cat-vel">—/wk</span>
+                      </div>
+                      <div className="pt-cat-cell-cover">
+                        <span className={`mono ${flag === 'oos' ? 'is-zero' : flag === 'critical' ? 'is-warn' : ''}`}>—</span>
+                      </div>
+                      <div className="pt-cat-cell-price mono">${p.unitPrice.toFixed(0)}</div>
+                      <div className="pt-cat-cell-margin mono">{p.batches.length}</div>
                     </div>
                   )
                 })}
