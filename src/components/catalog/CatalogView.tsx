@@ -250,7 +250,7 @@ function CatalogDetail({ product, products }: { product: CatalogProduct; product
           <header className="pt-card-hd">
             <div>
               <h3>Often paired with</h3>
-              <p>Other {product.productFamily} products</p>
+              <p>Other {displayFamily(product.productFamily)} products</p>
             </div>
           </header>
           <div className="pt-cat-affinity-body">
@@ -285,29 +285,52 @@ function stockFlag(stock: number): 'oos' | 'critical' | 'low' | undefined {
   return undefined
 }
 
+const FAMILY_DISPLAY: Record<string, string> = {
+  'GLP-1': 'GLP-1', 'HEALING': 'Healing', 'COSMETIC': 'Cosmetic', 'MITO': 'Mito', 'GH': 'GH',
+}
+function displayFamily(f: string) { return FAMILY_DISPLAY[f] ?? f }
+
+function flagOrder(f: ReturnType<typeof stockFlag>) {
+  return f === 'oos' ? 0 : f === 'critical' ? 1 : f === 'low' ? 2 : 3
+}
+
 // ── Main catalog view ────────────────────────────────────────────────────────
 export function CatalogView({ products }: { products: CatalogProduct[] }) {
   const [selectedId, setSelectedId] = useState(products[0]?.id ?? '')
   const [showAddProduct, setShowAddProduct] = useState(false)
-  const [search, setSearch] = useState('')
+  const [familyFilter, setFamilyFilter] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<string>('attention')
 
-  const filtered = useMemo(() => products.filter(p =>
-    !search ||
-    p.sku.toLowerCase().includes(search.toLowerCase()) ||
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.productFamily.toLowerCase().includes(search.toLowerCase())
-  ), [products, search])
+  const allFamilies = useMemo(() =>
+    Array.from(new Set(products.map(p => p.productFamily))).sort()
+  , [products])
+
+  const needsAttentionCount = useMemo(() =>
+    products.filter(p => stockFlag(p.totalStock) !== undefined).length
+  , [products])
+  const totalValue = products.reduce((s, p) => s + p.totalStock * p.unitPrice, 0)
+
+  const filtered = useMemo(() => {
+    let result = products
+    if (familyFilter === 'attention') result = result.filter(p => stockFlag(p.totalStock) !== undefined)
+    else if (familyFilter !== 'all') result = result.filter(p => p.productFamily === familyFilter)
+    return result
+  }, [products, familyFilter])
 
   const families = useMemo(() =>
     Array.from(new Set(filtered.map(p => p.productFamily))).sort()
   , [filtered])
-  const byFamily = useMemo(() =>
-    Object.fromEntries(families.map(f => [f, filtered.filter(p => p.productFamily === f)]))
-  , [families, filtered])
+
+  const byFamily = useMemo(() => {
+    const sortFn = sortBy === 'attention'
+      ? (a: CatalogProduct, b: CatalogProduct) => flagOrder(stockFlag(a.totalStock)) - flagOrder(stockFlag(b.totalStock)) || a.name.localeCompare(b.name)
+      : sortBy === 'stock-asc' ? (a: CatalogProduct, b: CatalogProduct) => a.totalStock - b.totalStock
+      : sortBy === 'stock-desc' ? (a: CatalogProduct, b: CatalogProduct) => b.totalStock - a.totalStock
+      : (a: CatalogProduct, b: CatalogProduct) => a.name.localeCompare(b.name)
+    return Object.fromEntries(families.map(f => [f, [...filtered.filter(p => p.productFamily === f)].sort(sortFn)]))
+  }, [families, filtered, sortBy])
 
   const selected = products.find(p => p.id === selectedId) ?? products[0]
-  const needsAttentionCount = products.filter(p => p.totalStock <= LOW_THRESHOLD).length
-  const totalValue = products.reduce((s, p) => s + p.totalStock * p.unitPrice, 0)
 
   return (
     <div className="pt-cat">
@@ -317,6 +340,9 @@ export function CatalogView({ products }: { products: CatalogProduct[] }) {
           <p>{products.length} SKUs · {needsAttentionCount} need attention · ${Math.round(totalValue).toLocaleString()} on hand</p>
         </div>
         <div className="pt-cat-hd-actions">
+          <button className="pt-btn pt-btn-ghost">
+            <Icons.gear size={12} /> Import COA
+          </button>
           <button className="pt-btn pt-btn-primary" onClick={() => setShowAddProduct(v => !v)}>
             <Icons.plus size={12} /> {showAddProduct ? 'Cancel' : 'New SKU'}
           </button>
@@ -331,14 +357,26 @@ export function CatalogView({ products }: { products: CatalogProduct[] }) {
 
       <div className="pt-cat-toolbar">
         <div className="pt-cat-filters">
-          <div className="pt-ix-search" style={{ width: 260 }}>
-            <Icons.search size={12} />
-            <input
-              placeholder="Search SKU, name, family…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
+          <button className={`pt-cat-filter ${familyFilter === 'all' ? 'is-active' : ''}`} onClick={() => setFamilyFilter('all')}>All</button>
+          {needsAttentionCount > 0 && (
+            <button className={`pt-cat-filter ${familyFilter === 'attention' ? 'is-active' : ''}`} onClick={() => setFamilyFilter('attention')}>
+              Needs attention · {needsAttentionCount}
+            </button>
+          )}
+          {allFamilies.map(f => (
+            <button key={f} className={`pt-cat-filter ${familyFilter === f ? 'is-active' : ''}`} onClick={() => setFamilyFilter(f)}>
+              {displayFamily(f)}
+            </button>
+          ))}
+        </div>
+        <div className="pt-cat-sort">
+          <span className="pt-cat-sort-lbl">Sort</span>
+          <select className="pt-cat-sort-sel" value={sortBy} onChange={e => setSortBy(e.target.value)}>
+            <option value="attention">Attention first</option>
+            <option value="name">Name A–Z</option>
+            <option value="stock-asc">Stock: low to high</option>
+            <option value="stock-desc">Stock: high to low</option>
+          </select>
         </div>
       </div>
 
@@ -355,7 +393,7 @@ export function CatalogView({ products }: { products: CatalogProduct[] }) {
           <ul>
             {families.map(family => (
               <li key={family}>
-                <div className="pt-cat-family-hd">{family}</div>
+                <div className="pt-cat-family-hd">{displayFamily(family)}</div>
                 {byFamily[family].map(p => {
                   const flag = stockFlag(p.totalStock)
                   const barPct = Math.min(100, (p.totalStock / BAR_MAX) * 100)
@@ -368,7 +406,7 @@ export function CatalogView({ products }: { products: CatalogProduct[] }) {
                     >
                       <div className="pt-cat-cell-name">
                         <div className="pt-cat-name-main">
-                          <span className="pt-cat-cat-pill" data-cat={p.productFamily}>{p.productFamily}</span>
+                          <span className="pt-cat-cat-pill" data-cat={p.productFamily}>{displayFamily(p.productFamily)}</span>
                           <div className="pt-cat-prod-name">{p.name}</div>
                         </div>
                         <div className="pt-cat-sku mono">{p.sku}</div>
@@ -405,7 +443,7 @@ export function CatalogView({ products }: { products: CatalogProduct[] }) {
             ))}
             {filtered.length === 0 && (
               <li style={{ padding: '24px', textAlign: 'center', color: 'var(--pt-fg-4)', fontSize: 13 }}>
-                {search ? 'No products match your search' : 'No products yet — add your first SKU above'}
+                No products yet — add your first SKU above
               </li>
             )}
           </ul>
