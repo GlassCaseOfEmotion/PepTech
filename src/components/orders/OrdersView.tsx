@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
 import { updateOrderStatus } from '@/app/orders/actions'
@@ -106,24 +106,55 @@ export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
     setTimeout(() => setPulse(p => { const n = { ...p }; delete n[id]; return n }), 700)
   }
 
-  const tryMove = useCallback(async (orderId: string, toStatus: OrderStatus) => {
-    const o = orders.find(x => x.id === orderId)
-    if (!o || o.status === toStatus) return
-    if (o.status === 'awaiting' && toStatus !== 'confirming' && toStatus !== 'awaiting') {
-      flash(orderId, 'err')
-      showToast(`#${o.refNumber} — move to ${toStatus} not allowed from awaiting`, 'err')
+  const tryMove = async (orderId: string, toStatus: OrderStatus) => {
+    // Strict sequential progression guard
+    const ALLOWED_FROM: Partial<Record<OrderStatus, OrderStatus[]>> = {
+      awaiting:   ['confirming'],
+      confirming: ['packing'],
+      packing:    ['shipped'],
+      shipped:    ['delivered'],
+    }
+
+    let originalStatus: OrderStatus | undefined
+    let refNumber = ''
+
+    setOrders(prev => {
+      const target = prev.find(x => x.id === orderId)
+      if (!target || target.status === toStatus) return prev
+      const allowed = ALLOWED_FROM[target.status] ?? []
+      if (!allowed.includes(toStatus)) return prev
+      originalStatus = target.status
+      refNumber = target.refNumber
+      return prev.map(x => x.id === orderId ? { ...x, status: toStatus } : x)
+    })
+
+    if (!originalStatus) {
+      // Either same status or transition not allowed — check current state for error message
+      setOrders(prev => {
+        const target = prev.find(x => x.id === orderId)
+        if (target && target.status !== toStatus) {
+          const allowed = ALLOWED_FROM[target.status] ?? []
+          if (!allowed.includes(toStatus)) {
+            flash(orderId, 'err')
+            showToast(`Cannot move directly to ${toStatus}`, 'err')
+          }
+        }
+        return prev
+      })
       return
     }
-    // Optimistic update
-    setOrders(prev => prev.map(x => x.id === orderId ? { ...x, status: toStatus } : x))
-    flash(orderId, 'ok')
-    showToast(`#${o.refNumber} → ${COLUMNS.find(c => c.id === toStatus)?.label}`)
+
+    showToast(`#${refNumber} → ${COLUMNS.find(c => c.id === toStatus)?.label}`)
+
     const result = await updateOrderStatus(orderId, toStatus)
     if ('error' in result) {
-      setOrders(prev => prev.map(x => x.id === orderId ? { ...x, status: o.status } : x))
+      setOrders(prev => prev.map(x => x.id === orderId ? { ...x, status: originalStatus! } : x))
+      flash(orderId, 'err')
       showToast(`Failed: ${result.error}`, 'err')
+    } else {
+      flash(orderId, 'ok')
     }
-  }, [orders])
+  }
 
   const totalAwaiting = orders
     .filter(o => o.status === 'awaiting' || o.status === 'confirming')

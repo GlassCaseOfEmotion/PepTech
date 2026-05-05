@@ -92,9 +92,10 @@ export async function updateOrderStatus(orderId: string, status: string): Promis
 
   try {
     const { supabase, tenantId } = await getTenantId()
-    await supabase.from('orders')
+    const { error: updateError } = await supabase.from('orders')
       .update({ status })
       .eq('id', orderId).eq('tenant_id', tenantId)
+    if (updateError) return { error: updateError.message }
     await supabase.from('order_events').insert({
       tenant_id: tenantId,
       order_id: orderId,
