@@ -393,7 +393,6 @@ export function CatalogView({ products }: { products: CatalogProduct[] }) {
           <ul>
             {families.map(family => (
               <li key={family}>
-                <div className="pt-cat-family-hd">{displayFamily(family)}</div>
                 {byFamily[family].map(p => {
                   const flag = stockFlag(p.totalStock)
                   const barPct = Math.min(100, (p.totalStock / BAR_MAX) * 100)
