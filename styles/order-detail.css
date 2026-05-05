@@ -317,3 +317,36 @@
   margin-top: 2px;
   font-family: var(--pt-mono);
 }
+
+/* ── Create order form ──────────────────────────────────────────────────── */
+.pt-create-order { display: flex; flex-direction: column; gap: 20px; }
+.pt-co-section { display: flex; flex-direction: column; gap: 8px; }
+.pt-co-lbl {
+  font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--pt-fg-4);
+}
+.pt-co-item { display: flex; align-items: center; gap: 8px; }
+.pt-co-row { display: flex; gap: 8px; }
+.pt-co-total {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 600;
+}
+.pt-co-dropdown {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px oklch(0 0 0 / 0.12);
+  margin-top: 2px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.pt-co-dropdown-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 8px 12px;
+  border: none; background: none; cursor: pointer;
+  font-size: 12.5px; text-align: left; color: var(--pt-fg);
+  font-family: inherit;
+}
+.pt-co-dropdown-item:hover { background: oklch(from var(--pt-fg) l c h / 0.04); }

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
 import { updateOrderStatus } from '@/app/orders/actions'
+import { CreateOrderModal } from './CreateOrderModal'
 import type { OrderCard, OrderStatus } from '@/types/orders'
 
 const COLUMNS: { id: OrderStatus; label: string; caption: string }[] = [
@@ -227,21 +228,7 @@ export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
       </div>
 
       {showCreateModal && (
-        <div className="pt-modal-backdrop" onClick={() => setShowCreateModal(false)}>
-          <div className="pt-modal" onClick={e => e.stopPropagation()}>
-            <div className="pt-modal-hd">
-              <h3>New order</h3>
-              <button className="pt-iconbtn" onClick={() => setShowCreateModal(false)}>
-                <Icons.x size={14} />
-              </button>
-            </div>
-            <div className="pt-modal-body">
-              <p style={{ color: 'var(--pt-fg-3)', fontSize: 13 }}>
-                Order creation form — wired in Task 11
-              </p>
-            </div>
-          </div>
-        </div>
+        <CreateOrderModal onClose={() => setShowCreateModal(false)} />
       )}
 
       {toast && (
