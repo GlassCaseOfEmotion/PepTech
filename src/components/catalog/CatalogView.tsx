@@ -6,9 +6,9 @@ import { createProduct, createBatch, saveBatchCoaPath } from '@/app/catalog/acti
 import type { CatalogProduct, DbBatch } from '@/types/catalog'
 
 // ── Mini sparkline (static placeholder — replace with real 7d velocity data) ─
-function MiniSparkline() {
+function MiniSparkline({ width = 44, height = 16 }: { width?: number; height?: number }) {
   return (
-    <svg className="pt-cat-spark" width="44" height="16" viewBox="0 0 44 16">
+    <svg className="pt-cat-spark" width={width} height={height} viewBox="0 0 44 16">
       <polyline
         points="0,10 6,8 12,11 18,6 24,9 30,7 36,10 44,8"
         fill="none" stroke="var(--pt-ok)" strokeWidth="1.5"
@@ -129,53 +129,88 @@ function AddBatchForm({ productId, onDone }: { productId: string; onDone: () => 
 
 // ── Batch row ────────────────────────────────────────────────────────────────
 function BatchRow({ batch }: { batch: DbBatch }) {
+  const added = new Date(batch.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const expires = batch.expires_at
+    ? new Date(batch.expires_at).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+    : '—'
   return (
     <tr>
-      <td className="mono">{batch.batch_number}</td>
-      <td className="mono">{batch.stock}</td>
-      <td>{batch.expires_at ?? '—'}</td>
+      <td className="mono" style={{ color: 'var(--pt-accent)', fontWeight: 500 }}>{batch.batch_number}</td>
+      <td style={{ color: 'var(--pt-fg-3)' }}>{added}</td>
+      <td className="mono" style={{ fontWeight: 500 }}>{batch.stock}</td>
+      <td style={{ color: 'var(--pt-fg-3)' }}>{expires}</td>
       <td>
         {batch.coa_path
-          ? <button className="pt-od-coa" onClick={() => void openCoa(batch.coa_path!)}>View COA</button>
-          : <span style={{ color: 'var(--pt-fg-4)', fontSize: 11 }}>No COA</span>}
+          ? <button className="pt-od-coa" onClick={() => void openCoa(batch.coa_path!)}>View →</button>
+          : <span style={{ color: 'var(--pt-fg-4)', fontSize: 11 }}>—</span>}
       </td>
     </tr>
   )
 }
 
 // ── Product detail panel ─────────────────────────────────────────────────────
-function CatalogDetail({ product }: { product: CatalogProduct }) {
+function CatalogDetail({ product, products }: { product: CatalogProduct; products: CatalogProduct[] }) {
   const [showAddBatch, setShowAddBatch] = useState(false)
   const flag = stockFlag(product.totalStock)
-  const outOfStock = flag === 'oos'
-  const lowStock = flag === 'low' || flag === 'critical'
+  const barPct = Math.min(100, (product.totalStock / BAR_MAX) * 100)
+  const thrPct = (LOW_THRESHOLD / BAR_MAX) * 100
+
+  const paired = products.filter(p => p.id !== product.id && p.productFamily === product.productFamily).slice(0, 3)
 
   return (
     <aside className="pt-cat-detail">
       <header className="pt-cat-detail-hd">
         <div>
-          <span className="pt-cat-cat-pill">{product.productFamily}</span>
+          <span className="pt-cat-cat-pill" data-cat={product.productFamily}>{product.productFamily}</span>
           <h2>{product.name}</h2>
           <div className="pt-cat-sku mono">{product.sku}</div>
         </div>
         <div className="pt-cat-detail-actions">
-          <span className="mono" style={{ fontSize: 14, fontWeight: 600 }}>${product.unitPrice.toFixed(2)}</span>
+          <button className="pt-btn pt-btn-ghost">Edit</button>
+          <button className="pt-btn pt-btn-primary">Re-order</button>
         </div>
       </header>
 
-      {outOfStock && (
-        <div className="pt-cat-note pt-cat-note-critical">
-          <i className="pt-cat-note-dot" /><span>Out of stock</span>
+      {flag && (
+        <div className={`pt-cat-note ${flag === 'oos' ? 'pt-cat-note-critical' : 'pt-cat-note-low'}`}>
+          <i className="pt-cat-note-dot" />
+          <span>
+            {flag === 'oos'
+              ? 'Out of stock — reorder immediately.'
+              : `Below threshold — ${product.totalStock} units remaining.`}
+          </span>
         </div>
       )}
-      {lowStock && !outOfStock && (
-        <div className="pt-cat-note pt-cat-note-low">
-          <i className="pt-cat-note-dot" /><span>Low stock — {product.totalStock} units remaining</span>
+
+      <div className="pt-cat-stat-grid">
+        <div className="pt-cat-stat">
+          <div className="lbl">In Stock</div>
+          <div className={`val ${flag === 'oos' ? 'is-zero' : flag ? 'is-warn' : ''}`}>
+            {product.totalStock}<span className="u">units</span>
+          </div>
+          <div className="pt-cat-stock-bar" style={{ marginTop: 2 }}>
+            <div className={`pt-cat-stock-fill ${flag ? `is-${flag}` : ''}`} style={{ width: `${barPct}%` }} />
+            <div className="pt-cat-stock-thr" style={{ left: `${thrPct}%` }} />
+          </div>
+          <div className="pt-cat-stat-sub">threshold {LOW_THRESHOLD}</div>
         </div>
-      )}
-      {product.description && (
-        <p style={{ fontSize: 12.5, color: 'var(--pt-fg-3)', margin: '0 0 16px' }}>{product.description}</p>
-      )}
+        <div className="pt-cat-stat">
+          <div className="lbl">Velocity</div>
+          <div className="val">—<span className="u">/wk</span></div>
+          <MiniSparkline width={110} height={28} />
+          <div className="pt-cat-stat-sub">last 7 days</div>
+        </div>
+        <div className="pt-cat-stat">
+          <div className="lbl">Cover</div>
+          <div className="val">—<span className="u">days</span></div>
+          <div className="pt-cat-stat-sub">at current velocity</div>
+        </div>
+        <div className="pt-cat-stat">
+          <div className="lbl">Unit Econ</div>
+          <div className="val">${product.unitPrice.toFixed(0)}</div>
+          <div className="pt-cat-stat-sub">cost — · margin —</div>
+        </div>
+      </div>
 
       <section className="pt-card pt-cat-section">
         <header className="pt-card-hd">
@@ -183,9 +218,11 @@ function CatalogDetail({ product }: { product: CatalogProduct }) {
             <h3>Batches</h3>
             <p>{product.batches.length} batch{product.batches.length !== 1 ? 'es' : ''} · {product.totalStock} units total</p>
           </div>
-          <button className="pt-link" onClick={() => setShowAddBatch(v => !v)}>
-            {showAddBatch ? 'Cancel' : '+ Add batch'}
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="pt-link" onClick={() => setShowAddBatch(v => !v)}>
+              {showAddBatch ? 'Cancel' : '+ Add batch'}
+            </button>
+          </div>
         </header>
         <div className="pt-card-body" style={{ padding: 0 }}>
           {showAddBatch && (
@@ -196,19 +233,43 @@ function CatalogDetail({ product }: { product: CatalogProduct }) {
           {product.batches.length > 0 ? (
             <table className="pt-cat-batches">
               <thead>
-                <tr><th>Batch</th><th>Stock</th><th>Expires</th><th>COA</th></tr>
+                <tr><th>Lot</th><th>Added</th><th>Stock</th><th>Expires</th><th>COA</th></tr>
               </thead>
               <tbody>
                 {product.batches.map(b => <BatchRow key={b.id} batch={b} />)}
               </tbody>
             </table>
           ) : (
-            !showAddBatch && (
-              <div className="pt-cat-empty"><span>No batches yet.</span></div>
-            )
+            !showAddBatch && <div className="pt-cat-empty"><span>No batches yet.</span></div>
           )}
         </div>
       </section>
+
+      {paired.length > 0 && (
+        <section className="pt-card pt-cat-section">
+          <header className="pt-card-hd">
+            <div>
+              <h3>Often paired with</h3>
+              <p>Other {product.productFamily} products</p>
+            </div>
+          </header>
+          <div className="pt-cat-affinity-body">
+            {paired.map(p => {
+              const pFlag = stockFlag(p.totalStock)
+              return (
+                <div key={p.id} className="pt-cat-aff">
+                  <span className="pt-cat-cat-pill" data-cat={p.productFamily}>{p.productFamily}</span>
+                  <div>
+                    <div className="pt-cat-aff-name">{p.name}</div>
+                    <div className="pt-cat-aff-sub mono">{p.sku} · ${p.unitPrice}</div>
+                  </div>
+                  <div className={`pt-cat-aff-stock mono ${pFlag ? 'is-low' : ''}`}>{p.totalStock}</div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
     </aside>
   )
 }
@@ -349,7 +410,7 @@ export function CatalogView({ products }: { products: CatalogProduct[] }) {
             )}
           </ul>
         </div>
-        {selected && <CatalogDetail product={selected} />}
+        {selected && <CatalogDetail product={selected} products={products} />}
       </div>
     </div>
   )
