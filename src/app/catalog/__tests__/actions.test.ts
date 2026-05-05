@@ -27,6 +27,9 @@ describe('validateSku', () => {
   it('uppercases the SKU', () => {
     expect(validateSku('bpc-157')).toBeNull()
   })
+  it('returns error for SKU longer than 32 characters', () => {
+    expect(validateSku('A'.repeat(33))).toBe('SKU must be 32 characters or fewer')
+  })
 })
 
 describe('validateBatch', () => {

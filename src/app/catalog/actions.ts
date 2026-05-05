@@ -84,8 +84,8 @@ export async function createBatch(data: {
 
 export async function saveBatchCoaPath(batchId: string, coaPath: string): Promise<{ success: true } | { error: string }> {
   try {
-    const { supabase } = await getTenantId()
-    await supabase.from('batches').update({ coa_path: coaPath }).eq('id', batchId)
+    const { supabase, tenantId } = await getTenantId()
+    await supabase.from('batches').update({ coa_path: coaPath }).eq('id', batchId).eq('tenant_id', tenantId)
     revalidatePath('/catalog')
     return { success: true }
   } catch (e) {

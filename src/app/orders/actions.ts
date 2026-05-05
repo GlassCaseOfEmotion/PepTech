@@ -29,6 +29,12 @@ export async function createOrder(data: {
 }): Promise<{ success: true; orderId: string; refNumber: string } | { error: string }> {
   if (data.items.length === 0) return { error: 'Order must have at least one item' }
 
+  for (const it of data.items) {
+    if (!it.productId) return { error: 'All items must have a product selected' }
+    if (it.qty < 1) return { error: 'Quantity must be at least 1' }
+    if (it.unitPriceSnapshot <= 0) return { error: 'Unit price must be greater than 0' }
+  }
+
   try {
     const { supabase, tenantId } = await getTenantId()
 
@@ -60,7 +66,10 @@ export async function createOrder(data: {
         unit_price_snapshot: it.unitPriceSnapshot,
       }))
     )
-    if (itemsError) return { error: itemsError.message }
+    if (itemsError) {
+      await supabase.from('orders').delete().eq('id', order.id)
+      return { error: itemsError.message }
+    }
 
     await supabase.from('order_events').insert({
       tenant_id: tenantId,
@@ -78,6 +87,9 @@ export async function createOrder(data: {
 }
 
 export async function updateOrderStatus(orderId: string, status: string): Promise<{ success: true } | { error: string }> {
+  const VALID_STATUSES = ['awaiting', 'confirming', 'packing', 'shipped', 'delivered']
+  if (!VALID_STATUSES.includes(status)) return { error: `Invalid status: ${status}` }
+
   try {
     const { supabase, tenantId } = await getTenantId()
     await supabase.from('orders')
@@ -122,6 +134,7 @@ export async function saveOrderNotes(orderId: string, notes: string): Promise<{ 
     await supabase.from('orders')
       .update({ notes })
       .eq('id', orderId).eq('tenant_id', tenantId)
+    revalidatePath(`/orders/${orderId}`)
     return { success: true }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }
