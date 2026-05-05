@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, Fragment } from 'react'
+import { useState, useTransition, useRef, Fragment } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
 import { updateOrderStatus, saveOrderNotes } from '@/app/orders/actions'
@@ -34,7 +34,9 @@ export function OrderDetailView({ order, events, chatExcerpt }: {
 }) {
   const [status, setStatus] = useState(order.status)
   const [notes, setNotes] = useState(order.notes ?? '')
+  const [notesError, setNotesError] = useState('')
   const [pending, startTransition] = useTransition()
+  const savingRef = useRef(false)
 
   const primaryChannel = order.customers?.customer_channels?.find(c => c.is_primary)
     ?? order.customers?.customer_channels?.[0]
@@ -49,15 +51,23 @@ export function OrderDetailView({ order, events, chatExcerpt }: {
 
   const advance = () => {
     if (!nextStatus) return
+    const prevStatus = status   // capture synchronously before async gap
     startTransition(async () => {
       setStatus(nextStatus)
       const result = await updateOrderStatus(order.id, nextStatus)
-      if ('error' in result) setStatus(status)
+      if ('error' in result) setStatus(prevStatus)
     })
   }
 
   const blurNotes = () => {
-    startTransition(async () => { await saveOrderNotes(order.id, notes) })
+    if (savingRef.current) return
+    savingRef.current = true
+    setNotesError('')
+    startTransition(async () => {
+      const result = await saveOrderNotes(order.id, notes)
+      savingRef.current = false
+      if ('error' in result) setNotesError('Failed to save notes')
+    })
   }
 
   return (
@@ -253,6 +263,9 @@ export function OrderDetailView({ order, events, chatExcerpt }: {
                 onBlur={blurNotes}
                 placeholder="Add internal notes…"
               />
+              {notesError && (
+                <div style={{ fontSize: 11, color: 'var(--pt-danger)', marginTop: 4 }}>{notesError}</div>
+              )}
             </div>
           </section>
         </div>
@@ -271,7 +284,12 @@ export function OrderDetailView({ order, events, chatExcerpt }: {
               <div className="pt-card-body">
                 <div className="pt-cust-id">
                   <div className="pt-thread-av" data-channel={channel} style={{ width: 36, height: 36, fontSize: 11 }}>
-                    {(order.customers.display_name.match(/[A-Z]/g) ?? [order.customers.display_name[0] ?? '?']).slice(0, 2).join('')}
+                    {order.customers.display_name
+                      .split(' ')
+                      .map(w => w[0]?.toUpperCase() ?? '')
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .join('') || '?'}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="pt-cust-name">{order.customers.display_name}</div>
