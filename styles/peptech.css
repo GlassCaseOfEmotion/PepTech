@@ -758,3 +758,27 @@ kbd {
   font-size: 11px; color: var(--pt-fg-4);
 }
 .pt-foot-mid { font-style: italic; }
+
+/* ─── Modal ───────────────────────────────────────────────────────────────── */
+.pt-modal-backdrop {
+  position: fixed; inset: 0; z-index: 200;
+  background: oklch(from var(--pt-bg) l c h / 0.7);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+}
+.pt-modal {
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line);
+  border-radius: var(--pt-radius);
+  box-shadow: 0 24px 64px oklch(0 0 0 / 0.3);
+  width: min(640px, 95vw);
+  max-height: 90vh;
+  display: flex; flex-direction: column;
+}
+.pt-modal-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 0.5px solid var(--pt-line);
+}
+.pt-modal-hd h3 { font-size: 15px; font-weight: 600; margin: 0; }
+.pt-modal-body { flex: 1; overflow-y: auto; padding: 20px; }
