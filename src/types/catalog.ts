@@ -1,0 +1,48 @@
+﻿export type DbProduct = {
+  id: string
+  tenant_id: string
+  sku: string
+  name: string
+  product_family: string
+  unit_price: number
+  description: string | null
+  is_active: boolean
+  created_at: string
+}
+
+export type DbBatch = {
+  id: string
+  tenant_id: string
+  product_id: string
+  batch_number: string
+  coa_path: string | null
+  stock: number
+  expires_at: string | null
+  created_at: string
+}
+
+export type CatalogProduct = {
+  id: string
+  sku: string
+  name: string
+  productFamily: string
+  unitPrice: number
+  description: string | null
+  isActive: boolean
+  batches: DbBatch[]
+  totalStock: number
+}
+
+export function dbProductToDisplay(product: DbProduct, batches: DbBatch[]): CatalogProduct {
+  return {
+    id: product.id,
+    sku: product.sku,
+    name: product.name,
+    productFamily: product.product_family,
+    unitPrice: product.unit_price,
+    description: product.description,
+    isActive: product.is_active,
+    batches,
+    totalStock: batches.reduce((sum, b) => sum + b.stock, 0),
+  }
+}
