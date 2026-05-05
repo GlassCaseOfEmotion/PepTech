@@ -21,6 +21,7 @@ export async function createProduct(data: {
 }): Promise<{ success: true } | { error: string }> {
   const sku = data.sku.trim().toUpperCase()
   if (!sku) return { error: 'SKU is required' }
+  if (sku.length > 32) return { error: 'SKU must be 32 characters or fewer' }
   if (!/^[A-Z0-9\-_]+$/.test(sku)) return { error: 'SKU may only contain letters, numbers, hyphens, and underscores' }
   if (!data.name.trim()) return { error: 'Name is required' }
   if (!data.productFamily.trim()) return { error: 'Product family is required' }
