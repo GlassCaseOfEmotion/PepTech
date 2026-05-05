@@ -13,12 +13,9 @@ export default async function CatalogPage() {
 
   const supabase = await createClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabaseAny = supabase as any
-
   const [{ data: products }, { data: batches }] = await Promise.all([
-    supabaseAny.from('products').select('*').eq('is_active', true).order('product_family').order('name'),
-    supabaseAny.from('batches').select('*').order('created_at', { ascending: false }),
+    supabase.from('products').select('*').eq('is_active', true).order('product_family').order('name'),
+    supabase.from('batches').select('*').order('created_at', { ascending: false }),
   ])
 
   const batchesByProduct = ((batches ?? []) as DbBatch[]).reduce<Record<string, DbBatch[]>>((acc, b) => {

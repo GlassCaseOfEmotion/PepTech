@@ -12,33 +12,56 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
+      batches: {
+        Row: {
+          batch_number: string
+          coa_path: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          product_id: string
+          stock: number
+          tenant_id: string
+        }
+        Insert: {
+          batch_number: string
+          coa_path?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          product_id: string
+          stock?: number
+          tenant_id: string
+        }
+        Update: {
+          batch_number?: string
+          coa_path?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          product_id?: string
+          stock?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batches_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batches_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           assigned_to: string | null
@@ -343,6 +366,233 @@ export type Database = {
           },
         ]
       }
+      order_events: {
+        Row: {
+          action: string
+          actor: string
+          created_at: string
+          id: string
+          note: string | null
+          order_id: string
+          tenant_id: string
+        }
+        Insert: {
+          action: string
+          actor?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          order_id: string
+          tenant_id: string
+        }
+        Update: {
+          action?: string
+          actor?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          order_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          batch_id: string | null
+          id: string
+          order_id: string
+          product_id: string
+          qty: number
+          tenant_id: string
+          unit_price_snapshot: number
+        }
+        Insert: {
+          batch_id?: string | null
+          id?: string
+          order_id: string
+          product_id: string
+          qty: number
+          tenant_id: string
+          unit_price_snapshot: number
+        }
+        Update: {
+          batch_id?: string | null
+          id?: string
+          order_id?: string
+          product_id?: string
+          qty?: number
+          tenant_id?: string
+          unit_price_snapshot?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          carrier: string | null
+          conversation_id: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          notes: string | null
+          payment_address: string | null
+          payment_amount: number
+          payment_asset: string
+          ref_number: string
+          shipping_address: Json | null
+          status: string
+          tenant_id: string
+          tracking_number: string | null
+          tx_hash: string | null
+          updated_at: string
+        }
+        Insert: {
+          carrier?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          notes?: string | null
+          payment_address?: string | null
+          payment_amount?: number
+          payment_asset?: string
+          ref_number: string
+          shipping_address?: Json | null
+          status?: string
+          tenant_id: string
+          tracking_number?: string | null
+          tx_hash?: string | null
+          updated_at?: string
+        }
+        Update: {
+          carrier?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          notes?: string | null
+          payment_address?: string | null
+          payment_amount?: number
+          payment_asset?: string
+          ref_number?: string
+          shipping_address?: Json | null
+          status?: string
+          tenant_id?: string
+          tracking_number?: string | null
+          tx_hash?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          product_family: string
+          sku: string
+          tenant_id: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          product_family: string
+          sku: string
+          tenant_id: string
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          product_family?: string
+          sku?: string
+          tenant_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quick_replies: {
         Row: {
           content: string
@@ -460,6 +710,29 @@ export type Database = {
           },
         ]
       }
+      tenant_order_sequences: {
+        Row: {
+          last_value: number
+          tenant_id: string
+        }
+        Insert: {
+          last_value?: number
+          tenant_id: string
+        }
+        Update: {
+          last_value?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_order_sequences_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           created_at: string
@@ -538,6 +811,7 @@ export type Database = {
         Args: { conv_id: string; tenant: string }
         Returns: undefined
       }
+      next_order_ref: { Args: { p_tenant_id: string }; Returns: string }
       unsnooze_expired: { Args: never; Returns: undefined }
     }
     Enums: {
@@ -667,9 +941,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

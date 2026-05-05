@@ -76,11 +76,15 @@ function AddBatchForm({ productId, onDone }: { productId: string; onDone: () => 
       })
       if ('error' in result) { setError(result.error); return }
       if (coaFile && result.coaUploadUrl) {
-        await fetch(result.coaUploadUrl, {
+        const uploadRes = await fetch(result.coaUploadUrl, {
           method: 'PUT',
           body: coaFile,
           headers: { 'Content-Type': 'application/pdf' },
         })
+        if (!uploadRes.ok) {
+          setError('COA upload failed — please try again')
+          return
+        }
         await saveBatchCoaPath(result.batchId, result.coaPath)
       }
       onDone()
@@ -212,7 +216,9 @@ export function CatalogView({ products }: { products: CatalogProduct[] }) {
   const byFamily = Object.fromEntries(families.map(f => [f, filtered.filter(p => p.productFamily === f)]))
 
   const selected = products.find(p => p.id === selectedId) ?? products[0]
-  const lowCount = products.filter(p => p.totalStock < 20).length
+  const outOfStockCount = products.filter(p => p.totalStock === 0).length
+  const lowStockCount = products.filter(p => p.totalStock > 0 && p.totalStock < 20).length
+  const needsAttentionCount = outOfStockCount + lowStockCount
   const totalValue = products.reduce((s, p) => s + p.totalStock * p.unitPrice, 0)
 
   return (
@@ -220,7 +226,7 @@ export function CatalogView({ products }: { products: CatalogProduct[] }) {
       <div className="pt-cat-hd">
         <div>
           <h1>Catalog</h1>
-          <p>{products.length} SKUs · {lowCount} need attention · ${Math.round(totalValue).toLocaleString()} on hand</p>
+          <p>{products.length} SKUs · {needsAttentionCount} need attention · ${Math.round(totalValue).toLocaleString()} on hand</p>
         </div>
         <div className="pt-cat-hd-actions">
           <button className="pt-btn pt-btn-primary" onClick={() => setShowAddProduct(v => !v)}>
