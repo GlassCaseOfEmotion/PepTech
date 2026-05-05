@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
 import { InboxProvider, useInbox } from './InboxProvider'
+import { OrderRail } from './OrderRail'
 import { TemplatePicker } from './TemplatePicker'
 import type { DbConversation, DbQuickReply, DbTemplate, InboxThread, InboxMessage } from '@/types/inbox'
 import { initials } from '@/types/inbox'
@@ -410,11 +411,12 @@ function snoozeOptions() {
   ]
 }
 
-function ConversationPane({ thread, messages, onSend, isSending }: {
+function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder }: {
   thread: InboxThread
   messages: InboxMessage[]
   onSend: (text: string) => void
   isSending: boolean
+  onCreateOrder: () => void
 }) {
   const { snooze, markDone, reopen } = useInbox()
   const [showSnooze, setShowSnooze] = useState(false)
@@ -477,6 +479,9 @@ function ConversationPane({ thread, messages, onSend, isSending }: {
               </div>
             )}
           </div>
+          <button className="pt-btn pt-btn-ghost" onClick={onCreateOrder}>
+            <Icons.box size={12} /> Order
+          </button>
           {thread.status === 'resolved'
             ? <button className="pt-btn pt-btn-ghost" onClick={reopen}><Icons.rotate size={12} /> Reopen</button>
             : <button className="pt-btn pt-btn-ghost" onClick={markDone}><Icons.check size={12} /> Mark done</button>
@@ -590,6 +595,7 @@ function ConversationRail({ thread }: { thread: InboxThread }) {
 function InboxLayout() {
   const { threads, activeId, setActiveId, filter, setFilter, messages, isSending, sendMessage } = useInbox()
   const activeThread = threads.find(t => t.id === activeId) ?? threads[0]
+  const [showOrderRail, setShowOrderRail] = useState(false)
 
   return (
     <div className="pt-inbox">
@@ -606,9 +612,18 @@ function InboxLayout() {
           messages={messages}
           onSend={sendMessage}
           isSending={isSending}
+          onCreateOrder={() => setShowOrderRail(true)}
         />
       )}
-      {activeThread && <ConversationRail thread={activeThread} />}
+      {activeThread && !showOrderRail && <ConversationRail thread={activeThread} />}
+      {activeThread && showOrderRail && (
+        <OrderRail
+          customerId={activeThread.customerId}
+          customerName={activeThread.name}
+          conversationId={activeThread.id}
+          onClose={() => setShowOrderRail(false)}
+        />
+      )}
     </div>
   )
 }
