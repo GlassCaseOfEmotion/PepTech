@@ -13,35 +13,18 @@ interface OrderRailProps {
 export function OrderRail({ customerId, customerName, conversationId, onClose }: OrderRailProps) {
   const router = useRouter()
 
-  const handleSuccess = (orderId: string, refNumber: string) => {
+  const handleSuccess = (orderId: string, _refNumber: string) => {
     onClose()
     router.push(`/orders/${orderId}`)
-    void refNumber
   }
 
   return (
-    <aside className="pt-ix-rail">
-      <div style={{
-        padding: '12px 16px 10px',
-        borderBottom: '0.5px solid var(--pt-line)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexShrink: 0,
-      }}>
-        <div style={{ fontSize: 13, fontWeight: 600 }}>New order</div>
-        <button
-          style={{
-            fontSize: 11, color: 'var(--pt-fg-4)',
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: '2px 6px', borderRadius: 4,
-          }}
-          onClick={onClose}
-        >
-          Cancel
-        </button>
+    <aside className="pt-ix-order-rail">
+      <div className="pt-ix-order-rail-hd">
+        <span className="pt-ix-order-rail-title">New order</span>
+        <button className="pt-ix-order-rail-cancel" onClick={onClose}>Cancel</button>
       </div>
-      <div style={{ padding: '16px', overflowY: 'auto', flex: 1 }}>
+      <div className="pt-ix-order-rail-body">
         <CreateOrderForm
           customerId={customerId}
           customerName={customerName}
