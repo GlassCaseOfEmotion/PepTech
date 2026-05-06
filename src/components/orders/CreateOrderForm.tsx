@@ -1,15 +1,10 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { Icons } from '@/lib/icons'
+import { useState, useEffect } from 'react'
 import { createOrder } from '@/app/orders/actions'
 
 type ProductOption = {
   id: string; sku: string; name: string; product_family: string; unit_price: number
-}
-
-type LineItem = {
-  key: number; productId: string; productName: string; qty: number; unitPrice: number
 }
 
 interface CreateOrderFormProps {
@@ -21,44 +16,40 @@ interface CreateOrderFormProps {
 }
 
 export function CreateOrderForm({ customerId, customerName, conversationId, onSuccess, onCancel }: CreateOrderFormProps) {
-  const [items, setItems] = useState<LineItem[]>([{ key: 0, productId: '', productName: '', qty: 1, unitPrice: 0 }])
+  const [products, setProducts] = useState<ProductOption[]>([])
+  const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [paymentAsset, setPaymentAsset] = useState('USDT')
   const [paymentAddress, setPaymentAddress] = useState('')
   const [address, setAddress] = useState({ ln1: '', ln2: '', city: '', state: '', zip: '' })
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [searchResults, setSearchResults] = useState<ProductOption[]>([])
-  const [activeItemKey, setActiveItemKey] = useState<number | null>(null)
   const [resolvedCustomerId, setResolvedCustomerId] = useState(customerId ?? '')
 
-  const searchProducts = useCallback(async (q: string, itemKey: number) => {
-    setActiveItemKey(itemKey)
-    if (!q.trim()) { setSearchResults([]); return }
-    const res = await fetch(`/api/catalog/products?q=${encodeURIComponent(q)}`)
-    if (res.ok) setSearchResults(await res.json() as ProductOption[])
+  useEffect(() => {
+    fetch('/api/catalog/products')
+      .then(r => r.json())
+      .then((data: ProductOption[]) => setProducts(data))
+      .catch(() => {/* non-critical */})
   }, [])
 
-  const selectProduct = (product: ProductOption, itemKey: number) => {
-    setItems(prev => prev.map(it => it.key === itemKey
-      ? { ...it, productId: product.id, productName: product.name, unitPrice: product.unit_price }
-      : it
-    ))
-    setSearchResults([])
-    setActiveItemKey(null)
+  const setQty = (productId: string, qty: number) => {
+    setQuantities(prev =>
+      qty > 0
+        ? { ...prev, [productId]: qty }
+        : Object.fromEntries(Object.entries(prev).filter(([k]) => k !== productId))
+    )
   }
 
-  const addItem = () => setItems(prev => [...prev, { key: Date.now(), productId: '', productName: '', qty: 1, unitPrice: 0 }])
-  const removeItem = (key: number) => setItems(prev => prev.filter(it => it.key !== key))
-  const updateItemQty = (key: number, qty: number) =>
-    setItems(prev => prev.map(it => it.key === key ? { ...it, qty } : it))
+  const families = [...new Set(products.map(p => p.product_family))]
+  const byFamily = Object.fromEntries(families.map(f => [f, products.filter(p => p.product_family === f)]))
 
-  const total = items.reduce((s, it) => s + it.qty * it.unitPrice, 0)
+  const selectedItems = products.filter(p => (quantities[p.id] ?? 0) > 0)
+  const total = selectedItems.reduce((s, p) => s + (quantities[p.id] ?? 0) * p.unit_price, 0)
 
   const submit = async () => {
     if (!resolvedCustomerId) { setError('Customer is required'); return }
-    const unselected = items.find(it => !it.productId)
-    if (unselected) { setError('All line items must have a product selected'); return }
+    if (selectedItems.length === 0) { setError('Add at least one product'); return }
     setError('')
     setSubmitting(true)
     const result = await createOrder({
@@ -69,7 +60,11 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
       paymentAddress: paymentAddress || undefined,
       shippingAddress: address.ln1 ? { ...address } : undefined,
       notes: notes || undefined,
-      items: items.map(it => ({ productId: it.productId, qty: it.qty, unitPriceSnapshot: it.unitPrice })),
+      items: selectedItems.map(p => ({
+        productId: p.id,
+        qty: quantities[p.id] ?? 1,
+        unitPriceSnapshot: p.unit_price,
+      })),
     })
     setSubmitting(false)
     if ('error' in result) { setError(result.error); return }
@@ -78,6 +73,7 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
 
   return (
     <div className="pt-create-order">
+
       {/* Customer */}
       {!customerId && (
         <div className="pt-co-section">
@@ -97,54 +93,51 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
         </div>
       )}
 
-      {/* Line items */}
+      {/* Product picker */}
       <div className="pt-co-section">
-        <div className="pt-co-lbl">Line items</div>
-        {items.map(it => (
-          <div key={it.key} className="pt-co-item">
-            <div style={{ flex: 1, position: 'relative' }}>
-              <input
-                className="pt-input"
-                placeholder="Search product (SKU or name)…"
-                value={it.productName}
-                onChange={e => {
-                  const name = e.target.value
-                  setItems(prev => prev.map(x => x.key === it.key ? { ...x, productName: name, productId: '' } : x))
-                  void searchProducts(name, it.key)
-                }}
-              />
-              {activeItemKey === it.key && searchResults.length > 0 && (
-                <div className="pt-co-dropdown">
-                  {searchResults.map(p => (
-                    <button key={p.id} className="pt-co-dropdown-item" onClick={() => selectProduct(p, it.key)}>
-                      <span className="mono" style={{ fontSize: 11, color: 'var(--pt-fg-3)' }}>{p.sku}</span>
-                      <span style={{ flex: 1 }}>{p.name}</span>
-                      <span className="mono" style={{ fontSize: 11 }}>${p.unit_price.toFixed(2)}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <input
-              className="pt-input"
-              style={{ width: 64, textAlign: 'right' }}
-              type="number" min="1" value={it.qty}
-              onChange={e => updateItemQty(it.key, Math.max(1, parseInt(e.target.value, 10) || 1))}
-            />
-            <span className="mono" style={{ fontSize: 12, minWidth: 64, textAlign: 'right', color: it.unitPrice ? 'var(--pt-fg)' : 'var(--pt-fg-4)' }}>
-              {it.unitPrice ? `$${(it.qty * it.unitPrice).toFixed(2)}` : '—'}
-            </span>
-            {items.length > 1 && (
-              <button className="pt-iconbtn" onClick={() => removeItem(it.key)} title="Remove">
-                <Icons.x size={12} />
-              </button>
-            )}
+        <div className="pt-co-lbl">Products</div>
+        {products.length === 0 ? (
+          <div style={{ fontSize: 12, color: 'var(--pt-fg-4)', padding: '4px 0' }}>Loading…</div>
+        ) : (
+          <div className="pt-co-products">
+            {families.map(family => (
+              <div key={family}>
+                <div className="pt-co-family-hd">{family}</div>
+                {byFamily[family].map(p => {
+                  const qty = quantities[p.id] ?? 0
+                  return (
+                    <div key={p.id} className={`pt-co-product ${qty > 0 ? 'is-selected' : ''}`}>
+                      <div className="pt-co-product-info">
+                        <div className="pt-co-product-name">{p.name}</div>
+                        <div className="pt-co-product-meta mono">{p.sku} · ${p.unit_price}</div>
+                      </div>
+                      <div className="pt-co-product-right">
+                        {qty > 0 && (
+                          <span className="pt-co-product-subtotal mono">${(qty * p.unit_price).toFixed(0)}</span>
+                        )}
+                        {qty === 0 ? (
+                          <button className="pt-co-add-btn" onClick={() => setQty(p.id, 1)}>+ Add</button>
+                        ) : (
+                          <div className="pt-co-stepper">
+                            <button className="pt-co-stepper-btn" onClick={() => setQty(p.id, qty - 1)}>−</button>
+                            <span className="pt-co-stepper-qty">{qty}</span>
+                            <button className="pt-co-stepper-btn" onClick={() => setQty(p.id, qty + 1)}>+</button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
           </div>
-        ))}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-          <button className="pt-link" style={{ fontSize: 12 }} onClick={addItem}>+ Add item</button>
-          <div className="pt-co-total">Total <span className="mono">${total.toFixed(2)}</span></div>
-        </div>
+        )}
+        {selectedItems.length > 0 && (
+          <div className="pt-co-total">
+            <span className="pt-co-total-lbl">{selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''}</span>
+            <span className="mono">${total.toFixed(2)}</span>
+          </div>
+        )}
       </div>
 
       {/* Payment */}
@@ -186,11 +179,11 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
         <textarea className="pt-od-notes" style={{ minHeight: 48 }} placeholder="Internal notes…" value={notes} onChange={e => setNotes(e.target.value)} />
       </div>
 
-      {error && <div style={{ fontSize: 12, color: 'var(--pt-danger)', marginBottom: 4 }}>{error}</div>}
+      {error && <div style={{ fontSize: 12, color: 'var(--pt-danger)' }}>{error}</div>}
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <button className="pt-btn pt-btn-ghost" onClick={onCancel} disabled={submitting}>Cancel</button>
-        <button className="pt-btn pt-btn-primary" onClick={submit} disabled={submitting}>
+        <button className="pt-btn pt-btn-primary" onClick={submit} disabled={submitting || selectedItems.length === 0}>
           {submitting ? 'Creating…' : 'Create order'}
         </button>
       </div>
