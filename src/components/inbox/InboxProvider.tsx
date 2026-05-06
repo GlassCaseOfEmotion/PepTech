@@ -51,15 +51,19 @@ interface Props {
   quickReplies: DbQuickReply[]
   templates: DbTemplate[]
   initialResolvedCount?: number
+  initialActiveId?: string
   children: ReactNode
 }
 
-export function InboxProvider({ initialConversations, quickReplies, templates, initialResolvedCount = 0, children }: Props) {
+export function InboxProvider({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId, children }: Props) {
   const supabase = useMemo(() => createClient(), [])
   const [threads, setThreads] = useState<InboxThread[]>(
     initialConversations.map(dbConversationToThread)
   )
-  const [activeId, setActiveIdRaw] = useState(threads[0]?.id ?? '')
+  const [activeId, setActiveIdRaw] = useState(() => {
+    if (initialActiveId && initialConversations.some(c => c.id === initialActiveId)) return initialActiveId
+    return threads[0]?.id ?? ''
+  })
   const [filter, setFilter] = useState('all')
   const [messages, setMessages] = useState<InboxMessage[]>([])
   const [resolvedCount, setResolvedCount] = useState(initialResolvedCount)

@@ -126,11 +126,11 @@ export function Sidebar({ displayName }: SidebarProps) {
         {pinned.length > 0 && (
           <>
             <div className="pt-nav-sep" />
-            <div className="pt-nav-section">Pinned</div>
+            <div className="pt-nav-section">Pinned threads</div>
             {pinned.map((p) => {
               const ChIcon = CH_ICONS[p.channel]
               return (
-                <Link key={p.id} href="/inbox" className="pt-pin">
+                <Link key={p.id} href={`/inbox?conversation=${p.id}`} className="pt-pin">
                   {ChIcon && <ChIcon size={11} />}
                   <div className="pt-pin-body">
                     <div className="pt-pin-name">{p.name}</div>

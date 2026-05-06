@@ -597,6 +597,8 @@ function InboxLayout() {
   const activeThread = threads.find(t => t.id === activeId) ?? threads[0]
   const [showOrderRail, setShowOrderRail] = useState(false)
 
+  useEffect(() => { setShowOrderRail(false) }, [activeId])
+
   return (
     <div className="pt-inbox">
       <ThreadColumn
@@ -635,11 +637,12 @@ interface InboxViewProps {
   quickReplies: DbQuickReply[]
   templates: DbTemplate[]
   initialResolvedCount?: number
+  initialActiveId?: string
 }
 
-export function InboxView({ initialConversations, quickReplies, templates, initialResolvedCount = 0 }: InboxViewProps) {
+export function InboxView({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId }: InboxViewProps) {
   return (
-    <InboxProvider initialConversations={initialConversations} quickReplies={quickReplies} templates={templates} initialResolvedCount={initialResolvedCount}>
+    <InboxProvider initialConversations={initialConversations} quickReplies={quickReplies} templates={templates} initialResolvedCount={initialResolvedCount} initialActiveId={initialActiveId}>
       <InboxLayout />
     </InboxProvider>
   )

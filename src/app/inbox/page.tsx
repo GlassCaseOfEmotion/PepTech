@@ -5,10 +5,11 @@ import { createClient, getServerUser } from '@/lib/supabase/server'
 import { InboxView } from '@/components/inbox/InboxView'
 import type { DbConversation, DbQuickReply, DbTemplate } from '@/types/inbox'
 
-export default async function InboxPage() {
+export default async function InboxPage({ searchParams }: { searchParams: Promise<{ conversation?: string }> }) {
   const user = await getServerUser()
   if (!user) redirect('/login')
 
+  const { conversation: initialConversationId } = await searchParams
   const supabase = await createClient()
 
   const [{ data: conversations }, { data: quickReplies }, { data: templates }, { count: resolvedCount }] = await Promise.all([
@@ -45,6 +46,7 @@ export default async function InboxPage() {
       quickReplies={(quickReplies ?? []) as DbQuickReply[]}
       templates={(templates ?? []) as DbTemplate[]}
       initialResolvedCount={resolvedCount ?? 0}
+      initialActiveId={initialConversationId}
     />
   )
 }
