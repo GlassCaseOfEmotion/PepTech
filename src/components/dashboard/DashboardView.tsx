@@ -4,12 +4,13 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
 import {
-  MOCK_PAYMENTS, MOCK_PRODUCTS,
+  MOCK_PAYMENTS,
   MOCK_REORDERS, MOCK_SHIPMENTS, MOCK_REVENUE_7D,
-  type MockPayment, type MockProduct,
+  type MockPayment,
   type MockReorder, type MockShipment, type MockRevenueDay,
 } from '@/lib/mock-data'
 import type { InboxThread } from '@/types/inbox'
+import type { CatalogProduct } from '@/types/catalog'
 import { initials } from '@/types/inbox'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -287,7 +288,7 @@ function ReordersCard({ reorders }: { reorders: MockReorder[] }) {
 
 // ─── Stock card ─────────────────────────────────────────────────────────────
 
-function StockCard({ products }: { products: MockProduct[] }) {
+function StockCard({ products }: { products: CatalogProduct[] }) {
   return (
     <DashCard title="Stock" subtitle="On-hand by SKU"
       action={<Link href="/catalog" className="pt-link">Catalog →</Link>}
@@ -297,23 +298,26 @@ function StockCard({ products }: { products: MockProduct[] }) {
           <tr><th>SKU</th><th>Lot</th><th className="r">On-hand</th><th className="r">7d Δ</th></tr>
         </thead>
         <tbody>
-          {products.map(p => (
-            <tr key={p.sku} className={p.stock === 0 ? 'is-out' : p.stock < 15 ? 'is-low' : ''}>
-              <td>
-                <div className="pt-sku">{p.sku}</div>
-                <div className="pt-sku-name">{p.name}</div>
-              </td>
-              <td className="mono">{p.lot}</td>
-              <td className="r mono">
-                {p.stock === 0
-                  ? <span className="pt-out">OUT</span>
-                  : <>{p.stock}<span className="pt-stock-unit">v</span></>}
-              </td>
-              <td className={`r mono ${p.trend > 0 ? 'up' : p.trend < 0 ? 'dn' : ''}`}>
-                {p.trend > 0 ? '+' : ''}{p.trend}
-              </td>
-            </tr>
-          ))}
+          {products.map(p => {
+            const latestBatch = p.batches[0]
+            const isOut = p.totalStock === 0
+            const isLow = !isOut && p.totalStock < 15
+            return (
+              <tr key={p.sku} className={isOut ? 'is-out' : isLow ? 'is-low' : ''}>
+                <td>
+                  <div className="pt-sku">{p.sku}</div>
+                  <div className="pt-sku-name">{p.name}</div>
+                </td>
+                <td className="mono">{latestBatch?.batch_number ?? '—'}</td>
+                <td className="r mono">
+                  {isOut
+                    ? <span className="pt-out">OUT</span>
+                    : <>{p.totalStock}<span className="pt-stock-unit">u</span></>}
+                </td>
+                <td className="r mono" style={{ color: 'var(--pt-fg-4)' }}>—</td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </DashCard>
@@ -448,7 +452,7 @@ export function DashboardRightRail({ focusThread }: { focusThread: InboxThread |
 
 // ─── Dashboard page content ──────────────────────────────────────────────────
 
-export function DashboardView({ threads }: { threads: InboxThread[] }) {
+export function DashboardView({ threads, stockProducts }: { threads: InboxThread[]; stockProducts: CatalogProduct[] }) {
   const active = threads.length
   const needsReply = threads.filter(t => t.status === 'needs_reply').length
 
@@ -474,7 +478,7 @@ export function DashboardView({ threads }: { threads: InboxThread[] }) {
         <PaymentsCard initialPayments={MOCK_PAYMENTS} />
         <RevenueCard data={MOCK_REVENUE_7D} />
         <ReordersCard reorders={MOCK_REORDERS} />
-        <StockCard products={MOCK_PRODUCTS} />
+        <StockCard products={stockProducts} />
         <ShipmentsCard shipments={MOCK_SHIPMENTS} />
       </div>
 
