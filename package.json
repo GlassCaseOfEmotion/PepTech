@@ -17,6 +17,7 @@
   "dependencies": {
     "@azure/msal-node": "^5.1.4",
     "@microsoft/microsoft-graph-client": "^3.0.7",
+    "@react-pdf/renderer": "^4.5.1",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.104.1",
     "googleapis": "^171.4.0",
