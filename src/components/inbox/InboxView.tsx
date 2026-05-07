@@ -570,12 +570,14 @@ function ConversationRail({ thread }: { thread: InboxThread }) {
         <Link href={`/customers/${thread.customerId}`} className="pt-cust-hd" style={{ textDecoration: 'none', color: 'inherit' }}>
           <div className="pt-cust-av" data-channel={thread.channel}>{initials(thread.name)}</div>
           <div className="pt-cust-id">
-            <div className="pt-cust-name">{thread.name}</div>
+            <div className="pt-cust-namerow">
+              <div className="pt-cust-name">{thread.name}</div>
+              <div className={`pt-trust pt-trust-${trustCls}`}>
+                <div className="pt-trust-num">{thread.trust}</div>
+                <div className="pt-trust-lbl">trust</div>
+              </div>
+            </div>
             <div className="pt-cust-handle mono">{thread.handle}</div>
-          </div>
-          <div className={`pt-trust pt-trust-${trustCls}`}>
-            <div className="pt-trust-num">{thread.trust}</div>
-            <div className="pt-trust-lbl">trust</div>
           </div>
         </Link>
         <div className="pt-cust-stats">

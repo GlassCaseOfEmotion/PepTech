@@ -26,12 +26,14 @@ export function CustomerRail({ conversation }: CustomerRailProps) {
             {initials(name)}
           </div>
           <div className="pt-cust-id">
-            <div className="pt-cust-name">{name}</div>
+            <div className="pt-cust-namerow">
+              <div className="pt-cust-name">{name}</div>
+              <div className={`pt-trust pt-trust-${trustCls}`}>
+                <div className="pt-trust-num">{customer.trust_score}</div>
+                <div className="pt-trust-lbl">trust</div>
+              </div>
+            </div>
             <div className="pt-cust-handle mono">{conversation.channel_identifier}</div>
-          </div>
-          <div className={`pt-trust pt-trust-${trustCls}`}>
-            <div className="pt-trust-num">{customer.trust_score}</div>
-            <div className="pt-trust-lbl">trust</div>
           </div>
         </div>
 

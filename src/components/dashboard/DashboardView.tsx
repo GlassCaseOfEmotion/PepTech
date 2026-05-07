@@ -416,10 +416,12 @@ export function DashboardRightRail({ focusThread }: { focusThread: InboxThread |
               <div className="pt-cust-hd">
                 <div className="pt-cust-av" data-channel={t.channel}>{initials(t.name)}</div>
                 <div className="pt-cust-id">
-                  <div className="pt-cust-name">{t.name}</div>
+                  <div className="pt-cust-namerow">
+                    <div className="pt-cust-name">{t.name}</div>
+                    <TrustBlock score={t.trust} />
+                  </div>
                   <div className="pt-cust-handle mono">{t.handle}</div>
                 </div>
-                <TrustBlock score={t.trust} />
               </div>
               <div className="pt-cust-stats">
                 <div><div className="lbl">LTV</div><div className="val mono">${t.ltv.toLocaleString()}</div></div>
