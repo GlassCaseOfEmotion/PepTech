@@ -8,6 +8,7 @@ const SECTIONS = [
   { id: 'profile',       label: 'Profile',              icon: Icons.user,    href: '/settings/profile',       built: true },
   { id: 'channels',      label: 'Channels',             icon: Icons.hash,    href: '/settings/channels',      built: true },
   { id: 'wallets',       label: 'Wallets & assets',     icon: Icons.wallet,  href: '/settings/wallets',       built: true },
+  { id: 'branding',      label: 'Branding',             icon: Icons.spark,   href: '/settings/branding',      built: true },
   { id: 'trust',         label: 'Trust & risk',         icon: Icons.shield,  href: '/settings/trust',         built: false },
   { id: 'inventory',     label: 'Inventory defaults',   icon: Icons.box,     href: '/settings/inventory',     built: false },
   { id: 'notifications', label: 'Notifications',        icon: Icons.bell,    href: '/settings/notifications', built: false },
