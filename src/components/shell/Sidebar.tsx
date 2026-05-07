@@ -37,23 +37,29 @@ const PINNED_SELECT = `
 
 interface SidebarProps {
   displayName: string
+  initialPinned?: DbConversation[]
 }
 
-export function Sidebar({ displayName }: SidebarProps) {
+export function Sidebar({ displayName, initialPinned = [] }: SidebarProps) {
   const pathname = usePathname()
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
   const supabase = useMemo(() => createClient(), [])
-  const [pinned, setPinned] = useState<ReturnType<typeof dbConversationToThread>[]>([])
+  const [pinned, setPinned] = useState<ReturnType<typeof dbConversationToThread>[]>(
+    () => initialPinned.map(c => dbConversationToThread(c))
+  )
 
   useEffect(() => {
-    supabase
-      .from('conversations')
-      .select(PINNED_SELECT)
-      .eq('is_pinned', true)
-      .order('last_message_at', { ascending: false, nullsFirst: false })
-      .then(({ data }) => {
-        if (data) setPinned(data.map(c => dbConversationToThread(c as unknown as DbConversation)))
-      })
+    // Only fetch if nothing was server-rendered (e.g. ShellSkeleton path)
+    if (initialPinned.length === 0) {
+      supabase
+        .from('conversations')
+        .select(PINNED_SELECT)
+        .eq('is_pinned', true)
+        .order('last_message_at', { ascending: false, nullsFirst: false })
+        .then(({ data }) => {
+          if (data) setPinned(data.map(c => dbConversationToThread(c as unknown as DbConversation)))
+        })
+    }
   }, [supabase])
 
   useEffect(() => {
