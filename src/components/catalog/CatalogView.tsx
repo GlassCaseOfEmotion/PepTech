@@ -28,13 +28,25 @@ async function openCoa(coaPath: string) {
 }
 
 // ── Add product form ─────────────────────────────────────────────────────────
-function AddProductForm({ onDone }: { onDone: () => void }) {
+const NEW_FAMILY_SENTINEL = '__new__'
+
+function AddProductForm({ onDone, knownFamilies }: { onDone: () => void; knownFamilies: string[] }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState('')
   const [form, setForm] = useState({ sku: '', name: '', productFamily: '', unitPrice: '', costPrice: '' })
+  const [familyMode, setFamilyMode] = useState<'select' | 'custom'>(knownFamilies.length === 0 ? 'custom' : 'select')
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }))
+
+  const handleFamilySelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (e.target.value === NEW_FAMILY_SENTINEL) {
+      setFamilyMode('custom')
+      setForm(f => ({ ...f, productFamily: '' }))
+    } else {
+      setForm(f => ({ ...f, productFamily: e.target.value }))
+    }
+  }
 
   const submit = () => {
     setError('')
@@ -57,7 +69,29 @@ function AddProductForm({ onDone }: { onDone: () => void }) {
       <div className="pt-cat-form-grid">
         <input className="pt-input" placeholder="SKU (e.g. BPC-157-5MG)" value={form.sku} onChange={set('sku')} />
         <input className="pt-input" placeholder="Name (e.g. BPC-157 5mg)" value={form.name} onChange={set('name')} />
-        <input className="pt-input" placeholder="Family (e.g. BPC-157)" value={form.productFamily} onChange={set('productFamily')} />
+        {familyMode === 'select' ? (
+          <select className="pt-input" value={form.productFamily} onChange={handleFamilySelect}>
+            <option value="">Select family…</option>
+            {knownFamilies.map(f => (
+              <option key={f} value={f}>{displayFamily(f)}</option>
+            ))}
+            <option value={NEW_FAMILY_SENTINEL}>+ New family…</option>
+          </select>
+        ) : (
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input className="pt-input" placeholder="New family name" value={form.productFamily} onChange={set('productFamily')} style={{ flex: 1 }} />
+            {knownFamilies.length > 0 && (
+              <button
+                type="button"
+                className="pt-btn pt-btn-ghost"
+                style={{ flexShrink: 0, fontSize: 11 }}
+                onClick={() => { setFamilyMode('select'); setForm(f => ({ ...f, productFamily: '' })) }}
+              >
+                Pick existing
+              </button>
+            )}
+          </div>
+        )}
         <input className="pt-input" placeholder="Sale price (USD)" type="number" min="0" step="0.01" value={form.unitPrice} onChange={set('unitPrice')} />
         <input className="pt-input" placeholder="Cost price (USD, optional)" type="number" min="0" step="0.01" value={form.costPrice} onChange={set('costPrice')} />
       </div>
@@ -362,7 +396,7 @@ export function CatalogView({ products }: { products: CatalogProduct[] }) {
 
       {showAddProduct && (
         <div style={{ padding: '0 22px 16px' }}>
-          <AddProductForm onDone={() => setShowAddProduct(false)} />
+          <AddProductForm onDone={() => setShowAddProduct(false)} knownFamilies={allFamilies} />
         </div>
       )}
 
