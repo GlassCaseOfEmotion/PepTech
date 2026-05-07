@@ -23,7 +23,7 @@ export function SendInvoiceModal({ order, onClose }: SendInvoiceModalProps) {
   const supabase = useMemo(() => createClient(), [])
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState('')
-  const [existing, setExisting] = useState<ExistingInvoice | null | undefined>(undefined) // undefined = loading
+  const [existing, setExisting] = useState<ExistingInvoice | null | undefined>(undefined)
 
   const invoiceNumber = formatInvoiceNumber(order.ref_number)
   const total = order.order_items.reduce((s, it) => s + it.qty * it.unit_price_snapshot, 0)
@@ -86,95 +86,114 @@ export function SendInvoiceModal({ order, onClose }: SendInvoiceModalProps) {
 
   return (
     <div className="pt-modal-backdrop" onClick={pending ? undefined : onClose}>
-      <div className="pt-modal" onClick={e => e.stopPropagation()}>
+      <div className="pt-modal pt-inv-modal" onClick={e => e.stopPropagation()}>
         <div className="pt-modal-hd">
           <h2>{existing ? 'Invoice' : 'Send invoice'}</h2>
-          <button className="pt-iconbtn" onClick={onClose}><Icons.x size={14} /></button>
+          <button className="pt-iconbtn" onClick={onClose} disabled={pending}><Icons.x size={14} /></button>
         </div>
 
         {loading ? (
-          <div className="pt-modal-body" style={{ textAlign: 'center', color: 'var(--pt-fg-4)', fontSize: 13, padding: '32px 0' }}>
-            Loading…
+          <div className="pt-modal-body">
+            <div className="pt-inv-loading">
+              <div className="pt-inv-loading-icon" />
+              <span>Loading…</span>
+            </div>
           </div>
         ) : existing ? (
           <>
             <div className="pt-modal-body">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 20 }}>
-                <span style={{ fontSize: 16, fontWeight: 600 }}>{existing.invoice_number}</span>
-                <span style={{ fontSize: 12, color: 'var(--pt-fg-3)' }}>
-                  Generated {new Date(existing.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                  {' · '}{order.customers?.display_name ?? '—'}
-                </span>
+              <div className="pt-inv-exists-hd">
+                <div className="pt-inv-thumb" aria-hidden="true">
+                  <div className="pt-inv-thumb-bar short" />
+                  <div className="pt-inv-thumb-bar full" />
+                  <div className="pt-inv-thumb-bar med" />
+                  <div className="pt-inv-thumb-bar full" />
+                  <div className="pt-inv-thumb-bar short" />
+                  <div className="pt-inv-thumb-bar med accent" />
+                </div>
+                <div className="pt-inv-exists-info">
+                  <span className="pt-inv-exists-num">{existing.invoice_number}</span>
+                  <span className="pt-inv-exists-meta">
+                    {new Date(existing.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </span>
+                  <span className="pt-inv-exists-meta">{order.customers?.display_name ?? '—'}</span>
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="pt-btn pt-btn-ghost" onClick={preview} disabled={pending} style={{ flex: 1 }}>
+
+              <div className="pt-inv-actions">
+                <button className="pt-btn pt-btn-ghost" onClick={preview} disabled={pending}>
                   Preview
                 </button>
-                <button className="pt-btn pt-btn-primary" onClick={resend} disabled={!hasConversation} style={{ flex: 1 }}>
+                <button className="pt-btn pt-btn-primary" onClick={resend} disabled={!hasConversation || pending}>
                   Resend
                 </button>
               </div>
+
               {!hasConversation && (
-                <div style={{ marginTop: 12, fontSize: 12, color: 'var(--pt-warn)', padding: '8px 10px', background: 'oklch(0.97 0.03 65)', borderRadius: 6 }}>
+                <div className="pt-inv-warn">
                   No linked conversation — open the customer chat from Inbox to enable sending.
                 </div>
               )}
-              {error && <div style={{ marginTop: 10, fontSize: 12, color: 'var(--pt-danger)' }}>{error}</div>}
+              {error && <div className="pt-inv-error">{error}</div>}
             </div>
+
             <div className="pt-modal-ft" style={{ justifyContent: 'space-between' }}>
-              <button
-                style={{ fontSize: 11.5, color: 'var(--pt-fg-4)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                onClick={() => generate(true)}
-                disabled={pending}
-              >
-                {pending ? 'Regenerating…' : 'Regenerate'}
+              <button className="pt-inv-regen" onClick={() => generate(true)} disabled={pending}>
+                {pending ? 'Regenerating…' : 'Regenerate PDF'}
               </button>
-              <button className="pt-btn pt-btn-ghost" onClick={onClose}>Close</button>
+              <button className="pt-btn pt-btn-ghost" onClick={onClose} disabled={pending}>Close</button>
             </div>
           </>
         ) : (
           <>
             <div className="pt-modal-body">
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                <span style={{ fontSize: 12, color: 'var(--pt-fg-3)' }}>{invoiceNumber}</span>
-                <span style={{ fontSize: 12, color: 'var(--pt-fg-3)' }}>{order.customers?.display_name ?? '—'}</span>
+              <div className="pt-inv-doc-hd">
+                <span className="pt-inv-doc-num">{invoiceNumber}</span>
+                <span className="pt-inv-doc-cust">{order.customers?.display_name ?? '—'}</span>
               </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+
+              <table className="pt-inv-table">
                 <thead>
-                  <tr style={{ borderBottom: '0.5px solid var(--pt-line)', color: 'var(--pt-fg-4)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    <th style={{ textAlign: 'left', paddingBottom: 6 }}>Item</th>
-                    <th style={{ textAlign: 'center', paddingBottom: 6 }}>Qty</th>
-                    <th style={{ textAlign: 'right', paddingBottom: 6 }}>Total</th>
+                  <tr>
+                    <th>Item</th>
+                    <th className="center">Qty</th>
+                    <th className="right">Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {order.order_items.map((it, i) => (
-                    <tr key={i} style={{ borderBottom: '0.5px solid var(--pt-line-soft)' }}>
-                      <td style={{ padding: '7px 0' }}>{it.products?.name ?? '—'}</td>
-                      <td style={{ padding: '7px 0', textAlign: 'center' }}>{it.qty}</td>
-                      <td style={{ padding: '7px 0', textAlign: 'right' }} className="mono">${(it.qty * it.unit_price_snapshot).toFixed(2)}</td>
+                    <tr key={i}>
+                      <td>{it.products?.name ?? '—'}</td>
+                      <td className="center">{it.qty}</td>
+                      <td className="right mono">${(it.qty * it.unit_price_snapshot).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr>
+                    <td className="label">Total</td>
+                    <td />
+                    <td className="right mono">${total.toFixed(2)}</td>
+                  </tr>
+                </tfoot>
               </table>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10, paddingTop: 8, borderTop: '1.5px solid var(--pt-fg)', fontWeight: 600, fontSize: 13 }}>
-                <span className="mono">${total.toFixed(2)}</span>
-              </div>
+
               {order.payment_address && (
-                <div style={{ marginTop: 14, padding: 10, background: 'var(--pt-bg-side)', borderRadius: 6, fontSize: 11.5 }}>
-                  <span style={{ color: 'var(--pt-fg-4)' }}>Pay via </span>
-                  <strong>{order.payment_asset}</strong>
-                  {' · '}
-                  <span className="mono" style={{ fontSize: 10.5, wordBreak: 'break-all' }}>{order.payment_address}</span>
+                <div className="pt-inv-pay">
+                  <div className="pt-inv-pay-label">Payment</div>
+                  <span className="pt-inv-pay-asset">{order.payment_asset}</span>
+                  <div className="pt-inv-pay-addr mono">{order.payment_address}</div>
                 </div>
               )}
+
               {!hasConversation && (
-                <div style={{ marginTop: 14, fontSize: 12, color: 'var(--pt-warn)', padding: '8px 10px', background: 'oklch(0.97 0.03 65)', borderRadius: 6 }}>
+                <div className="pt-inv-warn">
                   No linked conversation — open the customer chat from Inbox and create the order from there to enable invoice sending.
                 </div>
               )}
-              {error && <div style={{ marginTop: 10, fontSize: 12, color: 'var(--pt-danger)' }}>{error}</div>}
+              {error && <div className="pt-inv-error">{error}</div>}
             </div>
+
             <div className="pt-modal-ft">
               <button className="pt-btn pt-btn-ghost" onClick={onClose} disabled={pending}>Cancel</button>
               <button className="pt-btn pt-btn-primary" onClick={() => generate(false)} disabled={pending || !hasConversation}>

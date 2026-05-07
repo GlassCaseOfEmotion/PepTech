@@ -770,8 +770,8 @@ kbd {
 .pt-modal {
   background: var(--pt-surface);
   border: 0.5px solid var(--pt-line);
-  border-radius: var(--pt-radius);
-  box-shadow: 0 24px 64px oklch(0 0 0 / 0.3);
+  border-radius: var(--pt-radius-lg);
+  box-shadow: 0 8px 16px oklch(0 0 0 / 0.06), 0 32px 80px oklch(0 0 0 / 0.18);
   width: min(640px, 95vw);
   max-height: 90vh;
   display: flex; flex-direction: column;
@@ -781,5 +781,158 @@ kbd {
   padding: 16px 20px;
   border-bottom: 0.5px solid var(--pt-line);
 }
-.pt-modal-hd h3 { font-size: 15px; font-weight: 600; margin: 0; }
+.pt-modal-hd h2,
+.pt-modal-hd h3 { font-size: 14px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
 .pt-modal-body { flex: 1; overflow-y: auto; padding: 20px; }
+.pt-modal-ft {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  padding: 14px 20px;
+  border-top: 0.5px solid var(--pt-line);
+}
+
+/* ─── Invoice modal ──────────────────────────────────────────────────────── */
+.pt-inv-modal { width: min(420px, 95vw); }
+
+/* document thumbnail shown when invoice already exists */
+.pt-inv-thumb {
+  width: 52px; height: 68px; flex-shrink: 0;
+  background: var(--pt-bg-side);
+  border: 0.5px solid var(--pt-line);
+  border-radius: 5px;
+  display: flex; flex-direction: column; justify-content: center; gap: 5px;
+  padding: 10px 9px;
+  position: relative;
+}
+.pt-inv-thumb::after {
+  content: '';
+  position: absolute; top: 0; right: 0;
+  width: 10px; height: 10px;
+  background: var(--pt-surface);
+  border-left: 0.5px solid var(--pt-line);
+  border-bottom: 0.5px solid var(--pt-line);
+  border-radius: 0 5px 0 4px;
+}
+.pt-inv-thumb-bar {
+  height: 3px; border-radius: 2px;
+  background: oklch(from var(--pt-fg) l c h / 0.12);
+}
+.pt-inv-thumb-bar.short { width: 55%; }
+.pt-inv-thumb-bar.med   { width: 75%; }
+.pt-inv-thumb-bar.full  { width: 100%; }
+.pt-inv-thumb-bar.accent { background: var(--pt-accent-soft); }
+
+/* existing-invoice state header */
+.pt-inv-exists-hd {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding-bottom: 18px;
+  border-bottom: 0.5px solid var(--pt-line-soft);
+  margin-bottom: 18px;
+}
+.pt-inv-exists-info { display: flex; flex-direction: column; gap: 3px; }
+.pt-inv-exists-num  { font-size: 17px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.2; }
+.pt-inv-exists-meta { font-size: 11.5px; color: var(--pt-fg-3); line-height: 1.5; }
+
+/* action buttons row */
+.pt-inv-actions { display: flex; gap: 8px; }
+.pt-inv-actions .pt-btn { flex: 1; justify-content: center; height: 36px; }
+
+/* generate flow — document header band */
+.pt-inv-doc-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 14px;
+  background: var(--pt-bg-side);
+  border: 0.5px solid var(--pt-line-soft);
+  border-radius: var(--pt-radius-sm);
+  margin-bottom: 16px;
+}
+.pt-inv-doc-num  { font-size: 12px; font-weight: 600; letter-spacing: 0.02em; color: var(--pt-fg-2); }
+.pt-inv-doc-cust { font-size: 11.5px; color: var(--pt-fg-3); }
+
+/* line items table */
+.pt-inv-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.pt-inv-table thead tr {
+  border-bottom: 0.5px solid var(--pt-line);
+}
+.pt-inv-table thead th {
+  padding: 0 0 8px;
+  font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--pt-fg-4);
+}
+.pt-inv-table thead th:first-child { text-align: left; }
+.pt-inv-table thead th.center     { text-align: center; }
+.pt-inv-table thead th.right      { text-align: right; }
+.pt-inv-table tbody tr { border-bottom: 0.5px solid var(--pt-line-soft); }
+.pt-inv-table tbody td { padding: 9px 0; }
+.pt-inv-table tbody td.center { text-align: center; color: var(--pt-fg-3); }
+.pt-inv-table tbody td.right  { text-align: right; }
+.pt-inv-table tfoot tr { }
+.pt-inv-table tfoot td {
+  padding: 10px 0 2px;
+  border-top: 1px solid var(--pt-fg);
+  font-weight: 650;
+  font-size: 13.5px;
+}
+.pt-inv-table tfoot td.right { text-align: right; }
+.pt-inv-table tfoot td.label { color: var(--pt-fg-3); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; vertical-align: bottom; padding-bottom: 4px; }
+
+/* payment block */
+.pt-inv-pay {
+  margin-top: 16px;
+  padding: 11px 13px;
+  border: 0.5px dashed var(--pt-line);
+  border-radius: var(--pt-radius-sm);
+  background: var(--pt-bg-side);
+  font-size: 11.5px;
+}
+.pt-inv-pay-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--pt-fg-4); margin-bottom: 5px; }
+.pt-inv-pay-asset { font-weight: 600; color: var(--pt-fg-2); }
+.pt-inv-pay-addr  { margin-top: 4px; font-size: 10.5px; word-break: break-all; color: var(--pt-fg-3); }
+
+/* warning strip */
+.pt-inv-warn {
+  margin-top: 14px;
+  padding: 9px 12px;
+  border-left: 2.5px solid var(--pt-warn);
+  background: var(--pt-warn-soft);
+  border-radius: 0 var(--pt-radius-sm) var(--pt-radius-sm) 0;
+  font-size: 11.5px;
+  color: var(--pt-fg-2);
+  line-height: 1.5;
+}
+
+/* error strip */
+.pt-inv-error {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-left: 2.5px solid var(--pt-danger);
+  background: oklch(from var(--pt-danger) l c h / 0.07);
+  border-radius: 0 var(--pt-radius-sm) var(--pt-radius-sm) 0;
+  font-size: 11.5px;
+  color: var(--pt-danger);
+}
+
+/* loading skeleton */
+.pt-inv-loading {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 36px 0 28px;
+  color: var(--pt-fg-4);
+  font-size: 12.5px;
+}
+.pt-inv-loading-icon {
+  width: 32px; height: 40px;
+  background: var(--pt-bg-side);
+  border: 0.5px solid var(--pt-line);
+  border-radius: 4px;
+  animation: pt-pulse 1.4s ease-in-out infinite;
+}
+
+/* regenerate ghost link */
+.pt-inv-regen {
+  font-size: 12px; color: var(--pt-fg-4);
+  background: none; border: none; cursor: pointer; padding: 0;
+  text-decoration: underline; text-underline-offset: 2px;
+  text-decoration-color: oklch(from var(--pt-fg-4) l c h / 0.4);
+}
+.pt-inv-regen:hover:not(:disabled) { color: var(--pt-fg-2); }
+.pt-inv-regen:disabled { opacity: 0.5; cursor: not-allowed; }
