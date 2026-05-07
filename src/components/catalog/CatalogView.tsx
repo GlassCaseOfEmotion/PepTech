@@ -28,25 +28,29 @@ async function openCoa(coaPath: string) {
 }
 
 // ── Add product form ─────────────────────────────────────────────────────────
-const NEW_FAMILY_SENTINEL = '__new__'
-
 function AddProductForm({ onDone, knownFamilies }: { onDone: () => void; knownFamilies: string[] }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState('')
   const [form, setForm] = useState({ sku: '', name: '', productFamily: '', unitPrice: '', costPrice: '' })
-  const [familyMode, setFamilyMode] = useState<'select' | 'custom'>(knownFamilies.length === 0 ? 'custom' : 'select')
+  const [addingFamily, setAddingFamily] = useState(false)
+  const [newFamilyText, setNewFamilyText] = useState('')
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }))
 
-  const handleFamilySelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    if (e.target.value === NEW_FAMILY_SENTINEL) {
-      setFamilyMode('custom')
-      setForm(f => ({ ...f, productFamily: '' }))
-    } else {
-      setForm(f => ({ ...f, productFamily: e.target.value }))
-    }
+  const selectFamily = (f: string) => setForm(prev => ({ ...prev, productFamily: f }))
+
+  const confirmNewFamily = () => {
+    const val = newFamilyText.trim().toUpperCase()
+    if (val) { selectFamily(val); setAddingFamily(false); setNewFamilyText('') }
   }
+
+  const sale = parseFloat(form.unitPrice)
+  const cost = parseFloat(form.costPrice)
+  const margin = !isNaN(sale) && !isNaN(cost) && sale > 0 && cost >= 0
+    ? ((sale - cost) / sale) * 100
+    : null
+  const marginCls = margin === null ? '' : margin >= 50 ? 'is-hi' : margin >= 25 ? 'is-md' : 'is-lo'
 
   const submit = () => {
     setError('')
@@ -56,7 +60,7 @@ function AddProductForm({ onDone, knownFamilies }: { onDone: () => void; knownFa
         sku: form.sku,
         name: form.name,
         productFamily: form.productFamily,
-        unitPrice: parseFloat(form.unitPrice),
+        unitPrice: sale,
         costPrice,
       })
       if ('error' in result) { setError(result.error); return }
@@ -65,42 +69,105 @@ function AddProductForm({ onDone, knownFamilies }: { onDone: () => void; knownFa
   }
 
   return (
-    <div className="pt-cat-form">
-      <div className="pt-cat-form-grid">
-        <input className="pt-input" placeholder="SKU (e.g. BPC-157-5MG)" value={form.sku} onChange={set('sku')} />
-        <input className="pt-input" placeholder="Name (e.g. BPC-157 5mg)" value={form.name} onChange={set('name')} />
-        {familyMode === 'select' ? (
-          <select className="pt-input" value={form.productFamily} onChange={handleFamilySelect}>
-            <option value="">Select family…</option>
-            {knownFamilies.map(f => (
-              <option key={f} value={f}>{displayFamily(f)}</option>
-            ))}
-            <option value={NEW_FAMILY_SENTINEL}>+ New family…</option>
-          </select>
-        ) : (
-          <div style={{ display: 'flex', gap: 6 }}>
-            <input className="pt-input" placeholder="New family name" value={form.productFamily} onChange={set('productFamily')} style={{ flex: 1 }} />
-            {knownFamilies.length > 0 && (
-              <button
-                type="button"
-                className="pt-btn pt-btn-ghost"
-                style={{ flexShrink: 0, fontSize: 11 }}
-                onClick={() => { setFamilyMode('select'); setForm(f => ({ ...f, productFamily: '' })) }}
-              >
-                Pick existing
-              </button>
+    <div className="pt-sku-form">
+      <div className="pt-sku-form-body">
+
+        {/* ── Product identity ── */}
+        <div className="pt-sku-section">
+          <div className="pt-sku-section-hd">Product</div>
+
+          <div className="pt-sku-field">
+            <label className="pt-sku-lbl">SKU</label>
+            <input
+              className="pt-sku-input mono"
+              placeholder="e.g. BPC-157-5MG"
+              value={form.sku}
+              onChange={e => setForm(f => ({ ...f, sku: e.target.value.toUpperCase() }))}
+              autoFocus
+            />
+          </div>
+
+          <div className="pt-sku-field">
+            <label className="pt-sku-lbl">Name</label>
+            <input className="pt-sku-input" placeholder="e.g. BPC-157 5mg" value={form.name} onChange={set('name')} />
+          </div>
+
+          <div className="pt-sku-field">
+            <label className="pt-sku-lbl">Family</label>
+            <div className="pt-sku-chips">
+              {knownFamilies.map(f => (
+                <button
+                  key={f} type="button"
+                  className={`pt-sku-chip ${form.productFamily === f ? 'is-on' : ''}`}
+                  onClick={() => selectFamily(form.productFamily === f ? '' : f)}
+                >
+                  {displayFamily(f)}
+                </button>
+              ))}
+              {addingFamily ? (
+                <input
+                  className="pt-sku-input"
+                  style={{ width: 130, height: 26, fontSize: 11.5, padding: '0 8px' }}
+                  placeholder="New family…"
+                  value={newFamilyText}
+                  onChange={e => setNewFamilyText(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') confirmNewFamily(); if (e.key === 'Escape') setAddingFamily(false) }}
+                  onBlur={confirmNewFamily}
+                  autoFocus
+                />
+              ) : (
+                <button type="button" className="pt-sku-chip pt-sku-chip-new" onClick={() => setAddingFamily(true)}>
+                  <Icons.plus size={9} /> New
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-sku-divider" />
+
+        {/* ── Pricing ── */}
+        <div className="pt-sku-section">
+          <div className="pt-sku-section-hd">Pricing</div>
+
+          <div className="pt-sku-field">
+            <label className="pt-sku-lbl">Sale price <span className="pt-sku-lbl-opt">USD</span></label>
+            <input className="pt-sku-input mono" placeholder="0.00" type="number" min="0" step="0.01" value={form.unitPrice} onChange={set('unitPrice')} />
+          </div>
+
+          <div className="pt-sku-field">
+            <label className="pt-sku-lbl">Cost price <span className="pt-sku-lbl-opt">USD · optional</span></label>
+            <input className="pt-sku-input mono" placeholder="0.00" type="number" min="0" step="0.01" value={form.costPrice} onChange={set('costPrice')} />
+          </div>
+
+          <div className="pt-sku-margin">
+            {margin !== null ? (
+              <div className={`pt-sku-margin-live ${marginCls}`}>
+                <span className="pt-sku-margin-pct">{margin.toFixed(0)}%</span>
+                <div className="pt-sku-margin-meta">
+                  <span className="pt-sku-margin-abs">${(sale - cost).toFixed(2)}/unit</span>
+                  <span className="pt-sku-margin-lbl">gross margin</span>
+                </div>
+              </div>
+            ) : (
+              <div className="pt-sku-margin-empty">Enter both prices to preview margin</div>
             )}
           </div>
-        )}
-        <input className="pt-input" placeholder="Sale price (USD)" type="number" min="0" step="0.01" value={form.unitPrice} onChange={set('unitPrice')} />
-        <input className="pt-input" placeholder="Cost price (USD, optional)" type="number" min="0" step="0.01" value={form.costPrice} onChange={set('costPrice')} />
+        </div>
+
       </div>
-      {error && <div className="pt-cat-form-err">{error}</div>}
-      <div className="pt-cat-form-actions">
-        <button className="pt-btn pt-btn-ghost" onClick={onDone} disabled={pending}>Cancel</button>
-        <button className="pt-btn pt-btn-primary" onClick={submit} disabled={pending}>
-          {pending ? 'Saving…' : 'Add product'}
-        </button>
+
+      <div className="pt-sku-form-ft">
+        {error
+          ? <span className="pt-sku-form-ft-err">{error}</span>
+          : <span />
+        }
+        <div className="pt-sku-form-ft-actions">
+          <button className="pt-btn pt-btn-ghost" onClick={onDone} disabled={pending}>Cancel</button>
+          <button className="pt-btn pt-btn-primary" onClick={submit} disabled={pending}>
+            {pending ? 'Saving…' : 'Add product'}
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -395,7 +462,7 @@ export function CatalogView({ products }: { products: CatalogProduct[] }) {
       </div>
 
       {showAddProduct && (
-        <div style={{ padding: '0 22px 16px' }}>
+        <div style={{ padding: '0 22px 20px' }}>
           <AddProductForm onDone={() => setShowAddProduct(false)} knownFamilies={allFamilies} />
         </div>
       )}
