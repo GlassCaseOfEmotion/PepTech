@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Icons } from '@/lib/icons'
 import { updateOrderStatus, saveOrderNotes } from '@/app/orders/actions'
 import type { DbOrderRow, DbOrderEvent, OrderStatus } from '@/types/orders'
+import { SendInvoiceModal } from './SendInvoiceModal'
 
 const CH_MAP: Record<string, 'wa' | 'tg' | 'em'> = { whatsapp: 'wa', telegram: 'tg', email: 'em' }
 const CH_NAMES: Record<string, string> = { wa: 'WhatsApp', tg: 'Telegram', em: 'Email' }
@@ -35,6 +36,7 @@ export function OrderDetailView({ order, events, chatExcerpt }: {
   const [status, setStatus] = useState(order.status)
   const [notes, setNotes] = useState(order.notes ?? '')
   const [notesError, setNotesError] = useState('')
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false)
   const [pending, startTransition] = useTransition()
   const savingRef = useRef(false)
 
@@ -91,8 +93,11 @@ export function OrderDetailView({ order, events, chatExcerpt }: {
           </p>
         </div>
         <div className="pt-od-hd-actions">
+          <button className="pt-btn pt-btn-ghost" onClick={() => setShowInvoiceModal(true)}>
+            <Icons.doc size={12} /> Invoice
+          </button>
           {order.conversation_id && (
-            <Link href="/inbox" className="pt-btn pt-btn-ghost">
+            <Link href={`/inbox?conversation=${order.conversation_id}`} className="pt-btn pt-btn-ghost">
               <Icons.send size={12} /> Message
             </Link>
           )}
@@ -104,6 +109,9 @@ export function OrderDetailView({ order, events, chatExcerpt }: {
           <button className="pt-btn pt-btn-ghost"><Icons.more size={14} /></button>
         </div>
       </div>
+      {showInvoiceModal && (
+        <SendInvoiceModal order={order} onClose={() => setShowInvoiceModal(false)} />
+      )}
 
       {/* Stepper */}
       <div className="pt-od-stepper">
