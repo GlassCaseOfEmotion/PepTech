@@ -14,21 +14,22 @@ export const queryCustomers: AgentTool = {
   inputSchema: {
     type: 'object',
     properties: {
-      name:       { type: 'string', description: 'Partial name match (case-insensitive)' },
-      tag:        { type: 'string', description: 'Filter by tag e.g. "vip", "new"' },
-      min_ltv:    { type: 'number', description: 'Minimum lifetime value' },
-      min_trust:  { type: 'number', description: 'Minimum trust score (0–100)' },
-      limit:      { type: 'number', description: 'Max results (default 20)' },
+      name:      { type: 'string', description: 'Partial name match (case-insensitive)' },
+      tag:       { type: 'string', description: 'Filter by tag e.g. "vip", "new"' },
+      min_ltv:   { type: 'number', description: 'Minimum lifetime value' },
+      min_trust: { type: 'number', description: 'Minimum trust score (0–100)' },
+      limit:     { type: 'number', description: 'Max results (default 20)' },
     },
   },
-  async execute(input: { name?: string; tag?: string; min_ltv?: number; min_trust?: number; limit?: number }, supabase: AgentSupabase) {
+  async execute(raw: Record<string, unknown>, supabase: AgentSupabase) {
+    const input = raw as { name?: string; tag?: string; min_ltv?: number; min_trust?: number; limit?: number }
     let q = supabase
       .from('customers')
       .select('id, display_name, trust_score, ltv, created_at, customer_tags(tag), customer_channels(channel_type, display_handle, is_primary)')
       .order('ltv', { ascending: false })
       .limit(input.limit ?? 20)
 
-    if (input.name) q = q.ilike('display_name', `%${input.name}%`)
+    if (input.name)      q = q.ilike('display_name', `%${input.name}%`)
     if (input.min_ltv  != null) q = q.gte('ltv', input.min_ltv)
     if (input.min_trust != null) q = q.gte('trust_score', input.min_trust)
 
@@ -59,11 +60,12 @@ export const getCustomer: AgentTool = {
       name: { type: 'string', description: 'Exact or partial name (used if id not provided)' },
     },
   },
-  async execute(input: { id?: string; name?: string }, supabase: AgentSupabase) {
+  async execute(raw: Record<string, unknown>, supabase: AgentSupabase) {
+    const input = raw as { id?: string; name?: string }
     let q = supabase
       .from('customers')
       .select('id, display_name, trust_score, ltv, created_at, customer_tags(tag), customer_channels(channel_type, display_handle, is_primary)')
-    if (input.id)   q = (q as ReturnType<typeof q.eq>).eq('id', input.id).single() as never
+    if (input.id)        q = (q as ReturnType<typeof q.eq>).eq('id', input.id).single() as never
     else if (input.name) q = (q as ReturnType<typeof q.ilike>).ilike('display_name', `%${input.name}%`).limit(1).single() as never
     else throw new Error('Provide id or name')
 
@@ -102,7 +104,8 @@ export const queryOrders: AgentTool = {
       limit:       { type: 'number', description: 'Max results (default 20)' },
     },
   },
-  async execute(input: { status?: string; customer_id?: string; since?: string; until?: string; limit?: number }, supabase: AgentSupabase) {
+  async execute(raw: Record<string, unknown>, supabase: AgentSupabase) {
+    const input = raw as { status?: string; customer_id?: string; since?: string; until?: string; limit?: number }
     let q = supabase
       .from('orders')
       .select(ORDER_SELECT)
@@ -131,9 +134,10 @@ export const getOrder: AgentTool = {
       ref_number: { type: 'string', description: 'Order reference like A-1012' },
     },
   },
-  async execute(input: { id?: string; ref_number?: string }, supabase: AgentSupabase) {
+  async execute(raw: Record<string, unknown>, supabase: AgentSupabase) {
+    const input = raw as { id?: string; ref_number?: string }
     let q = supabase.from('orders').select(ORDER_SELECT)
-    if (input.id)         q = q.eq('id', input.id)
+    if (input.id)             q = q.eq('id', input.id)
     else if (input.ref_number) q = q.eq('ref_number', input.ref_number)
     else throw new Error('Provide id or ref_number')
 
@@ -154,7 +158,8 @@ export const queryCatalog: AgentTool = {
       low_stock: { type: 'boolean', description: 'If true, return only products with stock < 10' },
     },
   },
-  async execute(input: { family?: string; low_stock?: boolean }, supabase: AgentSupabase) {
+  async execute(raw: Record<string, unknown>, supabase: AgentSupabase) {
+    const input = raw as { family?: string; low_stock?: boolean }
     const [{ data: products }, { data: batches }] = await Promise.all([
       supabase.from('products').select('id, sku, name, product_family, unit_price, cost_price, is_active').eq('is_active', true).order('name'),
       supabase.from('batches').select('id, product_id, batch_number, stock, expires_at'),
@@ -191,7 +196,8 @@ export const getAnalytics: AgentTool = {
       until: { type: 'string', description: 'ISO date string for end of period' },
     },
   },
-  async execute(input: { since?: string; until?: string }, supabase: AgentSupabase) {
+  async execute(raw: Record<string, unknown>, supabase: AgentSupabase) {
+    const input = raw as { since?: string; until?: string }
     let q = supabase
       .from('orders')
       .select('id, ref_number, status, payment_amount, payment_asset, created_at, customers(display_name), order_items(qty, unit_price_snapshot, products(name))')
@@ -208,7 +214,6 @@ export const getAnalytics: AgentTool = {
     const byStatus: Record<string, number> = {}
     for (const o of rows) byStatus[o.status] = (byStatus[o.status] ?? 0) + 1
 
-    // Top products by units sold
     const unitsByProduct: Record<string, { name: string; units: number; revenue: number }> = {}
     for (const o of rows) {
       for (const item of (o.order_items as { qty: number; unit_price_snapshot: number; products: { name: string } | null }[]) ?? []) {

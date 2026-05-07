@@ -30,12 +30,13 @@ export const createOrder: AgentTool = {
       },
     },
   },
-  summarise(input: Record<string, unknown>) {
-    const i = input as { payment_asset: string; items: unknown[] }
-    return `Create order for ${i.items?.length ?? '?'} item(s) · ${i.payment_asset}`
+  summarise(raw: Record<string, unknown>) {
+    const items = raw.items as unknown[]
+    return `Create order for ${items?.length ?? '?'} item(s) · ${raw.payment_asset}`
   },
-  async execute(input: { customer_id: string; items: { product_id: string; qty: number }[]; payment_asset: string }, supabase: AgentSupabase, tenantId: string) {
-    // Fetch product prices
+  async execute(raw: Record<string, unknown>, supabase: AgentSupabase, tenantId: string) {
+    const input = raw as { customer_id: string; items: { product_id: string; qty: number }[]; payment_asset: string }
+
     const productIds = input.items.map(i => i.product_id)
     const { data: products, error: prodErr } = await supabase
       .from('products').select('id, name, unit_price').in('id', productIds)
@@ -90,10 +91,11 @@ export const updateOrderStatus: AgentTool = {
       status:   { type: 'string', description: 'New status: confirming, packing, shipped, delivered' },
     },
   },
-  summarise(input: Record<string, unknown>) {
-    return `Move order ${input.order_id} → ${input.status}`
+  summarise(raw: Record<string, unknown>) {
+    return `Move order ${raw.order_id} → ${raw.status}`
   },
-  async execute(input: { order_id: string; status: string }, supabase: AgentSupabase, tenantId: string) {
+  async execute(raw: Record<string, unknown>, supabase: AgentSupabase, tenantId: string) {
+    const input = raw as { order_id: string; status: string }
     const VALID = ['awaiting', 'confirming', 'packing', 'shipped', 'delivered']
     if (!VALID.includes(input.status)) throw new Error(`Invalid status: ${input.status}`)
 
@@ -127,12 +129,11 @@ export const generateInvoice: AgentTool = {
       order_id: { type: 'string', description: 'Order UUID' },
     },
   },
-  summarise(input: Record<string, unknown>) {
-    return `Generate invoice for order ${input.order_id}`
+  summarise(raw: Record<string, unknown>) {
+    return `Generate invoice for order ${raw.order_id}`
   },
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async execute(input: { order_id: string }, _supabase: AgentSupabase, _tenantId: string) {
-    // Delegate to the existing generate route
+  async execute(raw: Record<string, unknown>) {
+    const input = raw as { order_id: string }
     const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/invoices/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
