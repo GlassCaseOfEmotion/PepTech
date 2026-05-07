@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, getServerUser } from '@/lib/supabase/server'
-import { renderToBuffer } from '@react-pdf/renderer'
+import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import React from 'react'
 import { InvoicePDF } from '@/components/invoices/InvoicePDF'
 import { buildInvoiceData } from '@/types/invoices'
@@ -49,7 +49,9 @@ export async function POST(request: Request) {
   const invoiceData = buildInvoiceData(order as never, tenant?.name ?? 'My Business', logoUrl)
 
   // Render PDF
-  const buffer = await renderToBuffer(React.createElement(InvoicePDF, { data: invoiceData }))
+  const buffer = await renderToBuffer(
+    React.createElement(InvoicePDF, { data: invoiceData }) as React.ReactElement<DocumentProps>
+  )
 
   // Upload to invoices bucket: {tenantId}/{orderId}/{invoiceNumber}.pdf
   const pdfPath = `${tenantId}/${orderId}/${invoiceData.invoiceNumber}.pdf`
