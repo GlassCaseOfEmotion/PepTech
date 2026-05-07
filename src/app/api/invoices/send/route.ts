@@ -29,21 +29,25 @@ export async function POST(request: Request) {
     .eq('tenant_id', conv.tenant_id)
     .eq('channel_type', conv.channel_type)
     .single()
-  if (!channel?.is_active) return NextResponse.json({ error: 'Channel not connected' }, { status: 422 })
+  if (!channel?.is_active || !channel.credentials) return NextResponse.json({ error: 'Channel not connected' }, { status: 422 })
 
   const to = conv.channel_identifier
 
-  if (conv.channel_type === 'whatsapp') {
-    const { data: signed, error: signedErr } = await supabase.storage.from('invoices').createSignedUrl(invoicePath, 300)
-    if (signedErr || !signed) return NextResponse.json({ error: 'Could not sign PDF URL' }, { status: 500 })
-    await sendWhatsAppMedia(signed.signedUrl, to)
-  } else if (conv.channel_type === 'telegram') {
-    const creds = channel.credentials as { bot_token: string; business_connection_id?: string }
-    const { data: blob, error: dlErr } = await supabase.storage.from('invoices').download(invoicePath)
-    if (dlErr || !blob) return NextResponse.json({ error: 'Could not download invoice PDF' }, { status: 500 })
-    await sendTelegramDocument(creds.bot_token, to, blob, invoiceName, creds.business_connection_id)
-  } else {
-    return NextResponse.json({ error: `Invoice sending not yet supported for ${conv.channel_type}` }, { status: 422 })
+  try {
+    if (conv.channel_type === 'whatsapp') {
+      const { data: signed, error: signedErr } = await supabase.storage.from('invoices').createSignedUrl(invoicePath, 300)
+      if (signedErr || !signed) return NextResponse.json({ error: 'Could not sign PDF URL' }, { status: 500 })
+      await sendWhatsAppMedia(signed.signedUrl, to)
+    } else if (conv.channel_type === 'telegram') {
+      const creds = channel.credentials as { bot_token: string; business_connection_id?: string }
+      const { data: blob, error: dlErr } = await supabase.storage.from('invoices').download(invoicePath)
+      if (dlErr || !blob) return NextResponse.json({ error: 'Could not download invoice PDF' }, { status: 500 })
+      await sendTelegramDocument(creds.bot_token, to, blob, invoiceName, creds.business_connection_id)
+    } else {
+      return NextResponse.json({ error: `Invoice sending not yet supported for ${conv.channel_type}` }, { status: 422 })
+    }
+  } catch {
+    return NextResponse.json({ error: 'Failed to send invoice' }, { status: 500 })
   }
 
   const { data: message } = await supabase
