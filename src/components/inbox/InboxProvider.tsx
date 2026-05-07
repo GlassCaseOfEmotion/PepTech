@@ -60,6 +60,25 @@ interface Props {
   children: ReactNode
 }
 
+function playChime() {
+  try {
+    const ctx = new AudioContext()
+    const now = ctx.currentTime
+    const pairs: [number, number, number][] = [[880, 0, 0.5], [1108, 0.09, 0.55]]
+    pairs.forEach(([freq, offset, decay]) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain); gain.connect(ctx.destination)
+      osc.type = 'sine'; osc.frequency.value = freq
+      gain.gain.setValueAtTime(0, now + offset)
+      gain.gain.linearRampToValueAtTime(0.10, now + offset + 0.015)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + offset + decay)
+      osc.start(now + offset); osc.stop(now + offset + decay)
+    })
+    setTimeout(() => ctx.close(), 800)
+  } catch { /* AudioContext unavailable */ }
+}
+
 export function InboxProvider({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId, initialInvoicePath, initialInvoiceName, children }: Props) {
   const supabase = useMemo(() => createClient(), [])
   const [threads, setThreads] = useState<InboxThread[]>(
@@ -73,6 +92,8 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
   const [messages, setMessages] = useState<InboxMessage[]>([])
   const [resolvedCount, setResolvedCount] = useState(initialResolvedCount)
   const signedUrlsRef = useRef<Set<string>>(new Set())
+  const activeIdRef = useRef(activeId)
+  const unreadRef = useRef<Record<string, number>>({})
   const [notes, setNotes] = useState<DbNote[]>([])
   const [isSending, setIsSending] = useState(false)
   const [tenantId, setTenantId] = useState<string | null>(null)
@@ -83,6 +104,9 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
     setPendingInvoiceName(null)
   }, [])
   const [resolvedLoaded, setResolvedLoaded] = useState(false)
+
+  useEffect(() => { activeIdRef.current = activeId }, [activeId])
+  useEffect(() => { threads.forEach(t => { unreadRef.current[t.id] = t.unread }) }, [threads])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -291,6 +315,10 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
         filter: `conversation_id=eq.${activeId}`,
       }, (payload) => {
         const newMsg = dbMessageToInboxMessage(payload.new as unknown as DbMessage)
+        if (newMsg.from !== 'me') {
+          playChime()
+          window.dispatchEvent(new CustomEvent('pt:new-message'))
+        }
         setMessages(prev => {
           if (prev.some(m => m.id === newMsg.id)) return prev
           if (newMsg.from === 'me') {
@@ -312,6 +340,13 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
       .channel('conversations:list')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations' }, (payload) => {
         const updated = payload.new as unknown as DbConversation
+        // Notify for background threads (active thread handled by messages subscription)
+        const newUnread = updated.unread_count ?? 0
+        const prevUnread = unreadRef.current[updated.id] ?? 0
+        if (updated.id !== activeIdRef.current && newUnread > prevUnread) {
+          playChime()
+          window.dispatchEvent(new CustomEvent('pt:new-message'))
+        }
         setThreads(prev => prev.map(t => {
           if (t.id !== updated.id) return t
           return {

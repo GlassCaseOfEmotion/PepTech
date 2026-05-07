@@ -1,6 +1,7 @@
 'use client'
 
 import { Icons } from '@/lib/icons'
+import { NotificationBell } from './NotificationBell'
 
 interface TopBarProps {
   section?: string
@@ -32,10 +33,7 @@ export function TopBar({ section = 'Inbox', connectedChannels = [], rightOpen, o
 
       <div className="pt-top-actions">
         <button className="pt-iconbtn" title="Filter"><Icons.filter size={14} /></button>
-        <button className="pt-iconbtn" title="Notifications">
-          <Icons.bell size={14} />
-          <span className="pt-iconbtn-dot" />
-        </button>
+        <NotificationBell />
         {onRightToggle !== undefined && (
           <button
             className={`pt-iconbtn ${rightOpen ? 'is-on' : ''}`}
