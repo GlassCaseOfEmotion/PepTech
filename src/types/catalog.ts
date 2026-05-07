@@ -5,6 +5,7 @@
   name: string
   product_family: string
   unit_price: number
+  cost_price: number | null
   description: string | null
   is_active: boolean
   created_at: string
@@ -27,6 +28,7 @@ export type CatalogProduct = {
   name: string
   productFamily: string
   unitPrice: number
+  costPrice: number | null
   description: string | null
   isActive: boolean
   batches: DbBatch[]
@@ -40,9 +42,15 @@ export function dbProductToDisplay(product: DbProduct, batches: DbBatch[]): Cata
     name: product.name,
     productFamily: product.product_family,
     unitPrice: product.unit_price,
+    costPrice: product.cost_price ?? null,
     description: product.description,
     isActive: product.is_active,
     batches,
     totalStock: batches.reduce((sum, b) => sum + b.stock, 0),
   }
+}
+
+export function grossMargin(unitPrice: number, costPrice: number | null): number | null {
+  if (costPrice === null || costPrice <= 0 || unitPrice <= 0) return null
+  return ((unitPrice - costPrice) / unitPrice) * 100
 }

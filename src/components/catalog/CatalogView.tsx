@@ -4,6 +4,7 @@ import { useState, useTransition, useMemo } from 'react'
 import { Icons } from '@/lib/icons'
 import { createProduct, createBatch, saveBatchCoaPath } from '@/app/catalog/actions'
 import type { CatalogProduct, DbBatch } from '@/types/catalog'
+import { grossMargin } from '@/types/catalog'
 
 // ── Mini sparkline (static placeholder — replace with real 7d velocity data) ─
 function MiniSparkline({ width = 44, height = 16 }: { width?: number; height?: number }) {
@@ -30,7 +31,7 @@ async function openCoa(coaPath: string) {
 function AddProductForm({ onDone }: { onDone: () => void }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState('')
-  const [form, setForm] = useState({ sku: '', name: '', productFamily: '', unitPrice: '' })
+  const [form, setForm] = useState({ sku: '', name: '', productFamily: '', unitPrice: '', costPrice: '' })
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }))
@@ -38,11 +39,13 @@ function AddProductForm({ onDone }: { onDone: () => void }) {
   const submit = () => {
     setError('')
     startTransition(async () => {
+      const costPrice = form.costPrice !== '' ? parseFloat(form.costPrice) : null
       const result = await createProduct({
         sku: form.sku,
         name: form.name,
         productFamily: form.productFamily,
         unitPrice: parseFloat(form.unitPrice),
+        costPrice,
       })
       if ('error' in result) { setError(result.error); return }
       onDone()
@@ -55,7 +58,8 @@ function AddProductForm({ onDone }: { onDone: () => void }) {
         <input className="pt-input" placeholder="SKU (e.g. BPC-157-5MG)" value={form.sku} onChange={set('sku')} />
         <input className="pt-input" placeholder="Name (e.g. BPC-157 5mg)" value={form.name} onChange={set('name')} />
         <input className="pt-input" placeholder="Family (e.g. BPC-157)" value={form.productFamily} onChange={set('productFamily')} />
-        <input className="pt-input" placeholder="Price (USD)" type="number" min="0" step="0.01" value={form.unitPrice} onChange={set('unitPrice')} />
+        <input className="pt-input" placeholder="Sale price (USD)" type="number" min="0" step="0.01" value={form.unitPrice} onChange={set('unitPrice')} />
+        <input className="pt-input" placeholder="Cost price (USD, optional)" type="number" min="0" step="0.01" value={form.costPrice} onChange={set('costPrice')} />
       </div>
       {error && <div className="pt-cat-form-err">{error}</div>}
       <div className="pt-cat-form-actions">
@@ -208,7 +212,14 @@ function CatalogDetail({ product, products }: { product: CatalogProduct; product
         <div className="pt-cat-stat">
           <div className="lbl">Unit Econ</div>
           <div className="val">${product.unitPrice.toFixed(0)}</div>
-          <div className="pt-cat-stat-sub">cost — · margin —</div>
+          <div className="pt-cat-stat-sub">
+            {product.costPrice != null ? `cost $${product.costPrice.toFixed(0)}` : 'cost —'}
+            {' · '}
+            {(() => {
+              const m = grossMargin(product.unitPrice, product.costPrice)
+              return m !== null ? `margin ${m.toFixed(0)}%` : 'margin —'
+            })()}
+          </div>
         </div>
       </div>
 
@@ -388,7 +399,7 @@ export function CatalogView({ products }: { products: CatalogProduct[] }) {
             <div className="pt-cat-cell-velocity">Vel · 7d</div>
             <div className="pt-cat-cell-cover">Cover</div>
             <div className="pt-cat-cell-price">Price</div>
-            <div className="pt-cat-cell-margin">Batches</div>
+            <div className="pt-cat-cell-margin">Margin</div>
           </div>
           <ul>
             {families.map(family => (
@@ -434,7 +445,14 @@ export function CatalogView({ products }: { products: CatalogProduct[] }) {
                         <span className={`mono ${flag === 'oos' ? 'is-zero' : flag === 'critical' ? 'is-warn' : ''}`}>—</span>
                       </div>
                       <div className="pt-cat-cell-price mono">${p.unitPrice.toFixed(0)}</div>
-                      <div className="pt-cat-cell-margin mono">{p.batches.length}</div>
+                      <div className="pt-cat-cell-margin">
+                        {(() => {
+                          const m = grossMargin(p.unitPrice, p.costPrice)
+                          return m !== null
+                            ? <span className={`mono pt-cat-margin ${m >= 50 ? 'is-hi' : m >= 25 ? 'is-md' : 'is-lo'}`}>{m.toFixed(0)}%</span>
+                            : <span style={{ color: 'var(--pt-fg-4)' }}>—</span>
+                        })()}
+                      </div>
                     </div>
                   )
                 })}

@@ -17,6 +17,7 @@ export async function createProduct(data: {
   name: string
   productFamily: string
   unitPrice: number
+  costPrice?: number | null
   description?: string
 }): Promise<{ success: true } | { error: string }> {
   const sku = data.sku.trim().toUpperCase()
@@ -26,6 +27,7 @@ export async function createProduct(data: {
   if (!data.name.trim()) return { error: 'Name is required' }
   if (!data.productFamily.trim()) return { error: 'Product family is required' }
   if (data.unitPrice <= 0) return { error: 'Unit price must be greater than 0' }
+  if (data.costPrice != null && data.costPrice < 0) return { error: 'Cost price cannot be negative' }
 
   try {
     const { supabase, tenantId } = await getTenantId()
@@ -35,6 +37,7 @@ export async function createProduct(data: {
       name: data.name.trim(),
       product_family: data.productFamily.trim(),
       unit_price: data.unitPrice,
+      cost_price: data.costPrice ?? null,
       description: data.description?.trim() || null,
     })
     if (error) {

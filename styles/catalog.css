@@ -163,6 +163,9 @@
   font-size: 12px; color: var(--pt-fg-2);
 }
 .pt-cat-cell-margin { color: var(--pt-fg-3); }
+.pt-cat-margin.is-hi { color: var(--pt-ok); }
+.pt-cat-margin.is-md { color: var(--pt-warn); }
+.pt-cat-margin.is-lo { color: var(--pt-danger); }
 
 /* Detail panel */
 .pt-cat-detail {
