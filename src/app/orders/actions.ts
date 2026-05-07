@@ -86,12 +86,28 @@ export async function createOrder(data: {
   }
 }
 
+const ALLOWED_FROM: Record<string, string> = {
+  awaiting: 'confirming',
+  confirming: 'packing',
+  packing: 'shipped',
+  shipped: 'delivered',
+}
+
 export async function updateOrderStatus(orderId: string, status: string): Promise<{ success: true } | { error: string }> {
   const VALID_STATUSES = ['awaiting', 'confirming', 'packing', 'shipped', 'delivered']
   if (!VALID_STATUSES.includes(status)) return { error: `Invalid status: ${status}` }
 
   try {
     const { supabase, tenantId } = await getTenantId()
+
+    // Enforce valid transition server-side — client guards are not enough
+    const { data: current, error: fetchError } = await supabase
+      .from('orders').select('status').eq('id', orderId).eq('tenant_id', tenantId).single()
+    if (fetchError || !current) return { error: 'Order not found' }
+    if (ALLOWED_FROM[current.status] !== status) {
+      return { error: `Cannot move from ${current.status} to ${status}` }
+    }
+
     const { error: updateError } = await supabase.from('orders')
       .update({ status })
       .eq('id', orderId).eq('tenant_id', tenantId)
@@ -117,11 +133,12 @@ export async function updateOrderShipping(orderId: string, data: {
 }): Promise<{ success: true } | { error: string }> {
   try {
     const { supabase, tenantId } = await getTenantId()
-    await supabase.from('orders').update({
+    const { error } = await supabase.from('orders').update({
       carrier: data.carrier ?? null,
       tracking_number: data.trackingNumber ?? null,
       shipping_address: data.shippingAddress ?? null,
     }).eq('id', orderId).eq('tenant_id', tenantId)
+    if (error) return { error: error.message }
     revalidatePath(`/orders/${orderId}`)
     return { success: true }
   } catch (e) {
@@ -132,9 +149,10 @@ export async function updateOrderShipping(orderId: string, data: {
 export async function saveOrderNotes(orderId: string, notes: string): Promise<{ success: true } | { error: string }> {
   try {
     const { supabase, tenantId } = await getTenantId()
-    await supabase.from('orders')
+    const { error } = await supabase.from('orders')
       .update({ notes })
       .eq('id', orderId).eq('tenant_id', tenantId)
+    if (error) return { error: error.message }
     revalidatePath(`/orders/${orderId}`)
     return { success: true }
   } catch (e) {

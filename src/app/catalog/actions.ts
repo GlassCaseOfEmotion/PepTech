@@ -85,6 +85,7 @@ export async function createBatch(data: {
 export async function saveBatchCoaPath(batchId: string, coaPath: string): Promise<{ success: true } | { error: string }> {
   try {
     const { supabase, tenantId } = await getTenantId()
+    if (!coaPath.startsWith(`${tenantId}/`)) return { error: 'Invalid COA path' }
     await supabase.from('batches').update({ coa_path: coaPath }).eq('id', batchId).eq('tenant_id', tenantId)
     revalidatePath('/catalog')
     return { success: true }
