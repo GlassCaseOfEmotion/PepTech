@@ -29,7 +29,7 @@ async function loadHistory(sessionId: string, supabase: AgentSupabase): Promise<
     } else {
       const content: Anthropic.ContentBlock[] = []
       if (m.content) content.push({ type: 'text', text: m.content, citations: [] } as Anthropic.ContentBlock)
-      for (const tc of (m.tool_calls as ToolCall[] ?? [])) {
+      for (const tc of (m.tool_calls as unknown as ToolCall[] ?? [])) {
         if (tc.status === 'complete' || tc.status === 'rejected') {
           content.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.input } as Anthropic.ContentBlock)
         }
@@ -38,7 +38,7 @@ async function loadHistory(sessionId: string, supabase: AgentSupabase): Promise<
 
       // Append tool results as user turn
       const results: Anthropic.ToolResultBlockParam[] = []
-      for (const tc of (m.tool_calls as ToolCall[] ?? [])) {
+      for (const tc of (m.tool_calls as unknown as ToolCall[] ?? [])) {
         if (tc.status === 'complete') {
           results.push({ type: 'tool_result', tool_use_id: tc.id, content: JSON.stringify(tc.output) })
         } else if (tc.status === 'rejected') {
@@ -209,7 +209,7 @@ export async function confirmToolCall(
 
   if (!msg) { send({ type: 'error', message: 'Message not found' }); return }
 
-  const toolCalls = (msg.tool_calls ?? []) as ToolCall[]
+  const toolCalls = (msg.tool_calls as unknown as ToolCall[]) ?? []
   const tc = toolCalls.find(t => t.id === toolCallId)
   if (!tc) { send({ type: 'error', message: 'Tool call not found' }); return }
 
