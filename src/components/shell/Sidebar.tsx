@@ -25,6 +25,9 @@ const NAV_SECONDARY = [
 
 const CH_ICONS: Record<string, React.FC<{ size?: number }>> = { wa: Icons.wa, tg: Icons.tg, em: Icons.em }
 
+// Module-level cache — survives component remounts during navigation, cleared on full page reload
+let _pinnedCache: ReturnType<typeof dbConversationToThread>[] = []
+
 const PINNED_SELECT = `
   id, status, unread_count, last_message_at, last_message_snippet,
   channel_type, channel_identifier, is_pinned,
@@ -44,13 +47,24 @@ export function Sidebar({ displayName, initialPinned = [] }: SidebarProps) {
   const pathname = usePathname()
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
   const supabase = useMemo(() => createClient(), [])
-  const [pinned, setPinned] = useState<ReturnType<typeof dbConversationToThread>[]>(
-    () => initialPinned.map(c => dbConversationToThread(c))
-  )
+  const [pinned, setPinnedRaw] = useState<ReturnType<typeof dbConversationToThread>[]>(() => {
+    if (initialPinned.length > 0) {
+      const threads = initialPinned.map(c => dbConversationToThread(c))
+      _pinnedCache = threads
+      return threads
+    }
+    // Fall back to cache from a previous mount (avoids flash during skeleton transitions)
+    return _pinnedCache
+  })
+
+  const setPinned = (threads: ReturnType<typeof dbConversationToThread>[]) => {
+    _pinnedCache = threads
+    setPinnedRaw(threads)
+  }
 
   useEffect(() => {
-    // Only fetch if nothing was server-rendered (e.g. ShellSkeleton path)
-    if (initialPinned.length === 0) {
+    // Only fetch if nothing came from server or cache
+    if (initialPinned.length === 0 && _pinnedCache.length === 0) {
       supabase
         .from('conversations')
         .select(PINNED_SELECT)
