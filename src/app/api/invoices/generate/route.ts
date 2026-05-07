@@ -59,19 +59,21 @@ export async function POST(request: Request) {
   if (uploadErr) return NextResponse.json({ error: 'PDF upload failed' }, { status: 500 })
 
   // Create invoice record
-  await supabase.from('invoices').insert({
+  const { error: insertErr } = await supabase.from('invoices').insert({
     tenant_id: tenantId,
     order_id: orderId,
     invoice_number: invoiceData.invoiceNumber,
     pdf_path: pdfPath,
   })
+  if (insertErr) return NextResponse.json({ error: 'Invoice record failed' }, { status: 500 })
 
   // Return signed URL valid for 1 hour
-  const { data: signed } = await supabase.storage.from('invoices').createSignedUrl(pdfPath, 3600)
+  const { data: signed, error: signedErr } = await supabase.storage.from('invoices').createSignedUrl(pdfPath, 3600)
+  if (signedErr || !signed) return NextResponse.json({ error: 'Failed to create signed URL' }, { status: 500 })
 
   return NextResponse.json({
     invoiceNumber: invoiceData.invoiceNumber,
     pdfPath,
-    signedUrl: signed?.signedUrl ?? null,
+    signedUrl: signed.signedUrl,
   })
 }
