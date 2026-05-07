@@ -57,7 +57,7 @@ export function Sidebar({ displayName }: SidebarProps) {
 
   useEffect(() => {
     const channel = supabase
-      .channel('sidebar:pinned')
+      .channel(`sidebar:pinned-${Math.random()}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations' }, (payload) => {
         const updated = payload.new as { id: string; is_pinned: boolean; last_message_snippet: string | null; unread_count: number }
         if (updated.is_pinned) {
