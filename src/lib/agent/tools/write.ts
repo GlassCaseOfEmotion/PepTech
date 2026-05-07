@@ -129,6 +129,7 @@ export const generateInvoice: AgentTool = {
   summarise(input: { order_id: string }) {
     return `Generate invoice for order ${input.order_id}`
   },
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async execute(input: { order_id: string }, _supabase: AgentSupabase, _tenantId: string) {
     // Delegate to the existing generate route
     const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/invoices/generate`, {

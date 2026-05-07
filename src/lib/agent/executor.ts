@@ -28,10 +28,10 @@ async function loadHistory(sessionId: string, supabase: AgentSupabase): Promise<
       msgs.push({ role: 'user', content: m.content ?? '' })
     } else {
       const content: Anthropic.ContentBlock[] = []
-      if (m.content) content.push({ type: 'text', text: m.content })
+      if (m.content) content.push({ type: 'text', text: m.content, citations: [] } as Anthropic.ContentBlock)
       for (const tc of (m.tool_calls as ToolCall[] ?? [])) {
         if (tc.status === 'complete' || tc.status === 'rejected') {
-          content.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.input })
+          content.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.input } as Anthropic.ContentBlock)
         }
       }
       if (content.length) msgs.push({ role: 'assistant', content })
