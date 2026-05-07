@@ -72,7 +72,7 @@ export type DbMessage = {
 }
 
 export type MessageMetadata = {
-  kind?: 'wallet' | 'tx' | 'photo'
+  kind?: 'wallet' | 'tx' | 'photo' | 'invoice'
   // wallet
   asset?: string
   network?: string
@@ -86,6 +86,9 @@ export type MessageMetadata = {
   // photo
   storagePath?: string
   mediaUrl?: string   // signed URL, populated client-side — not stored in DB
+  // invoice
+  invoicePath?: string
+  invoiceName?: string
   mimeType?: string
 }
 
