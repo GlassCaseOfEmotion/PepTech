@@ -366,7 +366,20 @@ function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: 
         <div className="pt-composer-photo-preview">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Icons.doc size={16} />
-            <span style={{ fontSize: 12, fontWeight: 500 }}>{pendingInvoiceName}</span>
+            <button
+              className="pt-link"
+              style={{ fontSize: 12, fontWeight: 500 }}
+              title="Preview PDF"
+              onClick={async () => {
+                const res = await fetch(`/api/invoices/preview?path=${encodeURIComponent(pendingInvoicePath)}`)
+                if (res.ok) {
+                  const { url } = await res.json() as { url: string }
+                  window.open(url, '_blank', 'noopener')
+                }
+              }}
+            >
+              {pendingInvoiceName}
+            </button>
           </div>
           {!isUploading && (
             <button className="pt-composer-photo-clear" onClick={clearPendingInvoice} title="Remove">✕</button>
