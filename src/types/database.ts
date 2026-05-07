@@ -263,6 +263,48 @@ export type Database = {
           },
         ]
       }
+      invoices: {
+        Row: {
+          created_at: string
+          id: string
+          invoice_number: string
+          order_id: string
+          pdf_path: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invoice_number: string
+          order_id: string
+          pdf_path: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invoice_number?: string
+          order_id?: string
+          pdf_path?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -737,6 +779,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          logo_path: string | null
           name: string
           plan: string
           slug: string
@@ -745,6 +788,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          logo_path?: string | null
           name: string
           plan?: string
           slug: string
@@ -753,6 +797,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          logo_path?: string | null
           name?: string
           plan?: string
           slug?: string
