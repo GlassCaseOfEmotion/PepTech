@@ -22,7 +22,8 @@ export async function uploadLogo(formData: FormData): Promise<{ success: true; l
 
   try {
     const { supabase, tenantId } = await getTenantId()
-    const ext = file.name.split('.').pop() ?? 'png'
+    const extMap: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+    const ext = extMap[file.type] ?? 'png'
     const logoPath = `${tenantId}/logo.${ext}`
     const arrayBuffer = await file.arrayBuffer()
 
@@ -31,7 +32,8 @@ export async function uploadLogo(formData: FormData): Promise<{ success: true; l
       .upload(logoPath, arrayBuffer, { contentType: file.type, upsert: true })
     if (uploadErr) return { error: uploadErr.message }
 
-    await supabase.from('tenants').update({ logo_path: logoPath }).eq('id', tenantId)
+    const { error: dbErr } = await supabase.from('tenants').update({ logo_path: logoPath }).eq('id', tenantId)
+    if (dbErr) return { error: dbErr.message }
     revalidatePath('/settings/branding')
     return { success: true, logoPath }
   } catch (e) {
@@ -46,7 +48,8 @@ export async function removeLogo(): Promise<{ success: true } | { error: string 
     if (tenant?.logo_path) {
       await supabase.storage.from('logos').remove([tenant.logo_path])
     }
-    await supabase.from('tenants').update({ logo_path: null }).eq('id', tenantId)
+    const { error: dbErr } = await supabase.from('tenants').update({ logo_path: null }).eq('id', tenantId)
+    if (dbErr) return { error: dbErr.message }
     revalidatePath('/settings/branding')
     return { success: true }
   } catch (e) {
