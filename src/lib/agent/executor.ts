@@ -66,7 +66,7 @@ async function saveAssistantMessage(
   const { data } = await supabase.from('agent_messages').insert({
     session_id: sessionId, tenant_id: tenantId, role: 'assistant',
     content: content || null,
-    tool_calls: toolCalls.length ? toolCalls : null,
+    tool_calls: toolCalls.length ? (toolCalls as unknown as import('@/types/database').Json) : null,
   }).select('id').single()
   return data?.id
 }
@@ -228,7 +228,7 @@ export async function confirmToolCall(
 
   // Update the message in DB
   await supabase.from('agent_messages')
-    .update({ tool_calls: toolCalls })
+    .update({ tool_calls: toolCalls as unknown as import('@/types/database').Json })
     .eq('id', messageId)
 
   // Run follow-up Claude turn
