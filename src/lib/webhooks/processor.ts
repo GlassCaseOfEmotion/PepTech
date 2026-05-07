@@ -112,11 +112,8 @@ export async function processInboundMessage(
     throw new Error(`Failed to insert message: ${msgErr.message}`)
   }
 
-  // 4. Atomically increment unread count
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).rpc('increment_unread_count', { conv_id: conversationId, tenant: tenantId })
-
-  // 5. Update conversation snippet + status
+  // 4. Update conversation snippet + status
+  // (unread_count is incremented by the trg_message_insert DB trigger on messages INSERT)
   const newStatus = ['resolved', 'snoozed'].includes(currentStatus) ? 'needs_reply'
     : currentStatus === 'new' ? 'new'
     : 'needs_reply'

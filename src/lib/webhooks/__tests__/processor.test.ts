@@ -81,7 +81,7 @@ describe('processInboundMessage', () => {
       expect(mockFrom).toHaveBeenCalledWith('customer_channels')
       expect(mockFrom).toHaveBeenCalledWith('conversations')
       expect(mockFrom).toHaveBeenCalledWith('messages')
-      expect(mockRpc).toHaveBeenCalledWith('increment_unread_count', { conv_id: CONV_ID, tenant: TENANT_ID })
+      expect(mockRpc).not.toHaveBeenCalledWith('increment_unread_count', expect.anything())
     })
   })
 
