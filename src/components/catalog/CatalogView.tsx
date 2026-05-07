@@ -69,105 +69,111 @@ function AddProductForm({ onDone, knownFamilies }: { onDone: () => void; knownFa
   }
 
   return (
-    <div className="pt-sku-form">
-      <div className="pt-sku-form-body">
+    <div className="pt-modal-backdrop" onClick={pending ? undefined : onDone}>
+      <div className="pt-modal pt-sku-modal" onClick={e => e.stopPropagation()}>
 
-        {/* ── Product identity ── */}
-        <div className="pt-sku-section">
-          <div className="pt-sku-section-hd">Product</div>
+        <div className="pt-modal-hd">
+          <h2>New SKU</h2>
+          <button className="pt-iconbtn" onClick={onDone} disabled={pending}><Icons.x size={14} /></button>
+        </div>
 
-          <div className="pt-sku-field">
-            <label className="pt-sku-lbl">SKU</label>
-            <input
-              className="pt-sku-input mono"
-              placeholder="e.g. BPC-157-5MG"
-              value={form.sku}
-              onChange={e => setForm(f => ({ ...f, sku: e.target.value.toUpperCase() }))}
-              autoFocus
-            />
+        <div className="pt-sku-form-body">
+
+          {/* ── Product identity ── */}
+          <div className="pt-sku-section">
+            <div className="pt-sku-section-hd">Product</div>
+
+            <div className="pt-sku-field">
+              <label className="pt-sku-lbl">SKU</label>
+              <input
+                className="pt-sku-input mono"
+                placeholder="e.g. BPC-157-5MG"
+                value={form.sku}
+                onChange={e => setForm(f => ({ ...f, sku: e.target.value.toUpperCase() }))}
+                autoFocus
+              />
+            </div>
+
+            <div className="pt-sku-field">
+              <label className="pt-sku-lbl">Name</label>
+              <input className="pt-sku-input" placeholder="e.g. BPC-157 5mg" value={form.name} onChange={set('name')} />
+            </div>
+
+            <div className="pt-sku-field">
+              <label className="pt-sku-lbl">Family</label>
+              <div className="pt-sku-chips">
+                {knownFamilies.map(f => (
+                  <button
+                    key={f} type="button"
+                    className={`pt-sku-chip ${form.productFamily === f ? 'is-on' : ''}`}
+                    onClick={() => selectFamily(form.productFamily === f ? '' : f)}
+                  >
+                    {displayFamily(f)}
+                  </button>
+                ))}
+                {addingFamily ? (
+                  <input
+                    className="pt-sku-input"
+                    style={{ width: 120, height: 26, fontSize: 11.5, padding: '0 8px' }}
+                    placeholder="New family…"
+                    value={newFamilyText}
+                    onChange={e => setNewFamilyText(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') confirmNewFamily(); if (e.key === 'Escape') setAddingFamily(false) }}
+                    onBlur={confirmNewFamily}
+                    autoFocus
+                  />
+                ) : (
+                  <button type="button" className="pt-sku-chip pt-sku-chip-new" onClick={() => setAddingFamily(true)}>
+                    <Icons.plus size={9} /> New
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
-          <div className="pt-sku-field">
-            <label className="pt-sku-lbl">Name</label>
-            <input className="pt-sku-input" placeholder="e.g. BPC-157 5mg" value={form.name} onChange={set('name')} />
-          </div>
+          <div className="pt-sku-divider" />
 
-          <div className="pt-sku-field">
-            <label className="pt-sku-lbl">Family</label>
-            <div className="pt-sku-chips">
-              {knownFamilies.map(f => (
-                <button
-                  key={f} type="button"
-                  className={`pt-sku-chip ${form.productFamily === f ? 'is-on' : ''}`}
-                  onClick={() => selectFamily(form.productFamily === f ? '' : f)}
-                >
-                  {displayFamily(f)}
-                </button>
-              ))}
-              {addingFamily ? (
-                <input
-                  className="pt-sku-input"
-                  style={{ width: 130, height: 26, fontSize: 11.5, padding: '0 8px' }}
-                  placeholder="New family…"
-                  value={newFamilyText}
-                  onChange={e => setNewFamilyText(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') confirmNewFamily(); if (e.key === 'Escape') setAddingFamily(false) }}
-                  onBlur={confirmNewFamily}
-                  autoFocus
-                />
+          {/* ── Pricing ── */}
+          <div className="pt-sku-section">
+            <div className="pt-sku-section-hd">Pricing</div>
+
+            <div className="pt-sku-field">
+              <label className="pt-sku-lbl">Sale price <span className="pt-sku-lbl-opt">USD</span></label>
+              <input className="pt-sku-input mono" placeholder="0.00" type="number" min="0" step="0.01" value={form.unitPrice} onChange={set('unitPrice')} />
+            </div>
+
+            <div className="pt-sku-field">
+              <label className="pt-sku-lbl">Cost price <span className="pt-sku-lbl-opt">USD · optional</span></label>
+              <input className="pt-sku-input mono" placeholder="0.00" type="number" min="0" step="0.01" value={form.costPrice} onChange={set('costPrice')} />
+            </div>
+
+            <div className="pt-sku-margin">
+              {margin !== null ? (
+                <div className={`pt-sku-margin-live ${marginCls}`}>
+                  <span className="pt-sku-margin-pct">{margin.toFixed(0)}%</span>
+                  <div className="pt-sku-margin-meta">
+                    <span className="pt-sku-margin-abs">${(sale - cost).toFixed(2)}/unit</span>
+                    <span className="pt-sku-margin-lbl">gross margin</span>
+                  </div>
+                </div>
               ) : (
-                <button type="button" className="pt-sku-chip pt-sku-chip-new" onClick={() => setAddingFamily(true)}>
-                  <Icons.plus size={9} /> New
-                </button>
+                <div className="pt-sku-margin-empty">Enter both prices to preview margin</div>
               )}
             </div>
           </div>
+
         </div>
 
-        <div className="pt-sku-divider" />
-
-        {/* ── Pricing ── */}
-        <div className="pt-sku-section">
-          <div className="pt-sku-section-hd">Pricing</div>
-
-          <div className="pt-sku-field">
-            <label className="pt-sku-lbl">Sale price <span className="pt-sku-lbl-opt">USD</span></label>
-            <input className="pt-sku-input mono" placeholder="0.00" type="number" min="0" step="0.01" value={form.unitPrice} onChange={set('unitPrice')} />
-          </div>
-
-          <div className="pt-sku-field">
-            <label className="pt-sku-lbl">Cost price <span className="pt-sku-lbl-opt">USD · optional</span></label>
-            <input className="pt-sku-input mono" placeholder="0.00" type="number" min="0" step="0.01" value={form.costPrice} onChange={set('costPrice')} />
-          </div>
-
-          <div className="pt-sku-margin">
-            {margin !== null ? (
-              <div className={`pt-sku-margin-live ${marginCls}`}>
-                <span className="pt-sku-margin-pct">{margin.toFixed(0)}%</span>
-                <div className="pt-sku-margin-meta">
-                  <span className="pt-sku-margin-abs">${(sale - cost).toFixed(2)}/unit</span>
-                  <span className="pt-sku-margin-lbl">gross margin</span>
-                </div>
-              </div>
-            ) : (
-              <div className="pt-sku-margin-empty">Enter both prices to preview margin</div>
-            )}
+        <div className="pt-sku-form-ft">
+          {error ? <span className="pt-sku-form-ft-err">{error}</span> : <span />}
+          <div className="pt-sku-form-ft-actions">
+            <button className="pt-btn pt-btn-ghost" onClick={onDone} disabled={pending}>Cancel</button>
+            <button className="pt-btn pt-btn-primary" onClick={submit} disabled={pending}>
+              {pending ? 'Saving…' : 'Add product'}
+            </button>
           </div>
         </div>
 
-      </div>
-
-      <div className="pt-sku-form-ft">
-        {error
-          ? <span className="pt-sku-form-ft-err">{error}</span>
-          : <span />
-        }
-        <div className="pt-sku-form-ft-actions">
-          <button className="pt-btn pt-btn-ghost" onClick={onDone} disabled={pending}>Cancel</button>
-          <button className="pt-btn pt-btn-primary" onClick={submit} disabled={pending}>
-            {pending ? 'Saving…' : 'Add product'}
-          </button>
-        </div>
       </div>
     </div>
   )
@@ -455,16 +461,14 @@ export function CatalogView({ products }: { products: CatalogProduct[] }) {
           <button className="pt-btn pt-btn-ghost">
             <Icons.gear size={12} /> Import COA
           </button>
-          <button className="pt-btn pt-btn-primary" onClick={() => setShowAddProduct(v => !v)}>
-            <Icons.plus size={12} /> {showAddProduct ? 'Cancel' : 'New SKU'}
+          <button className="pt-btn pt-btn-primary" onClick={() => setShowAddProduct(true)}>
+            <Icons.plus size={12} /> New SKU
           </button>
         </div>
       </div>
 
       {showAddProduct && (
-        <div style={{ padding: '0 22px 20px' }}>
-          <AddProductForm onDone={() => setShowAddProduct(false)} knownFamilies={allFamilies} />
-        </div>
+        <AddProductForm onDone={() => setShowAddProduct(false)} knownFamilies={allFamilies} />
       )}
 
       <div className="pt-cat-toolbar">

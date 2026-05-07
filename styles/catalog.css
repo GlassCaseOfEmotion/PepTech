@@ -288,19 +288,8 @@ li:first-child .pt-cat-family-hd { border-top: none; }
 .pt-cat-form-err { font-size: 12px; color: var(--pt-danger); }
 .pt-cat-form-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
-/* ── New SKU form ─────────────────────────────────────────────────── */
-@keyframes pt-sku-in {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.pt-sku-form {
-  background: var(--pt-surface);
-  border: 0.5px solid var(--pt-line);
-  border-radius: var(--pt-radius-lg);
-  box-shadow: var(--pt-shadow-card);
-  animation: pt-sku-in 0.18s ease-out both;
-  overflow: hidden;
-}
+/* ── New SKU modal ────────────────────────────────────────────────── */
+.pt-sku-modal { width: min(560px, 95vw); }
 .pt-sku-form-body {
   display: grid;
   grid-template-columns: 1fr 0.5px 1fr;
