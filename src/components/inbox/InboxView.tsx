@@ -308,11 +308,12 @@ function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: 
     if (!pendingInvoicePath || !pendingInvoiceName || !activeId) return
     setIsUploading(true)
     try {
-      await fetch('/api/invoices/send', {
+      const res = await fetch('/api/invoices/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conversationId: activeId, invoicePath: pendingInvoicePath, invoiceName: pendingInvoiceName }),
       })
+      if (!res.ok) return
       clearPendingInvoice()
       if (draft.trim()) send()
     } finally {

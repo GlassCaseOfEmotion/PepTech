@@ -59,12 +59,10 @@ export async function POST(request: Request) {
   if (uploadErr) return NextResponse.json({ error: 'PDF upload failed' }, { status: 500 })
 
   // Create invoice record
-  const { error: insertErr } = await supabase.from('invoices').insert({
-    tenant_id: tenantId,
-    order_id: orderId,
-    invoice_number: invoiceData.invoiceNumber,
-    pdf_path: pdfPath,
-  })
+  const { error: insertErr } = await supabase.from('invoices').upsert(
+    { tenant_id: tenantId, order_id: orderId, invoice_number: invoiceData.invoiceNumber, pdf_path: pdfPath },
+    { onConflict: 'tenant_id,invoice_number' }
+  )
   if (insertErr) return NextResponse.json({ error: 'Invoice record failed' }, { status: 500 })
 
   // Return signed URL valid for 1 hour

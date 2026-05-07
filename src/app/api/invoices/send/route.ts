@@ -31,6 +31,15 @@ export async function POST(request: Request) {
     .single()
   if (!channel?.is_active || !channel.credentials) return NextResponse.json({ error: 'Channel not connected' }, { status: 422 })
 
+  // Verify the invoice path belongs to this tenant
+  const { data: invoice } = await supabase
+    .from('invoices')
+    .select('id')
+    .eq('tenant_id', conv.tenant_id)
+    .eq('pdf_path', invoicePath)
+    .single()
+  if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
+
   const to = conv.channel_identifier
 
   try {
