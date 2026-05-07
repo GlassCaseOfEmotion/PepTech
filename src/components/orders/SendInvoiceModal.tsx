@@ -33,15 +33,15 @@ export function SendInvoiceModal({ order, onClose }: SendInvoiceModalProps) {
         setError(e ?? 'Failed to generate invoice')
         return
       }
-      const { pdfPath, invoiceNumber: invNum } = await res.json() as { pdfPath: string; invoiceNumber: string }
-      const filename = `${invNum}.pdf`
+      const { pdfPath } = await res.json() as { pdfPath: string }
+      const filename = `${invoiceNumber}.pdf`
       router.push(`/inbox?conversation=${order.conversation_id}&invoice_path=${encodeURIComponent(pdfPath)}&invoice_name=${encodeURIComponent(filename)}`)
       onClose()
     })
   }
 
   return (
-    <div className="pt-modal-backdrop" onClick={onClose}>
+    <div className="pt-modal-backdrop" onClick={pending ? undefined : onClose}>
       <div className="pt-modal" onClick={e => e.stopPropagation()}>
         <div className="pt-modal-hd">
           <h2>Send invoice</h2>
