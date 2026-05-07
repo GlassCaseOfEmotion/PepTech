@@ -148,4 +148,25 @@ describe('POST /api/invoices/send', () => {
     expect(res.status).toBe(200)
     expect(sendTelegramDocument).toHaveBeenCalledWith('bot-tok', '11223344', expect.any(Blob), 'INV-A-1001.pdf', 'biz-1')
   })
+
+  it('returns 500 when channel dispatch throws', async () => {
+    vi.mocked(getServerUser).mockResolvedValue({ id: 'user-1' } as never)
+    vi.mocked(sendWhatsAppMedia).mockRejectedValue(new Error('network timeout'))
+    const supabase = makeSupabase()
+    let callCount = 0
+    vi.mocked(supabase.from).mockImplementation(() => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnValue({ select: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { id: 'msg-1' }, error: null }) }),
+      update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }),
+      single: vi.fn().mockImplementation(() => {
+        callCount++
+        if (callCount === 1) return Promise.resolve({ data: CONV, error: null })
+        return Promise.resolve({ data: WA_CHANNEL, error: null })
+      }),
+    } as never))
+    vi.mocked(createClient).mockResolvedValue(supabase as never)
+    const res = await POST(makeRequest(VALID_BODY))
+    expect(res.status).toBe(500)
+  })
 })
