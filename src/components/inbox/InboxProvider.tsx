@@ -36,6 +36,9 @@ type InboxCtx = {
   markDone: () => Promise<void>
   reopen: () => Promise<void>
   togglePin: (id: string) => Promise<void>
+  pendingInvoicePath: string | null
+  pendingInvoiceName: string | null
+  clearPendingInvoice: () => void
 }
 
 const InboxContext = createContext<InboxCtx | null>(null)
@@ -52,10 +55,12 @@ interface Props {
   templates: DbTemplate[]
   initialResolvedCount?: number
   initialActiveId?: string
+  initialInvoicePath?: string
+  initialInvoiceName?: string
   children: ReactNode
 }
 
-export function InboxProvider({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId, children }: Props) {
+export function InboxProvider({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId, initialInvoicePath, initialInvoiceName, children }: Props) {
   const supabase = useMemo(() => createClient(), [])
   const [threads, setThreads] = useState<InboxThread[]>(
     initialConversations.map(dbConversationToThread)
@@ -71,6 +76,12 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
   const [notes, setNotes] = useState<DbNote[]>([])
   const [isSending, setIsSending] = useState(false)
   const [tenantId, setTenantId] = useState<string | null>(null)
+  const [pendingInvoicePath, setPendingInvoicePath] = useState(initialInvoicePath ?? null)
+  const [pendingInvoiceName, setPendingInvoiceName] = useState(initialInvoiceName ?? null)
+  const clearPendingInvoice = useCallback(() => {
+    setPendingInvoicePath(null)
+    setPendingInvoiceName(null)
+  }, [])
   const [resolvedLoaded, setResolvedLoaded] = useState(false)
 
   useEffect(() => {
@@ -355,6 +366,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
     <InboxContext.Provider value={{
       threads, activeId, setActiveId, filter, setFilter,
       messages, notes, quickReplies, templates, isSending, resolvedCount, sendMessage, addNote, snooze, markDone, reopen, togglePin,
+      pendingInvoicePath, pendingInvoiceName, clearPendingInvoice,
     }}>
       {children}
     </InboxContext.Provider>

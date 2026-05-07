@@ -252,7 +252,7 @@ function Bubble({ m, onImageClick }: { m: InboxMessage; onImageClick?: (url: str
 // ─── Composer ────────────────────────────────────────────────────────────────
 
 function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: (text: string) => void; isSending: boolean }) {
-  const { quickReplies, templates, activeId } = useInbox()
+  const { quickReplies, templates, activeId, pendingInvoicePath, pendingInvoiceName, clearPendingInvoice } = useInbox()
   const [draft, setDraft] = useState('')
   const [showTemplates, setShowTemplates] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
@@ -304,10 +304,27 @@ function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: 
     setDraft('')
   }, [draft, onSend])
 
+  const sendInvoice = useCallback(async () => {
+    if (!pendingInvoicePath || !pendingInvoiceName || !activeId) return
+    setIsUploading(true)
+    try {
+      await fetch('/api/invoices/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: activeId, invoicePath: pendingInvoicePath, invoiceName: pendingInvoiceName }),
+      })
+      clearPendingInvoice()
+      if (draft.trim()) send()
+    } finally {
+      setIsUploading(false)
+    }
+  }, [pendingInvoicePath, pendingInvoiceName, activeId, clearPendingInvoice, draft, send])
+
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
       if (pendingFile) void sendPhoto()
+      else if (pendingInvoicePath) void sendInvoice()
       else send()
     }
   }
@@ -342,6 +359,18 @@ function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: 
             ? <span className="pt-composer-photo-status">Sending…</span>
             : <button className="pt-composer-photo-clear" onClick={clearPendingFile} title="Remove">✕</button>
           }
+        </div>
+      )}
+      {pendingInvoicePath && pendingInvoiceName && (
+        <div className="pt-composer-photo-preview">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icons.doc size={16} />
+            <span style={{ fontSize: 12, fontWeight: 500 }}>{pendingInvoiceName}</span>
+          </div>
+          {!isUploading && (
+            <button className="pt-composer-photo-clear" onClick={clearPendingInvoice} title="Remove">✕</button>
+          )}
+          {isUploading && <span className="pt-composer-photo-status">Sending…</span>}
         </div>
       )}
       <div className="pt-composer-field">
@@ -385,8 +414,8 @@ function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: 
             <span className="pt-composer-hint">⌘↵ to send</span>
             <button
               className={`pt-btn pt-btn-primary ${(isSending || isUploading) ? 'is-sending' : ''}`}
-              onClick={pendingFile ? () => void sendPhoto() : send}
-              disabled={pendingFile ? isUploading : (!draft.trim() || isSending)}
+              onClick={() => { if (pendingFile) void sendPhoto(); else if (pendingInvoicePath) void sendInvoice(); else send() }}
+              disabled={pendingFile ? isUploading : pendingInvoicePath ? isUploading : (!draft.trim() || isSending)}
             >
               <Icons.send size={12} /> Send
             </button>
@@ -638,11 +667,21 @@ interface InboxViewProps {
   templates: DbTemplate[]
   initialResolvedCount?: number
   initialActiveId?: string
+  initialInvoicePath?: string
+  initialInvoiceName?: string
 }
 
-export function InboxView({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId }: InboxViewProps) {
+export function InboxView({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId, initialInvoicePath, initialInvoiceName }: InboxViewProps) {
   return (
-    <InboxProvider initialConversations={initialConversations} quickReplies={quickReplies} templates={templates} initialResolvedCount={initialResolvedCount} initialActiveId={initialActiveId}>
+    <InboxProvider
+      initialConversations={initialConversations}
+      quickReplies={quickReplies}
+      templates={templates}
+      initialResolvedCount={initialResolvedCount}
+      initialActiveId={initialActiveId}
+      initialInvoicePath={initialInvoicePath}
+      initialInvoiceName={initialInvoiceName}
+    >
       <InboxLayout />
     </InboxProvider>
   )
