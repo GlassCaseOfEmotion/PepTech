@@ -15,6 +15,7 @@
     "node": ">=18.17.0"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.95.0",
     "@azure/msal-node": "^5.1.4",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@react-pdf/renderer": "^4.5.1",

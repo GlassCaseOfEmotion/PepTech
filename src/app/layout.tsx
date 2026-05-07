@@ -9,6 +9,7 @@ import '../../styles/broadcast.css'
 import '../../styles/automations.css'
 import '../../styles/vault.css'
 import '../../styles/order-detail.css'
+import '../../styles/agent.css'
 
 export const metadata: Metadata = {
   title: 'Peptech',

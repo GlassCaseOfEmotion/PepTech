@@ -2,6 +2,7 @@ import { createClient, getServerUser } from '@/lib/supabase/server'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { GlobalNotifications } from './GlobalNotifications'
+import { AgentPalette } from './AgentPalette'
 
 interface ShellProps {
   children: React.ReactNode
@@ -36,6 +37,7 @@ export async function Shell({ children, section, isInbox = false, rightRail }: S
   return (
     <div className={rootClass}>
       <GlobalNotifications />
+      <AgentPalette />
       <Sidebar displayName={displayName} />
       <main className="pt-main">
         <TopBar section={section} connectedChannels={connectedChannels} />
