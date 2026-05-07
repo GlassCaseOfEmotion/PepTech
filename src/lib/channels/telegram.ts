@@ -97,6 +97,25 @@ export async function sendTelegramPhoto(
   if (!res.ok) throw new Error(`Telegram sendPhoto failed: ${res.status}`)
 }
 
+export async function sendTelegramDocument(
+  botToken: string,
+  chatId: string,
+  document: Blob,
+  filename: string,
+  businessConnectionId?: string,
+): Promise<void> {
+  const form = new FormData()
+  form.append('chat_id', chatId)
+  form.append('document', document, filename)
+  if (businessConnectionId) form.append('business_connection_id', businessConnectionId)
+
+  const res = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, {
+    method: 'POST',
+    body: form,
+  })
+  if (!res.ok) throw new Error(`Telegram sendDocument failed: ${res.status}`)
+}
+
 export async function registerTelegramWebhook(botToken: string, webhookUrl: string): Promise<void> {
   const res = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
     method: 'POST',

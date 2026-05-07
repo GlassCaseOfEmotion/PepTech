@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { extractTelegramMessage, sendTelegramMessage, getTelegramFileBuffer, sendTelegramPhoto } from '../telegram'
+import { extractTelegramMessage, sendTelegramMessage, getTelegramFileBuffer, sendTelegramPhoto, sendTelegramDocument } from '../telegram'
 import type { TelegramUpdate } from '../telegram'
 
 describe('extractTelegramMessage', () => {
@@ -199,6 +199,37 @@ describe('sendTelegramPhoto', () => {
   it('throws when Telegram responds with an error', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 400 }))
     await expect(sendTelegramPhoto('token', '123', new Blob(['x']))).rejects.toThrow('Telegram sendPhoto failed')
+    vi.restoreAllMocks()
+  })
+})
+
+describe('sendTelegramDocument', () => {
+  it('POSTs to sendDocument with document field and filename', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+    await sendTelegramDocument('bot-token', '11223344', new Blob(['%PDF']), 'INV-A-1001.pdf')
+    const [url, opts] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('https://api.telegram.org/botbot-token/sendDocument')
+    const body = opts.body as FormData
+    expect(body.get('chat_id')).toBe('11223344')
+    expect(body.get('document')).toBeInstanceOf(Blob)
+    vi.restoreAllMocks()
+  })
+
+  it('includes business_connection_id when provided', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+    await sendTelegramDocument('tok', '999', new Blob(['x']), 'inv.pdf', 'biz-conn-1')
+    const body = (fetchMock.mock.calls[0] as [string, RequestInit])[1].body as FormData
+    expect(body.get('business_connection_id')).toBe('biz-conn-1')
+    vi.restoreAllMocks()
+  })
+
+  it('throws when response is not ok', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 400 }))
+    await expect(
+      sendTelegramDocument('tok', '123', new Blob(['x']), 'inv.pdf')
+    ).rejects.toThrow('Telegram sendDocument failed: 400')
     vi.restoreAllMocks()
   })
 })
