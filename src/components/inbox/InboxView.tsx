@@ -237,6 +237,31 @@ function Bubble({ m, onImageClick }: { m: InboxMessage; onImageClick?: (url: str
     )
   }
 
+  if (m.kind === 'invoice') {
+    const invoicePath = m.metadata?.invoicePath as string | undefined
+    const invoiceName = m.metadata?.invoiceName as string | undefined
+    const openPreview = async () => {
+      if (!invoicePath) return
+      const res = await fetch(`/api/invoices/preview?path=${encodeURIComponent(invoicePath)}`)
+      if (res.ok) {
+        const { url } = await res.json() as { url: string }
+        window.open(url, '_blank', 'noopener')
+      }
+    }
+    return (
+      <div className={`pt-bubble pt-bubble-${m.from}`}>
+        <button className="pt-bubble-invoice" onClick={openPreview} title="Open PDF">
+          <Icons.doc size={15} />
+          <span>{invoiceName ?? 'Invoice'}</span>
+        </button>
+        <div className="pt-bubble-meta">
+          {m.at}
+          {m.from === 'me' && !m.optimistic && <span className="pt-bubble-read"> · sent</span>}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={`pt-bubble pt-bubble-${m.from} ${m.optimistic ? 'is-optimistic' : ''}`}>
       <div className="pt-bubble-text">{m.text}</div>

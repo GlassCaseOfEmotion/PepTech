@@ -132,7 +132,7 @@ export type InboxMessage = {
   from: 'me' | 'them'
   at: string              // formatted timestamp
   text?: string
-  kind?: 'text' | 'wallet' | 'tx' | 'photo'
+  kind?: 'text' | 'wallet' | 'tx' | 'photo' | 'invoice'
   optimistic?: boolean
   status?: string
   metadata?: MessageMetadata | null
