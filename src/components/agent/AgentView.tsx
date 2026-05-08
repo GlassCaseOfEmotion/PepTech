@@ -205,11 +205,12 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
   }, [pendingConfirm, activeId, appendAssistantDelta])
 
   const firstUserMsg = (session: AgentSession) => {
-    if (session.id === activeId && messages.length > 0) {
+    if (session.id === activeId) {
       const first = messages.find(m => m.role === 'user')
       if (first) return first.text.slice(0, 60)
     }
-    return 'Session'
+    if (session.snippet) return session.snippet.slice(0, 60)
+    return 'New session'
   }
 
   return (

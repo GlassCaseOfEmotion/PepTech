@@ -31,6 +31,7 @@ export interface AgentSession {
   status: 'active' | 'complete'
   created_at: string
   updated_at: string
+  snippet?: string
 }
 
 export type SseEvent =

@@ -22,6 +22,30 @@ export default async function AgentPage({
     .order('updated_at', { ascending: false })
     .limit(50)
 
+  const sessionIds = (sessions ?? []).map(s => s.id)
+
+  // Fetch the first user message per session for sidebar snippets
+  const { data: firstMsgs } = sessionIds.length
+    ? await supabase
+        .from('agent_messages')
+        .select('session_id, content')
+        .in('session_id', sessionIds)
+        .eq('role', 'user')
+        .order('created_at', { ascending: true })
+    : { data: [] }
+
+  const snippetBySession: Record<string, string> = {}
+  for (const m of firstMsgs ?? []) {
+    if (!snippetBySession[m.session_id] && m.content) {
+      snippetBySession[m.session_id] = m.content
+    }
+  }
+
+  const sessionsWithSnippets = (sessions ?? []).map(s => ({
+    ...s,
+    snippet: snippetBySession[s.id] ?? undefined,
+  })) as AgentSession[]
+
   // Load messages for the initial session (first or from URL)
   const activeId = initialSessionId ?? (sessions?.[0]?.id ?? null)
   let initialMessages: AgentMessage[] = []
@@ -36,7 +60,7 @@ export default async function AgentPage({
 
   return (
     <AgentView
-      sessions={(sessions ?? []) as AgentSession[]}
+      sessions={sessionsWithSnippets}
       initialSessionId={activeId}
       initialMessages={initialMessages}
     />
