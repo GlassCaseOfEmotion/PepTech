@@ -100,7 +100,11 @@ export function Sidebar({ displayName, initialPinned = [] }: SidebarProps) {
               })
             })
         } else {
-          setPinned(prev => prev.filter(p => p.id !== updated.id))
+          setPinnedRaw(prev => {
+            const next = prev.filter(p => p.id !== updated.id)
+            _pinnedCache = next
+            return next
+          })
         }
       })
       .subscribe()
