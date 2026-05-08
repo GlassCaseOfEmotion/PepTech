@@ -4,11 +4,17 @@ import type { AgentSupabase, SseEvent, ToolCall, AgentMessage } from './types'
 
 const MODEL = 'claude-sonnet-4-6'
 
-const SYSTEM = `You are the Peptech business assistant — a helpful agent for a peptide supplier's CRM.
+function buildSystem() {
+  const now = new Date()
+  const dateStr = now.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+  const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })
+  return `You are the Peptech business assistant — a helpful agent for a peptide supplier's CRM.
 You help the operator query their business data and take internal actions.
 Be concise and direct. When summarising data, use numbers and specifics.
 Always confirm the customer's name before creating orders.
-Never make up data — if you don't have it, use the query tools to fetch it.`
+Never make up data — if you don't have it, use the query tools to fetch it.
+Current date and time: ${dateStr}, ${timeStr}.`
+}
 
 function encodeEvent(event: SseEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`
@@ -92,7 +98,7 @@ export async function executeAgentTurn(
   const stream = await client.messages.stream({
     model: MODEL,
     max_tokens: 1024,
-    system: SYSTEM,
+    system: buildSystem(),
     tools: CLAUDE_TOOLS as Anthropic.Tool[],
     messages: history,
   })
@@ -171,7 +177,7 @@ async function continueTurn(
   void controller
   const history = await loadHistory(sessionId, supabase)
   const stream = await client.messages.stream({
-    model: MODEL, max_tokens: 1024, system: SYSTEM,
+    model: MODEL, max_tokens: 1024, system: buildSystem(),
     tools: CLAUDE_TOOLS as Anthropic.Tool[],
     messages: history,
   })
