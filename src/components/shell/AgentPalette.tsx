@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import ReactMarkdown from 'react-markdown'
 import { Icons } from '@/lib/icons'
 import type { SseEvent, ToolCall } from '@/lib/agent/types'
 
@@ -207,7 +208,13 @@ export function AgentPalette() {
           <div className="pt-agent-messages" ref={msgsRef}>
             {messages.map(m => (
               <div key={m.id} className={`pt-agent-msg pt-agent-msg-${m.role}`}>
-                {m.text && <div className="pt-agent-msg-text">{m.text}</div>}
+                {m.text && (
+                  <div className="pt-agent-msg-text">
+                    {m.role === 'assistant'
+                      ? <ReactMarkdown className="pt-agent-md">{m.text}</ReactMarkdown>
+                      : m.text}
+                  </div>
+                )}
                 {m.toolCalls?.map(tc => (
                   <div key={tc.id} className={`pt-agent-confirm ${tc.status !== 'pending' ? 'is-resolved' : ''}`}>
                     <div className="pt-agent-confirm-name">

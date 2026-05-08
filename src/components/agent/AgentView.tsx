@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import ReactMarkdown from 'react-markdown'
 import { Icons } from '@/lib/icons'
 import type { AgentSession, AgentMessage, SseEvent, ToolCall } from '@/lib/agent/types'
 
@@ -262,7 +263,13 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
           )}
           {messages.map(m => (
             <div key={m.id} className={`pt-agent-chat-msg pt-agent-chat-msg-${m.role}`}>
-              {m.text && <div className="pt-agent-chat-text">{m.text}</div>}
+              {m.text && (
+                <div className="pt-agent-chat-text">
+                  {m.role === 'assistant'
+                    ? <ReactMarkdown className="pt-agent-md">{m.text}</ReactMarkdown>
+                    : m.text}
+                </div>
+              )}
               {m.toolCalls?.map(tc => (
                 <div key={tc.id} className={`pt-agent-confirm ${tc.status !== 'pending' ? 'is-resolved' : ''}`}>
                   <div className="pt-agent-confirm-name">{tc.name.replace(/_/g, ' ')}</div>
