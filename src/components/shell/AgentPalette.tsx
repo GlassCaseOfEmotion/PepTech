@@ -211,7 +211,7 @@ export function AgentPalette() {
                 {m.text && (
                   <div className="pt-agent-msg-text">
                     {m.role === 'assistant'
-                      ? <ReactMarkdown className="pt-agent-md">{m.text}</ReactMarkdown>
+                      ? <div className="pt-agent-md"><ReactMarkdown>{m.text}</ReactMarkdown></div>
                       : m.text}
                   </div>
                 )}

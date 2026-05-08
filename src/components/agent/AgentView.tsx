@@ -266,7 +266,7 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
               {m.text && (
                 <div className="pt-agent-chat-text">
                   {m.role === 'assistant'
-                    ? <ReactMarkdown className="pt-agent-md">{m.text}</ReactMarkdown>
+                    ? <div className="pt-agent-md"><ReactMarkdown>{m.text}</ReactMarkdown></div>
                     : m.text}
                 </div>
               )}
