@@ -91,11 +91,12 @@ export function Sidebar({ displayName, initialPinned = [] }: SidebarProps) {
             .then(({ data }) => {
               if (!data) return
               const thread = dbConversationToThread(data as unknown as DbConversation)
-              setPinned(prev => {
-                if (prev.some(p => p.id === thread.id)) {
-                  return prev.map(p => p.id === thread.id ? thread : p)
-                }
-                return [thread, ...prev]
+              setPinnedRaw(prev => {
+                const next = prev.some(p => p.id === thread.id)
+                  ? prev.map(p => p.id === thread.id ? thread : p)
+                  : [thread, ...prev]
+                _pinnedCache = next
+                return next
               })
             })
         } else {
