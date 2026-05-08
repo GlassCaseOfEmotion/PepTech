@@ -9,29 +9,31 @@ const ORDER_SELECT = `
 
 export const queryCustomers: AgentTool = {
   name: 'query_customers',
-  description: 'Search and filter customers. Returns a list with display name, trust score, LTV, tags, and primary channel.',
+  description: 'Search and filter customers. Returns a list with display name, trust score, LTV, tags, and primary channel. To find recently joined customers use created_after with an ISO date — do NOT use tag="new" for this purpose; tags are user-defined labels.',
   requiresConfirmation: false,
   inputSchema: {
     type: 'object',
     properties: {
-      name:      { type: 'string', description: 'Partial name match (case-insensitive)' },
-      tag:       { type: 'string', description: 'Filter by tag e.g. "vip", "new"' },
-      min_ltv:   { type: 'number', description: 'Minimum lifetime value' },
-      min_trust: { type: 'number', description: 'Minimum trust score (0–100)' },
-      limit:     { type: 'number', description: 'Max results (default 20)' },
+      name:          { type: 'string', description: 'Partial name match (case-insensitive)' },
+      tag:           { type: 'string', description: 'Filter by a user-defined tag label e.g. "vip", "wholesale"' },
+      min_ltv:       { type: 'number', description: 'Minimum lifetime value' },
+      min_trust:     { type: 'number', description: 'Minimum trust score (0–100)' },
+      created_after: { type: 'string', description: 'ISO date string — return only customers who joined after this date, e.g. "2026-05-01"' },
+      limit:         { type: 'number', description: 'Max results (default 20)' },
     },
   },
   async execute(raw: Record<string, unknown>, supabase: AgentSupabase) {
-    const input = raw as { name?: string; tag?: string; min_ltv?: number; min_trust?: number; limit?: number }
+    const input = raw as { name?: string; tag?: string; min_ltv?: number; min_trust?: number; created_after?: string; limit?: number }
     let q = supabase
       .from('customers')
       .select('id, display_name, trust_score, ltv, created_at, customer_tags(tag), customer_channels(channel_type, display_handle, is_primary)')
-      .order('ltv', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(input.limit ?? 20)
 
-    if (input.name)      q = q.ilike('display_name', `%${input.name}%`)
+    if (input.name)          q = q.ilike('display_name', `%${input.name}%`)
     if (input.min_ltv  != null) q = q.gte('ltv', input.min_ltv)
     if (input.min_trust != null) q = q.gte('trust_score', input.min_trust)
+    if (input.created_after)  q = q.gte('created_at', input.created_after)
 
     const { data, error } = await q
     if (error) throw new Error(error.message)
@@ -43,6 +45,7 @@ export const queryCustomers: AgentTool = {
       name: c.display_name,
       trust_score: c.trust_score,
       ltv: c.ltv,
+      created_at: c.created_at,
       tags: c.customer_tags.map((t: { tag: string }) => t.tag),
       primary_channel: c.customer_channels.find((ch: { is_primary: boolean }) => ch.is_primary)?.display_handle ?? null,
     }))
