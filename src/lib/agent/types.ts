@@ -37,7 +37,7 @@ export interface AgentSession {
 
 export type SseEvent =
   | { type: 'text'; delta: string }
-  | { type: 'confirm'; toolCalls: ToolCall[] }
+  | { type: 'confirm'; toolCalls: ToolCall[]; messageId: string }
   | { type: 'done'; sessionId: string }
   | { type: 'error'; message: string }
 

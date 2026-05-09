@@ -17,7 +17,7 @@ interface Msg {
 function readSseStream(
   response: Response,
   onDelta: (delta: string) => void,
-  onConfirm: (toolCalls: ToolCall[]) => void,
+  onConfirm: (toolCalls: ToolCall[], messageId: string) => void,
   onDone: (sessionId: string) => void,
   onError: (msg: string) => void,
 ) {
@@ -36,7 +36,7 @@ function readSseStream(
       try {
         const event = JSON.parse(line.slice(6)) as SseEvent
         if (event.type === 'text')    onDelta(event.delta)
-        if (event.type === 'confirm') onConfirm(event.toolCalls)
+        if (event.type === 'confirm') onConfirm(event.toolCalls, event.messageId)
         if (event.type === 'done')    onDone(event.sessionId)
         if (event.type === 'error')   onError(event.message)
       } catch { /* ignore parse errors */ }
@@ -114,18 +114,16 @@ export function AgentPalette() {
       readSseStream(
         res,
         appendAssistantDelta,
-        (toolCalls) => {
-          // We need the message id — get the last assistant message id from state
+        (toolCalls, messageId) => {
           setMessages(prev => {
             const last = prev[prev.length - 1]
             if (last?.role === 'assistant') {
               const updatedLast = { ...last, toolCalls }
-              // Store for confirm flow
-              setPendingToolCalls({ messageId: last.id, toolCalls })
+              setPendingToolCalls({ messageId, toolCalls })
               return [...prev.slice(0, -1), updatedLast]
             }
             const newMsg = { id: `a-${Date.now()}`, role: 'assistant' as const, text: '', toolCalls }
-            setPendingToolCalls({ messageId: newMsg.id, toolCalls })
+            setPendingToolCalls({ messageId, toolCalls })
             return [...prev, newMsg]
           })
         },

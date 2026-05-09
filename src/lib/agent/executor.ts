@@ -152,8 +152,8 @@ export async function executeAgentTurn(
 
   if (pendingWrites.length > 0) {
     // Surface write actions for confirmation
-    await saveAssistantMessage(sessionId, tenantId, textAccum || null, toolCalls, supabase)
-    send({ type: 'confirm', toolCalls: pendingWrites })
+    const messageId = await saveAssistantMessage(sessionId, tenantId, textAccum || null, toolCalls, supabase)
+    send({ type: 'confirm', toolCalls: pendingWrites, messageId: messageId ?? '' })
     send({ type: 'done', sessionId })
     return
   }

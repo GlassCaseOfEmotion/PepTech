@@ -21,7 +21,7 @@ function formatDate(iso: string) {
 function readSseStream(
   response: Response,
   onDelta: (delta: string) => void,
-  onConfirm: (toolCalls: ToolCall[]) => void,
+  onConfirm: (toolCalls: ToolCall[], messageId: string) => void,
   onDone: (sessionId: string) => void,
   onError: (msg: string) => void,
 ) {
@@ -39,7 +39,7 @@ function readSseStream(
       try {
         const event = JSON.parse(line.slice(6)) as SseEvent
         if (event.type === 'text')    onDelta(event.delta)
-        if (event.type === 'confirm') onConfirm(event.toolCalls)
+        if (event.type === 'confirm') onConfirm(event.toolCalls, event.messageId)
         if (event.type === 'done')    onDone(event.sessionId)
         if (event.type === 'error')   onError(event.message)
       } catch { /* ignore */ }
@@ -146,16 +146,16 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
       readSseStream(
         res,
         appendAssistantDelta,
-        (toolCalls) => {
+        (toolCalls, messageId) => {
           setMessages(prev => {
             const last = prev[prev.length - 1]
             if (last?.role === 'assistant') {
               const updated = { ...last, toolCalls }
-              setPendingConfirm({ messageId: last.id, toolCalls })
+              setPendingConfirm({ messageId, toolCalls })
               return [...prev.slice(0, -1), updated]
             }
             const newMsg: DisplayMsg = { id: `a-${Date.now()}`, role: 'assistant', text: '', toolCalls }
-            setPendingConfirm({ messageId: newMsg.id, toolCalls })
+            setPendingConfirm({ messageId, toolCalls })
             return [...prev, newMsg]
           })
         },
