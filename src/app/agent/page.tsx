@@ -18,7 +18,7 @@ export default async function AgentPage({
 
   const { data: sessions } = await supabase
     .from('agent_sessions')
-    .select('id, trigger, trigger_ref, status, created_at, updated_at')
+    .select('id, trigger, trigger_ref, status, title, created_at, updated_at')
     .order('updated_at', { ascending: false })
     .limit(50)
 

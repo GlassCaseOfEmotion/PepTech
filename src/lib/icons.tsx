@@ -57,6 +57,8 @@ export const Icons = {
   lock:    (p: IconProps) => <PtIcon {...p}><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></PtIcon>,
   card:    (p: IconProps) => <PtIcon {...p}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18 M7 15h3"/></PtIcon>,
   pin:     (p: IconProps) => <PtIcon {...p} d="M12 2a4 4 0 0 1 4 4c0 1.5-.5 2.8-1.3 3.7L16 17H8l1.3-7.3A5.4 5.4 0 0 1 8 6a4 4 0 0 1 4-4Z M12 17v5" />,
+  pencil:  (p: IconProps) => <PtIcon {...p} d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" />,
+  trash:   (p: IconProps) => <PtIcon {...p} d="M3 6h18 M8 6V4h8v2 M19 6l-1 14H6L5 6" />,
 }
 
 export function ChannelIcon({ channelType, size = 9 }: { channelType: 'whatsapp' | 'telegram' | 'email'; size?: number }) {

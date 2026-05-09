@@ -29,6 +29,7 @@ export interface AgentSession {
   trigger: 'user' | 'automation' | 'schedule'
   trigger_ref: string | null
   status: 'active' | 'complete'
+  title: string | null
   created_at: string
   updated_at: string
   snippet?: string

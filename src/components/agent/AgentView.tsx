@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import { Icons } from '@/lib/icons'
+import { renameSession, deleteSession } from '@/app/agent/actions'
 import type { AgentSession, AgentMessage, SseEvent, ToolCall } from '@/lib/agent/types'
 
 function formatDate(iso: string) {
@@ -73,6 +74,9 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
   const router = useRouter()
   const [sessions, setSessions] = useState(initialSessions)
   const [activeId, setActiveId] = useState(initialSessionId)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const renameInputRef = useRef<HTMLInputElement>(null)
   const [messages, setMessages] = useState<DisplayMsg[]>(initialMessages.map(dbMsgToDisplay))
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
@@ -204,7 +208,30 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
     }
   }, [pendingConfirm, activeId, appendAssistantDelta])
 
+  const startRename = (session: AgentSession, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setRenamingId(session.id)
+    setRenameValue(session.title ?? firstUserMsg(session))
+    setTimeout(() => renameInputRef.current?.select(), 30)
+  }
+
+  const commitRename = async (sessionId: string) => {
+    const title = renameValue.trim()
+    setRenamingId(null)
+    setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, title: title || null } : s))
+    await renameSession(sessionId, title)
+  }
+
+  const handleDelete = async (session: AgentSession, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!confirm(`Delete this session? This cannot be undone.`)) return
+    setSessions(prev => prev.filter(s => s.id !== session.id))
+    if (activeId === session.id) { setActiveId(null); setMessages([]) }
+    await deleteSession(session.id)
+  }
+
   const firstUserMsg = (session: AgentSession) => {
+    if (session.title) return session.title
     if (session.id === activeId) {
       const first = messages.find(m => m.role === 'user')
       if (first) return first.text.slice(0, 60)
@@ -232,13 +259,37 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
             <li
               key={s.id}
               className={`pt-agent-session-row ${activeId === s.id ? 'is-active' : ''}`}
-              onClick={() => selectSession(s.id)}
+              onClick={() => renamingId !== s.id && selectSession(s.id)}
             >
               {s.trigger === 'automation' && <span className="pt-agent-auto-tag">⚡</span>}
-              <div className="pt-agent-session-snippet">{firstUserMsg(s)}</div>
+              {renamingId === s.id ? (
+                <input
+                  ref={renameInputRef}
+                  className="pt-agent-rename-input"
+                  value={renameValue}
+                  onChange={e => setRenameValue(e.target.value)}
+                  onBlur={() => commitRename(s.id)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); void commitRename(s.id) }
+                    if (e.key === 'Escape') setRenamingId(null)
+                  }}
+                  onClick={e => e.stopPropagation()}
+                  autoFocus
+                />
+              ) : (
+                <div className="pt-agent-session-snippet">{firstUserMsg(s)}</div>
+              )}
               <div className="pt-agent-session-meta">
                 <span className={`pt-agent-session-status pt-agent-status-${s.status}`} />
                 <span className="pt-agent-session-time">{formatDate(s.updated_at)}</span>
+              </div>
+              <div className="pt-agent-session-actions">
+                <button className="pt-agent-session-action" title="Rename" onClick={e => startRename(s, e)}>
+                  <Icons.pencil size={11} />
+                </button>
+                <button className="pt-agent-session-action pt-agent-session-action-del" title="Delete" onClick={e => handleDelete(s, e)}>
+                  <Icons.trash size={11} />
+                </button>
               </div>
             </li>
           ))}
