@@ -537,7 +537,7 @@
 .pt-inbox-ai-custom-send:disabled { opacity: 0.35; cursor: default; }
 
 .pt-inbox-ai-msgs {
-  max-height: 340px; overflow-y: auto;
+  height: 360px; overflow-y: auto; overflow-x: hidden;
   padding: 6px 0 8px;
   display: flex; flex-direction: column; gap: 8px;
 }
@@ -548,7 +548,8 @@
 }
 .pt-inbox-ai-msg-assistant { color: var(--pt-fg-2); max-width: 100%; }
 .pt-inbox-ai-msg-assistant .pt-agent-md { font-size: 12px; }
-.pt-inbox-ai-msg-assistant .pt-agent-md table { font-size: 11px; }
+.pt-inbox-ai-msg-assistant .pt-agent-md .pt-table-wrap { overflow-x: auto; }
+.pt-inbox-ai-msg-assistant .pt-agent-md table { font-size: 11px; min-width: 360px; }
 
 .pt-inbox-ai-input-row {
   display: flex; align-items: center; gap: 6px;

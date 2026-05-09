@@ -114,9 +114,11 @@ kbd {
   height: 100%;
   background: var(--pt-bg);
   color: var(--pt-fg);
+  transition: grid-template-columns 0.22s ease;
 }
 .pt-root.no-right { grid-template-columns: 232px 1fr; }
 .pt-d-compact .pt-root { grid-template-columns: 220px 1fr 296px; }
+html.pt-ai-expanded .pt-root { grid-template-columns: 232px 1fr 420px; }
 
 /* ─── Sidebar ────────────────────────────────────────────────────────────── */
 .pt-sidebar {

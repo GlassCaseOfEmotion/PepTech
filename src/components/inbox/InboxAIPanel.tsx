@@ -1,10 +1,16 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import ReactMarkdown from 'react-markdown'
+import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Icons } from '@/lib/icons'
 import type { SseEvent, ToolCall } from '@/lib/agent/types'
+
+const mdComponents: Components = {
+  table: ({ children, ...props }) => (
+    <div className="pt-table-wrap"><table {...props}>{children}</table></div>
+  ),
+}
 
 const CHIPS = [
   { label: 'Create order from chat',      prompt: 'Read the recent messages in this conversation and create an order based on what the customer has requested.' },
@@ -70,6 +76,16 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
   useEffect(() => {
     msgsRef.current?.scrollTo({ top: msgsRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
+
+  // Expand rail when AI is active
+  useEffect(() => {
+    if (messages.length > 0) {
+      document.documentElement.classList.add('pt-ai-expanded')
+    } else {
+      document.documentElement.classList.remove('pt-ai-expanded')
+    }
+    return () => document.documentElement.classList.remove('pt-ai-expanded')
+  }, [messages.length])
 
   // Reset when conversation changes
   useEffect(() => {
@@ -187,7 +203,7 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
               {m.role === 'assistant' ? (
                 m.streaming
                   ? <span style={{ whiteSpace: 'pre-wrap' }}>{m.text}</span>
-                  : <div className="pt-agent-md"><ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown></div>
+                  : <div className="pt-agent-md"><ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{m.text}</ReactMarkdown></div>
               ) : m.text.replace(/^\[Context:[^\]]+\]\n\n/, '')}
             </div>
           ))}
