@@ -208,6 +208,7 @@ export function AgentPalette() {
         res,
         appendAssistantDelta,
         () => setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: '' }]),
+        () => {},
         () => setConfirming(false),
         (msg) => {
           setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${msg}` }])
