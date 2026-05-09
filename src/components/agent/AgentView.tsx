@@ -8,6 +8,46 @@ import { Icons } from '@/lib/icons'
 import { renameSession, deleteSession } from '@/app/agent/actions'
 import type { AgentSession, AgentMessage, SseEvent, ToolCall } from '@/lib/agent/types'
 
+function summariseToolCall(name: string, input: Record<string, unknown>): string {
+  const i = input
+  switch (name) {
+    case 'query_customers': {
+      const parts: string[] = []
+      if (i.name) parts.push(`name "${i.name}"`)
+      if (i.tag) parts.push(`tag "${i.tag}"`)
+      if (i.min_ltv != null) parts.push(`LTV ≥ ${i.min_ltv}`)
+      if (i.created_after) parts.push(`joined after ${i.created_after}`)
+      return parts.length ? `Searched customers — ${parts.join(', ')}` : 'Queried all customers'
+    }
+    case 'get_customer':
+      return `Looked up customer${i.name ? ` "${i.name}"` : ''}`
+    case 'query_orders': {
+      const parts: string[] = []
+      if (i.status) parts.push(`status: ${i.status}`)
+      if (i.since) parts.push(`since ${i.since}`)
+      if (i.until) parts.push(`until ${i.until}`)
+      return parts.length ? `Queried orders — ${parts.join(', ')}` : 'Queried all orders'
+    }
+    case 'get_order':
+      return `Looked up order${i.ref_number ? ` ${i.ref_number}` : ''}`
+    case 'query_catalog':
+      return i.family ? `Queried catalog — ${i.family}` : i.low_stock ? 'Queried low-stock products' : 'Queried full catalog'
+    case 'get_analytics':
+      return `Fetched analytics${i.since ? ` from ${i.since}` : ''}`
+    case 'create_order': {
+      const items = i.items as { qty: number }[] | undefined
+      const count = items?.reduce((s, it) => s + it.qty, 0) ?? '?'
+      return `Create order — ${count} item(s) · ${i.payment_asset ?? '?'}`
+    }
+    case 'update_order_status':
+      return `Move order ${i.order_id ?? ''} → ${i.status ?? '?'}`
+    case 'generate_invoice':
+      return `Generate invoice for order ${i.order_id ?? ''}`
+    default:
+      return name.replace(/_/g, ' ')
+  }
+}
+
 function formatDate(iso: string) {
   const d = new Date(iso)
   const now = new Date()
@@ -326,8 +366,7 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
               )}
               {m.toolCalls?.map(tc => (
                 <div key={tc.id} className={`pt-agent-confirm ${tc.status !== 'pending' ? 'is-resolved' : ''}`}>
-                  <div className="pt-agent-confirm-name">{tc.name.replace(/_/g, ' ')}</div>
-                  <div className="pt-agent-confirm-input">{JSON.stringify(tc.input, null, 2).slice(0, 300)}</div>
+                  <div className="pt-agent-confirm-summary">{summariseToolCall(tc.name, tc.input)}</div>
                   {tc.status === 'pending' && (
                     <div className="pt-agent-confirm-btns">
                       <button className="pt-btn pt-btn-primary" style={{ height: 30, fontSize: 12.5 }} onClick={() => confirm(tc.id, true)} disabled={confirming}>Confirm</button>
