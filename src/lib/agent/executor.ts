@@ -151,7 +151,25 @@ export async function executeAgentTurn(
   if (pendingWrites.length === 0 && toolCalls.some(tc => tc.status === 'complete')) {
     // All tools were read tools — run a follow-up turn with results
     await saveAssistantMessage(sessionId, tenantId, textAccum || null, toolCalls, supabase)
-    await continueTurn(sessionId, tenantId, supabase, client, controller, send, encoder)
+
+    // Build the next history in memory rather than re-querying — avoids DB race conditions
+    const assistantContent: Anthropic.ContentBlockParam[] = []
+    if (textAccum) assistantContent.push({ type: 'text', text: textAccum })
+    for (const tc of toolCalls) {
+      assistantContent.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.input })
+    }
+    const toolResults: Anthropic.ToolResultBlockParam[] = toolCalls.map(tc => ({
+      type: 'tool_result',
+      tool_use_id: tc.id,
+      content: JSON.stringify(tc.output),
+    }))
+    const nextHistory: Anthropic.MessageParam[] = [
+      ...history,
+      { role: 'assistant', content: assistantContent },
+      { role: 'user', content: toolResults },
+    ]
+
+    await continueTurn(nextHistory, sessionId, tenantId, supabase, client, send)
     send({ type: 'done', sessionId })
     return
   }
@@ -169,19 +187,15 @@ export async function executeAgentTurn(
   send({ type: 'done', sessionId })
 }
 
-// Run a follow-up turn after silent tool execution, appending tool results
+// Run a follow-up turn with a fully-built history (no DB re-query)
 async function continueTurn(
+  history: Anthropic.MessageParam[],
   sessionId: string,
   tenantId: string,
   supabase: AgentSupabase,
   client: Anthropic,
-  controller: ReadableStreamDefaultController<Uint8Array>,
   send: (e: SseEvent) => void,
-  encoder: TextEncoder
 ) {
-  void encoder
-  void controller
-  const history = await loadHistory(sessionId, supabase)
   const stream = await client.messages.stream({
     model: MODEL, max_tokens: 1024, system: buildSystem(),
     tools: CLAUDE_TOOLS as Anthropic.Tool[],
@@ -243,8 +257,11 @@ export async function confirmToolCall(
     .update({ tool_calls: toolCalls as unknown as import('@/types/database').Json })
     .eq('id', messageId)
 
+  // Build history in memory — avoids DB re-query race conditions
+  const history = await loadHistory(sessionId, supabase)
+
   // Run follow-up Claude turn
   const client = new Anthropic()
-  await continueTurn(sessionId, tenantId, supabase, client, controller, send, encoder)
+  await continueTurn(history, sessionId, tenantId, supabase, client, send)
   send({ type: 'done', sessionId })
 }
