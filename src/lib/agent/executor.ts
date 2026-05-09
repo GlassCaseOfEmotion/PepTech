@@ -196,6 +196,7 @@ async function continueTurn(
   client: Anthropic,
   send: (e: SseEvent) => void,
 ) {
+  send({ type: 'new_turn' })
   const stream = await client.messages.stream({
     model: MODEL, max_tokens: 1024, system: buildSystem(),
     tools: CLAUDE_TOOLS as Anthropic.Tool[],
