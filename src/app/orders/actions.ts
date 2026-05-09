@@ -80,6 +80,7 @@ export async function createOrder(data: {
     })
 
     revalidatePath('/orders')
+    revalidatePath('/customers', 'layout')
     return { success: true, orderId: order.id, refNumber: order.ref_number }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }

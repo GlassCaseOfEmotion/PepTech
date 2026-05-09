@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient, getServerUser } from '@/lib/supabase/server'
 import { Shell } from '@/components/shell/Shell'
 import { Icons } from '@/lib/icons'
+import { CustomerNewOrderButton } from '@/components/customers/CustomerNewOrderButton'
 
 const CH_LABEL: Record<string, string> = { whatsapp: 'WhatsApp', telegram: 'Telegram', email: 'Email' }
 const CH_KEY: Record<string, string> = { whatsapp: 'wa', telegram: 'tg', email: 'em' }
@@ -53,9 +54,12 @@ const MOCK_PAY_METHODS = ['USDT (TRC20)', 'BTC', 'Cash']
 
 function OrderState({ state }: { state: string }) {
   const map: Record<string, { cls: string; label: string }> = {
-    delivered:  { cls: 'ok',   label: 'Delivered'  },
+    awaiting:   { cls: 'warn', label: 'Awaiting'   },
     confirming: { cls: 'warn', label: 'Confirming' },
+    packing:    { cls: 'cool', label: 'Packing'    },
     shipped:    { cls: 'cool', label: 'Shipped'    },
+    delivered:  { cls: 'ok',   label: 'Delivered'  },
+    cancelled:  { cls: '',     label: 'Cancelled'  },
   }
   const s = map[state] ?? { cls: '', label: state }
   return <span className={`pt-cu-state pt-cu-state-${s.cls}`}><i />{s.label}</span>
@@ -67,7 +71,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
   if (!user) redirect('/login')
 
   const supabase = await createClient()
-  const [{ data: customer }, { data: notes }] = await Promise.all([
+  const [{ data: customer }, { data: notes }, { data: orders }] = await Promise.all([
     supabase
       .from('customers')
       .select('id, display_name, trust_score, ltv, created_at, customer_channels(channel_type, display_handle, is_primary), customer_tags(tag)')
@@ -79,6 +83,11 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
       .eq('customer_id', customerId)
       .order('created_at', { ascending: false })
       .limit(10),
+    supabase
+      .from('orders')
+      .select('id, ref_number, status, payment_asset, payment_amount, created_at, order_items(qty, unit_price_snapshot, products(name))')
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false }),
   ])
 
   if (!customer) redirect('/customers')
@@ -88,8 +97,12 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
   const chLabel = primary ? CH_LABEL[primary.channel_type] ?? '—' : '—'
   const trustCls = customer.trust_score >= 85 ? 'hi' : customer.trust_score >= 65 ? 'md' : 'lo'
   const tags = customer.customer_tags?.map(t => t.tag) ?? []
-  const totalOrders = MOCK_ORDER_HISTORY.length
-  const avgOrder = Math.round(customer.ltv / Math.max(1, totalOrders))
+  const realOrders = orders ?? []
+  const totalOrders = realOrders.length
+  const avgOrder = totalOrders > 0 ? Math.round(customer.ltv / totalOrders) : 0
+  const lastOrderDate = realOrders[0]?.created_at
+    ? new Date(realOrders[0].created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : '—'
   const joined = customer.created_at ? new Date(customer.created_at).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) : '—'
   const ChIcon = chKey === 'wa' ? Icons.wa : chKey === 'tg' ? Icons.tg : Icons.em
 
@@ -121,9 +134,10 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
           <div className="pt-cu-hd-actions">
             <button className="pt-btn pt-btn-ghost">Add note</button>
             <button className="pt-btn pt-btn-ghost">Add tag</button>
-            <button className="pt-btn pt-btn-primary">
+            <button className="pt-btn pt-btn-ghost">
               <ChIcon size={12} /> Message
             </button>
+            <CustomerNewOrderButton customerId={customer.id} customerName={customer.display_name} />
           </div>
         </div>
 
@@ -145,7 +159,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
             </div>
             <div className="pt-cu-stat">
               <div className="lbl">Last order</div>
-              <div className="val">{MOCK_ORDER_HISTORY[0].date}</div>
+              <div className="val">{lastOrderDate}</div>
             </div>
             <div className="pt-cu-stat">
               <div className="lbl">Channel</div>
@@ -166,26 +180,35 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
               <section className="pt-card">
                 <header className="pt-card-hd">
                   <div><h3>Order history</h3><p>{totalOrders} total · ${customer.ltv.toLocaleString()} LTV</p></div>
-                  <button className="pt-link">Export CSV →</button>
                 </header>
                 <div className="pt-card-body" style={{ padding: 0 }}>
-                  <table className="pt-cu-orders">
-                    <thead>
-                      <tr><th>Order</th><th>Date</th><th>Items</th><th>Pay</th><th className="r">Amount</th><th>State</th></tr>
-                    </thead>
-                    <tbody>
-                      {MOCK_ORDER_HISTORY.map(o => (
-                        <tr key={o.id}>
-                          <td className="mono">#{o.id}</td>
-                          <td>{o.date}</td>
-                          <td className="pt-cu-items">{o.items}</td>
-                          <td><span className="pt-pay-asset" data-asset={o.pay}>{o.pay}</span></td>
-                          <td className="r mono">${o.amt}</td>
-                          <td><OrderState state={o.state} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  {realOrders.length === 0 ? (
+                    <div style={{ padding: '14px 16px', fontSize: 12, color: 'var(--pt-fg-4)' }}>No orders yet</div>
+                  ) : (
+                    <table className="pt-cu-orders">
+                      <thead>
+                        <tr><th>Order</th><th>Date</th><th>Items</th><th>Pay</th><th className="r">Amount</th><th>State</th></tr>
+                      </thead>
+                      <tbody>
+                        {realOrders.map(o => {
+                          const items = (o.order_items as { qty: number; products: { name: string } | null }[]) ?? []
+                          const itemsSummary = items.map(i => `${i.products?.name ?? '?'} ×${i.qty}`).join(', ') || '—'
+                          return (
+                            <tr key={o.id} style={{ cursor: 'pointer' }} onClick={() => {}}>
+                              <td className="mono">
+                                <Link href={`/orders/${o.id}`} className="pt-link">#{o.ref_number}</Link>
+                              </td>
+                              <td>{fmtDate(o.created_at)}</td>
+                              <td className="pt-cu-items">{itemsSummary}</td>
+                              <td><span className="pt-pay-asset" data-asset={o.payment_asset}>{o.payment_asset}</span></td>
+                              <td className="r mono">${o.payment_amount.toLocaleString()}</td>
+                              <td><OrderState state={o.status} /></td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </section>
 
