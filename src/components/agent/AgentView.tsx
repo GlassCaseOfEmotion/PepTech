@@ -170,7 +170,12 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }
-      setSessions(prev => [newSession, ...prev])
+      setSessions(prev => [{ ...newSession, snippet: text }, ...prev])
+    } else {
+      // Stamp snippet on existing session if it doesn't have one yet
+      setSessions(prev => prev.map(s =>
+        s.id === sid && !s.snippet && !s.title ? { ...s, snippet: text } : s
+      ))
     }
 
     setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user', text }])
@@ -274,10 +279,6 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
 
   const firstUserMsg = (session: AgentSession) => {
     if (session.title) return session.title
-    if (session.id === activeId) {
-      const first = messages.find(m => m.role === 'user')
-      if (first) return first.text.slice(0, 60)
-    }
     if (session.snippet) return session.snippet.slice(0, 60)
     return 'New session'
   }
