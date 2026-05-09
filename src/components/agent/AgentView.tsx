@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Icons } from '@/lib/icons'
 import { renameSession, deleteSession } from '@/app/agent/actions'
 import type { AgentSession, AgentMessage, SseEvent, ToolCall } from '@/lib/agent/types'
@@ -318,7 +319,7 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
               {m.text && (
                 <div className="pt-agent-chat-text">
                   {m.role === 'assistant'
-                    ? <div className="pt-agent-md"><ReactMarkdown>{m.text}</ReactMarkdown></div>
+                    ? <div className="pt-agent-md"><ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown></div>
                     : m.text}
                 </div>
               )}

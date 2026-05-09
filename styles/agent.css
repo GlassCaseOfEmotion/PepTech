@@ -264,3 +264,16 @@
   font-size: 13px; font-weight: 600; margin: 0.6em 0 0.3em;
 }
 .pt-agent-md a { color: var(--pt-accent-fg); text-decoration: underline; }
+.pt-agent-md table {
+  border-collapse: collapse; width: 100%; margin: 0.5em 0;
+  font-size: 12px;
+}
+.pt-agent-md th, .pt-agent-md td {
+  border: 0.5px solid var(--pt-line);
+  padding: 5px 10px; text-align: left;
+}
+.pt-agent-md th {
+  background: var(--pt-bg-side); font-weight: 600;
+  color: var(--pt-fg-2); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.pt-agent-md tr:nth-child(even) td { background: oklch(from var(--pt-surface-2) l c h / 0.5); }

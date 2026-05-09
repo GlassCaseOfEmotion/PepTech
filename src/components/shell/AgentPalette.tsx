@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Icons } from '@/lib/icons'
 import type { SseEvent, ToolCall } from '@/lib/agent/types'
 
@@ -211,7 +212,7 @@ export function AgentPalette() {
                 {m.text && (
                   <div className="pt-agent-msg-text">
                     {m.role === 'assistant'
-                      ? <div className="pt-agent-md"><ReactMarkdown>{m.text}</ReactMarkdown></div>
+                      ? <div className="pt-agent-md"><ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown></div>
                       : m.text}
                   </div>
                 )}
