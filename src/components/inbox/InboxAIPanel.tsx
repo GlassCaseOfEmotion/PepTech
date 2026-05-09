@@ -64,6 +64,7 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [streaming, setStreaming] = useState(false)
   const [input, setInput] = useState('')
+  const [customInput, setCustomInput] = useState('')
   const msgsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -76,6 +77,7 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
     setSessionId(null)
     setStreaming(false)
     setInput('')
+    setCustomInput('')
   }, [conversationId])
 
   const appendDelta = useCallback((delta: string) => {
@@ -153,6 +155,28 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
               {chip.label}
             </button>
           ))}
+          <div className="pt-inbox-ai-custom">
+            <input
+              className="pt-inbox-ai-custom-input"
+              placeholder="Ask something…"
+              value={customInput}
+              onChange={e => setCustomInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && customInput.trim()) {
+                  void send(customInput)
+                  setCustomInput('')
+                }
+              }}
+              disabled={streaming}
+            />
+            <button
+              className="pt-inbox-ai-custom-send"
+              onClick={() => { void send(customInput); setCustomInput('') }}
+              disabled={!customInput.trim() || streaming}
+            >
+              <Icons.send size={10} />
+            </button>
+          </div>
         </div>
       )}
 
