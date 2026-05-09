@@ -194,7 +194,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                           const items = (o.order_items as { qty: number; products: { name: string } | null }[]) ?? []
                           const itemsSummary = items.map(i => `${i.products?.name ?? '?'} ×${i.qty}`).join(', ') || '—'
                           return (
-                            <tr key={o.id} style={{ cursor: 'pointer' }} onClick={() => {}}>
+                            <tr key={o.id}>
                               <td className="mono">
                                 <Link href={`/orders/${o.id}`} className="pt-link">#{o.ref_number}</Link>
                               </td>
