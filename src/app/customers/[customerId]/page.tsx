@@ -19,15 +19,6 @@ function fmtDate(iso: string) {
 
 // ─── Mock data for sections not yet backed by the DB ────────────────────────
 
-const MOCK_ORDER_HISTORY = [
-  { id: 'A-2241', date: 'Apr 18', items: 'Reta 10mg ×2',         amt: 330, pay: 'USDT', state: 'confirming' },
-  { id: 'A-2188', date: 'Mar 30', items: 'BPC-157 5mg ×3',       amt: 114, pay: 'USDT', state: 'delivered'  },
-  { id: 'A-2103', date: 'Mar 11', items: 'Tirz 30mg ×1',         amt: 220, pay: 'BTC',  state: 'delivered'  },
-  { id: 'A-2044', date: 'Feb 22', items: 'Reta 10mg ×1, GHK ×2', amt: 275, pay: 'USDT', state: 'delivered'  },
-  { id: 'A-1998', date: 'Feb 03', items: 'BPC-157 5mg ×4',       amt: 152, pay: 'Cash', state: 'delivered'  },
-  { id: 'A-1921', date: 'Jan 14', items: 'Tirz 30mg ×1',         amt: 220, pay: 'USDT', state: 'delivered'  },
-]
-
 const MOCK_CYCLES = [
   { product: 'BPC-157', start: 'Apr 1',  end: 'May 27', weeks: 8,  progress: 0.55 },
   { product: 'Reta',    start: 'Apr 18', end: 'Aug 8',  weeks: 16, progress: 0.18 },
