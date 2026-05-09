@@ -743,9 +743,9 @@ kbd {
 }
 .pt-cust-av[data-channel="wa"] { color: var(--pt-wa); }
 .pt-cust-av[data-channel="tg"] { color: var(--pt-tg); }
-.pt-cust-id { flex: 1; min-width: 0; }
+.pt-cust-id { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .pt-cust-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pt-cust-handle { font-size: 11px; color: var(--pt-fg-3); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pt-cust-handle { font-size: 11px; color: var(--pt-fg-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pt-cust-stats {
   display: grid; grid-template-columns: repeat(3, 1fr);
   gap: 6px; margin-top: 12px;
