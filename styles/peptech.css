@@ -745,9 +745,9 @@ html.pt-ai-expanded .pt-root { grid-template-columns: 232px 1fr 420px; }
 }
 .pt-cust-av[data-channel="wa"] { color: var(--pt-wa); }
 .pt-cust-av[data-channel="tg"] { color: var(--pt-tg); }
-.pt-cust-id { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pt-cust-id { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
 .pt-cust-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pt-cust-handle { font-size: 11px; color: var(--pt-fg-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pt-cust-handle { font-size: 11px; color: var(--pt-fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pt-cust-stats {
   display: grid; grid-template-columns: repeat(3, 1fr);
   gap: 6px; margin-top: 12px;
