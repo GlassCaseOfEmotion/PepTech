@@ -33,6 +33,8 @@ function summariseToolCall(name: string, input: Record<string, unknown>): string
       return i.family ? `Queried catalog — ${i.family}` : i.low_stock ? 'Queried low-stock products' : 'Queried full catalog'
     case 'get_analytics':
       return `Fetched analytics${i.since ? ` from ${i.since}` : ''}`
+    case 'get_conversation_messages':
+      return `Read conversation messages`
     case 'create_order': {
       const items = i.items as { qty: number }[] | undefined
       const count = items?.reduce((s, it) => s + it.qty, 0) ?? '?'

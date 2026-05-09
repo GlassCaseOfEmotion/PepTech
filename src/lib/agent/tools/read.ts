@@ -238,6 +238,35 @@ export const getAnalytics: AgentTool = {
   },
 }
 
+export const getConversationMessages: AgentTool = {
+  name: 'get_conversation_messages',
+  description: 'Fetch recent messages from a conversation. Use this whenever the context includes a conversation ID — for drafting replies, summarising threads, or identifying outstanding requests.',
+  requiresConfirmation: false,
+  inputSchema: {
+    type: 'object',
+    required: ['conversation_id'],
+    properties: {
+      conversation_id: { type: 'string', description: 'Conversation UUID from context' },
+      limit: { type: 'number', description: 'Number of recent messages to fetch (default 30)' },
+    },
+  },
+  async execute(raw: Record<string, unknown>, supabase: AgentSupabase) {
+    const input = raw as { conversation_id: string; limit?: number }
+    const { data, error } = await supabase
+      .from('messages')
+      .select('id, direction, content, sent_at, metadata')
+      .eq('conversation_id', input.conversation_id)
+      .order('sent_at', { ascending: false })
+      .limit(input.limit ?? 30)
+    if (error) throw new Error(error.message)
+    return (data ?? []).reverse().map(m => ({
+      direction: m.direction,
+      content: m.content,
+      sent_at: m.sent_at,
+    }))
+  },
+}
+
 export const READ_TOOLS: AgentTool[] = [
-  queryCustomers, getCustomer, queryOrders, getOrder, queryCatalog, getAnalytics,
+  queryCustomers, getCustomer, queryOrders, getOrder, queryCatalog, getAnalytics, getConversationMessages,
 ]
