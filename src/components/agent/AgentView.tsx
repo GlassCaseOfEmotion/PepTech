@@ -126,6 +126,7 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
         trigger: 'user',
         trigger_ref: null,
         status: 'active',
+        title: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }
@@ -164,7 +165,7 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
           setSessions(prev => {
             const exists = prev.find(s => s.id === newSid)
             if (exists) return prev.map(s => s.id === newSid ? { ...s, updated_at: new Date().toISOString() } : s)
-            const newS: AgentSession = { id: newSid, tenant_id: '', trigger: 'user', trigger_ref: null, status: 'active', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+            const newS: AgentSession = { id: newSid, tenant_id: '', trigger: 'user', trigger_ref: null, status: 'active', title: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
             return [newS, ...prev.filter(s => !s.id.startsWith('tmp-'))]
           })
           setStreaming(false)
