@@ -91,7 +91,11 @@ export async function executeAgentTurn(
   const send = (e: SseEvent) => controller.enqueue(encoder.encode(encodeEvent(e)))
 
   await saveUserMessage(sessionId, tenantId, userMessage, supabase)
-  const history = await loadHistory(sessionId, tenantId.length ? supabase : supabase)
+  let history = await loadHistory(sessionId, supabase)
+  // Guard: if DB round-trip returned nothing, send at minimum the current message
+  if (history.length === 0) {
+    history = [{ role: 'user', content: userMessage }]
+  }
 
   const client = new Anthropic()
   let textAccum = ''
