@@ -226,7 +226,7 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
 
   const handleDelete = async (session: AgentSession, e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!confirm(`Delete this session? This cannot be undone.`)) return
+    if (!window.confirm(`Delete this session? This cannot be undone.`)) return
     setSessions(prev => prev.filter(s => s.id !== session.id))
     if (activeId === session.id) { setActiveId(null); setMessages([]) }
     await deleteSession(session.id)
