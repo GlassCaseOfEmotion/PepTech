@@ -499,3 +499,54 @@
   background: oklch(from var(--pt-fg) l c h / 0.06);
   font-size: 24px;
 }
+
+/* ─── Inbox AI Panel ─────────────────────────────────────────────────────── */
+.pt-inbox-ai { padding-bottom: 4px; }
+
+.pt-inbox-ai-chips {
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 6px 14px 10px;
+}
+.pt-inbox-ai-chip {
+  text-align: left; padding: 7px 10px;
+  border-radius: var(--pt-radius); border: 0.5px solid var(--pt-line);
+  background: var(--pt-surface); color: var(--pt-fg-2);
+  font-size: 12px; font-family: inherit; cursor: pointer;
+  transition: border-color 0.1s, background 0.1s;
+}
+.pt-inbox-ai-chip:hover { border-color: var(--pt-accent); background: var(--pt-accent-soft); color: var(--pt-fg); }
+.pt-inbox-ai-chip:disabled { opacity: 0.5; cursor: default; }
+
+.pt-inbox-ai-msgs {
+  max-height: 340px; overflow-y: auto;
+  padding: 6px 14px 8px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.pt-inbox-ai-msg { font-size: 12px; line-height: 1.55; }
+.pt-inbox-ai-msg-user {
+  align-self: flex-end; background: var(--pt-fg); color: var(--pt-bg);
+  padding: 6px 10px; border-radius: 12px 12px 3px 12px; max-width: 90%;
+}
+.pt-inbox-ai-msg-assistant {
+  color: var(--pt-fg-2); max-width: 100%;
+}
+.pt-inbox-ai-msg-assistant .pt-agent-md { font-size: 12px; }
+.pt-inbox-ai-msg-assistant .pt-agent-md table { font-size: 11px; }
+
+.pt-inbox-ai-input-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px 10px;
+}
+.pt-inbox-ai-input {
+  flex: 1; height: 30px; padding: 0 8px;
+  border: 0.5px solid var(--pt-line); border-radius: var(--pt-radius);
+  background: var(--pt-bg-side); color: var(--pt-fg);
+  font-size: 12px; font-family: inherit; outline: none;
+}
+.pt-inbox-ai-input:focus { border-color: var(--pt-accent); background: var(--pt-surface); }
+.pt-inbox-ai-send {
+  width: 28px; height: 28px; border-radius: var(--pt-radius);
+  border: none; background: var(--pt-fg); color: var(--pt-bg);
+  display: grid; place-items: center; cursor: pointer; flex-shrink: 0;
+}
+.pt-inbox-ai-send:disabled { opacity: 0.4; cursor: default; }

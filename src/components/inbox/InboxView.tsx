@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
 import { InboxProvider, useInbox } from './InboxProvider'
+import { InboxAIPanel } from './InboxAIPanel'
 import { OrderRail } from './OrderRail'
 import { TemplatePicker } from './TemplatePicker'
 import type { DbConversation, DbQuickReply, DbTemplate, InboxThread, InboxMessage } from '@/types/inbox'
@@ -611,6 +612,15 @@ function ConversationRail({ thread }: { thread: InboxThread }) {
           {thread.tags.map(tag => <span key={tag} className="pt-tag pt-tag-soft">{tag}</span>)}
         </div>
       </div>
+
+      {/* AI Assistant */}
+      {thread.id && thread.customerId && (
+        <InboxAIPanel
+          conversationId={thread.id}
+          customerId={thread.customerId}
+          customerName={thread.name}
+        />
+      )}
 
       {/* Notes */}
       <div className="pt-right-section">
