@@ -150,8 +150,8 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
     })
   }, [])
 
-  const send = useCallback(async () => {
-    const text = input.trim()
+  const send = useCallback(async (override?: string) => {
+    const text = (override ?? input).trim()
     if (!text || streaming) return
     setInput('')
     setStreaming(true)
@@ -351,7 +351,7 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
               <p>Ask about your business or give a command</p>
               <div className="pt-agent-suggestions">
                 {['How many orders this week?', 'Which products are low on stock?', 'Show me my top 5 customers by LTV'].map(q => (
-                  <button key={q} className="pt-agent-suggestion" onClick={() => { setInput(q); inputRef.current?.focus() }}>{q}</button>
+                  <button key={q} className="pt-agent-suggestion" onClick={() => void send(q)}>{q}</button>
                 ))}
               </div>
             </div>
