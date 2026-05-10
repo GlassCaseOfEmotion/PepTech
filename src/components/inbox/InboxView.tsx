@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
 import { InboxProvider, useInbox } from './InboxProvider'
@@ -9,6 +9,35 @@ import { OrderRail } from './OrderRail'
 import { TemplatePicker } from './TemplatePicker'
 import type { DbConversation, DbQuickReply, DbTemplate, InboxThread, InboxMessage } from '@/types/inbox'
 import { initials } from '@/types/inbox'
+import { createClient } from '@/lib/supabase/client'
+
+interface ActivityItem {
+  id: string
+  source: 'order' | 'tag'
+  label: string
+  ref_number: string | null
+  amount: number | null
+  note: string | null
+  created_at: string
+}
+
+function actBullet(item: ActivityItem) {
+  if (item.source === 'tag') return ''
+  const l = item.label.toLowerCase()
+  if (l.includes('shipped') || l.includes('delivered') || l.includes('creat') || l.includes('draft')) return 'pt-bul-cool'
+  if (l.includes('confirm')) return 'pt-bul-warn'
+  return ''
+}
+
+function actDetail(item: ActivityItem) {
+  if (item.source === 'tag') return item.note ? ` · ${item.note}` : ''
+  const parts: string[] = []
+  if (item.ref_number) parts.push(item.ref_number)
+  if (item.amount != null && (item.label.toLowerCase().includes('creat') || item.label.toLowerCase().includes('draft'))) {
+    parts.push(`$${Number(item.amount).toLocaleString()}`)
+  }
+  return parts.length ? ` · ${parts.join(' · ')}` : ''
+}
 
 function fmtMins(m: number) {
   if (m < 60) return `${m}m`
@@ -580,7 +609,20 @@ function ConversationRail({ thread }: { thread: InboxThread }) {
   const { notes, addNote } = useInbox()
   const [addingNote, setAddingNote] = useState(false)
   const [noteText, setNoteText] = useState('')
+  const [activity, setActivity] = useState<ActivityItem[]>([])
   const trustCls = thread.trust >= 85 ? 'hi' : thread.trust >= 65 ? 'md' : 'lo'
+  const supabase = useMemo(() => createClient(), [])
+
+  useEffect(() => {
+    if (!thread.customerId) return
+    supabase
+      .from('customer_activity')
+      .select('id, source, label, ref_number, amount, note, created_at')
+      .eq('customer_id', thread.customerId)
+      .order('created_at', { ascending: false })
+      .limit(15)
+      .then(({ data }) => { if (data) setActivity(data as ActivityItem[]) })
+  }, [supabase, thread.customerId])
 
   const submitNote = async () => {
     if (!noteText.trim()) return
@@ -655,15 +697,22 @@ function ConversationRail({ thread }: { thread: InboxThread }) {
       </div>
 
       {/* Activity */}
-      <div className="pt-right-section">
-        <div className="pt-right-hd"><span>Activity</span></div>
-        <ul className="pt-rail-activity">
-          <li><i className="pt-act-dot pt-bul-cool" /><div><b>Order placed</b> · #A-2241 · $330<div className="pt-act-time">11:38 today</div></div></li>
-          <li><i className="pt-act-dot" /><div><b>Tag added</b> · vip<div className="pt-act-time">2d ago</div></div></li>
-          <li><i className="pt-act-dot pt-bul-warn" /><div><b>Reorder ping sent</b><div className="pt-act-time">11d ago</div></div></li>
-          <li><i className="pt-act-dot" /><div><b>Order delivered</b> · #A-2188<div className="pt-act-time">14d ago</div></div></li>
-        </ul>
-      </div>
+      {activity.length > 0 && (
+        <div className="pt-right-section">
+          <div className="pt-right-hd"><span>Activity</span></div>
+          <ul className="pt-rail-activity">
+            {activity.map(item => (
+              <li key={item.id}>
+                <i className={`pt-act-dot ${actBullet(item)}`} />
+                <div>
+                  <b>{item.label}</b>{actDetail(item)}
+                  <div className="pt-act-time">{fmtRelative(item.created_at)}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </aside>
   )
 }
