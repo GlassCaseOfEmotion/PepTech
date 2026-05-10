@@ -3,6 +3,7 @@ import { createClient, getServerUser } from '@/lib/supabase/server'
 import { DashboardLayout } from '@/components/shell/DashboardLayout'
 import { dbConversationToThread, type DbConversation } from '@/types/inbox'
 import { dbProductToDisplay, type DbProduct, type DbBatch } from '@/types/catalog'
+import type { DashboardStats } from '@/types/dashboard'
 
 const CONV_SELECT = `
   id, status, unread_count, last_message_at, last_message_snippet,
@@ -19,7 +20,19 @@ export default async function Home() {
   if (!user) redirect('/login')
 
   const supabase = await createClient()
-  const [{ data: userRow }, { data: channels }, { data: conversations }, { data: products }, { data: batches }] = await Promise.all([
+
+  const now = Date.now()
+  const d90 = new Date(now - 90 * 86400_000).toISOString()
+
+  const [
+    { data: userRow },
+    { data: channels },
+    { data: conversations },
+    { data: products },
+    { data: batches },
+    { data: revenueRows },
+    { data: pendingRaw },
+  ] = await Promise.all([
     supabase.from('users').select('display_name').eq('id', user.id).single(),
     supabase.from('tenant_channels').select('channel_type').eq('is_active', true),
     supabase
@@ -30,11 +43,63 @@ export default async function Home() {
       .limit(50),
     supabase.from('products').select('*').eq('is_active', true).order('name'),
     supabase.from('batches').select('*').order('created_at', { ascending: false }),
+    supabase
+      .from('orders')
+      .select('created_at, payment_amount')
+      .neq('status', 'cancelled')
+      .gte('created_at', d90),
+    supabase
+      .from('orders')
+      .select('id, ref_number, payment_amount, payment_asset, status, created_at, customers(display_name)')
+      .in('status', ['awaiting', 'confirming'])
+      .neq('payment_asset', 'Cash')
+      .order('created_at', { ascending: false })
+      .limit(10),
   ])
 
-  const displayName = userRow?.display_name ?? user.email?.split('@')[0] ?? 'User'
+  // ── Revenue stats ────────────────────────────────────────────────────────
+  const cutoff7d  = now - 7  * 86400_000
+  const cutoff14d = now - 14 * 86400_000
+  const dayMap = new Map<string, number>()
+  let revenue7d = 0, revenuePrev7d = 0
+
+  for (const row of revenueRows ?? []) {
+    const key = (row.created_at as string).slice(0, 10)
+    const amt = Number(row.payment_amount)
+    dayMap.set(key, (dayMap.get(key) ?? 0) + amt)
+    const t = new Date(row.created_at as string).getTime()
+    if (t >= cutoff7d)        revenue7d      += amt
+    else if (t >= cutoff14d)  revenuePrev7d  += amt
+  }
+
+  const revenue90dDaily = Array.from({ length: 90 }, (_, i) => {
+    const d = new Date(now - (89 - i) * 86400_000)
+    const key   = d.toISOString().slice(0, 10)
+    const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    return { d: label, v: dayMap.get(key) ?? 0 }
+  })
+
+  // ── Pending orders ───────────────────────────────────────────────────────
+  const pendingOrders = (pendingRaw ?? []).map(o => {
+    const cust = o.customers as { display_name: string } | null
+    return {
+      id:           o.id as string,
+      refNumber:    o.ref_number as string,
+      customerName: cust?.display_name ?? 'Unknown',
+      amount:       Number(o.payment_amount),
+      asset:        o.payment_asset as string,
+      status:       o.status as 'awaiting' | 'confirming',
+      minsAgo:      Math.floor((now - new Date(o.created_at as string).getTime()) / 60000),
+    }
+  })
+  const pendingTotal = pendingOrders.reduce((s, o) => s + o.amount, 0)
+
+  const stats: DashboardStats = { revenue7d, revenuePrev7d, revenue90dDaily, pendingOrders, pendingTotal }
+
+  // ── Other props ──────────────────────────────────────────────────────────
+  const displayName      = userRow?.display_name ?? user.email?.split('@')[0] ?? 'User'
   const connectedChannels = (channels ?? []).map(c => c.channel_type)
-  const threads = (conversations ?? []).map(c => dbConversationToThread(c as unknown as DbConversation))
+  const threads          = (conversations ?? []).map(c => dbConversationToThread(c as unknown as DbConversation))
 
   const batchesByProduct: Record<string, DbBatch[]> = {}
   for (const b of (batches ?? []) as DbBatch[]) {
@@ -51,6 +116,7 @@ export default async function Home() {
       connectedChannels={connectedChannels}
       threads={threads}
       stockProducts={stockProducts}
+      stats={stats}
     />
   )
 }

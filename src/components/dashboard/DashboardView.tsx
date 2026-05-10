@@ -4,13 +4,12 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
 import {
-  MOCK_PAYMENTS,
-  MOCK_REORDERS, MOCK_SHIPMENTS, MOCK_REVENUE_7D,
-  type MockPayment,
-  type MockReorder, type MockShipment, type MockRevenueDay,
+  MOCK_REORDERS, MOCK_SHIPMENTS,
+  type MockReorder, type MockShipment,
 } from '@/lib/mock-data'
 import type { InboxThread } from '@/types/inbox'
 import type { CatalogProduct } from '@/types/catalog'
+import type { DashboardStats, PendingOrder } from '@/types/dashboard'
 import { initials } from '@/types/inbox'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -84,12 +83,37 @@ function DashCard({ title, subtitle, action, span, footer, scroll, children }: {
 
 // ─── KPI strip ──────────────────────────────────────────────────────────────
 
-function KpiRow({ active, needsReply }: { active: number; needsReply: number }) {
+function KpiRow({ active, needsReply, stats }: { active: number; needsReply: number; stats: DashboardStats }) {
+  const { revenue7d, revenuePrev7d, revenue90dDaily, pendingOrders, pendingTotal } = stats
+  const spark7d = revenue90dDaily.slice(-7).map(d => d.v)
+  const delta = revenuePrev7d > 0
+    ? Math.round(((revenue7d - revenuePrev7d) / revenuePrev7d) * 100 * 10) / 10
+    : null
+  const confirming = pendingOrders.filter(o => o.status === 'confirming').length
+  const awaiting   = pendingOrders.filter(o => o.status === 'awaiting').length
+
   const kpis = [
-    { label: 'Revenue · 7d',          value: '$12,330', delta: 18.4,  spark: [3,4,3,5,4,7,8] },
-    { label: 'Pending crypto',        value: '$895',    delta: null,  sub: '2 confirming · 1 pending' },
-    { label: 'Active conversations',  value: String(active), delta: null, sub: `${needsReply} need reply` },
-    { label: 'Reorders due · 7d',     value: '11',      delta: null,  sub: '3 high-confidence' },
+    {
+      label: 'Revenue · 7d',
+      value: `$${revenue7d.toLocaleString()}`,
+      delta,
+      spark: spark7d,
+    },
+    {
+      label: 'Pending crypto',
+      value: `$${pendingTotal.toLocaleString()}`,
+      delta: null,
+      sub: pendingOrders.length === 0
+        ? 'None outstanding'
+        : `${confirming} confirming · ${awaiting} pending`,
+    },
+    {
+      label: 'Active conversations',
+      value: String(active),
+      delta: null,
+      sub: `${needsReply} need reply`,
+    },
+    { label: 'Reorders due · 7d', value: '11', delta: null, sub: '3 high-confidence' },
   ]
   return (
     <div className="pt-kpis">
@@ -187,34 +211,34 @@ function InboxCard({ threads }: { threads: InboxThread[] }) {
 
 // ─── Payments card ──────────────────────────────────────────────────────────
 
-function PaymentsCard({ initialPayments }: { initialPayments: MockPayment[] }) {
-  const [confirmed, setConfirmed] = useState<Record<string, boolean>>({})
-  const payments = initialPayments.map(p =>
-    confirmed[p.id] ? { ...p, state: 'confirmed' as const } : p
-  )
+function fmtAge(mins: number) {
+  if (mins < 60) return `${mins}m ago`
+  if (mins < 60 * 24) return `${Math.floor(mins / 60)}h ago`
+  return `${Math.floor(mins / 1440)}d ago`
+}
 
+function PaymentsCard({ orders }: { orders: PendingOrder[] }) {
   return (
     <DashCard title="Crypto payments" subtitle="Awaiting confirmation"
-      action={<button className="pt-link">View all →</button>}>
+      action={<Link href="/orders" className="pt-link">View all →</Link>}>
       <ul className="pt-pay-list">
-        {payments.map(p => (
-          <li key={p.id} className={`pt-pay pt-pay-${p.state}`}>
-            <div className="pt-pay-asset" data-asset={p.asset}>{p.asset}</div>
+        {orders.length === 0 && (
+          <li className="pt-pay" style={{ opacity: 0.5, fontSize: 12 }}>No pending payments</li>
+        )}
+        {orders.map(o => (
+          <li key={o.id} className={`pt-pay pt-pay-${o.status === 'confirming' ? 'confirming' : 'pending'}`}>
+            <div className="pt-pay-asset" data-asset={o.asset}>{o.asset}</div>
             <div className="pt-pay-mid">
-              <div className="pt-pay-who">{p.who}</div>
+              <div className="pt-pay-who">{o.customerName}</div>
               <div className="pt-pay-state">
-                {p.state === 'confirmed' && <><span className="pt-dot pt-dot-ok" /> confirmed · {p.conf} conf</>}
-                {p.state === 'confirming' && <><span className="pt-dot pt-dot-warn" /> {p.conf}/{p.need} confirmations · {p.txAge} ago</>}
-                {p.state === 'pending' && <><span className="pt-dot pt-dot-cool" /> awaiting tx hash</>}
+                {o.status === 'confirming'
+                  ? <><span className="pt-dot pt-dot-warn" /> confirming · {fmtAge(o.minsAgo)}</>
+                  : <><span className="pt-dot pt-dot-cool" /> awaiting tx hash · {fmtAge(o.minsAgo)}</>}
               </div>
             </div>
             <div className="pt-pay-amt-col">
-              <div className="pt-pay-amt">${p.amt}</div>
-              {p.state !== 'confirmed' && (
-                <button className="pt-pay-act" onClick={() => setConfirmed(c => ({ ...c, [p.id]: true }))}>
-                  {p.state === 'confirming' ? 'Mark paid' : 'Resend addr'}
-                </button>
-              )}
+              <div className="pt-pay-amt">${o.amount.toLocaleString()}</div>
+              <Link href={`/orders/${o.id}`} className="pt-pay-act">{o.refNumber}</Link>
             </div>
           </li>
         ))}
@@ -225,11 +249,21 @@ function PaymentsCard({ initialPayments }: { initialPayments: MockPayment[] }) {
 
 // ─── Revenue card ────────────────────────────────────────────────────────────
 
-function RevenueCard({ data }: { data: MockRevenueDay[] }) {
+const PERIOD_DAYS: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90 }
+
+function RevenueCard({ daily90d }: { daily90d: { d: string; v: number }[] }) {
   const [period, setPeriod] = useState('7d')
-  const max = Math.max(...data.map(d => d.v))
+  const data = daily90d.slice(-PERIOD_DAYS[period])
+  const max = Math.max(...data.map(d => d.v), 1)
+  const total = data.reduce((s, d) => s + d.v, 0)
+
+  // For 30d/90d, only show every Nth label to avoid crowding
+  const labelEvery = period === '7d' ? 1 : period === '30d' ? 5 : 15
+
   return (
-    <DashCard title="Revenue" subtitle="Last 7 days · USD equivalent"
+    <DashCard
+      title="Revenue"
+      subtitle={`Last ${period} · $${total.toLocaleString()} total`}
       action={
         <div className="pt-segctl">
           {['7d', '30d', '90d'].map(p => (
@@ -242,10 +276,10 @@ function RevenueCard({ data }: { data: MockRevenueDay[] }) {
           <div className="pt-bar-col" key={i}>
             <div className="pt-bar-track">
               <div className="pt-bar-fill" style={{ height: `${(d.v / max) * 100}%` }}>
-                <span className="pt-bar-tip">${d.v.toLocaleString()}</span>
+                {d.v > 0 && <span className="pt-bar-tip">${d.v.toLocaleString()}</span>}
               </div>
             </div>
-            <div className="pt-bar-lbl">{d.d}</div>
+            <div className="pt-bar-lbl">{i % labelEvery === 0 ? d.d : ''}</div>
           </div>
         ))}
       </div>
@@ -452,7 +486,7 @@ export function DashboardRightRail({ focusThread }: { focusThread: InboxThread |
 
 // ─── Dashboard page content ──────────────────────────────────────────────────
 
-export function DashboardView({ threads, stockProducts }: { threads: InboxThread[]; stockProducts: CatalogProduct[] }) {
+export function DashboardView({ threads, stockProducts, stats }: { threads: InboxThread[]; stockProducts: CatalogProduct[]; stats: DashboardStats }) {
   const active = threads.length
   const needsReply = threads.filter(t => t.status === 'needs_reply').length
 
@@ -471,12 +505,12 @@ export function DashboardView({ threads, stockProducts }: { threads: InboxThread
         </div>
       </div>
 
-      <KpiRow active={active} needsReply={needsReply} />
+      <KpiRow active={active} needsReply={needsReply} stats={stats} />
 
       <div className="pt-grid">
         <InboxCard threads={threads} />
-        <PaymentsCard initialPayments={MOCK_PAYMENTS} />
-        <RevenueCard data={MOCK_REVENUE_7D} />
+        <PaymentsCard orders={stats.pendingOrders} />
+        <RevenueCard daily90d={stats.revenue90dDaily} />
         <ReordersCard reorders={MOCK_REORDERS} />
         <StockCard products={stockProducts} />
         <ShipmentsCard shipments={MOCK_SHIPMENTS} />
