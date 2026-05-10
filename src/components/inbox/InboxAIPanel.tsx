@@ -107,7 +107,10 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
   }, [])
 
   const startNewBubble = useCallback(() => {
-    setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: '', streaming: true }])
+    setMessages(prev => [
+      ...prev.map(m => ({ ...m, streaming: false })),
+      { id: `a-${Date.now()}`, role: 'assistant', text: '', streaming: true },
+    ])
   }, [])
 
   const markDone = useCallback((newSid: string) => {

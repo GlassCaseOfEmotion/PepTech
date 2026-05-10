@@ -159,7 +159,10 @@ export function AgentPalette() {
       readSseStream(
         res,
         appendAssistantDelta,
-        () => setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: '' }]),
+        () => setMessages(prev => [
+          ...prev.map(m => ({ ...m, streaming: false })),
+          { id: `a-${Date.now()}`, role: 'assistant', text: '', streaming: true },
+        ]),
         (toolCalls, messageId) => {
           setMessages(prev => {
             const last = prev[prev.length - 1]
@@ -211,7 +214,10 @@ export function AgentPalette() {
       readSseStream(
         res,
         appendAssistantDelta,
-        () => setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: '' }]),
+        () => setMessages(prev => [
+          ...prev.map(m => ({ ...m, streaming: false })),
+          { id: `a-${Date.now()}`, role: 'assistant', text: '', streaming: true },
+        ]),
         () => {},
         () => { setConfirming(false); setMessages(prev => prev.map(m => ({ ...m, streaming: false }))) },
         (msg) => {
