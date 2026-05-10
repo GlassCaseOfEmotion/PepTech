@@ -150,7 +150,7 @@ function InboxCard({ threads }: { threads: InboxThread[] }) {
         {shown.map(t => {
           const ChIcon = CHANNEL_ICONS[t.channel]
           return (
-            <Link key={t.id} href="/inbox" style={{ textDecoration: 'none', color: 'inherit', display: 'contents' }}>
+            <Link key={t.id} href={`/inbox?conversation=${t.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'contents' }}>
               <li className={`pt-thread ${t.unread ? 'is-unread' : ''}`}>
                 <div className="pt-thread-av" data-channel={t.channel}>
                   <span>{initials(t.name)}</span>
