@@ -12,7 +12,10 @@
 }
 .pt-d-compact .pt-inbox { grid-template-columns: 296px 1fr 296px; }
 html.pt-ai-expanded .pt-inbox { grid-template-columns: 320px 1fr 420px; }
-html.pt-ai-expanded .pt-inbox-ai-msgs { max-height: calc(100vh - 240px); }
+/* When AI is active: hide sibling rail sections, give the card a viewport-relative height */
+html.pt-ai-expanded .pt-ix-rail .pt-right-section { display: none; }
+html.pt-ai-expanded .pt-inbox-ai-card { max-height: calc(100vh - 270px); }
+html.pt-ai-expanded .pt-inbox-ai-msgs { flex: 1; max-height: none; }
 
 /* ── Thread list column ─────────────────────────────────────────────── */
 .pt-ix-list {
