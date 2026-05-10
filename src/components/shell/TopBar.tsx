@@ -32,6 +32,13 @@ export function TopBar({ section = 'Inbox', connectedChannels = [], rightOpen, o
       </div>
 
       <div className="pt-top-actions">
+        <button
+          className="pt-iconbtn pt-iconbtn-ai"
+          title="AI Assistant (⌘K)"
+          onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}
+        >
+          <Icons.spark size={14} />
+        </button>
         <button className="pt-iconbtn" title="Filter"><Icons.filter size={14} /></button>
         <NotificationBell />
         {onRightToggle !== undefined && (

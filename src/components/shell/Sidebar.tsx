@@ -15,7 +15,6 @@ const NAV_PRIMARY = [
   { label: 'Catalog',     href: '/catalog',        icon: Icons.flask, badge: null },
   { label: 'Broadcasts',  href: '/broadcasts',     icon: Icons.send,  badge: null },
   { label: 'Automations', href: '/automations',    icon: Icons.zap,   badge: null },
-  { label: 'Agent',       href: '/agent',          icon: Icons.spark, badge: null },
 ]
 
 const NAV_SECONDARY = [
