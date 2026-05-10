@@ -61,6 +61,7 @@ export const Icons = {
   trash:   (p: IconProps) => <PtIcon {...p} d="M3 6h18 M8 6V4h8v2 M19 6l-1 14H6L5 6" />,
   bot:     (p: IconProps) => <PtIcon {...p}><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8V5 M9 5h6 M9 13h.01 M15 13h.01 M9 17h6"/></PtIcon>,
   wand:    (p: IconProps) => <PtIcon {...p} d="M15 4l5 5L7 22l-5-5L15 4Z M9 9l6 6 M14.5 2.5l1 1 M19.5 7.5l1 1 M2.5 14.5l1 1 M7.5 19.5l1 1" />,
+  moon:    (p: IconProps) => <PtIcon {...p} d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />,
 }
 
 export function ChannelIcon({ channelType, size = 9 }: { channelType: 'whatsapp' | 'telegram' | 'email'; size?: number }) {

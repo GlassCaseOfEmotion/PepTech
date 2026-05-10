@@ -7,6 +7,39 @@ import { Icons } from '@/lib/icons'
 import { createClient } from '@/lib/supabase/client'
 import { dbConversationToThread, type DbConversation } from '@/types/inbox'
 
+// ─── Theme ───────────────────────────────────────────────────────────────────
+
+const THEMES = ['', 'pt-th-dim', 'pt-th-dark'] as const
+type Theme = (typeof THEMES)[number]
+
+function useTheme() {
+  const [theme, setThemeState] = useState<Theme>('')
+
+  useEffect(() => {
+    const stored = (localStorage.getItem('pt-theme') ?? '') as Theme
+    applyTheme(stored)
+    setThemeState(stored)
+  }, [])
+
+  function applyTheme(t: Theme) {
+    const root = document.querySelector('.pt-root')
+    if (!root) return
+    root.classList.remove('pt-th-dim', 'pt-th-dark')
+    if (t) root.classList.add(t)
+  }
+
+  function cycle() {
+    setThemeState(prev => {
+      const next = THEMES[(THEMES.indexOf(prev) + 1) % THEMES.length]
+      applyTheme(next)
+      localStorage.setItem('pt-theme', next)
+      return next
+    })
+  }
+
+  return { theme, cycle }
+}
+
 const NAV_PRIMARY = [
   { label: 'Dashboard',   href: '/',              icon: Icons.spark, badge: null },
   { label: 'Inbox',       href: '/inbox',          icon: Icons.inbox, badge: null },
@@ -46,6 +79,7 @@ export function Sidebar({ displayName, initialPinned = [] }: SidebarProps) {
   const pathname = usePathname()
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
   const supabase = useMemo(() => createClient(), [])
+  const { theme, cycle } = useTheme()
   const [pinned, setPinnedRaw] = useState<ReturnType<typeof dbConversationToThread>[]>(() => {
     if (initialPinned.length > 0) {
       const threads = initialPinned.map(c => dbConversationToThread(c))
@@ -188,7 +222,13 @@ export function Sidebar({ displayName, initialPinned = [] }: SidebarProps) {
             <div className="pt-me-name">{displayName}</div>
             <div className="pt-me-status"><i className="pt-dot pt-dot-ok" /> online</div>
           </div>
-          <button className="pt-me-more"><Icons.more size={14} /></button>
+          <button
+            className="pt-me-more"
+            title={theme === '' ? 'Switch to dim' : theme === 'pt-th-dim' ? 'Switch to dark' : 'Switch to light'}
+            onClick={cycle}
+          >
+            {theme === 'pt-th-dark' ? <Icons.moon size={13} /> : <Icons.sun size={13} />}
+          </button>
         </div>
       </div>
     </aside>
