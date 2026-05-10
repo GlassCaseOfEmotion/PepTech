@@ -155,11 +155,14 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
   }, [streaming, sessionId, conversationId, customerId, customerName, appendDelta, startNewBubble, markDone])
 
   return (
-    <div className="pt-right-section pt-inbox-ai">
-      <div className="pt-right-hd">
-        <span><Icons.spark size={11} /> AI Assistant</span>
+    <div className="pt-inbox-ai-card">
+      <div className="pt-inbox-ai-card-hd">
+        <div className="pt-inbox-ai-card-hd-left">
+          <Icons.bot size={13} />
+          <span>AI Assistant</span>
+        </div>
         {messages.length > 0 && (
-          <button className="pt-link" style={{ fontSize: 11 }} onClick={() => { setMessages([]); setSessionId(null) }}>
+          <button className="pt-inbox-ai-clear" onClick={() => { setMessages([]); setSessionId(null) }}>
             Clear
           </button>
         )}
@@ -174,6 +177,7 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
               onClick={() => void send(chip.prompt)}
               disabled={streaming}
             >
+              <span className="pt-inbox-ai-chip-arrow">→</span>
               {chip.label}
             </button>
           ))}

@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { ALL_TOOLS, TOOL_MAP, CLAUDE_TOOLS } from '../tools/index'
+import { ALL_TOOLS, TOOL_MAP, OPENAI_TOOLS } from '../tools/index'
 
 describe('agent tool registry', () => {
-  it('exports all 9 tools', () => {
-    expect(ALL_TOOLS).toHaveLength(9)
+  it('exports all 10 tools', () => {
+    expect(ALL_TOOLS).toHaveLength(10)
   })
 
   it('TOOL_MAP keys match tool names', () => {
@@ -12,11 +12,11 @@ describe('agent tool registry', () => {
     }
   })
 
-  it('CLAUDE_TOOLS have name, description, input_schema', () => {
-    for (const t of CLAUDE_TOOLS) {
-      expect(t.name).toBeTruthy()
-      expect(t.description).toBeTruthy()
-      expect(t.input_schema).toBeTruthy()
+  it('OPENAI_TOOLS have type, function.name, function.description', () => {
+    for (const t of OPENAI_TOOLS) {
+      expect(t.type).toBe('function')
+      expect(t.function.name).toBeTruthy()
+      expect(t.function.description).toBeTruthy()
     }
   })
 

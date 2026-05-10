@@ -503,32 +503,66 @@ html.pt-ai-expanded .pt-inbox { grid-template-columns: 320px 1fr 420px; }
 }
 
 /* ─── Inbox AI Panel ─────────────────────────────────────────────────────── */
-.pt-inbox-ai { padding-bottom: 4px; }
+.pt-inbox-ai-card {
+  border: 0.5px solid var(--pt-line);
+  border-radius: calc(var(--pt-radius) + 2px);
+  background: var(--pt-surface);
+  box-shadow: var(--pt-shadow-card);
+  display: flex; flex-direction: column;
+  overflow: hidden; min-width: 0;
+}
+
+.pt-inbox-ai-card-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 12px 8px;
+  border-bottom: 0.5px solid var(--pt-line-soft);
+  background: oklch(from var(--pt-accent) l c h / 0.04);
+  flex-shrink: 0;
+}
+.pt-inbox-ai-card-hd-left {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 600; letter-spacing: 0.01em;
+  color: oklch(from var(--pt-accent) 0.42 0.16 h);
+}
+.pt-inbox-ai-card-hd-left svg { color: oklch(from var(--pt-accent) 0.55 0.18 h); }
+.pt-inbox-ai-clear {
+  font-size: 10.5px; color: var(--pt-fg-4);
+  background: none; border: none; cursor: pointer; padding: 2px 6px;
+  border-radius: 4px; font-family: inherit;
+  transition: color 0.1s, background 0.1s;
+}
+.pt-inbox-ai-clear:hover { color: var(--pt-fg-2); background: oklch(from var(--pt-fg) l c h / 0.06); }
 
 .pt-inbox-ai-chips {
-  display: flex; flex-direction: column; gap: 5px;
-  padding: 6px 0 4px;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 10px 12px 8px;
 }
 .pt-inbox-ai-chip {
+  display: flex; align-items: center; gap: 7px;
   text-align: left; padding: 7px 10px;
   border-radius: var(--pt-radius); border: 0.5px solid var(--pt-line);
-  background: var(--pt-surface); color: var(--pt-fg-2);
-  font-size: 12px; font-family: inherit; cursor: pointer;
-  transition: border-color 0.1s, background 0.1s;
+  background: var(--pt-bg-side); color: var(--pt-fg-2);
+  font-size: 11.5px; font-family: inherit; cursor: pointer;
+  transition: border-color 0.1s, background 0.1s, color 0.1s;
   width: 100%; min-width: 0;
 }
 .pt-inbox-ai-chip:hover { border-color: var(--pt-accent); background: var(--pt-accent-soft); color: var(--pt-fg); }
 .pt-inbox-ai-chip:disabled { opacity: 0.5; cursor: default; }
+.pt-inbox-ai-chip-arrow {
+  color: oklch(from var(--pt-accent) 0.58 0.16 h);
+  font-size: 12px; flex-shrink: 0; line-height: 1;
+}
 
 .pt-inbox-ai-custom {
   display: flex; align-items: center; gap: 6px;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 .pt-inbox-ai-custom-input {
-  flex: 1; height: 30px; padding: 0 8px;
+  flex: 1; height: 30px; padding: 0 9px;
   border: 0.5px solid var(--pt-line); border-radius: var(--pt-radius);
-  background: var(--pt-surface); color: var(--pt-fg);
+  background: var(--pt-bg-side); color: var(--pt-fg);
   font-size: 12px; font-family: inherit; outline: none;
+  transition: border-color 0.1s;
 }
 .pt-inbox-ai-custom-input::placeholder { color: var(--pt-fg-4); }
 .pt-inbox-ai-custom-input:focus { border-color: var(--pt-accent); }
@@ -540,8 +574,9 @@ html.pt-ai-expanded .pt-inbox { grid-template-columns: 320px 1fr 420px; }
 .pt-inbox-ai-custom-send:disabled { opacity: 0.35; cursor: default; }
 
 .pt-inbox-ai-msgs {
-  height: 360px; overflow-y: auto; overflow-x: hidden;
-  padding: 6px 0 8px;
+  flex: 1; min-height: 180px; max-height: 380px;
+  overflow-y: auto; overflow-x: hidden;
+  padding: 10px 12px;
   display: flex; flex-direction: column; gap: 8px;
 }
 .pt-inbox-ai-msg { font-size: 12px; line-height: 1.55; min-width: 0; word-wrap: break-word; overflow-wrap: break-word; }
@@ -556,13 +591,16 @@ html.pt-ai-expanded .pt-inbox { grid-template-columns: 320px 1fr 420px; }
 
 .pt-inbox-ai-input-row {
   display: flex; align-items: center; gap: 6px;
-  padding: 6px 0 4px;
+  padding: 8px 12px 10px;
+  border-top: 0.5px solid var(--pt-line-soft);
+  flex-shrink: 0;
 }
 .pt-inbox-ai-input {
-  flex: 1; height: 30px; padding: 0 8px;
+  flex: 1; height: 30px; padding: 0 9px;
   border: 0.5px solid var(--pt-line); border-radius: var(--pt-radius);
   background: var(--pt-bg-side); color: var(--pt-fg);
   font-size: 12px; font-family: inherit; outline: none;
+  transition: border-color 0.1s;
 }
 .pt-inbox-ai-input::placeholder { color: var(--pt-fg-4); }
 .pt-inbox-ai-input:focus { border-color: var(--pt-accent); background: var(--pt-surface); }
