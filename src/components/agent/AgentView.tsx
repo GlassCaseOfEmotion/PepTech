@@ -204,8 +204,8 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
         ]),
         (toolCalls) => setMessages(prev => {
           const last = prev[prev.length - 1]
-          if (last?.role === 'assistant') return [...prev.slice(0, -1), { ...last, toolCalls }]
-          return [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: '', toolCalls }]
+          if (last?.role === 'assistant') return [...prev.slice(0, -1), { ...last, toolCalls, streaming: false }]
+          return [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: '', toolCalls, streaming: false }]
         }),
         (toolCalls, messageId) => {
           setMessages(prev => {
@@ -405,7 +405,7 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
               ))}
             </div>
           ))}
-          {(streaming || confirming) && (
+          {(streaming || confirming) && !messages.some(m => m.role === 'assistant' && m.streaming) && (
             <div className="pt-agent-chat-msg pt-agent-chat-msg-assistant">
               <div className="pt-agent-typing"><span /><span /><span /></div>
             </div>

@@ -167,8 +167,8 @@ export function AgentPalette() {
         ]),
         (toolCalls) => setMessages(prev => {
           const last = prev[prev.length - 1]
-          if (last?.role === 'assistant') return [...prev.slice(0, -1), { ...last, toolCalls }]
-          return [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: '', toolCalls }]
+          if (last?.role === 'assistant') return [...prev.slice(0, -1), { ...last, toolCalls, streaming: false }]
+          return [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: '', toolCalls, streaming: false }]
         }),
         (toolCalls, messageId) => {
           setMessages(prev => {
