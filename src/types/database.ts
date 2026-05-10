@@ -931,7 +931,20 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      customer_activity: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          customer_id: string | null
+          id: string | null
+          label: string | null
+          note: string | null
+          ref_number: string | null
+          source: string | null
+          tenant_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       auth_tenant_id: { Args: never; Returns: string }
