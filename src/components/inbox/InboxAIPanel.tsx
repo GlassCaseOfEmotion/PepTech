@@ -200,18 +200,13 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
         <div className="pt-inbox-ai-msgs" ref={msgsRef}>
           {messages.map(m => (
             <div key={m.id} className={`pt-inbox-ai-msg pt-inbox-ai-msg-${m.role}`}>
-              {m.role === 'assistant' ? (
-                m.streaming
-                  ? <span style={{ whiteSpace: 'pre-wrap' }}>{m.text}</span>
+              {m.role === 'assistant'
+                ? m.streaming
+                  ? <div className="pt-agent-typing"><span /><span /><span /></div>
                   : <div className="pt-agent-md"><ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{m.text}</ReactMarkdown></div>
-              ) : m.text.replace(/^\[Context:[^\]]+\]\n\n/, '')}
+                : m.text.replace(/^\[Context:[^\]]+\]\n\n/, '')}
             </div>
           ))}
-          {streaming && messages[messages.length - 1]?.role !== 'assistant' && (
-            <div className="pt-inbox-ai-msg pt-inbox-ai-msg-assistant">
-              <div className="pt-agent-typing"><span /><span /><span /></div>
-            </div>
-          )}
         </div>
       )}
 

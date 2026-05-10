@@ -53,6 +53,7 @@ interface Msg {
   id: string
   role: 'user' | 'assistant'
   text: string
+  streaming?: boolean
   toolCalls?: ToolCall[]
 }
 
@@ -129,9 +130,9 @@ export function AgentPalette() {
     setMessages(prev => {
       const last = prev[prev.length - 1]
       if (last?.role === 'assistant' && !last.toolCalls) {
-        return [...prev.slice(0, -1), { ...last, text: last.text + delta }]
+        return [...prev.slice(0, -1), { ...last, text: last.text + delta, streaming: true }]
       }
-      return [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: delta }]
+      return [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: delta, streaming: true }]
     })
   }, [])
 
@@ -176,6 +177,7 @@ export function AgentPalette() {
           setSessionId(newSessionId)
           sid = newSessionId
           setStreaming(false)
+          setMessages(prev => prev.map(m => ({ ...m, streaming: false })))
         },
         (msg) => {
           setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${msg}` }])
@@ -211,7 +213,7 @@ export function AgentPalette() {
         appendAssistantDelta,
         () => setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: '' }]),
         () => {},
-        () => setConfirming(false),
+        () => { setConfirming(false); setMessages(prev => prev.map(m => ({ ...m, streaming: false }))) },
         (msg) => {
           setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${msg}` }])
           setConfirming(false)
@@ -253,13 +255,17 @@ export function AgentPalette() {
           <div className="pt-agent-messages" ref={msgsRef}>
             {messages.map(m => (
               <div key={m.id} className={`pt-agent-msg pt-agent-msg-${m.role}`}>
-                {m.text && (
+                {m.role === 'assistant' && m.streaming ? (
+                  <div className="pt-agent-msg-text">
+                    <div className="pt-agent-typing"><span /><span /><span /></div>
+                  </div>
+                ) : m.text ? (
                   <div className="pt-agent-msg-text">
                     {m.role === 'assistant'
                       ? <div className="pt-agent-md"><ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown></div>
                       : m.text}
                   </div>
-                )}
+                ) : null}
                 {m.toolCalls?.map(tc => (
                   <div key={tc.id} className={`pt-agent-confirm ${tc.status !== 'pending' ? 'is-resolved' : ''}`}>
                     <div className="pt-agent-confirm-summary">{summariseToolCall(tc.name, tc.input)}</div>

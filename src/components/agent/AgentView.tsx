@@ -97,6 +97,7 @@ interface DisplayMsg {
   id: string
   role: 'user' | 'assistant'
   text: string
+  streaming?: boolean
   toolCalls?: ToolCall[]
 }
 
@@ -148,9 +149,9 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
     setMessages(prev => {
       const last = prev[prev.length - 1]
       if (last?.role === 'assistant' && !last.toolCalls) {
-        return [...prev.slice(0, -1), { ...last, text: last.text + delta }]
+        return [...prev.slice(0, -1), { ...last, text: last.text + delta, streaming: true }]
       }
-      return [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: delta }]
+      return [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: delta, streaming: true }]
     })
   }, [])
 
@@ -220,6 +221,7 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
             return [newS, ...prev.filter(s => !s.id.startsWith('tmp-'))]
           })
           setStreaming(false)
+          setMessages(prev => prev.map(m => ({ ...m, streaming: false })))
         },
         (msg) => {
           setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${msg}` }])
@@ -250,7 +252,7 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
         appendAssistantDelta,
         () => setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: '' }]),
         () => {},
-        () => setConfirming(false),
+        () => { setConfirming(false); setMessages(prev => prev.map(m => ({ ...m, streaming: false }))) },
         (msg) => {
           setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${msg}` }])
           setConfirming(false)
@@ -365,13 +367,15 @@ export function AgentView({ sessions: initialSessions, initialSessionId, initial
           )}
           {messages.map(m => (
             <div key={m.id} className={`pt-agent-chat-msg pt-agent-chat-msg-${m.role}`}>
-              {m.text && (
+              {m.role === 'assistant' && m.streaming ? (
+                <div className="pt-agent-typing"><span /><span /><span /></div>
+              ) : m.text ? (
                 <div className="pt-agent-chat-text">
                   {m.role === 'assistant'
                     ? <div className="pt-agent-md"><ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown></div>
                     : m.text}
                 </div>
-              )}
+              ) : null}
               {m.toolCalls?.map(tc => (
                 <div key={tc.id} className={`pt-agent-confirm ${tc.status !== 'pending' ? 'is-resolved' : ''}`}>
                   <div className="pt-agent-confirm-summary">{summariseToolCall(tc.name, tc.input)}</div>
