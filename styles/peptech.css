@@ -99,6 +99,24 @@ body {
   font-feature-settings: "cv11","ss01","ss03";
 }
 button { font-family: inherit; }
+
+/* ─── Scrollbars ─────────────────────────────────────────────────────────── */
+/* Standard (Firefox, Chrome 121+) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(from var(--pt-fg) l c h / 0.18) transparent;
+}
+/* WebKit (Safari, older Chrome/Edge) */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: oklch(from var(--pt-fg) l c h / 0.18);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(from var(--pt-fg) l c h / 0.32);
+}
+::-webkit-scrollbar-corner { background: transparent; }
 .mono { font-family: var(--pt-mono); font-feature-settings: "tnum"; letter-spacing: -0.01em; }
 kbd {
   font-family: var(--pt-mono); font-size: 10px;
