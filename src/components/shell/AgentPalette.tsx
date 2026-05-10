@@ -61,6 +61,7 @@ function readSseStream(
   response: Response,
   onDelta: (delta: string) => void,
   onNewTurn: () => void,
+  onToolUse: (toolCalls: ToolCall[]) => void,
   onConfirm: (toolCalls: ToolCall[], messageId: string) => void,
   onDone: (sessionId: string) => void,
   onError: (msg: string) => void,
@@ -81,6 +82,7 @@ function readSseStream(
         const event = JSON.parse(line.slice(6)) as SseEvent
         if (event.type === 'text')     onDelta(event.delta)
         if (event.type === 'new_turn') onNewTurn()
+        if (event.type === 'tool_use') onToolUse(event.toolCalls)
         if (event.type === 'confirm')  onConfirm(event.toolCalls, event.messageId)
         if (event.type === 'done')     onDone(event.sessionId)
         if (event.type === 'error')    onError(event.message)
@@ -163,6 +165,11 @@ export function AgentPalette() {
           ...prev.map(m => ({ ...m, streaming: false })),
           { id: `a-${Date.now()}`, role: 'assistant', text: '', streaming: true },
         ]),
+        (toolCalls) => setMessages(prev => {
+          const last = prev[prev.length - 1]
+          if (last?.role === 'assistant') return [...prev.slice(0, -1), { ...last, toolCalls }]
+          return [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: '', toolCalls }]
+        }),
         (toolCalls, messageId) => {
           setMessages(prev => {
             const last = prev[prev.length - 1]
@@ -218,6 +225,7 @@ export function AgentPalette() {
           ...prev.map(m => ({ ...m, streaming: false })),
           { id: `a-${Date.now()}`, role: 'assistant', text: '', streaming: true },
         ]),
+        () => {},
         () => {},
         () => { setConfirming(false); setMessages(prev => prev.map(m => ({ ...m, streaming: false }))) },
         (msg) => {

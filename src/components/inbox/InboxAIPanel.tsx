@@ -30,6 +30,7 @@ function readSseStream(
   response: Response,
   onDelta: (delta: string) => void,
   onNewTurn: () => void,
+  onToolUse: (toolCalls: ToolCall[]) => void,
   onConfirm: (toolCalls: ToolCall[], messageId: string) => void,
   onDone: (sessionId: string) => void,
   onError: (msg: string) => void,
@@ -49,6 +50,7 @@ function readSseStream(
         const event = JSON.parse(line.slice(6)) as SseEvent
         if (event.type === 'text')     onDelta(event.delta)
         if (event.type === 'new_turn') onNewTurn()
+        if (event.type === 'tool_use') onToolUse(event.toolCalls)
         if (event.type === 'confirm')  onConfirm(event.toolCalls, event.messageId)
         if (event.type === 'done')     onDone(event.sessionId)
         if (event.type === 'error')    onError(event.message)
@@ -138,6 +140,7 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
         res,
         appendDelta,
         startNewBubble,
+        () => {},
         () => {},
         markDone,
         (msg) => {

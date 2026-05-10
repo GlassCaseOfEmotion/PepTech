@@ -191,6 +191,7 @@ export async function executeAgentTurn(
 
   if (pendingWrites.length === 0 && toolCalls.some(tc => tc.status === 'complete')) {
     await saveAssistantMessage(sessionId, tenantId, text || null, toolCalls, supabase)
+    send({ type: 'tool_use', toolCalls })
 
     // Build next history in memory
     const assistantMsg: ChatCompletionMessageParam = {
