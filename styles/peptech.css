@@ -300,8 +300,8 @@ kbd {
 }
 .pt-iconbtn:hover { background: oklch(from var(--pt-fg) l c h / 0.06); color: var(--pt-fg); }
 .pt-iconbtn.is-on { background: var(--pt-accent-soft); color: var(--pt-accent-fg); }
-.pt-iconbtn-ai { color: var(--pt-accent-fg); }
-.pt-iconbtn-ai:hover { background: var(--pt-accent-soft); color: var(--pt-accent-fg); }
+.pt-iconbtn-ai { color: oklch(0.55 0.18 280); }
+.pt-iconbtn-ai:hover { background: oklch(0.55 0.18 280 / 0.1); color: oklch(0.45 0.2 280); }
 .pt-iconbtn-dot {
   position: absolute; top: 6px; right: 6px;
   width: 6px; height: 6px; border-radius: 50%;

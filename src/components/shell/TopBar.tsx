@@ -37,7 +37,7 @@ export function TopBar({ section = 'Inbox', connectedChannels = [], rightOpen, o
           title="AI Assistant (⌘K)"
           onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}
         >
-          <Icons.spark size={14} />
+          <Icons.bot size={15} />
         </button>
         <button className="pt-iconbtn" title="Filter"><Icons.filter size={14} /></button>
         <NotificationBell />

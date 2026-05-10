@@ -59,6 +59,8 @@ export const Icons = {
   pin:     (p: IconProps) => <PtIcon {...p} d="M12 2a4 4 0 0 1 4 4c0 1.5-.5 2.8-1.3 3.7L16 17H8l1.3-7.3A5.4 5.4 0 0 1 8 6a4 4 0 0 1 4-4Z M12 17v5" />,
   pencil:  (p: IconProps) => <PtIcon {...p} d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" />,
   trash:   (p: IconProps) => <PtIcon {...p} d="M3 6h18 M8 6V4h8v2 M19 6l-1 14H6L5 6" />,
+  bot:     (p: IconProps) => <PtIcon {...p}><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8V5 M9 5h6 M9 13h.01 M15 13h.01 M9 17h6"/></PtIcon>,
+  wand:    (p: IconProps) => <PtIcon {...p} d="M15 4l5 5L7 22l-5-5L15 4Z M9 9l6 6 M14.5 2.5l1 1 M19.5 7.5l1 1 M2.5 14.5l1 1 M7.5 19.5l1 1" />,
 }
 
 export function ChannelIcon({ channelType, size = 9 }: { channelType: 'whatsapp' | 'telegram' | 'email'; size?: number }) {
