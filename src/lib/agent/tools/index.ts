@@ -8,11 +8,14 @@ export const TOOL_MAP: Record<string, AgentTool> = Object.fromEntries(
   ALL_TOOLS.map(t => [t.name, t])
 )
 
-// Claude-compatible tool definitions
-export const CLAUDE_TOOLS = ALL_TOOLS.map(t => ({
-  name: t.name,
-  description: t.description,
-  input_schema: t.inputSchema,
+// OpenAI-compatible tool definitions (used by OpenRouter)
+export const OPENAI_TOOLS = ALL_TOOLS.map(t => ({
+  type: 'function' as const,
+  function: {
+    name: t.name,
+    description: t.description,
+    parameters: t.inputSchema,
+  },
 }))
 
 export { READ_TOOLS, WRITE_TOOLS }

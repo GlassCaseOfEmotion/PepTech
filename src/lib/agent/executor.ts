@@ -1,8 +1,9 @@
-import Anthropic from '@anthropic-ai/sdk'
-import { CLAUDE_TOOLS, TOOL_MAP } from './tools/index'
+import OpenAI from 'openai'
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
+import { OPENAI_TOOLS, TOOL_MAP } from './tools/index'
 import type { AgentSupabase, SseEvent, ToolCall, AgentMessage } from './types'
 
-const MODEL = 'claude-sonnet-4-6'
+const MODEL = process.env.OPENROUTER_MODEL ?? 'google/gemini-flash-2.5'
 
 function buildSystem() {
   const now = new Date()
@@ -22,48 +23,66 @@ Apply these links consistently — in tables, lists, and prose. Never show a bar
 Current date and time: ${dateStr}, ${timeStr}.`
 }
 
+function createClient() {
+  return new OpenAI({
+    baseURL: 'https://openrouter.ai/api/v1',
+    apiKey: process.env.OPENROUTER_API_KEY!,
+    defaultHeaders: {
+      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL ?? 'https://peptech.vercel.app',
+      'X-Title': 'Peptech',
+    },
+  })
+}
+
 function encodeEvent(event: SseEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`
 }
 
-// Load session history as Anthropic message format
-async function loadHistory(sessionId: string, supabase: AgentSupabase): Promise<Anthropic.MessageParam[]> {
+// Convert stored messages to OpenAI chat format
+async function loadHistory(sessionId: string, supabase: AgentSupabase): Promise<ChatCompletionMessageParam[]> {
   const { data } = await supabase
     .from('agent_messages')
     .select('role, content, tool_calls')
     .eq('session_id', sessionId)
     .order('created_at', { ascending: true })
 
-  const msgs: Anthropic.MessageParam[] = []
+  const msgs: ChatCompletionMessageParam[] = []
   for (const m of data ?? []) {
     if (m.role === 'user') {
       msgs.push({ role: 'user', content: m.content ?? '' })
     } else {
-      const content: Anthropic.ContentBlock[] = []
-      if (m.content) content.push({ type: 'text', text: m.content, citations: [] } as Anthropic.ContentBlock)
-      for (const tc of (m.tool_calls as unknown as ToolCall[] ?? [])) {
-        if (tc.status === 'complete' || tc.status === 'rejected') {
-          content.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.input } as Anthropic.ContentBlock)
-        }
-      }
-      if (content.length) msgs.push({ role: 'assistant', content })
+      const toolCalls = (m.tool_calls as unknown as ToolCall[]) ?? []
+      const hasToolCalls = toolCalls.some(tc => tc.status === 'complete' || tc.status === 'rejected')
 
-      // Append tool results as user turn
-      const results: Anthropic.ToolResultBlockParam[] = []
-      for (const tc of (m.tool_calls as unknown as ToolCall[] ?? [])) {
+      // Assistant message
+      const assistantMsg: ChatCompletionMessageParam = {
+        role: 'assistant',
+        content: m.content ?? null,
+        ...(hasToolCalls ? {
+          tool_calls: toolCalls
+            .filter(tc => tc.status === 'complete' || tc.status === 'rejected')
+            .map(tc => ({
+              id: tc.id,
+              type: 'function' as const,
+              function: { name: tc.name, arguments: JSON.stringify(tc.input) },
+            })),
+        } : {}),
+      }
+      msgs.push(assistantMsg)
+
+      // Tool results as individual tool messages
+      for (const tc of toolCalls) {
         if (tc.status === 'complete') {
-          results.push({ type: 'tool_result', tool_use_id: tc.id, content: JSON.stringify(tc.output) })
+          msgs.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(tc.output) })
         } else if (tc.status === 'rejected') {
-          results.push({ type: 'tool_result', tool_use_id: tc.id, content: 'User declined this action.', is_error: true })
+          msgs.push({ role: 'tool', tool_call_id: tc.id, content: 'User declined this action.' })
         }
       }
-      if (results.length) msgs.push({ role: 'user', content: results })
     }
   }
   return msgs
 }
 
-// Save a user message and return its DB id
 async function saveUserMessage(sessionId: string, tenantId: string, content: string, supabase: AgentSupabase) {
   const { data } = await supabase.from('agent_messages').insert({
     session_id: sessionId, tenant_id: tenantId, role: 'user', content,
@@ -71,7 +90,6 @@ async function saveUserMessage(sessionId: string, tenantId: string, content: str
   return data?.id
 }
 
-// Save assistant message with optional tool_calls
 async function saveAssistantMessage(
   sessionId: string, tenantId: string, content: string | null, toolCalls: ToolCall[], supabase: AgentSupabase
 ) {
@@ -83,7 +101,57 @@ async function saveAssistantMessage(
   return data?.id
 }
 
-// Run a full Claude turn with tool loop, streaming SSE events to controller
+// Stream a chat completion, accumulating text and tool calls
+async function streamCompletion(
+  client: OpenAI,
+  history: ChatCompletionMessageParam[],
+  send: (e: SseEvent) => void,
+): Promise<{ text: string; toolCalls: ToolCall[] }> {
+  const stream = await client.chat.completions.create({
+    model: MODEL,
+    messages: [{ role: 'system', content: buildSystem() }, ...history],
+    tools: OPENAI_TOOLS,
+    stream: true,
+  })
+
+  let textAccum = ''
+  // Accumulate streamed tool call fragments by index
+  const tcFragments = new Map<number, { id: string; name: string; args: string }>()
+
+  for await (const chunk of stream) {
+    const delta = chunk.choices[0]?.delta
+    if (!delta) continue
+
+    if (delta.content) {
+      textAccum += delta.content
+      // Don't stream text to client — Option J: show dots, reveal on done
+    }
+
+    if (delta.tool_calls) {
+      for (const tc of delta.tool_calls) {
+        const existing = tcFragments.get(tc.index) ?? { id: '', name: '', args: '' }
+        if (tc.id) existing.id = tc.id
+        if (tc.function?.name) existing.name = tc.function.name
+        if (tc.function?.arguments) existing.args += tc.function.arguments
+        tcFragments.set(tc.index, existing)
+      }
+    }
+  }
+
+  // Parse accumulated tool calls
+  const toolCalls: ToolCall[] = []
+  for (const [, frag] of tcFragments) {
+    let input: Record<string, unknown> = {}
+    try { input = JSON.parse(frag.args) } catch { /* malformed args */ }
+    toolCalls.push({ id: frag.id, name: frag.name, input, output: null, status: 'pending' })
+  }
+
+  // Send the complete text as a single event
+  if (textAccum) send({ type: 'text', delta: textAccum })
+
+  return { text: textAccum, toolCalls }
+}
+
 export async function executeAgentTurn(
   sessionId: string,
   userMessage: string,
@@ -93,52 +161,21 @@ export async function executeAgentTurn(
 ) {
   const encoder = new TextEncoder()
   const send = (e: SseEvent) => controller.enqueue(encoder.encode(encodeEvent(e)))
+  const client = createClient()
 
   await saveUserMessage(sessionId, tenantId, userMessage, supabase)
   let history = await loadHistory(sessionId, supabase)
-  // Guard: if DB round-trip returned nothing, send at minimum the current message
   if (history.length === 0) {
     history = [{ role: 'user', content: userMessage }]
   }
 
-  const client = new Anthropic()
-  let textAccum = ''
-  const toolCalls: ToolCall[] = []
+  const { text, toolCalls } = await streamCompletion(client, history, send)
 
-  const stream = await client.messages.stream({
-    model: MODEL,
-    max_tokens: 1024,
-    system: buildSystem(),
-    tools: CLAUDE_TOOLS as Anthropic.Tool[],
-    messages: history,
-  })
-
-  for await (const event of stream) {
-    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-      textAccum += event.delta.text
-      send({ type: 'text', delta: event.delta.text })
-    }
-    if (event.type === 'content_block_stop') {
-      // Tool use block completed — check accumulated input
-    }
-  }
-
-  const finalMessage = await stream.finalMessage()
-
-  // Process tool calls from the final message
-  for (const block of finalMessage.content) {
-    if (block.type !== 'tool_use') continue
-    const tool = TOOL_MAP[block.name]
+  // Execute read tools silently
+  for (const tc of toolCalls) {
+    const tool = TOOL_MAP[tc.name]
     if (!tool) continue
-
-    const tc: ToolCall = {
-      id: block.id, name: block.name,
-      input: block.input as Record<string, unknown>,
-      output: null, status: 'pending',
-    }
-
     if (!tool.requiresConfirmation) {
-      // Execute silently
       try {
         tc.output = await tool.execute(tc.input, supabase, tenantId)
         tc.status = 'complete'
@@ -147,77 +184,58 @@ export async function executeAgentTurn(
         tc.status = 'complete'
       }
     }
-    toolCalls.push(tc)
   }
 
   const pendingWrites = toolCalls.filter(tc => tc.status === 'pending')
 
   if (pendingWrites.length === 0 && toolCalls.some(tc => tc.status === 'complete')) {
-    // All tools were read tools — run a follow-up turn with results
-    await saveAssistantMessage(sessionId, tenantId, textAccum || null, toolCalls, supabase)
+    await saveAssistantMessage(sessionId, tenantId, text || null, toolCalls, supabase)
 
-    // Build the next history in memory rather than re-querying — avoids DB race conditions
-    const assistantContent: Anthropic.ContentBlockParam[] = []
-    if (textAccum) assistantContent.push({ type: 'text', text: textAccum })
-    for (const tc of toolCalls) {
-      assistantContent.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.input })
+    // Build next history in memory
+    const assistantMsg: ChatCompletionMessageParam = {
+      role: 'assistant',
+      content: text || null,
+      tool_calls: toolCalls.map(tc => ({
+        id: tc.id, type: 'function' as const,
+        function: { name: tc.name, arguments: JSON.stringify(tc.input) },
+      })),
     }
-    const toolResults: Anthropic.ToolResultBlockParam[] = toolCalls.map(tc => ({
-      type: 'tool_result',
-      tool_use_id: tc.id,
+    const toolResultMsgs: ChatCompletionMessageParam[] = toolCalls.map(tc => ({
+      role: 'tool' as const,
+      tool_call_id: tc.id,
       content: JSON.stringify(tc.output),
     }))
-    const nextHistory: Anthropic.MessageParam[] = [
-      ...history,
-      { role: 'assistant', content: assistantContent },
-      { role: 'user', content: toolResults },
-    ]
+    const nextHistory = [...history, assistantMsg, ...toolResultMsgs]
 
+    send({ type: 'new_turn' })
     await continueTurn(nextHistory, sessionId, tenantId, supabase, client, send)
     send({ type: 'done', sessionId })
     return
   }
 
   if (pendingWrites.length > 0) {
-    // Surface write actions for confirmation
-    const messageId = await saveAssistantMessage(sessionId, tenantId, textAccum || null, toolCalls, supabase)
+    const messageId = await saveAssistantMessage(sessionId, tenantId, text || null, toolCalls, supabase)
     send({ type: 'confirm', toolCalls: pendingWrites, messageId: messageId ?? '' })
     send({ type: 'done', sessionId })
     return
   }
 
-  // Pure text response
-  await saveAssistantMessage(sessionId, tenantId, textAccum || null, [], supabase)
+  await saveAssistantMessage(sessionId, tenantId, text || null, [], supabase)
   send({ type: 'done', sessionId })
 }
 
-// Run a follow-up turn with a fully-built history (no DB re-query)
 async function continueTurn(
-  history: Anthropic.MessageParam[],
+  history: ChatCompletionMessageParam[],
   sessionId: string,
   tenantId: string,
   supabase: AgentSupabase,
-  client: Anthropic,
+  client: OpenAI,
   send: (e: SseEvent) => void,
 ) {
-  send({ type: 'new_turn' })
-  const stream = await client.messages.stream({
-    model: MODEL, max_tokens: 1024, system: buildSystem(),
-    tools: CLAUDE_TOOLS as Anthropic.Tool[],
-    messages: history,
-  })
-
-  let textAccum = ''
-  for await (const event of stream) {
-    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-      textAccum += event.delta.text
-      send({ type: 'text', delta: event.delta.text })
-    }
-  }
-  await saveAssistantMessage(sessionId, tenantId, textAccum || null, [], supabase)
+  const { text } = await streamCompletion(client, history, send)
+  await saveAssistantMessage(sessionId, tenantId, text || null, [], supabase)
 }
 
-// Confirm or reject a pending tool call, then stream Claude's follow-up
 export async function confirmToolCall(
   sessionId: string,
   messageId: string,
@@ -230,7 +248,6 @@ export async function confirmToolCall(
   const encoder = new TextEncoder()
   const send = (e: SseEvent) => controller.enqueue(encoder.encode(encodeEvent(e)))
 
-  // Load the message containing the pending tool call
   const { data: msg } = await supabase
     .from('agent_messages')
     .select('tool_calls')
@@ -257,16 +274,13 @@ export async function confirmToolCall(
     tc.status = 'rejected'
   }
 
-  // Update the message in DB
   await supabase.from('agent_messages')
     .update({ tool_calls: toolCalls as unknown as import('@/types/database').Json })
     .eq('id', messageId)
 
-  // Build history in memory — avoids DB re-query race conditions
   const history = await loadHistory(sessionId, supabase)
-
-  // Run follow-up Claude turn
-  const client = new Anthropic()
+  const client = createClient()
+  send({ type: 'new_turn' })
   await continueTurn(history, sessionId, tenantId, supabase, client, send)
   send({ type: 'done', sessionId })
 }
