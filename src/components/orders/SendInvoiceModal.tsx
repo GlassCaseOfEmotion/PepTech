@@ -44,6 +44,13 @@ export function SendInvoiceModal({ order, onClose }: SendInvoiceModalProps) {
     onClose()
   }
 
+  const openPreview = async (pdfPath: string) => {
+    const res = await fetch(`/api/invoices/preview?path=${encodeURIComponent(pdfPath)}`)
+    if (!res.ok) { setError('Generated — could not open preview'); return }
+    const { url } = await res.json() as { url: string }
+    window.open(url, '_blank')
+  }
+
   const generate = (isRegenerate = false) => {
     setError('')
     startTransition(async () => {
@@ -62,7 +69,12 @@ export function SendInvoiceModal({ order, onClose }: SendInvoiceModalProps) {
         setExisting({ invoice_number: invoiceNumber, pdf_path: pdfPath, created_at: new Date().toISOString() })
         return
       }
-      navigateToInbox(pdfPath, invoiceNumber)
+      if (hasConversation) {
+        navigateToInbox(pdfPath, invoiceNumber)
+      } else {
+        setExisting({ invoice_number: invoiceNumber, pdf_path: pdfPath, created_at: new Date().toISOString() })
+        await openPreview(pdfPath)
+      }
     })
   }
 
@@ -188,7 +200,7 @@ export function SendInvoiceModal({ order, onClose }: SendInvoiceModalProps) {
 
               {!hasConversation && (
                 <div className="pt-inv-warn">
-                  No linked conversation — open the customer chat from Inbox and create the order from there to enable invoice sending.
+                  No linked conversation — invoice will open as a PDF. To send directly to the customer, start a chat from Inbox first.
                 </div>
               )}
               {error && <div className="pt-inv-error">{error}</div>}
@@ -196,8 +208,8 @@ export function SendInvoiceModal({ order, onClose }: SendInvoiceModalProps) {
 
             <div className="pt-modal-ft">
               <button className="pt-btn pt-btn-ghost" onClick={onClose} disabled={pending}>Cancel</button>
-              <button className="pt-btn pt-btn-primary" onClick={() => generate(false)} disabled={pending || !hasConversation}>
-                {pending ? 'Generating…' : 'Generate & attach'}
+              <button className="pt-btn pt-btn-primary" onClick={() => generate(false)} disabled={pending}>
+                {pending ? 'Generating…' : hasConversation ? 'Generate & attach' : 'Generate PDF'}
               </button>
             </div>
           </>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createOrder } from '@/app/orders/actions'
 import { PAYMENT_LABELS } from '@/types/payments'
 import type { PaymentType } from '@/types/payments'
@@ -8,6 +8,8 @@ import type { PaymentType } from '@/types/payments'
 type ProductOption = {
   id: string; sku: string; name: string; product_family: string; unit_price: number
 }
+
+type CustomerOption = { id: string; display_name: string }
 
 interface CreateOrderFormProps {
   customerId?: string
@@ -28,6 +30,11 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [resolvedCustomerId, setResolvedCustomerId] = useState(customerId ?? '')
+  const [customerSearch, setCustomerSearch] = useState('')
+  const [customerResults, setCustomerResults] = useState<CustomerOption[]>([])
+  const [selectedCustomerName, setSelectedCustomerName] = useState(customerName ?? '')
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
+  const customerSearchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetch('/api/catalog/products')
@@ -43,6 +50,27 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
         setPaymentConfigs(data.filter(c => c.is_active))
       })
       .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (!customerSearch.trim()) { setCustomerResults([]); return }
+    const timer = setTimeout(() => {
+      fetch(`/api/customers?q=${encodeURIComponent(customerSearch)}`)
+        .then(r => r.json())
+        .then((data: CustomerOption[]) => setCustomerResults(data))
+        .catch(() => {})
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [customerSearch])
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (customerSearchRef.current && !customerSearchRef.current.contains(e.target as Node)) {
+        setShowCustomerDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
   }, [])
 
   const setQty = (productId: string, qty: number) => {
@@ -65,7 +93,7 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
       const label = PAYMENT_LABELS[c.type as PaymentType]
       if (label && c.type !== 'cash') opts.push({ value: c.type, label })
     }
-    if (paymentConfigs.filter(c => c.type !== 'cash').length >= 2) {
+    if (paymentConfigs.filter(c => c.type !== 'cash').length >= 1) {
       opts.push({ value: 'customer_chooses', label: PAYMENT_LABELS.customer_chooses })
     }
     return opts
@@ -99,23 +127,58 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
     <div className="pt-create-order">
 
       {/* Customer */}
-      {!customerId && (
-        <div className="pt-co-section">
-          <div className="pt-co-lbl">Customer ID</div>
-          <input
-            className="pt-input"
-            placeholder="Paste customer ID from Customers page…"
-            value={resolvedCustomerId}
-            onChange={e => setResolvedCustomerId(e.target.value)}
-          />
-        </div>
-      )}
-      {customerId && customerName && (
-        <div className="pt-co-section">
-          <div className="pt-co-lbl">Customer</div>
+      <div className="pt-co-section">
+        <div className="pt-co-lbl">Customer</div>
+        {customerId ? (
           <div style={{ fontSize: 13, fontWeight: 500 }}>{customerName}</div>
-        </div>
-      )}
+        ) : (
+          <div className="pt-co-customer-search" ref={customerSearchRef}>
+            {selectedCustomerName ? (
+              <div className="pt-co-customer-selected">
+                <span style={{ fontSize: 13, fontWeight: 500 }}>{selectedCustomerName}</span>
+                <button
+                  className="pt-btn pt-btn-ghost"
+                  style={{ fontSize: 11, padding: '2px 8px' }}
+                  onClick={() => { setSelectedCustomerName(''); setResolvedCustomerId(''); setCustomerSearch('') }}
+                >
+                  Change
+                </button>
+              </div>
+            ) : (
+              <>
+                <input
+                  className="pt-input"
+                  placeholder="Search customers…"
+                  value={customerSearch}
+                  onChange={e => { setCustomerSearch(e.target.value); setShowCustomerDropdown(true) }}
+                  onFocus={() => setShowCustomerDropdown(true)}
+                  autoComplete="off"
+                />
+                {showCustomerDropdown && customerResults.length > 0 && (
+                  <div className="pt-co-customer-dropdown">
+                    {customerResults.map(c => (
+                      <button
+                        key={c.id}
+                        className="pt-co-customer-option"
+                        onMouseDown={e => {
+                          e.preventDefault()
+                          setResolvedCustomerId(c.id)
+                          setSelectedCustomerName(c.display_name)
+                          setCustomerSearch('')
+                          setCustomerResults([])
+                          setShowCustomerDropdown(false)
+                        }}
+                      >
+                        {c.display_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Product picker */}
       <div className="pt-co-section">

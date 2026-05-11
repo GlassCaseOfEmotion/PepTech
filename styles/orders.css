@@ -235,3 +235,24 @@
   margin-top: 12px; padding-top: 12px;
   border-top: 0.5px solid var(--pt-line-soft);
 }
+
+/* ─── Customer Search Dropdown ──────────────────────────────────────────── */
+.pt-co-customer-search { position: relative; }
+.pt-co-customer-selected {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 0;
+}
+.pt-co-customer-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 50;
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line);
+  border-radius: var(--pt-radius);
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  overflow: hidden;
+}
+.pt-co-customer-option {
+  display: block; width: 100%; text-align: left;
+  padding: 8px 12px; font-size: 13px; background: none; border: none; cursor: pointer;
+  color: var(--pt-fg);
+}
+.pt-co-customer-option:hover { background: var(--pt-hover); }
