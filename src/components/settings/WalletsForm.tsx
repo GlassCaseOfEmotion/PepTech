@@ -94,9 +94,9 @@ export function WalletsForm({ configs }: { configs: TenantPaymentConfig[] }) {
                 {c && (
                   <button
                     className={`pt-st-toggle ${c.is_active ? 'is-on' : ''}`}
-                    title={c.is_active ? 'Active — click to disable' : 'Inactive — click to enable'}
+                    title={c.is_active ? 'Active — click to disable' : !c.wallet_address ? 'Add an address first' : 'Inactive — click to enable'}
                     onClick={() => toggle(type, c.is_active)}
-                    disabled={pending}
+                    disabled={pending || !c.wallet_address}
                   />
                 )}
                 <button

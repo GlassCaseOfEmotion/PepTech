@@ -311,7 +311,7 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: 
             <header className="pt-card-hd">
               <div>
                 <h3>Payment</h3>
-                <p>{order.payment_asset === 'Cash' ? 'Cash on delivery' : `${order.payment_asset} · on-chain`}</p>
+                <p>{order.payment_asset === 'cash' ? 'Cash on delivery' : PAYMENT_LABELS[order.payment_asset as keyof typeof PAYMENT_LABELS] ?? order.payment_asset}</p>
               </div>
               <span className={`pt-od-pay-status pt-od-pay-${status}`}>
                 {status === 'awaiting' ? 'Awaiting' : status === 'confirming' ? 'Confirming' : 'Settled'}

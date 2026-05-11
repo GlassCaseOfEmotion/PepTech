@@ -177,7 +177,7 @@ export async function confirmPayment(
     if (fetchError || !current) return { error: 'Order not found' }
     if (current.status !== 'awaiting') return { error: 'Order is not awaiting payment' }
 
-    const update: Record<string, string> = { status: 'confirming' }
+    const update: { status: string; payment_asset?: string; tx_hash?: string } = { status: 'confirming' }
     if (data.actualPaymentAsset) update.payment_asset = data.actualPaymentAsset
     if (data.txHash?.trim()) update.tx_hash = data.txHash.trim()
 

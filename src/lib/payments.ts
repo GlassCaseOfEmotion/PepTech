@@ -1,5 +1,5 @@
 import { PAYMENT_LABELS } from '@/types/payments'
-import type { TenantPaymentConfig } from '@/types/payments'
+import type { TenantPaymentConfig, PaymentType } from '@/types/payments'
 
 interface OrderPaymentInfo {
   ref_number: string
@@ -29,7 +29,7 @@ export function buildPaymentMessage(
         parts.push(`Ref: ${order.ref_number}`)
         return `Bank Transfer: ${parts.join(' · ')}`
       }
-      return `${PAYMENT_LABELS[c.type] ?? c.type}: ${c.wallet_address}`
+      return `${PAYMENT_LABELS[c.type as PaymentType] ?? c.type}: ${c.wallet_address}`
     })
     const hasBankTransfer = active.some(c => c.type === 'bank_transfer')
     const note = hasBankTransfer ? '\n\nPlease include the reference number for bank transfers.' : ''
@@ -53,6 +53,6 @@ export function buildPaymentMessage(
   if (!order.payment_address) {
     return `${header}\n\nPayment details unavailable — contact the operator.`
   }
-  const label = PAYMENT_LABELS[order.payment_asset] ?? order.payment_asset
+  const label = PAYMENT_LABELS[order.payment_asset as PaymentType] ?? order.payment_asset
   return `${header}\n\n${label}: ${order.payment_address}\n\nPlease send the exact amount shown on the invoice.`
 }

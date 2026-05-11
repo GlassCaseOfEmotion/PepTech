@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { createOrder } from '@/app/orders/actions'
+import { PAYMENT_LABELS } from '@/types/payments'
+import type { PaymentType } from '@/types/payments'
 
 type ProductOption = {
   id: string; sku: string; name: string; product_family: string; unit_price: number
@@ -60,15 +62,11 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
   const paymentOptions = (() => {
     const opts: { value: string; label: string }[] = [{ value: 'cash', label: 'Cash' }]
     for (const c of paymentConfigs) {
-      const labels: Record<string, string> = {
-        usdt_trc20: 'USDT (TRC20)', btc: 'BTC', eth: 'ETH',
-        usdc_erc20: 'USDC (ERC20)', ltc: 'LTC', xmr: 'XMR',
-        bank_transfer: 'Bank Transfer',
-      }
-      if (labels[c.type]) opts.push({ value: c.type, label: labels[c.type] })
+      const label = PAYMENT_LABELS[c.type as PaymentType]
+      if (label && c.type !== 'cash') opts.push({ value: c.type, label })
     }
     if (paymentConfigs.filter(c => c.type !== 'cash').length >= 2) {
-      opts.push({ value: 'customer_chooses', label: 'Customer chooses' })
+      opts.push({ value: 'customer_chooses', label: PAYMENT_LABELS.customer_chooses })
     }
     return opts
   })()
