@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { Icons } from '@/lib/icons'
+import type { SupplyStatus } from '@/types/protocols'
 
 type CustomerChannel = { channel_type: string; display_handle: string; is_primary: boolean }
 type CustomerTag = { tag: string }
@@ -26,9 +27,10 @@ function initials(name: string) {
 
 interface Props {
   customers: Customer[]
+  supplyStatuses?: Record<string, SupplyStatus | null>
 }
 
-export function CustomersListView({ customers }: Props) {
+export function CustomersListView({ customers, supplyStatuses = {} }: Props) {
   const [search, setSearch] = useState('')
 
   const filtered = customers.filter(c => {
@@ -89,6 +91,18 @@ export function CustomersListView({ customers }: Props) {
                     </Link>
                     <div className="pt-thread-meta">
                       <div className={`pt-trust-pill pt-trust-${trustCls}`}>{c.trust_score}</div>
+                      {(() => {
+                        const status = supplyStatuses[c.id]
+                        if (!status) return <div style={{ width: 48 }} />
+                        return (
+                          <div className="pt-cu-supply">
+                            <div className={`pt-cu-supply-dot is-${status}`} />
+                            <span className={`pt-cu-supply-lbl is-${status}`}>
+                              {status === 'ok' ? 'supply ok' : status === 'low' ? 'low' : 'out'}
+                            </span>
+                          </div>
+                        )
+                      })()}
                       <Link href={`/inbox`} className="pt-link" style={{ fontSize: 11, marginTop: 4 }}>Message →</Link>
                     </div>
                   </li>
