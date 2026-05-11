@@ -864,6 +864,56 @@ export type Database = {
           },
         ]
       }
+      tenant_payment_configs: {
+        Row: {
+          account_name: string | null
+          account_number: string | null
+          bank_name: string | null
+          created_at: string
+          iban: string | null
+          id: string
+          is_active: boolean
+          sort_code: string | null
+          tenant_id: string
+          type: string
+          wallet_address: string | null
+        }
+        Insert: {
+          account_name?: string | null
+          account_number?: string | null
+          bank_name?: string | null
+          created_at?: string
+          iban?: string | null
+          id?: string
+          is_active?: boolean
+          sort_code?: string | null
+          tenant_id: string
+          type: string
+          wallet_address?: string | null
+        }
+        Update: {
+          account_name?: string | null
+          account_number?: string | null
+          bank_name?: string | null
+          created_at?: string
+          iban?: string | null
+          id?: string
+          is_active?: boolean
+          sort_code?: string | null
+          tenant_id?: string
+          type?: string
+          wallet_address?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_payment_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           created_at: string
