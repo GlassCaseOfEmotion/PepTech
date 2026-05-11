@@ -5,6 +5,7 @@ import { createClient, getServerUser } from '@/lib/supabase/server'
 import { Shell } from '@/components/shell/Shell'
 import { OrderDetailView } from '@/components/orders/OrderDetailView'
 import type { DbOrderRow, DbOrderEvent } from '@/types/orders'
+import type { TenantPaymentConfig } from '@/types/payments'
 
 const ORDER_SELECT = `
   id, ref_number, customer_id, conversation_id, status,
@@ -29,9 +30,10 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
 
   const supabase = await createClient()
 
-  const [{ data: order }, { data: events }] = await Promise.all([
+  const [{ data: order }, { data: events }, { data: paymentConfigs }] = await Promise.all([
     supabase.from('orders').select(ORDER_SELECT).eq('id', orderId).single(),
     supabase.from('order_events').select('*').eq('order_id', orderId).order('created_at', { ascending: true }),
+    supabase.from('tenant_payment_configs').select('*').eq('is_active', true),
   ])
 
   if (!order) notFound()
@@ -55,6 +57,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
         order={orderRow}
         events={(events ?? []) as DbOrderEvent[]}
         chatExcerpt={chatExcerpt}
+        paymentConfigs={(paymentConfigs ?? []) as TenantPaymentConfig[]}
       />
     </Shell>
   )

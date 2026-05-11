@@ -2,8 +2,12 @@
 
 import { useState, useTransition, useRef, Fragment } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
-import { updateOrderStatus, saveOrderNotes } from '@/app/orders/actions'
+import { updateOrderStatus, saveOrderNotes, confirmPayment } from '@/app/orders/actions'
+import { buildPaymentMessage } from '@/lib/payments'
+import { PAYMENT_LABELS } from '@/types/payments'
+import type { TenantPaymentConfig } from '@/types/payments'
 import type { DbOrderRow, DbOrderEvent, OrderStatus } from '@/types/orders'
 import { SendInvoiceModal } from './SendInvoiceModal'
 
@@ -28,10 +32,11 @@ function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
-export function OrderDetailView({ order, events, chatExcerpt }: {
+export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: {
   order: DbOrderRow
   events: DbOrderEvent[]
   chatExcerpt: { id: string; direction: string; content: string; sent_at: string }[]
+  paymentConfigs: TenantPaymentConfig[]
 }) {
   const [status, setStatus] = useState(order.status)
   const [notes, setNotes] = useState(order.notes ?? '')
@@ -39,6 +44,11 @@ export function OrderDetailView({ order, events, chatExcerpt }: {
   const [showInvoiceModal, setShowInvoiceModal] = useState(false)
   const [pending, startTransition] = useTransition()
   const savingRef = useRef(false)
+  const router = useRouter()
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [confirmAsset, setConfirmAsset] = useState('')
+  const [txHash, setTxHash] = useState('')
+  const [confirmError, setConfirmError] = useState('')
 
   const primaryChannel = order.customers?.customer_channels?.find(c => c.is_primary)
     ?? order.customers?.customer_channels?.[0]
@@ -69,6 +79,39 @@ export function OrderDetailView({ order, events, chatExcerpt }: {
       const result = await saveOrderNotes(order.id, notes)
       savingRef.current = false
       if ('error' in result) setNotesError('Failed to save notes')
+    })
+  }
+
+  const sendPaymentDetails = () => {
+    const msg = buildPaymentMessage(
+      { ref_number: order.ref_number, payment_amount: order.payment_amount, payment_asset: order.payment_asset, payment_address: order.payment_address },
+      paymentConfigs,
+    )
+    if (!msg) return
+    const encoded = encodeURIComponent(msg)
+    if (order.conversation_id) {
+      router.push(`/inbox?conversation=${order.conversation_id}&prefill=${encoded}`)
+    } else {
+      navigator.clipboard?.writeText(msg)
+      alert('Payment details copied to clipboard (no linked conversation).')
+    }
+  }
+
+  const handleConfirm = () => {
+    if (order.payment_asset === 'customer_chooses' && !confirmAsset) {
+      setConfirmError('Please select the payment method used'); return
+    }
+    setConfirmError('')
+    startTransition(async () => {
+      const result = await confirmPayment(order.id, {
+        actualPaymentAsset: order.payment_asset === 'customer_chooses' ? confirmAsset : undefined,
+        txHash: txHash || undefined,
+      })
+      if ('error' in result) { setConfirmError(result.error); return }
+      setStatus('confirming')
+      setShowConfirmDialog(false)
+      setTxHash('')
+      setConfirmAsset('')
     })
   }
 
@@ -111,6 +154,90 @@ export function OrderDetailView({ order, events, chatExcerpt }: {
       </div>
       {showInvoiceModal && (
         <SendInvoiceModal order={order} onClose={() => setShowInvoiceModal(false)} />
+      )}
+
+      {/* Payment panel — awaiting */}
+      {status === 'awaiting' && order.payment_asset !== 'cash' && (
+        <div className="pt-od-payment-panel">
+          <div className="pt-od-payment-hd">
+            <span>Payment</span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11 }} onClick={sendPaymentDetails}>
+                <Icons.send size={11} /> Send payment details
+              </button>
+              {order.payment_address && (
+                <button
+                  className="pt-btn pt-btn-ghost"
+                  style={{ fontSize: 11 }}
+                  onClick={() => navigator.clipboard?.writeText(order.payment_address!)}
+                >
+                  Copy address
+                </button>
+              )}
+              <button className="pt-btn pt-btn-primary" style={{ fontSize: 11 }} onClick={() => setShowConfirmDialog(true)}>
+                Mark as received
+              </button>
+            </div>
+          </div>
+          <div className="pt-od-payment-body">
+            <span className="pt-od-payment-asset">{PAYMENT_LABELS[order.payment_asset as keyof typeof PAYMENT_LABELS] ?? order.payment_asset}</span>
+            {order.payment_address && (
+              <span className="pt-od-payment-addr mono">{order.payment_address}</span>
+            )}
+            {order.payment_asset === 'customer_chooses' && (
+              <span style={{ fontSize: 11, color: 'var(--pt-fg-4)' }}>All configured methods offered</span>
+            )}
+          </div>
+          {showConfirmDialog && (
+            <div className="pt-od-confirm-dialog">
+              {order.payment_asset === 'customer_chooses' && (
+                <div style={{ marginBottom: 10 }}>
+                  <label style={{ fontSize: 11, color: 'var(--pt-fg-3)', display: 'block', marginBottom: 4 }}>
+                    Which method did they use?
+                  </label>
+                  <select className="pt-input" style={{ fontSize: 12 }} value={confirmAsset} onChange={e => setConfirmAsset(e.target.value)}>
+                    <option value="">Select…</option>
+                    {paymentConfigs.filter(c => c.type !== 'cash' && c.type !== 'customer_chooses').map(c => (
+                      <option key={c.type} value={c.type}>{PAYMENT_LABELS[c.type as keyof typeof PAYMENT_LABELS] ?? c.type}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div style={{ marginBottom: 10 }}>
+                <label style={{ fontSize: 11, color: 'var(--pt-fg-3)', display: 'block', marginBottom: 4 }}>
+                  Transaction ID (optional — paste from your wallet or block explorer)
+                </label>
+                <input
+                  className="pt-input mono"
+                  style={{ fontSize: 11 }}
+                  placeholder="Leave blank if unavailable"
+                  value={txHash}
+                  onChange={e => setTxHash(e.target.value)}
+                />
+              </div>
+              {confirmError && <p style={{ fontSize: 11, color: 'var(--pt-danger)', marginBottom: 8 }}>{confirmError}</p>}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="pt-btn pt-btn-primary" style={{ fontSize: 11 }} onClick={handleConfirm} disabled={pending}>
+                  Confirm payment received
+                </button>
+                <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11 }} onClick={() => { setShowConfirmDialog(false); setConfirmError('') }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {/* Payment panel — confirmed with tx hash */}
+      {status !== 'awaiting' && order.tx_hash && (
+        <div className="pt-od-payment-panel">
+          <div className="pt-od-payment-hd"><span>Payment confirmed</span></div>
+          <div className="pt-od-payment-body">
+            <span className="pt-od-payment-asset">{PAYMENT_LABELS[order.payment_asset as keyof typeof PAYMENT_LABELS] ?? order.payment_asset}</span>
+            <span className="pt-od-payment-addr mono" title={order.tx_hash}>{order.tx_hash.slice(0, 24)}…</span>
+            <button className="pt-btn pt-btn-ghost" style={{ fontSize: 10, padding: '2px 8px' }} onClick={() => navigator.clipboard?.writeText(order.tx_hash!)}>Copy TX</button>
+          </div>
+        </div>
       )}
 
       {/* Stepper */}
