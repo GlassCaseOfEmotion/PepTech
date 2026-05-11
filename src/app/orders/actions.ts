@@ -160,3 +160,46 @@ export async function saveOrderNotes(orderId: string, notes: string): Promise<{ 
     return { error: e instanceof Error ? e.message : 'Unknown error' }
   }
 }
+
+export async function confirmPayment(
+  orderId: string,
+  data: { actualPaymentAsset?: string; txHash?: string },
+): Promise<{ success: true } | { error: string }> {
+  try {
+    const { supabase, tenantId } = await getTenantId()
+
+    const { data: current, error: fetchError } = await supabase
+      .from('orders')
+      .select('status, payment_asset')
+      .eq('id', orderId)
+      .eq('tenant_id', tenantId)
+      .single()
+    if (fetchError || !current) return { error: 'Order not found' }
+    if (current.status !== 'awaiting') return { error: 'Order is not awaiting payment' }
+
+    const update: Record<string, string> = { status: 'confirming' }
+    if (data.actualPaymentAsset) update.payment_asset = data.actualPaymentAsset
+    if (data.txHash?.trim()) update.tx_hash = data.txHash.trim()
+
+    const { error: updateError } = await supabase
+      .from('orders')
+      .update(update)
+      .eq('id', orderId)
+      .eq('tenant_id', tenantId)
+    if (updateError) return { error: updateError.message }
+
+    await supabase.from('order_events').insert({
+      tenant_id: tenantId,
+      order_id: orderId,
+      actor: 'operator',
+      action: 'Moved to Confirming',
+      note: data.txHash?.trim() ? `TX: ${data.txHash.trim().slice(0, 24)}…` : null,
+    })
+
+    revalidatePath('/orders')
+    revalidatePath(`/orders/${orderId}`)
+    return { success: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
