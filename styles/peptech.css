@@ -580,12 +580,29 @@ kbd {
   background: oklch(from var(--pt-fg) l c h / 0.05);
   color: var(--pt-fg-2);
 }
-.pt-pay-asset[data-asset="USDT"] { background: oklch(0.95 0.06 165); color: oklch(0.40 0.10 165); }
-.pt-pay-asset[data-asset="BTC"]  { background: oklch(0.96 0.06 60);  color: oklch(0.50 0.14 60);  }
-.pt-pay-asset[data-asset="XMR"]  { background: oklch(0.96 0.04 30);  color: oklch(0.45 0.12 30);  }
-.pt-th-dim .pt-pay-asset[data-asset="USDT"], .pt-th-dark .pt-pay-asset[data-asset="USDT"] { background: oklch(0.30 0.06 165); color: oklch(0.85 0.10 165); }
-.pt-th-dim .pt-pay-asset[data-asset="BTC"],  .pt-th-dark .pt-pay-asset[data-asset="BTC"]  { background: oklch(0.30 0.06 60);  color: oklch(0.85 0.12 60);  }
-.pt-th-dim .pt-pay-asset[data-asset="XMR"],  .pt-th-dark .pt-pay-asset[data-asset="XMR"]  { background: oklch(0.30 0.06 30);  color: oklch(0.85 0.10 30);  }
+/* crypto */
+.pt-pay-asset[data-asset="usdt"]  { background: oklch(0.95 0.06 165); color: oklch(0.38 0.10 165); }
+.pt-pay-asset[data-asset="btc"]   { background: oklch(0.96 0.06 60);  color: oklch(0.48 0.14 60);  }
+.pt-pay-asset[data-asset="eth"]   { background: oklch(0.93 0.05 270); color: oklch(0.38 0.10 270); }
+.pt-pay-asset[data-asset="usdc"]  { background: oklch(0.93 0.06 230); color: oklch(0.38 0.12 230); }
+.pt-pay-asset[data-asset="ltc"]   { background: oklch(0.93 0.02 225); color: oklch(0.42 0.05 225); }
+.pt-pay-asset[data-asset="xmr"]   { background: oklch(0.96 0.04 30);  color: oklch(0.43 0.12 30);  }
+/* non-crypto */
+.pt-pay-asset[data-asset="bank"]  { background: oklch(0.93 0.05 245); color: oklch(0.36 0.10 245); }
+.pt-pay-asset[data-asset="multi"] { background: oklch(0.93 0.05 300); color: oklch(0.38 0.10 300); }
+.pt-pay-asset[data-asset="cash"]  { background: oklch(0.95 0.04 145); color: oklch(0.40 0.09 145); }
+.pt-pay-asset[data-asset="other"] { background: oklch(0.93 0.01 0);   color: oklch(0.48 0.02 0);   }
+/* dark variants */
+.pt-th-dim .pt-pay-asset[data-asset="usdt"],  .pt-th-dark .pt-pay-asset[data-asset="usdt"]  { background: oklch(0.28 0.06 165); color: oklch(0.82 0.10 165); }
+.pt-th-dim .pt-pay-asset[data-asset="btc"],   .pt-th-dark .pt-pay-asset[data-asset="btc"]   { background: oklch(0.28 0.06 60);  color: oklch(0.84 0.12 60);  }
+.pt-th-dim .pt-pay-asset[data-asset="eth"],   .pt-th-dark .pt-pay-asset[data-asset="eth"]   { background: oklch(0.26 0.05 270); color: oklch(0.82 0.10 270); }
+.pt-th-dim .pt-pay-asset[data-asset="usdc"],  .pt-th-dark .pt-pay-asset[data-asset="usdc"]  { background: oklch(0.26 0.06 230); color: oklch(0.82 0.12 230); }
+.pt-th-dim .pt-pay-asset[data-asset="ltc"],   .pt-th-dark .pt-pay-asset[data-asset="ltc"]   { background: oklch(0.28 0.02 225); color: oklch(0.80 0.05 225); }
+.pt-th-dim .pt-pay-asset[data-asset="xmr"],   .pt-th-dark .pt-pay-asset[data-asset="xmr"]   { background: oklch(0.28 0.05 30);  color: oklch(0.84 0.10 30);  }
+.pt-th-dim .pt-pay-asset[data-asset="bank"],  .pt-th-dark .pt-pay-asset[data-asset="bank"]  { background: oklch(0.26 0.05 245); color: oklch(0.82 0.10 245); }
+.pt-th-dim .pt-pay-asset[data-asset="multi"], .pt-th-dark .pt-pay-asset[data-asset="multi"] { background: oklch(0.26 0.05 300); color: oklch(0.82 0.10 300); }
+.pt-th-dim .pt-pay-asset[data-asset="cash"],  .pt-th-dark .pt-pay-asset[data-asset="cash"]  { background: oklch(0.28 0.04 145); color: oklch(0.82 0.09 145); }
+.pt-th-dim .pt-pay-asset[data-asset="other"], .pt-th-dark .pt-pay-asset[data-asset="other"] { background: oklch(0.28 0.01 0);   color: oklch(0.76 0.02 0);   }
 
 .pt-pay-who { font-size: 12.5px; font-weight: 500; }
 .pt-pay-state { font-size: 11px; color: var(--pt-fg-3); display: flex; align-items: center; gap: 5px; margin-top: 1px; }

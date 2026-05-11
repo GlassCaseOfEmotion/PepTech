@@ -217,17 +217,36 @@ function fmtAge(mins: number) {
   return `${Math.floor(mins / 1440)}d ago`
 }
 
+const ASSET_BADGE: Record<string, { label: string; key: string }> = {
+  usdt_trc20:       { label: 'USDT',  key: 'usdt'  },
+  btc:              { label: 'BTC',   key: 'btc'   },
+  eth:              { label: 'ETH',   key: 'eth'   },
+  usdc_erc20:       { label: 'USDC',  key: 'usdc'  },
+  ltc:              { label: 'LTC',   key: 'ltc'   },
+  xmr:              { label: 'XMR',   key: 'xmr'   },
+  bank_transfer:    { label: 'Bank',  key: 'bank'  },
+  customer_chooses: { label: 'Multi', key: 'multi' },
+  cash:             { label: 'Cash',  key: 'cash'  },
+  // legacy values
+  USDT:             { label: 'USDT',  key: 'usdt'  },
+  BTC:              { label: 'BTC',   key: 'btc'   },
+  Other:            { label: 'Other', key: 'other' },
+  Cash:             { label: 'Cash',  key: 'cash'  },
+}
+
 function PaymentsCard({ orders }: { orders: PendingOrder[] }) {
   return (
-    <DashCard title="Crypto payments" subtitle="Awaiting confirmation"
+    <DashCard title="Payments" subtitle="Awaiting confirmation"
       action={<Link href="/orders" className="pt-link">View all →</Link>}>
       <ul className="pt-pay-list">
         {orders.length === 0 && (
           <li className="pt-pay" style={{ opacity: 0.5, fontSize: 12 }}>No pending payments</li>
         )}
-        {orders.map(o => (
+        {orders.map(o => {
+          const badge = ASSET_BADGE[o.asset] ?? { label: o.asset, key: 'other' }
+          return (
           <li key={o.id} className={`pt-pay pt-pay-${o.status === 'confirming' ? 'confirming' : 'pending'}`}>
-            <div className="pt-pay-asset" data-asset={o.asset}>{o.asset}</div>
+            <div className="pt-pay-asset" data-asset={badge.key}>{badge.label}</div>
             <div className="pt-pay-mid">
               <div className="pt-pay-who">{o.customerName}</div>
               <div className="pt-pay-state">
@@ -241,7 +260,7 @@ function PaymentsCard({ orders }: { orders: PendingOrder[] }) {
               <Link href={`/orders/${o.id}`} className="pt-pay-act">{o.refNumber}</Link>
             </div>
           </li>
-        ))}
+        )})}
       </ul>
     </DashCard>
   )
