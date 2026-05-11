@@ -4,6 +4,9 @@ import { createClient, getServerUser } from '@/lib/supabase/server'
 import { Shell } from '@/components/shell/Shell'
 import { Icons } from '@/lib/icons'
 import { CustomerNewOrderButton } from '@/components/customers/CustomerNewOrderButton'
+import { ActiveCyclesCard } from '@/components/customers/ActiveCyclesCard'
+import { computeSupply } from '@/types/protocols'
+import type { ProductProtocol, CustomerProtocolOverride, CycleEntry } from '@/types/protocols'
 
 const CH_LABEL: Record<string, string> = { whatsapp: 'WhatsApp', telegram: 'Telegram', email: 'Email' }
 const CH_KEY: Record<string, string> = { whatsapp: 'wa', telegram: 'tg', email: 'em' }
@@ -18,12 +21,6 @@ function fmtDate(iso: string) {
 }
 
 // ─── Mock data for sections not yet backed by the DB ────────────────────────
-
-const MOCK_CYCLES = [
-  { product: 'BPC-157', start: 'Apr 1',  end: 'May 27', weeks: 8,  progress: 0.55 },
-  { product: 'Reta',    start: 'Apr 18', end: 'Aug 8',  weeks: 16, progress: 0.18 },
-  { product: 'Tirz',    start: 'Mar 11', end: 'Jun 3',  weeks: 12, progress: 0.55 },
-]
 
 const MOCK_TRUST_FACTORS = [
   { label: 'On-time payments',    v: 14, of: 14, w: 30, neg: false },
@@ -76,7 +73,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
       .limit(10),
     supabase
       .from('orders')
-      .select('id, ref_number, status, payment_asset, payment_amount, created_at, order_items(qty, unit_price_snapshot, products(name))')
+      .select('id, ref_number, status, payment_asset, payment_amount, created_at, order_items(product_id, qty, unit_price_snapshot, products(name))')
       .eq('customer_id', customerId)
       .order('created_at', { ascending: false }),
   ])
@@ -89,6 +86,55 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
   const trustCls = customer.trust_score >= 85 ? 'hi' : customer.trust_score >= 65 ? 'md' : 'lo'
   const tags = customer.customer_tags?.map(t => t.tag) ?? []
   const realOrders = orders ?? []
+
+  // ── Compute active cycles ─────────────────────────────────────────────────
+  type LatestItem = { productId: string; productName: string; qty: number; orderDate: string }
+  const seenProducts = new Set<string>()
+  const latestItems: LatestItem[] = []
+
+  for (const order of realOrders) {
+    const items = order.order_items as { product_id: string; qty: number; products: { name: string } | null }[]
+    for (const item of items ?? []) {
+      if (!item.product_id || seenProducts.has(item.product_id)) continue
+      seenProducts.add(item.product_id)
+      latestItems.push({
+        productId: item.product_id,
+        productName: item.products?.name ?? '—',
+        qty: item.qty,
+        orderDate: order.created_at,
+      })
+    }
+  }
+
+  const productIds = latestItems.map(i => i.productId)
+  const cycles: CycleEntry[] = []
+
+  if (productIds.length > 0) {
+    const [{ data: protocols }, { data: overrides }] = await Promise.all([
+      supabase.from('product_protocols').select('*').in('product_id', productIds),
+      supabase.from('customer_protocol_overrides').select('*').eq('customer_id', customerId).in('product_id', productIds),
+    ])
+
+    const protocolMap = Object.fromEntries(((protocols ?? []) as ProductProtocol[]).map(p => [p.product_id, p]))
+    const overrideMap = Object.fromEntries(((overrides ?? []) as CustomerProtocolOverride[]).map(o => [o.product_id, o]))
+
+    for (const item of latestItems) {
+      const protocol = protocolMap[item.productId]
+      if (!protocol) {
+        cycles.push({ productId: item.productId, productName: item.productName })
+        continue
+      }
+      cycles.push(computeSupply({
+        productId: item.productId,
+        productName: item.productName,
+        unitsOrdered: item.qty,
+        orderDate: item.orderDate,
+        protocol,
+        override: overrideMap[item.productId] ?? null,
+      }))
+    }
+  }
+
   const totalOrders = realOrders.length
   const avgOrder = totalOrders > 0 ? Math.round(customer.ltv / totalOrders) : 0
   const lastOrderDate = realOrders[0]?.created_at
@@ -203,28 +249,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                 </div>
               </section>
 
-              {/* Active cycles */}
-              <section className="pt-card">
-                <header className="pt-card-hd">
-                  <div><h3>Active cycles</h3><p>Inferred from order cadence + product half-life</p></div>
-                </header>
-                <div className="pt-card-body" style={{ padding: 0 }}>
-                  <ul className="pt-cu-cycles">
-                    {MOCK_CYCLES.map((cy, i) => (
-                      <li key={i} className="pt-cu-cycle">
-                        <div className="pt-cu-cycle-prod">{cy.product}</div>
-                        <div className="pt-cu-cycle-bar">
-                          <div className="pt-cu-cycle-fill" style={{ width: `${cy.progress * 100}%` }} />
-                          <span className="pt-cu-cycle-marker" style={{ left: `${cy.progress * 100}%` }} />
-                        </div>
-                        <div className="pt-cu-cycle-meta mono">
-                          wk {Math.round(cy.progress * cy.weeks)}/{cy.weeks} · {cy.start}→{cy.end}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </section>
+              <ActiveCyclesCard cycles={cycles} customerId={customer.id} />
 
               {/* Notes */}
               <section className="pt-card">
