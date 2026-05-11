@@ -3,7 +3,7 @@ import { createClient, getServerUser } from '@/lib/supabase/server'
 import { Shell } from '@/components/shell/Shell'
 import { CustomersListView } from '@/components/customers/CustomersListView'
 import { computeSupply } from '@/types/protocols'
-import type { ProductProtocol, SupplyStatus } from '@/types/protocols'
+import type { ProductProtocol, SupplyStatus, CustomerProtocolOverride } from '@/types/protocols'
 
 export default async function CustomersPage() {
   const user = await getServerUser()
@@ -11,7 +11,7 @@ export default async function CustomersPage() {
 
   const supabase = await createClient()
 
-  const [{ data: customers }, { data: recentOrders }, { data: protocols }] = await Promise.all([
+  const [{ data: customers }, { data: recentOrders }, { data: protocols }, { data: allOverrides }] = await Promise.all([
     supabase
       .from('customers')
       .select('id, display_name, trust_score, ltv, customer_channels(channel_type, display_handle, is_primary), customer_tags(tag)')
@@ -21,10 +21,15 @@ export default async function CustomersPage() {
       .select('customer_id, created_at, order_items(product_id, qty)')
       .order('created_at', { ascending: false }),
     supabase.from('product_protocols').select('*'),
+    supabase.from('customer_protocol_overrides').select('customer_id, product_id, draw_volume_ml, frequency, notes, id, tenant_id, created_at, updated_at'),
   ])
 
   const protocolMap = Object.fromEntries(
     ((protocols ?? []) as ProductProtocol[]).map(p => [p.product_id, p])
+  )
+
+  const overrideMap = Object.fromEntries(
+    ((allOverrides ?? []) as CustomerProtocolOverride[]).map(o => [`${o.customer_id}:${o.product_id}`, o])
   )
 
   // Compute worst-case supply status per customer
@@ -57,6 +62,7 @@ export default async function CustomersPage() {
           unitsOrdered: item.qty,
           orderDate: order.created_at,
           protocol,
+          override: overrideMap[`${customer.id}:${item.product_id}`] ?? null,
         })
         if (worst === null || priorityOf(cycle.status) > priorityOf(worst)) {
           worst = cycle.status

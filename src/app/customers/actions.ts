@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { FREQUENCY_OPTIONS } from '@/types/protocols'
+import type { Frequency } from '@/types/protocols'
 
 async function getTenantId() {
   const supabase = await createClient()
@@ -21,6 +23,9 @@ export async function upsertProtocolOverride(data: {
 }): Promise<{ success: true } | { error: string }> {
   if (data.drawVolumeMl != null && data.drawVolumeMl <= 0) {
     return { error: 'Draw volume must be greater than 0' }
+  }
+  if (data.frequency != null && !FREQUENCY_OPTIONS.includes(data.frequency as Frequency)) {
+    return { error: 'Invalid frequency value' }
   }
   try {
     const { supabase, tenantId } = await getTenantId()

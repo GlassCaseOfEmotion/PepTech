@@ -269,6 +269,64 @@ export type Database = {
           },
         ]
       }
+      customer_protocol_overrides: {
+        Row: {
+          created_at: string
+          customer_id: string
+          draw_volume_ml: number | null
+          frequency: string | null
+          id: string
+          notes: string | null
+          product_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          draw_volume_ml?: number | null
+          frequency?: string | null
+          id?: string
+          notes?: string | null
+          product_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          draw_volume_ml?: number | null
+          frequency?: string | null
+          id?: string
+          notes?: string | null
+          product_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_protocol_overrides_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_protocol_overrides_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_protocol_overrides_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_tags: {
         Row: {
           created_at: string
@@ -670,6 +728,69 @@ export type Database = {
           },
           {
             foreignKeyName: "orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_protocols: {
+        Row: {
+          created_at: string
+          cycle_length_weeks: number | null
+          draw_volume_ml: number
+          frequency: string
+          id: string
+          notes: string | null
+          product_id: string
+          reconstitution_ml: number
+          storage: string | null
+          tenant_id: string
+          timing: string | null
+          updated_at: string
+          vial_strength: string | null
+        }
+        Insert: {
+          created_at?: string
+          cycle_length_weeks?: number | null
+          draw_volume_ml: number
+          frequency: string
+          id?: string
+          notes?: string | null
+          product_id: string
+          reconstitution_ml: number
+          storage?: string | null
+          tenant_id: string
+          timing?: string | null
+          updated_at?: string
+          vial_strength?: string | null
+        }
+        Update: {
+          created_at?: string
+          cycle_length_weeks?: number | null
+          draw_volume_ml?: number
+          frequency?: string
+          id?: string
+          notes?: string | null
+          product_id?: string
+          reconstitution_ml?: number
+          storage?: string | null
+          tenant_id?: string
+          timing?: string | null
+          updated_at?: string
+          vial_strength?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_protocols_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_protocols_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1142,3 +1263,5 @@ export const Constants = {
     Enums: {},
   },
 } as const
+A new version of Supabase CLI is available: v2.98.2 (currently installed v2.95.3)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
