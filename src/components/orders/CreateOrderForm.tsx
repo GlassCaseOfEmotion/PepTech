@@ -18,8 +18,9 @@ interface CreateOrderFormProps {
 export function CreateOrderForm({ customerId, customerName, conversationId, onSuccess, onCancel }: CreateOrderFormProps) {
   const [products, setProducts] = useState<ProductOption[]>([])
   const [quantities, setQuantities] = useState<Record<string, number>>({})
-  const [paymentAsset, setPaymentAsset] = useState('USDT')
+  const [paymentAsset, setPaymentAsset] = useState('cash')
   const [paymentAddress, setPaymentAddress] = useState('')
+  const [paymentConfigs, setPaymentConfigs] = useState<{ type: string; wallet_address: string | null; is_active: boolean }[]>([])
   const [address, setAddress] = useState({ ln1: '', ln2: '', city: '', state: '', zip: '' })
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -31,6 +32,15 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
       .then(r => r.json())
       .then((data: ProductOption[]) => setProducts(data))
       .catch(() => {/* non-critical */})
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/payments/configs')
+      .then(r => r.json())
+      .then((data: { type: string; wallet_address: string | null; is_active: boolean }[]) => {
+        setPaymentConfigs(data.filter(c => c.is_active))
+      })
+      .catch(() => {})
   }, [])
 
   const setQty = (productId: string, qty: number) => {
@@ -46,6 +56,22 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
 
   const selectedItems = products.filter(p => (quantities[p.id] ?? 0) > 0)
   const total = selectedItems.reduce((s, p) => s + (quantities[p.id] ?? 0) * p.unit_price, 0)
+
+  const paymentOptions = (() => {
+    const opts: { value: string; label: string }[] = [{ value: 'cash', label: 'Cash' }]
+    for (const c of paymentConfigs) {
+      const labels: Record<string, string> = {
+        usdt_trc20: 'USDT (TRC20)', btc: 'BTC', eth: 'ETH',
+        usdc_erc20: 'USDC (ERC20)', ltc: 'LTC', xmr: 'XMR',
+        bank_transfer: 'Bank Transfer',
+      }
+      if (labels[c.type]) opts.push({ value: c.type, label: labels[c.type] })
+    }
+    if (paymentConfigs.filter(c => c.type !== 'cash').length >= 2) {
+      opts.push({ value: 'customer_chooses', label: 'Customer chooses' })
+    }
+    return opts
+  })()
 
   const submit = async () => {
     if (!resolvedCustomerId) { setError('Customer is required'); return }
@@ -144,21 +170,36 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
       <div className="pt-co-section">
         <div className="pt-co-lbl">Payment</div>
         <div className="pt-co-row">
-          <select className="pt-input" style={{ flex: '0 0 100px' }} value={paymentAsset} onChange={e => setPaymentAsset(e.target.value)}>
-            <option>USDT</option>
-            <option>BTC</option>
-            <option>XMR</option>
-            <option>Cash</option>
-            <option>Other</option>
-          </select>
-          <input
+          <select
             className="pt-input"
-            placeholder="Receiving address (optional)"
-            value={paymentAddress}
-            onChange={e => setPaymentAddress(e.target.value)}
-            style={{ flex: 1 }}
-          />
+            style={{ flex: '0 0 160px' }}
+            value={paymentAsset}
+            onChange={e => {
+              const type = e.target.value
+              setPaymentAsset(type)
+              const cfg = paymentConfigs.find(c => c.type === type)
+              setPaymentAddress(cfg?.wallet_address ?? '')
+            }}
+          >
+            {paymentOptions.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          {paymentAddress && (
+            <input
+              className="pt-input mono"
+              style={{ flex: 1, fontSize: 11 }}
+              value={paymentAddress}
+              readOnly
+              title="Receiving address (auto-filled from your wallet config)"
+            />
+          )}
         </div>
+        {paymentConfigs.length === 0 && (
+          <p style={{ fontSize: 11, color: 'var(--pt-fg-4)', marginTop: 4 }}>
+            Configure payment methods in Settings → Wallets &amp; Assets
+          </p>
+        )}
       </div>
 
       {/* Shipping */}
