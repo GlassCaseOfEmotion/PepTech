@@ -96,3 +96,40 @@ export async function saveBatchCoaPath(batchId: string, coaPath: string): Promis
     return { error: e instanceof Error ? e.message : 'Unknown error' }
   }
 }
+
+export async function upsertProtocol(data: {
+  productId: string
+  vialStrength?: string
+  reconstitutionMl: number
+  drawVolumeMl: number
+  frequency: string
+  timing?: string
+  cycleLengthWeeks?: number | null
+  storage?: string
+  notes?: string
+}): Promise<{ success: true } | { error: string }> {
+  if (data.reconstitutionMl <= 0) return { error: 'Reconstitution volume must be greater than 0' }
+  if (data.drawVolumeMl <= 0) return { error: 'Draw volume must be greater than 0' }
+  if (data.drawVolumeMl > data.reconstitutionMl) return { error: 'Draw volume cannot exceed reconstitution volume' }
+  try {
+    const { supabase, tenantId } = await getTenantId()
+    const { error } = await supabase.from('product_protocols').upsert({
+      tenant_id: tenantId,
+      product_id: data.productId,
+      vial_strength: data.vialStrength?.trim() || null,
+      reconstitution_ml: data.reconstitutionMl,
+      draw_volume_ml: data.drawVolumeMl,
+      frequency: data.frequency,
+      timing: data.timing?.trim() || null,
+      cycle_length_weeks: data.cycleLengthWeeks ?? null,
+      storage: data.storage?.trim() || null,
+      notes: data.notes?.trim() || null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'tenant_id,product_id' })
+    if (error) return { error: error.message }
+    revalidatePath('/catalog')
+    return { success: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
