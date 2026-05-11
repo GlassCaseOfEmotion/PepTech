@@ -9,7 +9,7 @@ export type PaymentType =
   | 'cash'
   | 'customer_chooses'
 
-export const PAYMENT_LABELS: Record<string, string> = {
+export const PAYMENT_LABELS: Record<PaymentType, string> = {
   usdt_trc20:       'USDT (TRC20)',
   btc:              'BTC',
   eth:              'ETH',
