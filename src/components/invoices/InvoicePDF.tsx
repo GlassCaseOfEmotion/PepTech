@@ -23,10 +23,12 @@ const S = StyleSheet.create({
   totalLbl:  { fontSize: 11, fontFamily: 'Helvetica-Bold', marginRight: 64 },
   totalAmt:  { fontSize: 11, fontFamily: 'Helvetica-Bold', width: 64, textAlign: 'right' },
   payment:   { marginTop: 32, padding: 14, backgroundColor: '#f8f8f8', borderRadius: 4 },
-  payHd:     { fontSize: 9, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', letterSpacing: 0.8, color: '#888', marginBottom: 8 },
-  payRow:    { flexDirection: 'row', gap: 8, marginBottom: 4 },
-  payLbl:    { fontSize: 10, color: '#888', width: 60 },
-  payVal:    { fontSize: 10, fontFamily: 'Helvetica-Bold', flex: 1 },
+  payHd:     { fontSize: 9, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', letterSpacing: 0.8, color: '#888', marginBottom: 10 },
+  payMethod: { marginBottom: 10 },
+  payLabel:  { fontSize: 10, fontFamily: 'Helvetica-Bold', marginBottom: 3 },
+  payRow:    { flexDirection: 'row', gap: 8, marginBottom: 2 },
+  payKey:    { fontSize: 9, color: '#888', width: 72 },
+  payVal:    { fontSize: 9, flex: 1 },
   footer:    { position: 'absolute', bottom: 32, left: 48, right: 48, flexDirection: 'row', justifyContent: 'space-between', fontSize: 8, color: '#bbb', borderTopWidth: 0.5, borderTopColor: '#e0e0e0', paddingTop: 8 },
 })
 
@@ -95,19 +97,54 @@ export function InvoicePDF({ data }: { data: InvoiceData }) {
         </View>
 
         {/* Payment */}
-        <View style={S.payment}>
-          <Text style={S.payHd}>Payment details</Text>
-          <View style={S.payRow}>
-            <Text style={S.payLbl}>Asset</Text>
-            <Text style={S.payVal}>{data.paymentAsset}</Text>
+        {data.paymentMethods.length > 0 && (
+          <View style={S.payment}>
+            <Text style={S.payHd}>
+              {data.paymentMethods.length === 1 ? 'Payment details' : 'Payment options'}
+            </Text>
+            {data.paymentMethods.map((m, i) => (
+              <View key={i} style={S.payMethod}>
+                <Text style={S.payLabel}>{m.label}</Text>
+                {m.address && (
+                  <View style={S.payRow}>
+                    <Text style={S.payKey}>Address</Text>
+                    <Text style={S.payVal}>{m.address}</Text>
+                  </View>
+                )}
+                {m.accountName && (
+                  <View style={S.payRow}>
+                    <Text style={S.payKey}>Name</Text>
+                    <Text style={S.payVal}>{m.accountName}</Text>
+                  </View>
+                )}
+                {m.accountNumber && (
+                  <View style={S.payRow}>
+                    <Text style={S.payKey}>Account</Text>
+                    <Text style={S.payVal}>{m.accountNumber}</Text>
+                  </View>
+                )}
+                {m.sortCode && (
+                  <View style={S.payRow}>
+                    <Text style={S.payKey}>Sort code</Text>
+                    <Text style={S.payVal}>{m.sortCode}</Text>
+                  </View>
+                )}
+                {m.iban && (
+                  <View style={S.payRow}>
+                    <Text style={S.payKey}>IBAN</Text>
+                    <Text style={S.payVal}>{m.iban}</Text>
+                  </View>
+                )}
+                {m.reference && (
+                  <View style={S.payRow}>
+                    <Text style={S.payKey}>Reference</Text>
+                    <Text style={S.payVal}>{m.reference} (please include)</Text>
+                  </View>
+                )}
+              </View>
+            ))}
           </View>
-          {data.paymentAddress && (
-            <View style={S.payRow}>
-              <Text style={S.payLbl}>Address</Text>
-              <Text style={S.payVal}>{data.paymentAddress}</Text>
-            </View>
-          )}
-        </View>
+        )}
 
         {/* Footer */}
         <View style={S.footer}>

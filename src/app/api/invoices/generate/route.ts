@@ -4,6 +4,7 @@ import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import React from 'react'
 import { InvoicePDF } from '@/components/invoices/InvoicePDF'
 import { buildInvoiceData } from '@/types/invoices'
+import type { TenantPaymentConfig } from '@/types/payments'
 
 const ORDER_SELECT = `
   id, ref_number, payment_asset, payment_amount, payment_address, created_at,
@@ -46,7 +47,17 @@ export async function POST(request: Request) {
     logoUrl = signed?.signedUrl ?? null
   }
 
-  const invoiceData = buildInvoiceData(order as never, tenant?.name ?? 'My Business', logoUrl)
+  const { data: paymentConfigs } = await supabase
+    .from('tenant_payment_configs')
+    .select('*')
+    .eq('is_active', true)
+
+  const invoiceData = buildInvoiceData(
+    order as never,
+    tenant?.name ?? 'My Business',
+    logoUrl,
+    (paymentConfigs ?? []) as TenantPaymentConfig[],
+  )
 
   // Render PDF
   const buffer = await renderToBuffer(
