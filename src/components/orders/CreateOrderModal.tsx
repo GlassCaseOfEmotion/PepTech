@@ -11,11 +11,9 @@ interface CreateOrderModalProps {
 export function CreateOrderModal({ onClose }: CreateOrderModalProps) {
   const router = useRouter()
 
-  const handleSuccess = (_orderId: string, refNumber: string) => {
+  const handleSuccess = (orderId: string) => {
     onClose()
-    router.refresh()
-    // Brief feedback via the page title would be nice but omit for now
-    void refNumber
+    router.push(`/orders/${orderId}`)
   }
 
   return (
