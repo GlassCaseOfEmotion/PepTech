@@ -89,7 +89,7 @@ export function computeSupply(params: {
 }): ActiveCycle {
   const today = params.today ?? new Date()
   const effectiveDrawMl = params.override?.draw_volume_ml ?? params.protocol.draw_volume_ml
-  const effectiveFrequency = (params.override?.frequency ?? params.protocol.frequency) as Frequency
+  const effectiveFrequency: Frequency = params.override?.frequency ?? params.protocol.frequency
 
   const drawsPerVial = params.protocol.reconstitution_ml / effectiveDrawMl
   const injectionsPerDay = frequencyToDaily(effectiveFrequency)
@@ -98,7 +98,7 @@ export function computeSupply(params: {
 
   const daysElapsed = (today.getTime() - new Date(params.orderDate).getTime()) / 86_400_000
   const daysRemaining = totalDays - daysElapsed
-  const pctRemaining = Math.max(0, Math.min(1, daysRemaining / totalDays))
+  const pctRemaining = totalDays > 0 ? Math.max(0, Math.min(1, daysRemaining / totalDays)) : 0
 
   const status: SupplyStatus =
     daysRemaining <= 0         ? 'critical'
@@ -120,7 +120,7 @@ export function computeSupply(params: {
     status,
     effectiveDrawMl,
     effectiveFrequency,
-    hasOverride: !!(params.override?.draw_volume_ml || params.override?.frequency),
+    hasOverride: !!(params.override?.draw_volume_ml != null || params.override?.frequency != null),
     reconstitutionMl: params.protocol.reconstitution_ml,
     cycleLengthWeeks: params.protocol.cycle_length_weeks ?? null,
     estimatedEndDate,

@@ -26,9 +26,10 @@ describe('frequencyToDaily', () => {
 
 describe('computeSupply', () => {
   it('computes 20 day supply for 1 vial at 0.1ml once_daily (2/0.1=20 draws, 20/1=20 days)', () => {
+    const today = new Date()
     const cycle = computeSupply({
       productId: 'prod1', productName: 'BPC-157 5mg',
-      unitsOrdered: 1, orderDate: daysAgo(0), protocol: baseProtocol,
+      unitsOrdered: 1, orderDate: today.toISOString(), protocol: baseProtocol, today,
     })
     expect(cycle.totalDays).toBeCloseTo(20)
   })
