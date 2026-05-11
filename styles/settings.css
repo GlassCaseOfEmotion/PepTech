@@ -306,3 +306,42 @@ select.pt-st-input { cursor: pointer; }
 .pt-tpl-settings-title { font-size: 13px; font-weight: 500; color: var(--pt-fg); margin-bottom: 3px; }
 .pt-tpl-settings-body { font-size: 11.5px; color: var(--pt-fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pt-tpl-settings-actions { display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0; }
+
+/* ─── Wallets & Assets ───────────────────────────────────────────────────── */
+.pt-st-wallet-row {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 10px; padding: 10px 0;
+  border-top: 0.5px solid var(--pt-line-soft);
+}
+.pt-st-wallet-row:first-child { border-top: 0; }
+.pt-st-wallet-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pt-st-wallet-name { font-size: 12.5px; font-weight: 500; }
+.pt-st-wallet-addr { font-size: 11px; color: var(--pt-fg-3); font-family: var(--pt-mono); }
+.pt-st-wallet-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.pt-st-wallet-edit { width: 100%; display: flex; flex-direction: column; gap: 8px; padding-top: 8px; }
+.pt-st-wallet-edit .pt-st-input { max-width: 100%; }
+.pt-st-wallet-panel {
+  border: 0.5px solid var(--pt-line);
+  border-radius: var(--pt-radius);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  background: var(--pt-surface);
+}
+.pt-st-wallet-panel-hd {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--pt-fg-4); margin-bottom: 10px;
+}
+.pt-st-toggle {
+  width: 32px; height: 18px; border-radius: 9px;
+  border: none; cursor: pointer; flex-shrink: 0;
+  background: var(--pt-line); transition: background 0.15s;
+  position: relative;
+}
+.pt-st-toggle::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: white; transition: left 0.15s;
+}
+.pt-st-toggle.is-on { background: var(--pt-accent); }
+.pt-st-toggle.is-on::after { left: 17px; }
+.pt-st-toggle:disabled { opacity: 0.4; cursor: default; }

@@ -1,16 +1,12 @@
-export default function WalletsPage() {
-  return (
-    <div className="pt-st-section pt-st-stub">
-      <div className="pt-st-shd">
-        <div>
-          <h2>Wallets & assets</h2>
-          <p>Which assets you accept and how confirmations gate orders.</p>
-        </div>
-      </div>
-      <div className="pt-st-stub-body">
-        <div className="pt-st-stub-mark">Wallets & assets</div>
-        <div className="pt-st-stub-cap">Coming in Phase 3 — orders and payment tracking.</div>
-      </div>
-    </div>
-  )
+import { createClient } from '@/lib/supabase/server'
+import { WalletsForm } from '@/components/settings/WalletsForm'
+import type { TenantPaymentConfig } from '@/types/payments'
+
+export default async function WalletsPage() {
+  const supabase = await createClient()
+  const { data: configs } = await supabase
+    .from('tenant_payment_configs')
+    .select('*')
+    .order('created_at')
+  return <WalletsForm configs={(configs ?? []) as TenantPaymentConfig[]} />
 }
