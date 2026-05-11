@@ -5,11 +5,11 @@ import { createClient, getServerUser } from '@/lib/supabase/server'
 import { InboxView } from '@/components/inbox/InboxView'
 import type { DbConversation, DbQuickReply, DbTemplate } from '@/types/inbox'
 
-export default async function InboxPage({ searchParams }: { searchParams: Promise<{ conversation?: string; invoice_path?: string; invoice_name?: string }> }) {
+export default async function InboxPage({ searchParams }: { searchParams: Promise<{ conversation?: string; invoice_path?: string; invoice_name?: string; prefill?: string }> }) {
   const user = await getServerUser()
   if (!user) redirect('/login')
 
-  const { conversation: initialConversationId, invoice_path: initialInvoicePath, invoice_name: initialInvoiceName } = await searchParams
+  const { conversation: initialConversationId, invoice_path: initialInvoicePath, invoice_name: initialInvoiceName, prefill: initialPrefill } = await searchParams
   const supabase = await createClient()
 
   const [{ data: conversations }, { data: quickReplies }, { data: templates }, { count: resolvedCount }] = await Promise.all([
@@ -49,6 +49,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       initialActiveId={initialConversationId}
       initialInvoicePath={initialInvoicePath}
       initialInvoiceName={initialInvoiceName}
+      initialPrefill={initialPrefill}
     />
   )
 }

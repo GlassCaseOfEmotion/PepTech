@@ -306,9 +306,18 @@ function Bubble({ m, onImageClick }: { m: InboxMessage; onImageClick?: (url: str
 
 // ─── Composer ────────────────────────────────────────────────────────────────
 
-function Composer({ thread, onSend, isSending }: { thread: InboxThread; onSend: (text: string) => void; isSending: boolean }) {
+function Composer({ thread, onSend, isSending, initialText }: { thread: InboxThread; onSend: (text: string) => void; isSending: boolean; initialText?: string }) {
   const { quickReplies, templates, activeId, pendingInvoicePath, pendingInvoiceName, clearPendingInvoice } = useInbox()
-  const [draft, setDraft] = useState('')
+  const [draft, setDraft] = useState(initialText ?? '')
+
+  useEffect(() => {
+    if (initialText) {
+      setDraft(initialText)
+      const url = new URL(window.location.href)
+      url.searchParams.delete('prefill')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, []) // intentionally empty — only runs on mount
   const [showTemplates, setShowTemplates] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -509,12 +518,13 @@ function snoozeOptions() {
   ]
 }
 
-function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder }: {
+function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, initialPrefill }: {
   thread: InboxThread
   messages: InboxMessage[]
   onSend: (text: string) => void
   isSending: boolean
   onCreateOrder: () => void
+  initialPrefill?: string
 }) {
   const { snooze, markDone, reopen } = useInbox()
   const [showSnooze, setShowSnooze] = useState(false)
@@ -598,7 +608,7 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder }
         </div>
       )}
 
-      <Composer thread={thread} onSend={onSend} isSending={isSending} />
+      <Composer thread={thread} onSend={onSend} isSending={isSending} initialText={initialPrefill} />
     </div>
   )
 }
@@ -719,7 +729,7 @@ function ConversationRail({ thread }: { thread: InboxThread }) {
 
 // ─── Inner layout (consumes context) ────────────────────────────────────────
 
-function InboxLayout() {
+function InboxLayout({ initialPrefill }: { initialPrefill?: string }) {
   const { threads, activeId, setActiveId, filter, setFilter, messages, isSending, sendMessage } = useInbox()
   const activeThread = threads.find(t => t.id === activeId) ?? threads[0]
   const [showOrderRail, setShowOrderRail] = useState(false)
@@ -742,6 +752,7 @@ function InboxLayout() {
           onSend={sendMessage}
           isSending={isSending}
           onCreateOrder={() => setShowOrderRail(true)}
+          initialPrefill={initialPrefill}
         />
       )}
       {activeThread && !showOrderRail && <ConversationRail thread={activeThread} />}
@@ -767,9 +778,10 @@ interface InboxViewProps {
   initialActiveId?: string
   initialInvoicePath?: string
   initialInvoiceName?: string
+  initialPrefill?: string
 }
 
-export function InboxView({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId, initialInvoicePath, initialInvoiceName }: InboxViewProps) {
+export function InboxView({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId, initialInvoicePath, initialInvoiceName, initialPrefill }: InboxViewProps) {
   return (
     <InboxProvider
       initialConversations={initialConversations}
@@ -780,7 +792,7 @@ export function InboxView({ initialConversations, quickReplies, templates, initi
       initialInvoicePath={initialInvoicePath}
       initialInvoiceName={initialInvoiceName}
     >
-      <InboxLayout />
+      <InboxLayout initialPrefill={initialPrefill} />
     </InboxProvider>
   )
 }
