@@ -6,6 +6,7 @@ import { Shell } from '@/components/shell/Shell'
 import { CatalogView } from '@/components/catalog/CatalogView'
 import { dbProductToDisplay } from '@/types/catalog'
 import type { DbProduct, DbBatch } from '@/types/catalog'
+import type { ProductProtocol } from '@/types/protocols'
 
 export default async function CatalogPage() {
   const user = await getServerUser()
@@ -13,9 +14,10 @@ export default async function CatalogPage() {
 
   const supabase = await createClient()
 
-  const [{ data: products }, { data: batches }] = await Promise.all([
+  const [{ data: products }, { data: batches }, { data: protocols }] = await Promise.all([
     supabase.from('products').select('*').eq('is_active', true).order('product_family').order('name'),
     supabase.from('batches').select('*').order('created_at', { ascending: false }),
+    supabase.from('product_protocols').select('*'),
   ])
 
   const batchesByProduct = ((batches ?? []) as DbBatch[]).reduce<Record<string, DbBatch[]>>((acc, b) => {
@@ -30,7 +32,7 @@ export default async function CatalogPage() {
 
   return (
     <Shell section="Catalog">
-      <CatalogView products={catalogProducts} />
+      <CatalogView products={catalogProducts} protocols={(protocols ?? []) as ProductProtocol[]} />
     </Shell>
   )
 }

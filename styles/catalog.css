@@ -421,3 +421,16 @@ li:first-child .pt-cat-family-hd { border-top: none; }
   padding: 0;
 }
 .pt-od-coa:hover { text-decoration-color: var(--pt-accent); }
+
+/* ─── Protocol section ───────────────────────────────────────────────────── */
+.pt-cat-proto-dl {
+  display: grid; grid-template-columns: 110px 1fr;
+  gap: 4px 12px; margin: 0; padding: 12px 14px;
+  font-size: 12px;
+}
+.pt-cat-proto-dl dt { color: var(--pt-fg-4); text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; padding-top: 3px; }
+.pt-cat-proto-dl dd { margin: 0; padding-bottom: 6px; border-bottom: 0.5px solid var(--pt-line-soft); }
+.pt-cat-proto-dl dd:last-of-type { border-bottom: 0; padding-bottom: 0; }
+.pt-cat-proto-derived { font-size: 10.5px; color: var(--pt-fg-4); font-family: inherit; margin-left: 6px; }
+.pt-cat-proto-form { display: flex; flex-direction: column; gap: 12px; }
+.pt-cat-proto-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
