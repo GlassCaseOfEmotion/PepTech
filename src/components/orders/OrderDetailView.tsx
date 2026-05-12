@@ -4,7 +4,7 @@ import { useState, useTransition, useRef, Fragment } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
-import { updateOrderStatus, saveOrderNotes, confirmPayment } from '@/app/orders/actions'
+import { updateOrderStatus, saveOrderNotes, confirmPayment, packOrder } from '@/app/orders/actions'
 import { buildPaymentMessage } from '@/lib/payments'
 import { PAYMENT_LABELS } from '@/types/payments'
 import type { TenantPaymentConfig } from '@/types/payments'
@@ -46,6 +46,7 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: 
   const savingRef = useRef(false)
   const router = useRouter()
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [packError, setPackError] = useState('')
   const [confirmAsset, setConfirmAsset] = useState('')
   const [txHash, setTxHash] = useState('')
   const [confirmError, setConfirmError] = useState('')
@@ -63,7 +64,20 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: 
 
   const advance = () => {
     if (!nextStatus) return
-    const prevStatus = status   // capture synchronously before async gap
+    if (nextStatus === 'packing') {
+      setPackError('')
+      startTransition(async () => {
+        const result = await packOrder(order.id)
+        if ('error' in result) {
+          setPackError(result.error)
+          return
+        }
+        setStatus('packing')
+        router.refresh()
+      })
+      return
+    }
+    const prevStatus = status
     startTransition(async () => {
       setStatus(nextStatus)
       const result = await updateOrderStatus(order.id, nextStatus)
@@ -145,9 +159,14 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: 
             </Link>
           )}
           {nextStatus && (
-            <button className="pt-btn pt-btn-primary" onClick={advance} disabled={pending}>
-              → {STATUS_LABELS[nextStatus]}
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+              <button className="pt-btn pt-btn-primary" onClick={advance} disabled={pending}>
+                → {STATUS_LABELS[nextStatus]}
+              </button>
+              {packError && (
+                <span style={{ fontSize: 11, color: 'var(--pt-danger)' }}>{packError}</span>
+              )}
+            </div>
           )}
           <button className="pt-btn pt-btn-ghost"><Icons.more size={14} /></button>
         </div>

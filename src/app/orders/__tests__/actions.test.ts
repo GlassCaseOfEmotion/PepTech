@@ -87,3 +87,13 @@ describe('updateOrderStatus confirming→packing guard', () => {
     expect(ALLOWED_FROM['confirming']).toBeUndefined()
   })
 })
+
+describe('packOrder prerequisites', () => {
+  it('buildAssignments returns error for a single item with no batch', () => {
+    const result = buildAssignments(
+      [{ id: 'i1', productName: 'Widget', qty: 3 }],
+      new Map([['i1', null]]),
+    )
+    expect(result).toEqual({ error: 'Insufficient stock: Widget' })
+  })
+})
