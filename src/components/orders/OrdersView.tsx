@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
 import { updateOrderStatus } from '@/app/orders/actions'
 import { CreateOrderModal } from './CreateOrderModal'
+import { PAYMENT_BADGE } from '@/types/payments'
 import type { OrderCard, OrderStatus } from '@/types/orders'
 
 const COLUMNS: { id: OrderStatus; label: string; caption: string }[] = [
@@ -73,7 +74,9 @@ function OrderCardUI({ order: o, pulse, onDragStart, onDragEnd, onAdvance, isDra
       </div>
       <div className="pt-or-card-items">{o.itemsSummary || `${o.itemCount} item${o.itemCount !== 1 ? 's' : ''}`}</div>
       <div className="pt-or-card-pay">
-        <span className="pt-pay-asset" data-asset={o.paymentAsset}>{o.paymentAsset}</span>
+        <span className="pt-pay-asset" data-asset={PAYMENT_BADGE[o.paymentAsset]?.key ?? 'other'}>
+          {PAYMENT_BADGE[o.paymentAsset]?.label ?? o.paymentAsset}
+        </span>
         <span className="pt-or-card-amt mono">${o.paymentAmount.toFixed(2)}</span>
       </div>
       {nextStatus && (

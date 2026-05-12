@@ -21,6 +21,24 @@ export const PAYMENT_LABELS: Record<PaymentType, string> = {
   customer_chooses: 'Customer chooses',
 }
 
+// Short label + CSS data-asset key for coloured badges
+export const PAYMENT_BADGE: Record<string, { label: string; key: string }> = {
+  usdt_trc20:       { label: 'USDT',  key: 'usdt'  },
+  btc:              { label: 'BTC',   key: 'btc'   },
+  eth:              { label: 'ETH',   key: 'eth'   },
+  usdc_erc20:       { label: 'USDC',  key: 'usdc'  },
+  ltc:              { label: 'LTC',   key: 'ltc'   },
+  xmr:              { label: 'XMR',   key: 'xmr'   },
+  bank_transfer:    { label: 'Bank',  key: 'bank'  },
+  customer_chooses: { label: 'Multi', key: 'multi' },
+  cash:             { label: 'Cash',  key: 'cash'  },
+  // legacy casing
+  USDT:  { label: 'USDT',  key: 'usdt'  },
+  BTC:   { label: 'BTC',   key: 'btc'   },
+  Cash:  { label: 'Cash',  key: 'cash'  },
+  Other: { label: 'Other', key: 'other' },
+}
+
 // Ordered list shown in dropdowns and config UI (excludes cash + customer_chooses)
 export const PAYMENT_METHODS: PaymentType[] = [
   'usdt_trc20', 'btc', 'eth', 'usdc_erc20', 'ltc', 'xmr', 'bank_transfer',

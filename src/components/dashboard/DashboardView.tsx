@@ -11,6 +11,7 @@ import type { InboxThread } from '@/types/inbox'
 import type { CatalogProduct } from '@/types/catalog'
 import type { DashboardStats, PendingOrder } from '@/types/dashboard'
 import { initials } from '@/types/inbox'
+import { PAYMENT_BADGE } from '@/types/payments'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -217,22 +218,6 @@ function fmtAge(mins: number) {
   return `${Math.floor(mins / 1440)}d ago`
 }
 
-const ASSET_BADGE: Record<string, { label: string; key: string }> = {
-  usdt_trc20:       { label: 'USDT',  key: 'usdt'  },
-  btc:              { label: 'BTC',   key: 'btc'   },
-  eth:              { label: 'ETH',   key: 'eth'   },
-  usdc_erc20:       { label: 'USDC',  key: 'usdc'  },
-  ltc:              { label: 'LTC',   key: 'ltc'   },
-  xmr:              { label: 'XMR',   key: 'xmr'   },
-  bank_transfer:    { label: 'Bank',  key: 'bank'  },
-  customer_chooses: { label: 'Multi', key: 'multi' },
-  cash:             { label: 'Cash',  key: 'cash'  },
-  // legacy values
-  USDT:             { label: 'USDT',  key: 'usdt'  },
-  BTC:              { label: 'BTC',   key: 'btc'   },
-  Other:            { label: 'Other', key: 'other' },
-  Cash:             { label: 'Cash',  key: 'cash'  },
-}
 
 function PaymentsCard({ orders }: { orders: PendingOrder[] }) {
   return (
@@ -243,7 +228,7 @@ function PaymentsCard({ orders }: { orders: PendingOrder[] }) {
           <li className="pt-pay" style={{ opacity: 0.5, fontSize: 12 }}>No pending payments</li>
         )}
         {orders.map(o => {
-          const badge = ASSET_BADGE[o.asset] ?? { label: o.asset, key: 'other' }
+          const badge = PAYMENT_BADGE[o.asset] ?? { label: o.asset, key: 'other' }
           return (
           <li key={o.id} className={`pt-pay pt-pay-${o.status === 'confirming' ? 'confirming' : 'pending'}`}>
             <div className="pt-pay-asset" data-asset={badge.key}>{badge.label}</div>
