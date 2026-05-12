@@ -42,6 +42,15 @@ export default async function CustomersPage() {
     ordersByCustomer[order.customer_id]!.push(order)
   }
 
+  // Order stats per customer (recentOrders already sorted desc by created_at)
+  const orderStats: Record<string, { count: number; lastOrderAt: string | null }> = {}
+  for (const [customerId, orders] of Object.entries(ordersByCustomer)) {
+    orderStats[customerId] = {
+      count: orders!.length,
+      lastOrderAt: orders![0]?.created_at ?? null,
+    }
+  }
+
   const priorityOf = (s: SupplyStatus) => s === 'critical' ? 2 : s === 'low' ? 1 : 0
 
   for (const customer of customers ?? []) {
@@ -80,7 +89,7 @@ export default async function CustomersPage() {
 
   return (
     <Shell section="Customers">
-      <CustomersListView customers={customers ?? []} supplyStatuses={supplyStatuses} />
+      <CustomersListView customers={customers ?? []} supplyStatuses={supplyStatuses} orderStats={orderStats} />
     </Shell>
   )
 }

@@ -26,12 +26,23 @@ function initials(name: string) {
   return (up && up.length >= 2 ? up.slice(0, 2) : [name[0]]).join('')
 }
 
+function fmtLastOrder(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
+  if (days === 0) return 'today'
+  if (days === 1) return 'yesterday'
+  if (days < 7) return `${days}d ago`
+  if (days < 30) return `${Math.floor(days / 7)}w ago`
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`
+  return `${Math.floor(days / 365)}y ago`
+}
+
 interface Props {
   customers: Customer[]
   supplyStatuses?: Record<string, SupplyStatus | null>
+  orderStats?: Record<string, { count: number; lastOrderAt: string | null }>
 }
 
-export function CustomersListView({ customers, supplyStatuses = {} }: Props) {
+export function CustomersListView({ customers, supplyStatuses = {}, orderStats = {} }: Props) {
   const [search, setSearch] = useState('')
   const router = useRouter()
 
@@ -71,6 +82,8 @@ export function CustomersListView({ customers, supplyStatuses = {} }: Props) {
                   <th>Customer</th>
                   <th>Contact</th>
                   <th className="r">LTV</th>
+                  <th className="r">Orders</th>
+                  <th>Last order</th>
                   <th>Trust</th>
                   <th>Supply</th>
                   <th />
@@ -84,6 +97,7 @@ export function CustomersListView({ customers, supplyStatuses = {} }: Props) {
                   const trustCls = c.trust_score >= 85 ? 'hi' : c.trust_score >= 65 ? 'md' : 'lo'
                   const tags = c.customer_tags.map(t => t.tag)
                   const supply = supplyStatuses[c.id]
+                  const stats = orderStats[c.id]
 
                   return (
                     <tr key={c.id} onClick={() => router.push(`/customers/${c.id}`)}>
@@ -104,6 +118,10 @@ export function CustomersListView({ customers, supplyStatuses = {} }: Props) {
                       </td>
                       <td className="pt-cl-handle mono">{primary?.display_handle ?? '—'}</td>
                       <td className="r pt-cl-ltv">${c.ltv.toLocaleString()}</td>
+                      <td className="r pt-cl-order-count">{stats?.count ?? '—'}</td>
+                      <td className="pt-cl-last-order">
+                        {stats?.lastOrderAt ? fmtLastOrder(stats.lastOrderAt) : <span className="pt-cl-no-supply">—</span>}
+                      </td>
                       <td><span className={`pt-trust-pill pt-trust-${trustCls}`}>{c.trust_score}</span></td>
                       <td>
                         {supply ? (
