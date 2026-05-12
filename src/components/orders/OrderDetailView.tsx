@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
 import { updateOrderStatus, saveOrderNotes, confirmPayment, packOrder } from '@/app/orders/actions'
 import { buildPaymentMessage } from '@/lib/payments'
-import { PAYMENT_LABELS } from '@/types/payments'
+import { PAYMENT_LABELS, PAYMENT_BADGE } from '@/types/payments'
 import type { TenantPaymentConfig } from '@/types/payments'
 import type { DbOrderRow, DbOrderEvent, OrderStatus } from '@/types/orders'
 import { SendInvoiceModal } from './SendInvoiceModal'
@@ -347,7 +347,9 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: 
                 <div>
                   <div className="pt-od-pay-lbl">Asset</div>
                   <div className="pt-od-pay-val">
-                    <span className="pt-pay-asset" data-asset={order.payment_asset}>{order.payment_asset}</span>
+                    <span className="pt-pay-asset" data-asset={PAYMENT_BADGE[order.payment_asset]?.key ?? 'other'}>
+                      {PAYMENT_BADGE[order.payment_asset]?.label ?? order.payment_asset}
+                    </span>
                     <span className="mono" style={{ marginLeft: 8 }}>${order.payment_amount.toFixed(2)}</span>
                   </div>
                 </div>
