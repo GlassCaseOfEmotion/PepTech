@@ -28,10 +28,12 @@ export default async function OrdersPage() {
   if (!user) redirect('/login')
 
   const supabase = await createClient()
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+
   const { data: orders } = await supabase
     .from('orders')
     .select(ORDER_SELECT)
-    .not('status', 'eq', 'delivered')
+    .or(`status.neq.delivered,and(status.eq.delivered,created_at.gte.${thirtyDaysAgo})`)
     .order('created_at', { ascending: false })
     .limit(100)
 
