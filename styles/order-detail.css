@@ -376,3 +376,54 @@
 }
 .pt-co-stepper-btn:hover { background: oklch(from var(--pt-fg) l c h / 0.06); }
 .pt-co-stepper-qty { min-width: 28px; text-align: center; font-size: 13px; font-weight: 500; }
+
+/* ── Payment action banner ──────────────────────────────────────────────── */
+.pt-od-payment-panel {
+  border-bottom: 0.5px solid var(--pt-line);
+  padding: 10px 22px 12px 19px;
+  display: flex; flex-direction: column; gap: 0;
+}
+.pt-od-payment-panel.is-awaiting {
+  background: var(--pt-warn-soft);
+  box-shadow: inset 3px 0 0 var(--pt-warn);
+}
+.pt-od-payment-panel.is-confirmed {
+  background: var(--pt-ok-soft);
+  box-shadow: inset 3px 0 0 var(--pt-ok);
+}
+
+.pt-od-payment-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; padding-bottom: 8px;
+}
+.pt-od-payment-hd > span {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em;
+}
+.is-awaiting .pt-od-payment-hd > span { color: var(--pt-warn); }
+.is-confirmed .pt-od-payment-hd > span { color: var(--pt-ok); }
+
+.pt-od-payment-body {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.pt-od-payment-asset {
+  font-size: 14px; font-weight: 600; letter-spacing: -0.01em;
+  color: var(--pt-fg);
+}
+.pt-od-payment-addr {
+  font-size: 11px; color: var(--pt-fg-3);
+  background: oklch(from var(--pt-fg) l c h / 0.06);
+  border: 0.5px solid oklch(from var(--pt-fg) l c h / 0.1);
+  border-radius: 5px; padding: 3px 9px;
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.pt-od-confirm-dialog {
+  margin-top: 12px;
+  padding: 14px 16px;
+  background: var(--pt-surface);
+  border: 0.5px solid oklch(from var(--pt-warn) l c h / 0.25);
+  border-radius: var(--pt-radius);
+  box-shadow: 0 1px 4px oklch(from var(--pt-warn) l c h / 0.08);
+}

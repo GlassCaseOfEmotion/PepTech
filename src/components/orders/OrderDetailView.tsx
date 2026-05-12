@@ -183,9 +183,9 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: 
 
       {/* Payment panel — awaiting */}
       {status === 'awaiting' && order.payment_asset !== 'cash' && (
-        <div className="pt-od-payment-panel">
+        <div className="pt-od-payment-panel is-awaiting">
           <div className="pt-od-payment-hd">
-            <span>Payment</span>
+            <span>Awaiting payment</span>
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11 }} onClick={sendPaymentDetails}>
                 <Icons.send size={11} /> Send payment details
@@ -255,7 +255,7 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: 
       )}
       {/* Payment panel — confirmed with tx hash */}
       {status !== 'awaiting' && order.tx_hash && (
-        <div className="pt-od-payment-panel">
+        <div className="pt-od-payment-panel is-confirmed">
           <div className="pt-od-payment-hd"><span>Payment confirmed</span></div>
           <div className="pt-od-payment-body">
             <span className="pt-od-payment-asset">{PAYMENT_LABELS[order.payment_asset as keyof typeof PAYMENT_LABELS] ?? order.payment_asset}</span>
