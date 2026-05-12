@@ -257,7 +257,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                           return (
                             <tr key={o.id}>
                               <td className="mono" style={{ whiteSpace: 'nowrap' }}>
-                                <Link href={`/orders/${o.id}`} className="pt-link">#{o.ref_number}</Link>
+                                <Link href={`/orders/${o.id}`} className="pt-link pt-cu-order-link">#{o.ref_number}</Link>
                               </td>
                               <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(o.created_at)}</td>
                               <td className="pt-cu-items">

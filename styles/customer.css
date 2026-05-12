@@ -60,7 +60,9 @@
   padding: 1px 6px; border-radius: 4px; white-space: nowrap;
 }
 .pt-cu-item-more { font-size: 11px; color: var(--pt-fg-4); white-space: nowrap; }
+.pt-cu-orders tbody tr { position: relative; cursor: pointer; }
 .pt-cu-orders tbody tr:hover { background: oklch(from var(--pt-fg) l c h / 0.025); }
+.pt-cu-order-link::after { content: ''; position: absolute; inset: 0; }
 .pt-cu-state { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; }
 .pt-cu-state i { width: 6px; height: 6px; border-radius: 50%; background: var(--pt-fg-4); }
 .pt-cu-state-ok { color: var(--pt-ok); } .pt-cu-state-ok i { background: var(--pt-ok); }
