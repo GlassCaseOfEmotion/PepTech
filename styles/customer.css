@@ -1,4 +1,37 @@
 /* customer.css */
+
+/* ── Customer list table ────────────────────────────────────────────────── */
+.pt-cl { width: 100%; border-collapse: collapse; }
+.pt-cl th {
+  text-align: left; padding: 8px 14px;
+  font-size: 10px; font-weight: 600; color: var(--pt-fg-4);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  border-bottom: 0.5px solid var(--pt-line);
+  white-space: nowrap; background: var(--pt-bg-side);
+}
+.pt-cl th.r { text-align: right; }
+.pt-cl td { padding: 11px 14px; border-bottom: 0.5px solid var(--pt-line-soft); vertical-align: middle; }
+.pt-cl tbody tr:last-child td { border-bottom: 0; }
+.pt-cl tbody tr { cursor: pointer; }
+.pt-cl tbody tr:hover td { background: oklch(from var(--pt-fg) l c h / 0.02); }
+
+.pt-cl-cust { display: flex; align-items: center; gap: 10px; }
+.pt-cl-name {
+  font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.pt-cl-handle { font-size: 11.5px; color: var(--pt-fg-3); }
+.pt-cl-ltv {
+  font-size: 13px; font-weight: 600;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+}
+.pt-cl td.r { text-align: right; }
+.pt-cl-no-supply { font-size: 12px; color: var(--pt-fg-4); }
+.pt-cl-actions {
+  display: flex; gap: 6px; justify-content: flex-end;
+  opacity: 0; transition: opacity 0.12s;
+}
+.pt-cl tbody tr:hover .pt-cl-actions { opacity: 1; }
 .pt-cu { height: calc(100vh - 48px); display: flex; flex-direction: column; overflow: hidden; }
 .pt-cu-hd {
   display: flex; align-items: center; gap: 14px;
