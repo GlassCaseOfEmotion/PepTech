@@ -24,6 +24,12 @@ const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
   awaiting: 'confirming', confirming: 'packing',
   packing: 'shipped', shipped: 'delivered',
 }
+const ADVANCE_LABELS: Partial<Record<OrderStatus, string>> = {
+  confirming: 'Confirm Payment',
+  packing: 'Pack Order',
+  shipped: 'Mark as Shipped',
+  delivered: 'Mark as Delivered',
+}
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -151,17 +157,17 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: 
         </div>
         <div className="pt-od-hd-actions">
           <button className="pt-btn pt-btn-ghost" onClick={() => setShowInvoiceModal(true)}>
-            <Icons.doc size={12} /> Invoice
+            <Icons.doc size={12} /> Send Invoice
           </button>
           {order.conversation_id && (
             <Link href={`/inbox?conversation=${order.conversation_id}`} className="pt-btn pt-btn-ghost">
-              <Icons.send size={12} /> Message
+              <Icons.send size={12} /> Open Chat
             </Link>
           )}
           {nextStatus && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
               <button className="pt-btn pt-btn-primary" onClick={advance} disabled={pending}>
-                → {STATUS_LABELS[nextStatus]}
+                {ADVANCE_LABELS[nextStatus] ?? `→ ${STATUS_LABELS[nextStatus]}`}
               </button>
               {packError && (
                 <span style={{ fontSize: 11, color: 'var(--pt-danger)' }}>{packError}</span>
