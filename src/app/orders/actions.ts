@@ -110,7 +110,7 @@ export async function updateOrderStatus(orderId: string, status: string): Promis
     }
 
     const { error: updateError } = await supabase.from('orders')
-      .update({ status })
+      .update({ status, ...(status === 'delivered' ? { delivered_at: new Date().toISOString() } : {}) })
       .eq('id', orderId).eq('tenant_id', tenantId)
     if (updateError) return { error: updateError.message }
     await supabase.from('order_events').insert({

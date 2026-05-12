@@ -662,6 +662,7 @@ export type Database = {
           conversation_id: string | null
           created_at: string
           customer_id: string
+          delivered_at: string | null
           id: string
           notes: string | null
           payment_address: string | null
@@ -680,6 +681,7 @@ export type Database = {
           conversation_id?: string | null
           created_at?: string
           customer_id: string
+          delivered_at?: string | null
           id?: string
           notes?: string | null
           payment_address?: string | null
@@ -698,6 +700,7 @@ export type Database = {
           conversation_id?: string | null
           created_at?: string
           customer_id?: string
+          delivered_at?: string | null
           id?: string
           notes?: string | null
           payment_address?: string | null

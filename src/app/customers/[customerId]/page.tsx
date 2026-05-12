@@ -73,7 +73,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
       .limit(10),
     supabase
       .from('orders')
-      .select('id, ref_number, status, payment_asset, payment_amount, created_at, order_items(product_id, qty, unit_price_snapshot, products(name))')
+      .select('id, ref_number, status, payment_asset, payment_amount, created_at, delivered_at, order_items(product_id, qty, unit_price_snapshot, products(name))')
       .eq('customer_id', customerId)
       .order('created_at', { ascending: false }),
   ])
@@ -88,7 +88,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
   const realOrders = orders ?? []
 
   // ── Compute active cycles ─────────────────────────────────────────────────
-  type LatestItem = { productId: string; productName: string; qty: number; orderDate: string }
+  type LatestItem = { productId: string; productName: string; qty: number; orderDate: string | null }
   const seenProducts = new Set<string>()
   const latestItems: LatestItem[] = []
 
@@ -101,7 +101,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
         productId: item.product_id,
         productName: item.products?.name ?? '—',
         qty: item.qty,
-        orderDate: order.created_at,
+        orderDate: (order as { delivered_at?: string | null }).delivered_at ?? null,
       })
     }
   }
@@ -121,6 +121,11 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
     for (const item of latestItems) {
       const protocol = protocolMap[item.productId]
       if (!protocol) {
+        cycles.push({ productId: item.productId, productName: item.productName })
+        continue
+      }
+      // Clock starts at delivery — if not yet delivered, supply hasn't started
+      if (!item.orderDate) {
         cycles.push({ productId: item.productId, productName: item.productName })
         continue
       }

@@ -18,7 +18,7 @@ export default async function CustomersPage() {
       .order('created_at', { ascending: false }),
     supabase
       .from('orders')
-      .select('customer_id, created_at, order_items(product_id, qty)')
+      .select('customer_id, created_at, delivered_at, order_items(product_id, qty)')
       .order('created_at', { ascending: false }),
     supabase.from('product_protocols').select('*'),
     supabase.from('customer_protocol_overrides').select('customer_id, product_id, draw_volume_ml, frequency, notes, id, tenant_id, created_at, updated_at'),
@@ -56,11 +56,13 @@ export default async function CustomersPage() {
         seenProducts.add(item.product_id)
         const protocol = protocolMap[item.product_id]
         if (!protocol) continue
+        const deliveredAt = (order as { delivered_at?: string | null }).delivered_at
+        if (!deliveredAt) continue  // clock starts at delivery — skip undelivered orders
         const cycle = computeSupply({
           productId: item.product_id,
           productName: '',
           unitsOrdered: item.qty,
-          orderDate: order.created_at,
+          orderDate: deliveredAt,
           protocol,
           override: overrideMap[`${customer.id}:${item.product_id}`] ?? null,
         })
