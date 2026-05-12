@@ -438,7 +438,7 @@ kbd {
 }
 .pt-card-hd h3 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
 .pt-card-hd p  { margin: 1px 0 0; font-size: 11.5px; color: var(--pt-fg-3); }
-.pt-card-body { padding: 4px 14px 14px; flex: 1; min-height: 0; }
+.pt-card-body { padding: 0; flex: 1; min-height: 0; }
 .pt-card-body.is-scroll { overflow-y: auto; }
 .pt-card-ft {
   border-top: 0.5px solid var(--pt-line-soft);
