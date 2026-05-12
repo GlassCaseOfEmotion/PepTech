@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       agent_messages: {
@@ -1133,6 +1158,10 @@ export type Database = {
         Returns: undefined
       }
       next_order_ref: { Args: { p_tenant_id: string }; Returns: string }
+      pack_order: {
+        Args: { p_assignments: Json; p_order_id: string; p_tenant_id: string }
+        Returns: undefined
+      }
       unsnooze_expired: { Args: never; Returns: undefined }
     }
     Enums: {
@@ -1262,6 +1291,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
