@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildAssignments } from '../actions'
+import { buildAssignments } from '../utils'
 
 function validateOrderItems(items: { productId: string; qty: number; unitPriceSnapshot: number }[]): string | null {
   if (items.length === 0) return 'Order must have at least one item'
