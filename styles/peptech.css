@@ -625,7 +625,7 @@ kbd {
 .pt-reorder {
   display: grid; grid-template-columns: 70px 1fr 76px 26px;
   gap: 10px; align-items: center;
-  padding: 8px 12px;
+  padding: 8px 14px;
   border-top: 0.5px solid var(--pt-line-soft);
 }
 .pt-reorder:first-child { border-top: 0; }
@@ -652,7 +652,7 @@ kbd {
 /* ─── Stock table ────────────────────────────────────────────────────────── */
 .pt-stock { width: 100%; border-collapse: collapse; }
 .pt-stock th, .pt-stock td {
-  padding: 7px 12px; text-align: left;
+  padding: 7px 14px; text-align: left;
   border-top: 0.5px solid var(--pt-line-soft);
   font-size: 12px;
 }
@@ -707,7 +707,7 @@ kbd {
 .pt-ship {
   display: grid; grid-template-columns: 28px 1fr;
   gap: 10px; align-items: flex-start;
-  padding: 9px 12px;
+  padding: 9px 14px;
   border-top: 0.5px solid var(--pt-line-soft);
 }
 .pt-ship:first-child { border-top: 0; }
