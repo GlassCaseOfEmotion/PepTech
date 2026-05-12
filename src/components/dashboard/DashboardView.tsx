@@ -75,7 +75,7 @@ function DashCard({ title, subtitle, action, span, footer, scroll, children }: {
         </div>
         {action}
       </header>
-      <div className={`pt-card-body ${scroll ? 'is-scroll' : ''}`}>{children}</div>
+      <div className={`pt-card-body ${scroll ? 'is-scroll' : ''}`} style={{ padding: 0 }}>{children}</div>
       {footer && <footer className="pt-card-ft">{footer}</footer>}
     </section>
   )

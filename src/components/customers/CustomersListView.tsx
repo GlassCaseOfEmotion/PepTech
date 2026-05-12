@@ -62,7 +62,7 @@ export function CustomersListView({ customers, supplyStatuses = {} }: Props) {
 
       <div className="pt-grid" style={{ gridTemplateColumns: '1fr' }}>
         <section className="pt-card">
-          <div className="pt-card-body">
+          <div className="pt-card-body" style={{ padding: 0 }}>
             <ul className="pt-thread-list">
               {filtered.map(c => {
                 const primary = c.customer_channels.find(ch => ch.is_primary) ?? c.customer_channels[0]
