@@ -60,6 +60,7 @@ export interface ActiveCycle {
 export interface OrderedProductNoProtocol {
   productId: string
   productName: string
+  pendingDelivery?: boolean  // true = protocol exists but order not yet delivered
 }
 
 export type CycleEntry = ActiveCycle | OrderedProductNoProtocol

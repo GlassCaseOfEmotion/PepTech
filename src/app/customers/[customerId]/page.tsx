@@ -97,11 +97,14 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
     for (const item of items ?? []) {
       if (!item.product_id || seenProducts.has(item.product_id)) continue
       seenProducts.add(item.product_id)
+      const o = order as { status: string; created_at: string; delivered_at?: string | null }
+      // Use delivered_at if set; fall back to created_at for pre-existing delivered orders
+      const orderDate = o.delivered_at ?? (o.status === 'delivered' ? o.created_at : null)
       latestItems.push({
         productId: item.product_id,
         productName: item.products?.name ?? '—',
         qty: item.qty,
-        orderDate: (order as { delivered_at?: string | null }).delivered_at ?? null,
+        orderDate,
       })
     }
   }
@@ -126,7 +129,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
       }
       // Clock starts at delivery — if not yet delivered, supply hasn't started
       if (!item.orderDate) {
-        cycles.push({ productId: item.productId, productName: item.productName })
+        cycles.push({ productId: item.productId, productName: item.productName, pendingDelivery: true })
         continue
       }
       cycles.push(computeSupply({

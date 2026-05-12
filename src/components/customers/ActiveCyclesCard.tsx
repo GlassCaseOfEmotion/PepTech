@@ -135,8 +135,11 @@ export function ActiveCyclesCard({ cycles, customerId }: { cycles: CycleEntry[];
               : (
                 <li key={entry.productId} className="pt-cu-cycle-row pt-cu-cycle-no-protocol">
                   <span className="pt-cu-cycle-name" style={{ color: 'var(--pt-fg-3)' }}>{entry.productName}</span>
-                  <span style={{ fontSize: 11, color: 'var(--pt-fg-4)' }}>No protocol configured</span>
-                  <Link href="/catalog" className="pt-link" style={{ fontSize: 11 }}>Set up in Catalog →</Link>
+                  {entry.pendingDelivery
+                    ? <span style={{ fontSize: 11, color: 'var(--pt-fg-4)' }}>⏳ Awaiting delivery</span>
+                    : <><span style={{ fontSize: 11, color: 'var(--pt-fg-4)' }}>No protocol configured</span>
+                       <Link href="/catalog" className="pt-link" style={{ fontSize: 11 }}>Set up in Catalog →</Link></>
+                  }
                 </li>
               )
           )}
