@@ -17,7 +17,23 @@ function initials(name: string) {
 }
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+const PAY_BADGE: Record<string, { label: string; key: string }> = {
+  usdt_trc20:       { label: 'USDT',  key: 'usdt'  },
+  btc:              { label: 'BTC',   key: 'btc'   },
+  eth:              { label: 'ETH',   key: 'eth'   },
+  usdc_erc20:       { label: 'USDC',  key: 'usdc'  },
+  ltc:              { label: 'LTC',   key: 'ltc'   },
+  xmr:              { label: 'XMR',   key: 'xmr'   },
+  bank_transfer:    { label: 'Bank',  key: 'bank'  },
+  customer_chooses: { label: 'Multi', key: 'multi' },
+  cash:             { label: 'Cash',  key: 'cash'  },
+  USDT:             { label: 'USDT',  key: 'usdt'  },
+  BTC:              { label: 'BTC',   key: 'btc'   },
+  Cash:             { label: 'Cash',  key: 'cash'  },
+  Other:            { label: 'Other', key: 'other' },
 }
 
 // ─── Mock data for sections not yet backed by the DB ────────────────────────
@@ -237,15 +253,25 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                       <tbody>
                         {realOrders.map(o => {
                           const items = (o.order_items as { qty: number; products: { name: string } | null }[]) ?? []
-                          const itemsSummary = items.map(i => `${i.products?.name ?? '?'} ×${i.qty}`).join(', ') || '—'
+                          const badge = PAY_BADGE[o.payment_asset] ?? { label: o.payment_asset, key: 'other' }
                           return (
                             <tr key={o.id}>
-                              <td className="mono">
+                              <td className="mono" style={{ whiteSpace: 'nowrap' }}>
                                 <Link href={`/orders/${o.id}`} className="pt-link">#{o.ref_number}</Link>
                               </td>
-                              <td>{fmtDate(o.created_at)}</td>
-                              <td className="pt-cu-items">{itemsSummary}</td>
-                              <td><span className="pt-pay-asset" data-asset={o.payment_asset}>{o.payment_asset}</span></td>
+                              <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(o.created_at)}</td>
+                              <td className="pt-cu-items">
+                                {items.slice(0, 2).map((i, idx) => (
+                                  <span key={idx} className="pt-cu-item-chip">
+                                    {i.products?.name ?? '?'} ×{i.qty}
+                                  </span>
+                                ))}
+                                {items.length > 2 && (
+                                  <span className="pt-cu-item-more">+{items.length - 2} more</span>
+                                )}
+                                {items.length === 0 && '—'}
+                              </td>
+                              <td><span className="pt-pay-asset" data-asset={badge.key}>{badge.label}</span></td>
                               <td className="r mono">${o.payment_amount.toLocaleString()}</td>
                               <td><OrderState state={o.status} /></td>
                             </tr>

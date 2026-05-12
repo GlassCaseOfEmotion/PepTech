@@ -53,7 +53,13 @@
   text-transform: uppercase; letter-spacing: 0.04em;
 }
 .pt-cu-orders .r { text-align: right; }
-.pt-cu-items { color: var(--pt-fg-2); }
+.pt-cu-items { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.pt-cu-item-chip {
+  font-size: 11px; color: var(--pt-fg-2);
+  background: oklch(from var(--pt-fg) l c h / 0.05);
+  padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+}
+.pt-cu-item-more { font-size: 11px; color: var(--pt-fg-4); white-space: nowrap; }
 .pt-cu-orders tbody tr:hover { background: oklch(from var(--pt-fg) l c h / 0.025); }
 .pt-cu-state { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; }
 .pt-cu-state i { width: 6px; height: 6px; border-radius: 50%; background: var(--pt-fg-4); }
