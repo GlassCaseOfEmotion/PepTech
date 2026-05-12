@@ -43,7 +43,7 @@
 /* Order history table */
 .pt-cu-orders { width: 100%; border-collapse: collapse; }
 .pt-cu-orders th, .pt-cu-orders td {
-  padding: 8px 12px; text-align: left;
+  padding: 8px 14px; text-align: left;
   border-top: 0.5px solid var(--pt-line-soft);
   font-size: 12px;
 }
