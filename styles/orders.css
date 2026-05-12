@@ -135,7 +135,7 @@
 .pt-or-card-name { font-size: 12px; font-weight: 500; flex: 1; min-width: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.pt-or-card-items { font-size: 11.5px; color: var(--pt-fg-2); line-height: 1.4; }
+.pt-or-card-items { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 
 .pt-or-card-pay { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .pt-or-card-amt { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }

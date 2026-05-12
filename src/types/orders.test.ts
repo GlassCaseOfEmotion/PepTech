@@ -32,9 +32,12 @@ describe('dbOrderToCard', () => {
     expect(card.channel).toBe('wa')
   })
 
-  it('builds items summary string', () => {
+  it('maps order_items to items array', () => {
     const card = dbOrderToCard(BASE_ORDER)
-    expect(card.itemsSummary).toBe('BPC-157 5mg ×3, GHK-Cu 50mg ×1')
+    expect(card.items).toEqual([
+      { name: 'BPC-157 5mg', qty: 3 },
+      { name: 'GHK-Cu 50mg', qty: 1 },
+    ])
   })
 
   it('calculates minsAgo from created_at', () => {

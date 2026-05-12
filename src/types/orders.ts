@@ -62,8 +62,7 @@ export type OrderCard = {
   paymentAsset: string
   paymentAmount: number
   conversationId: string | null
-  itemsSummary: string
-  itemCount: number
+  items: { name: string; qty: number }[]
   minsAgo: number
   createdAt: string
 }
@@ -77,9 +76,7 @@ export function dbOrderToCard(o: DbOrderRow): OrderCard {
     ?? o.customers?.customer_channels?.[0]
   const channel = CH_MAP[primaryChannel?.channel_type ?? 'whatsapp'] ?? 'wa'
   const minsAgo = Math.floor((Date.now() - new Date(o.created_at).getTime()) / 60000)
-  const itemsSummary = o.order_items
-    .map(it => `${it.products?.name ?? 'Unknown'} ×${it.qty}`)
-    .join(', ')
+  const items = o.order_items.map(it => ({ name: it.products?.name ?? 'Unknown', qty: it.qty }))
 
   return {
     id: o.id,
@@ -92,8 +89,7 @@ export function dbOrderToCard(o: DbOrderRow): OrderCard {
     paymentAsset: o.payment_asset,
     paymentAmount: o.payment_amount,
     conversationId: o.conversation_id,
-    itemsSummary,
-    itemCount: o.order_items.length,
+    items,
     minsAgo,
     createdAt: o.created_at,
   }

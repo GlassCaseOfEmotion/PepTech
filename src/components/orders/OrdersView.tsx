@@ -72,7 +72,12 @@ function OrderCardUI({ order: o, pulse, onDragStart, onDragEnd, onAdvance, isDra
         </div>
         <div className="pt-or-card-name">{o.customerName}</div>
       </div>
-      <div className="pt-or-card-items">{o.itemsSummary || `${o.itemCount} item${o.itemCount !== 1 ? 's' : ''}`}</div>
+      <div className="pt-or-card-items">
+        {o.items.slice(0, 2).map((it, i) => (
+          <span key={i} className="pt-cu-item-chip">{it.name}{it.qty > 1 ? ` ×${it.qty}` : ''}</span>
+        ))}
+        {o.items.length > 2 && <span className="pt-cu-item-more">+{o.items.length - 2} more</span>}
+      </div>
       <div className="pt-or-card-pay">
         <span className="pt-pay-asset" data-asset={PAYMENT_BADGE[o.paymentAsset]?.key ?? 'other'}>
           {PAYMENT_BADGE[o.paymentAsset]?.label ?? o.paymentAsset}
