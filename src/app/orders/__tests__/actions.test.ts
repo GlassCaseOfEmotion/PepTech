@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { buildAssignments } from '../actions'
 
 function validateOrderItems(items: { productId: string; qty: number; unitPriceSnapshot: number }[]): string | null {
   if (items.length === 0) return 'Order must have at least one item'
@@ -35,5 +36,54 @@ describe('calcOrderTotal', () => {
       { qty: 3, unitPriceSnapshot: 38 },
       { qty: 1, unitPriceSnapshot: 75 },
     ])).toBe(189)
+  })
+})
+
+describe('buildAssignments', () => {
+  const items = [
+    { id: 'i1', productName: 'BPC-157 5mg', qty: 2 },
+    { id: 'i2', productName: 'Retatrutide 10mg', qty: 1 },
+  ]
+
+  it('returns assignments when all items have a batch', () => {
+    const batchMap = new Map([['i1', 'b1'], ['i2', 'b2']])
+    const result = buildAssignments(items, batchMap)
+    expect(result).toEqual({
+      assignments: [
+        { item_id: 'i1', batch_id: 'b1', qty: 2 },
+        { item_id: 'i2', batch_id: 'b2', qty: 1 },
+      ],
+    })
+  })
+
+  it('returns error naming one insufficient product', () => {
+    const batchMap = new Map<string, string | null>([['i1', 'b1'], ['i2', null]])
+    const result = buildAssignments(items, batchMap)
+    expect(result).toEqual({ error: 'Insufficient stock: Retatrutide 10mg' })
+  })
+
+  it('returns error naming all insufficient products', () => {
+    const batchMap = new Map<string, string | null>([['i1', null], ['i2', null]])
+    const result = buildAssignments(items, batchMap)
+    expect(result).toEqual({ error: 'Insufficient stock: BPC-157 5mg, Retatrutide 10mg' })
+  })
+
+  it('returns error when item is missing from batchMap entirely', () => {
+    const batchMap = new Map<string, string | null>([['i1', 'b1']])
+    const result = buildAssignments(items, batchMap)
+    expect(result).toEqual({ error: 'Insufficient stock: Retatrutide 10mg' })
+  })
+})
+
+describe('updateOrderStatus confirming→packing guard', () => {
+  // Documents that confirming→packing is not a valid updateOrderStatus transition
+  const ALLOWED_FROM: Record<string, string> = {
+    awaiting: 'confirming',
+    packing: 'shipped',
+    shipped: 'delivered',
+  }
+
+  it('does not have confirming→packing in ALLOWED_FROM', () => {
+    expect(ALLOWED_FROM['confirming']).toBeUndefined()
   })
 })

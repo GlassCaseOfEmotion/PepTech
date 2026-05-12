@@ -89,9 +89,27 @@ export async function createOrder(data: {
 
 const ALLOWED_FROM: Record<string, string> = {
   awaiting: 'confirming',
-  confirming: 'packing',
+  // confirming → packing is handled exclusively by packOrder
   packing: 'shipped',
   shipped: 'delivered',
+}
+
+export function buildAssignments(
+  items: { id: string; productName: string; qty: number }[],
+  batchMap: Map<string, string | null>,
+): { assignments: { item_id: string; batch_id: string; qty: number }[] } | { error: string } {
+  const insufficient: string[] = []
+  const assignments: { item_id: string; batch_id: string; qty: number }[] = []
+  for (const item of items) {
+    const batchId = batchMap.get(item.id) ?? null
+    if (!batchId) {
+      insufficient.push(item.productName)
+    } else {
+      assignments.push({ item_id: item.id, batch_id: batchId, qty: item.qty })
+    }
+  }
+  if (insufficient.length > 0) return { error: `Insufficient stock: ${insufficient.join(', ')}` }
+  return { assignments }
 }
 
 export async function updateOrderStatus(orderId: string, status: string): Promise<{ success: true } | { error: string }> {
@@ -119,6 +137,67 @@ export async function updateOrderStatus(orderId: string, status: string): Promis
       actor: 'operator',
       action: `Moved to ${STATUS_LABELS[status] ?? status}`,
     })
+    revalidatePath('/orders')
+    revalidatePath(`/orders/${orderId}`)
+    return { success: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
+export async function packOrder(orderId: string): Promise<{ success: true } | { error: string }> {
+  try {
+    const { supabase, tenantId } = await getTenantId()
+
+    const { data: order, error: fetchError } = await supabase
+      .from('orders')
+      .select('status, order_items(id, product_id, qty, products(name))')
+      .eq('id', orderId)
+      .eq('tenant_id', tenantId)
+      .single()
+    if (fetchError || !order) return { error: 'Order not found' }
+    if (order.status !== 'confirming') return { error: 'Order must be in confirming status to pack' }
+
+    const items = (order.order_items as { id: string; product_id: string; qty: number; products: { name: string } | null }[])
+
+    // FIFO: for each item, find the oldest non-expired batch with sufficient stock
+    const batchMap = new Map<string, string | null>()
+    for (const item of items) {
+      const { data: batch } = await supabase
+        .from('batches')
+        .select('id')
+        .eq('product_id', item.product_id)
+        .eq('tenant_id', tenantId)
+        .gte('stock', item.qty)
+        .or('expiry_date.is.null,expiry_date.gt.' + new Date().toISOString())
+        .order('expiry_date', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      batchMap.set(item.id, batch?.id ?? null)
+    }
+
+    const result = buildAssignments(
+      items.map(i => ({ id: i.id, productName: i.products?.name ?? i.product_id, qty: i.qty })),
+      batchMap,
+    )
+    if ('error' in result) return result
+
+    const { error: rpcError } = await supabase.rpc('pack_order', {
+      p_order_id: orderId,
+      p_tenant_id: tenantId,
+      p_assignments: result.assignments,
+    })
+    if (rpcError) return { error: rpcError.message }
+
+    await supabase.from('order_events').insert({
+      tenant_id: tenantId,
+      order_id: orderId,
+      actor: 'operator',
+      action: 'Moved to Packing',
+      note: `${result.assignments.length} batch${result.assignments.length !== 1 ? 'es' : ''} assigned`,
+    })
+
     revalidatePath('/orders')
     revalidatePath(`/orders/${orderId}`)
     return { success: true }
