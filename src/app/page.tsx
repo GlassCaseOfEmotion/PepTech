@@ -46,12 +46,12 @@ export default async function Home() {
     supabase.from('batches').select('*').order('created_at', { ascending: false }),
     supabase
       .from('orders')
-      .select('created_at, payment_amount')
+      .select('created_at, payment_amount_base, payment_amount')
       .neq('status', 'cancelled')
       .gte('created_at', d90),
     supabase
       .from('orders')
-      .select('id, ref_number, payment_amount, payment_asset, status, created_at, customers(display_name)')
+      .select('id, ref_number, payment_amount_base, payment_amount, payment_asset, status, created_at, customers(display_name)')
       .in('status', ['awaiting', 'confirming'])
       .neq('payment_asset', 'Cash')
       .order('created_at', { ascending: false })
@@ -67,7 +67,7 @@ export default async function Home() {
 
   for (const row of revenueRows ?? []) {
     const key = (row.created_at as string).slice(0, 10)
-    const amt = Number(row.payment_amount)
+    const amt = Number((row as { payment_amount_base?: number | null }).payment_amount_base ?? row.payment_amount)
     dayMap.set(key, (dayMap.get(key) ?? 0) + amt)
     const t = new Date(row.created_at as string).getTime()
     if (t >= cutoff7d)        revenue7d      += amt
@@ -88,7 +88,7 @@ export default async function Home() {
       id:           o.id as string,
       refNumber:    o.ref_number as string,
       customerName: cust?.display_name ?? 'Unknown',
-      amount:       Number(o.payment_amount),
+      amount:       Number((o as { payment_amount_base?: number | null }).payment_amount_base ?? o.payment_amount),
       asset:        o.payment_asset as string,
       status:       o.status as 'awaiting' | 'confirming',
       minsAgo:      Math.floor((now - new Date(o.created_at as string).getTime()) / 60000),

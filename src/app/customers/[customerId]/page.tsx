@@ -167,7 +167,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
   }
 
   const totalOrders = realOrders.length
-  const avgOrder = totalOrders > 0 ? Math.round(customer.ltv / totalOrders) : 0
+  const avgOrder = totalOrders > 0 ? customer.ltv / totalOrders : 0
   const lastOrderDate = realOrders[0]?.created_at
     ? new Date(realOrders[0].created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '—'
