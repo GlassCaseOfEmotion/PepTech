@@ -85,6 +85,7 @@ export async function createOrder(data: {
       conversation_id: data.conversationId || null,
       payment_asset: data.paymentAsset,
       payment_amount: data.paymentAmount,
+      payment_amount_base: data.paymentAmount,
       currency,
       exchange_rate: exchangeRate,
       payment_address: data.paymentAddress || null,

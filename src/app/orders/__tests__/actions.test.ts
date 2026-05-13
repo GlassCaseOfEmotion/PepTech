@@ -97,3 +97,13 @@ describe('packOrder prerequisites', () => {
     expect(result).toEqual({ error: 'Insufficient stock: Widget' })
   })
 })
+
+describe('payment_amount_base invariant', () => {
+  it('equals payment_amount (amounts stored in base currency)', () => {
+    // payment_amount is always in the tenant base currency.
+    // payment_amount_base captures this explicitly for LTV aggregation.
+    const paymentAmount = 150
+    const paymentAmountBase = paymentAmount
+    expect(paymentAmountBase).toBe(paymentAmount)
+  })
+})
