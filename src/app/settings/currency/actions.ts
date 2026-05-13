@@ -20,6 +20,20 @@ export async function saveBaseCurrency(
     .update({ base_currency: currency })
     .eq('id', userRow.tenant_id)
   if (error) return { error: error.message }
+
+  // Nullify payment_amount_base on orders that were in the old currency
+  await supabase
+    .from('orders')
+    .update({ payment_amount_base: null })
+    .neq('currency', currency)
+
+  // Reset all customer LTV to 0 (LTV trigger won't fire on payment_amount_base update)
+  await supabase
+    .from('customers')
+    .update({ ltv: 0 })
+    .neq('ltv', 0)  // skip already-zero rows for efficiency
+
+  revalidatePath('/', 'layout')
   revalidatePath('/settings/currency')
   return { success: true }
 }

@@ -9,10 +9,11 @@ const CURRENCIES = [
 ]
 
 export function CurrencyForm({ baseCurrency }: { baseCurrency: string }) {
-  const [value, setValue]   = useState(baseCurrency)
-  const [saved, setSaved]   = useState(false)
-  const [error, setError]   = useState('')
-  const [pending, start]    = useTransition()
+  const [value, setValue]      = useState(baseCurrency)
+  const [saved, setSaved]      = useState(false)
+  const [error, setError]      = useState('')
+  const [pending, start]       = useTransition()
+  const [showConfirm, setShowConfirm] = useState(false)
 
   const save = () => {
     setSaved(false); setError('')
@@ -38,8 +39,7 @@ export function CurrencyForm({ baseCurrency }: { baseCurrency: string }) {
           ))}
         </select>
         <p style={{ fontSize: 11, color: 'var(--pt-fg-4)', marginTop: 6 }}>
-          All new order amounts and invoices will use this currency.
-          Existing orders are stored with their original currency and are unaffected.
+          Changing currency resets customer LTV to 0 — it rebuilds as new orders arrive. Existing order history is preserved.
         </p>
       </div>
       {error && <p style={{ fontSize: 12, color: 'var(--pt-danger)', margin: '8px 0 0' }}>{error}</p>}
@@ -47,11 +47,33 @@ export function CurrencyForm({ baseCurrency }: { baseCurrency: string }) {
       <button
         className="pt-btn pt-btn-primary"
         style={{ marginTop: 14 }}
-        onClick={save}
+        onClick={() => setShowConfirm(true)}
         disabled={pending || value === baseCurrency}
       >
         {pending ? 'Saving…' : 'Save'}
       </button>
+      {showConfirm && value !== baseCurrency && (
+        <div className="pt-modal-backdrop" onClick={() => setShowConfirm(false)}>
+          <div className="pt-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <h3>Change base currency to {value}?</h3>
+            <p style={{ fontSize: 13, color: 'var(--pt-fg-3)', margin: '10px 0 18px' }}>
+              All existing order amounts will be excluded from customer LTV calculations.
+              Customer LTV will reset to 0 and rebuild as new orders come in.
+              Order history is preserved and unaffected.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="pt-btn pt-btn-ghost" onClick={() => setShowConfirm(false)}>Cancel</button>
+              <button
+                className="pt-btn pt-btn-primary"
+                disabled={pending}
+                onClick={() => { setShowConfirm(false); save() }}
+              >
+                {pending ? 'Saving…' : 'Confirm change'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
