@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useMemo } from 'react'
 import { Icons } from '@/lib/icons'
+import { formatAmount } from '@/lib/currency'
 import { createProduct, createBatch, saveBatchCoaPath, upsertProtocol } from '@/app/catalog/actions'
 import type { CatalogProduct, DbBatch } from '@/types/catalog'
 import { grossMargin } from '@/types/catalog'
@@ -30,7 +31,7 @@ async function openCoa(coaPath: string) {
 }
 
 // ── Add product form ─────────────────────────────────────────────────────────
-function AddProductForm({ onDone, knownFamilies }: { onDone: () => void; knownFamilies: string[] }) {
+function AddProductForm({ onDone, knownFamilies, baseCurrency }: { onDone: () => void; knownFamilies: string[]; baseCurrency: string }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState('')
   const [form, setForm] = useState({ sku: '', name: '', productFamily: '', unitPrice: '', costPrice: '' })
@@ -140,12 +141,12 @@ function AddProductForm({ onDone, knownFamilies }: { onDone: () => void; knownFa
             <div className="pt-sku-section-hd">Pricing</div>
 
             <div className="pt-sku-field">
-              <label className="pt-sku-lbl">Sale price <span className="pt-sku-lbl-opt">USD</span></label>
+              <label className="pt-sku-lbl">Sale price <span className="pt-sku-lbl-opt">{baseCurrency}</span></label>
               <input className="pt-sku-input mono" placeholder="0.00" type="number" min="0" step="0.01" value={form.unitPrice} onChange={set('unitPrice')} />
             </div>
 
             <div className="pt-sku-field">
-              <label className="pt-sku-lbl">Cost price <span className="pt-sku-lbl-opt">USD · optional</span></label>
+              <label className="pt-sku-lbl">Cost price <span className="pt-sku-lbl-opt">{baseCurrency} · optional</span></label>
               <input className="pt-sku-input mono" placeholder="0.00" type="number" min="0" step="0.01" value={form.costPrice} onChange={set('costPrice')} />
             </div>
 
@@ -262,10 +263,11 @@ function BatchRow({ batch }: { batch: DbBatch }) {
 }
 
 // ── Product detail panel ─────────────────────────────────────────────────────
-function CatalogDetail({ product, products, protocol }: {
+function CatalogDetail({ product, products, protocol, baseCurrency }: {
   product: CatalogProduct
   products: CatalogProduct[]
   protocol: ProductProtocol | null
+  baseCurrency: string
 }) {
   const [showAddBatch, setShowAddBatch] = useState(false)
   const flag = stockFlag(product.totalStock)
@@ -324,9 +326,9 @@ function CatalogDetail({ product, products, protocol }: {
         </div>
         <div className="pt-cat-stat">
           <div className="lbl">Unit Econ</div>
-          <div className="val">${product.unitPrice.toFixed(0)}</div>
+          <div className="val">{formatAmount(product.unitPrice, baseCurrency)}</div>
           <div className="pt-cat-stat-sub">
-            {product.costPrice != null ? `cost $${product.costPrice.toFixed(0)}` : 'cost —'}
+            {product.costPrice != null ? `cost ${formatAmount(product.costPrice, baseCurrency)}` : 'cost —'}
             {' · '}
             {(() => {
               const m = grossMargin(product.unitPrice, product.costPrice)
@@ -385,7 +387,7 @@ function CatalogDetail({ product, products, protocol }: {
                   <span className="pt-cat-cat-pill" data-cat={p.productFamily}>{p.productFamily}</span>
                   <div>
                     <div className="pt-cat-aff-name">{p.name}</div>
-                    <div className="pt-cat-aff-sub mono">{p.sku} · ${p.unitPrice}</div>
+                    <div className="pt-cat-aff-sub mono">{p.sku} · {formatAmount(p.unitPrice, baseCurrency)}</div>
                   </div>
                   <div className={`pt-cat-aff-stock mono ${pFlag ? 'is-low' : ''}`}>{p.totalStock}</div>
                 </div>
@@ -576,7 +578,7 @@ function ProtocolSection({ productId, protocol }: { productId: string; protocol:
 }
 
 // ── Main catalog view ────────────────────────────────────────────────────────
-export function CatalogView({ products, protocols }: { products: CatalogProduct[]; protocols: ProductProtocol[] }) {
+export function CatalogView({ products, protocols, baseCurrency }: { products: CatalogProduct[]; protocols: ProductProtocol[]; baseCurrency: string }) {
   const [selectedId, setSelectedId] = useState(products[0]?.id ?? '')
   const [showAddProduct, setShowAddProduct] = useState(false)
   const [familyFilter, setFamilyFilter] = useState<string>('all')
@@ -620,7 +622,7 @@ export function CatalogView({ products, protocols }: { products: CatalogProduct[
       <div className="pt-cat-hd">
         <div>
           <h1>Catalog</h1>
-          <p>{products.length} SKUs · {needsAttentionCount} need attention · ${Math.round(totalValue).toLocaleString()} on hand</p>
+          <p>{products.length} SKUs · {needsAttentionCount} need attention · {formatAmount(Math.round(totalValue), baseCurrency)} on hand</p>
         </div>
         <div className="pt-cat-hd-actions">
           <button className="pt-btn pt-btn-ghost">
@@ -633,7 +635,7 @@ export function CatalogView({ products, protocols }: { products: CatalogProduct[
       </div>
 
       {showAddProduct && (
-        <AddProductForm onDone={() => setShowAddProduct(false)} knownFamilies={allFamilies} />
+        <AddProductForm onDone={() => setShowAddProduct(false)} knownFamilies={allFamilies} baseCurrency={baseCurrency} />
       )}
 
       <div className="pt-cat-toolbar">
@@ -714,7 +716,7 @@ export function CatalogView({ products, protocols }: { products: CatalogProduct[
                       <div className="pt-cat-cell-cover">
                         <span className={`mono ${flag === 'oos' ? 'is-zero' : flag === 'critical' ? 'is-warn' : ''}`}>—</span>
                       </div>
-                      <div className="pt-cat-cell-price mono">${p.unitPrice.toFixed(0)}</div>
+                      <div className="pt-cat-cell-price mono">{formatAmount(p.unitPrice, baseCurrency)}</div>
                       <div className="pt-cat-cell-margin">
                         {(() => {
                           const m = grossMargin(p.unitPrice, p.costPrice)
@@ -735,7 +737,7 @@ export function CatalogView({ products, protocols }: { products: CatalogProduct[
             )}
           </ul>
         </div>
-        {selected && <CatalogDetail product={selected} products={products} protocol={protocolByProduct[selected.id] ?? null} />}
+        {selected && <CatalogDetail product={selected} products={products} protocol={protocolByProduct[selected.id] ?? null} baseCurrency={baseCurrency} />}
       </div>
     </div>
   )

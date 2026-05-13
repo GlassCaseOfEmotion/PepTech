@@ -14,10 +14,11 @@ export default async function CatalogPage() {
 
   const supabase = await createClient()
 
-  const [{ data: products }, { data: batches }, { data: protocols }] = await Promise.all([
+  const [{ data: products }, { data: batches }, { data: protocols }, { data: tenantRow }] = await Promise.all([
     supabase.from('products').select('*').eq('is_active', true).order('product_family').order('name'),
     supabase.from('batches').select('*').order('created_at', { ascending: false }),
     supabase.from('product_protocols').select('*'),
+    supabase.from('tenants').select('base_currency').single(),
   ])
 
   const batchesByProduct = ((batches ?? []) as DbBatch[]).reduce<Record<string, DbBatch[]>>((acc, b) => {
@@ -30,9 +31,11 @@ export default async function CatalogPage() {
     dbProductToDisplay(p, batchesByProduct[p.id] ?? [])
   )
 
+  const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
+
   return (
     <Shell section="Catalog">
-      <CatalogView products={catalogProducts} protocols={(protocols ?? []) as ProductProtocol[]} />
+      <CatalogView products={catalogProducts} protocols={(protocols ?? []) as ProductProtocol[]} baseCurrency={baseCurrency} />
     </Shell>
   )
 }
