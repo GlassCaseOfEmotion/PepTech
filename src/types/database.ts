@@ -432,6 +432,27 @@ export type Database = {
           },
         ]
       }
+      exchange_rates: {
+        Row: {
+          fetched_at: string
+          from_currency: string
+          rate: number
+          to_currency: string
+        }
+        Insert: {
+          fetched_at?: string
+          from_currency: string
+          rate: number
+          to_currency: string
+        }
+        Update: {
+          fetched_at?: string
+          from_currency?: string
+          rate?: number
+          to_currency?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           created_at: string
@@ -686,12 +707,15 @@ export type Database = {
           carrier: string | null
           conversation_id: string | null
           created_at: string
+          currency: string
           customer_id: string
           delivered_at: string | null
+          exchange_rate: number | null
           id: string
           notes: string | null
           payment_address: string | null
           payment_amount: number
+          payment_amount_base: number | null
           payment_asset: string
           ref_number: string
           shipping_address: Json | null
@@ -705,12 +729,15 @@ export type Database = {
           carrier?: string | null
           conversation_id?: string | null
           created_at?: string
+          currency?: string
           customer_id: string
           delivered_at?: string | null
+          exchange_rate?: number | null
           id?: string
           notes?: string | null
           payment_address?: string | null
           payment_amount?: number
+          payment_amount_base?: number | null
           payment_asset?: string
           ref_number: string
           shipping_address?: Json | null
@@ -724,12 +751,15 @@ export type Database = {
           carrier?: string | null
           conversation_id?: string | null
           created_at?: string
+          currency?: string
           customer_id?: string
           delivered_at?: string | null
+          exchange_rate?: number | null
           id?: string
           notes?: string | null
           payment_address?: string | null
           payment_amount?: number
+          payment_amount_base?: number | null
           payment_asset?: string
           ref_number?: string
           shipping_address?: Json | null
@@ -1065,6 +1095,7 @@ export type Database = {
       }
       tenants: {
         Row: {
+          base_currency: string
           created_at: string
           id: string
           logo_path: string | null
@@ -1074,6 +1105,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          base_currency?: string
           created_at?: string
           id?: string
           logo_path?: string | null
@@ -1083,6 +1115,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          base_currency?: string
           created_at?: string
           id?: string
           logo_path?: string | null
