@@ -34,7 +34,7 @@ export function DashboardLayout({ displayName, connectedChannels, threads, stock
           rightOpen={rightOpen}
           onRightToggle={() => setRightOpen(o => !o)}
         />
-        <DashboardView threads={threads} stockProducts={stockProducts} stats={stats} baseCurrency={baseCurrency} />
+        <DashboardView threads={threads} stockProducts={stockProducts} stats={stats} baseCurrency={baseCurrency} displayName={displayName} />
       </main>
       {rightOpen && <DashboardRightRail focusThread={focusThread} baseCurrency={baseCurrency} />}
     </div>

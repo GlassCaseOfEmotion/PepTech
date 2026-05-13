@@ -491,7 +491,13 @@ export function DashboardRightRail({ focusThread, baseCurrency }: { focusThread:
 
 // ─── Dashboard page content ──────────────────────────────────────────────────
 
-export function DashboardView({ threads, stockProducts, stats, baseCurrency }: { threads: InboxThread[]; stockProducts: CatalogProduct[]; stats: DashboardStats; baseCurrency: string }) {
+function greeting(name: string) {
+  const h = new Date().getHours()
+  const tod = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'
+  return `${tod}, ${name}`
+}
+
+export function DashboardView({ threads, stockProducts, stats, baseCurrency, displayName }: { threads: InboxThread[]; stockProducts: CatalogProduct[]; stats: DashboardStats; baseCurrency: string; displayName: string }) {
   const active = threads.length
   const needsReply = threads.filter(t => t.status === 'needs_reply').length
 
@@ -499,7 +505,7 @@ export function DashboardView({ threads, stockProducts, stats, baseCurrency }: {
     <div className="pt-page">
       <div className="pt-page-hd">
         <div>
-          <h1>Dashboard</h1>
+          <h1>{greeting(displayName)}</h1>
           <p>{active} active threads · {needsReply} need a reply · 3 reorders due in &lt;48h</p>
         </div>
         <div className="pt-page-actions">
