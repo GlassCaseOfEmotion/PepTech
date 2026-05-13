@@ -4,6 +4,7 @@ import { createClient, getServerUser } from '@/lib/supabase/server'
 import { Shell } from '@/components/shell/Shell'
 import { Icons } from '@/lib/icons'
 import { CustomerNewOrderButton } from '@/components/customers/CustomerNewOrderButton'
+import { CustomerNoteCard } from '@/components/customers/CustomerNoteCard'
 import { ActiveCyclesCard } from '@/components/customers/ActiveCyclesCard'
 import { computeSupply } from '@/types/protocols'
 import { formatAmount } from '@/lib/currency'
@@ -200,7 +201,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
             </div>
           </div>
           <div className="pt-cu-hd-actions">
-            <button className="pt-btn pt-btn-ghost">Add note</button>
+            <a href="#notes" className="pt-btn pt-btn-ghost">Add note</a>
             <button className="pt-btn pt-btn-ghost">Add tag</button>
             <button className="pt-btn pt-btn-ghost">
               <ChIcon size={12} /> Message
@@ -293,24 +294,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
               <ActiveCyclesCard cycles={cycles} customerId={customer.id} />
 
               {/* Notes */}
-              <section className="pt-card">
-                <header className="pt-card-hd">
-                  <div><h3>Notes</h3><p>Internal — never sent to customer</p></div>
-                  <button className="pt-link">+ Add note</button>
-                </header>
-                <div className="pt-card-body" style={{ padding: 0 }}>
-                  <ul className="pt-cu-notes">
-                    {notes && notes.length > 0 ? notes.map(n => (
-                      <li key={n.id}>
-                        <div className="pt-cu-note-at mono">{fmtDate(n.created_at)}</div>
-                        <div className="pt-cu-note-text">{n.content}</div>
-                      </li>
-                    )) : (
-                      <li style={{ padding: '12px 14px', color: 'var(--pt-fg-4)', fontSize: 12 }}>No notes yet</li>
-                    )}
-                  </ul>
-                </div>
-              </section>
+              <CustomerNoteCard customerId={customer.id} initialNotes={notes ?? []} />
 
             </div>
 

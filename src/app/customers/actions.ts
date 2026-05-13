@@ -14,6 +14,27 @@ async function getTenantId() {
   return { supabase, tenantId: userRow.tenant_id }
 }
 
+export async function addCustomerNote(
+  customerId: string,
+  content: string,
+): Promise<{ success: true; note: { id: string; content: string; created_at: string } } | { error: string }> {
+  if (!content.trim()) return { error: 'Note cannot be empty' }
+  try {
+    const { supabase, tenantId } = await getTenantId()
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data, error } = await supabase
+      .from('notes')
+      .insert({ tenant_id: tenantId, customer_id: customerId, content: content.trim(), created_by: user?.id ?? null })
+      .select('id, content, created_at')
+      .single()
+    if (error || !data) return { error: error?.message ?? 'Failed to save note' }
+    revalidatePath(`/customers/${customerId}`)
+    return { success: true, note: data as { id: string; content: string; created_at: string } }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
 export async function upsertProtocolOverride(data: {
   customerId: string
   productId: string
