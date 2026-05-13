@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { addCustomerNote } from '@/app/customers/actions'
 
 type Note = { id: string; content: string; created_at: string }
@@ -9,12 +9,29 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+export function AddNoteHeaderButton() {
+  return (
+    <button className="pt-btn pt-btn-ghost" onClick={() => {
+      window.dispatchEvent(new CustomEvent('open-customer-notes'))
+      document.getElementById('notes')?.scrollIntoView({ behavior: 'smooth' })
+    }}>
+      Add note
+    </button>
+  )
+}
+
 export function CustomerNoteCard({ customerId, initialNotes }: { customerId: string; initialNotes: Note[] }) {
   const [notes, setNotes] = useState<Note[]>(initialNotes)
   const [adding, setAdding] = useState(false)
   const [text, setText] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const handler = () => { setAdding(true); setError('') }
+    window.addEventListener('open-customer-notes', handler)
+    return () => window.removeEventListener('open-customer-notes', handler)
+  }, [])
 
   const submit = async () => {
     if (!text.trim() || saving) return
@@ -36,7 +53,7 @@ export function CustomerNoteCard({ customerId, initialNotes }: { customerId: str
           + Add note
         </button>
       </header>
-      <div className="pt-card-body" style={{ padding: 0 }}>
+      <div className="pt-card-body">
         {adding && (
           <div className="pt-note-form">
             <textarea

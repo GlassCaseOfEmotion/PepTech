@@ -4,7 +4,7 @@ import { createClient, getServerUser } from '@/lib/supabase/server'
 import { Shell } from '@/components/shell/Shell'
 import { Icons } from '@/lib/icons'
 import { CustomerNewOrderButton } from '@/components/customers/CustomerNewOrderButton'
-import { CustomerNoteCard } from '@/components/customers/CustomerNoteCard'
+import { CustomerNoteCard, AddNoteHeaderButton } from '@/components/customers/CustomerNoteCard'
 import { ActiveCyclesCard } from '@/components/customers/ActiveCyclesCard'
 import { computeSupply } from '@/types/protocols'
 import { formatAmount } from '@/lib/currency'
@@ -201,7 +201,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
             </div>
           </div>
           <div className="pt-cu-hd-actions">
-            <a href="#notes" className="pt-btn pt-btn-ghost">Add note</a>
+            <AddNoteHeaderButton />
             <button className="pt-btn pt-btn-ghost">Add tag</button>
             <button className="pt-btn pt-btn-ghost">
               <ChIcon size={12} /> Message
