@@ -39,6 +39,41 @@ export async function createOrder(data: {
   try {
     const { supabase, tenantId } = await getTenantId()
 
+    // Fetch tenant's base currency
+    const { data: tenantRow } = await supabase
+      .from('tenants').select('base_currency').eq('id', tenantId).single()
+    const currency = tenantRow?.base_currency ?? 'USD'
+
+    // For crypto payments with non-USD base currency, fetch and cache exchange rate
+    const FIAT_ASSETS = new Set(['cash', 'bank_transfer', 'customer_chooses'])
+    const isCrypto = !FIAT_ASSETS.has(data.paymentAsset)
+    let exchangeRate: number | null = null
+
+    if (isCrypto && currency !== 'USD') {
+      const TTL_MS = 60 * 60 * 1000
+      const { data: cached } = await supabase
+        .from('exchange_rates')
+        .select('rate, fetched_at')
+        .eq('from_currency', data.paymentAsset)
+        .eq('to_currency', currency)
+        .single()
+
+      if (cached && Date.now() - new Date(cached.fetched_at).getTime() < TTL_MS) {
+        exchangeRate = Number(cached.rate)
+      } else {
+        try {
+          const { fetchAssetToBaseRate } = await import('@/lib/currency')
+          exchangeRate = await fetchAssetToBaseRate(data.paymentAsset, currency)
+          await supabase.from('exchange_rates').upsert(
+            { from_currency: data.paymentAsset, to_currency: currency, rate: exchangeRate, fetched_at: new Date().toISOString() },
+            { onConflict: 'from_currency,to_currency' }
+          )
+        } catch {
+          // Non-fatal: order created without exchange_rate
+        }
+      }
+    }
+
     // Generate per-tenant sequential ref number atomically
     const { data: refNumber, error: refError } = await supabase.rpc('next_order_ref', { p_tenant_id: tenantId })
     if (refError || !refNumber) return { error: refError?.message ?? 'Failed to generate order reference' }
@@ -50,6 +85,8 @@ export async function createOrder(data: {
       conversation_id: data.conversationId || null,
       payment_asset: data.paymentAsset,
       payment_amount: data.paymentAmount,
+      currency,
+      exchange_rate: exchangeRate,
       payment_address: data.paymentAddress || null,
       shipping_address: data.shippingAddress || null,
       notes: data.notes || null,

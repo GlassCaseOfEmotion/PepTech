@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createOrder } from '@/app/orders/actions'
-import { PAYMENT_LABELS } from '@/types/payments'
+import { PAYMENT_LABELS, PAYMENT_BADGE } from '@/types/payments'
 import type { PaymentType } from '@/types/payments'
+import { formatAmount } from '@/lib/currency'
 
 type ProductOption = {
   id: string; sku: string; name: string; product_family: string; unit_price: number
@@ -34,6 +35,9 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
   const [customerResults, setCustomerResults] = useState<CustomerOption[]>([])
   const [selectedCustomerName, setSelectedCustomerName] = useState(customerName ?? '')
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
+  const [baseCurrency, setBaseCurrency]     = useState('USD')
+  const [conversionRate, setConversionRate] = useState<number | null>(null)
+  const [rateLoading, setRateLoading]       = useState(false)
   const customerSearchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -72,6 +76,28 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
+
+  // Fetch tenant base currency once on mount
+  useEffect(() => {
+    fetch('/api/tenant/currency')
+      .then(r => r.json())
+      .then((d: { base_currency: string }) => setBaseCurrency(d.base_currency))
+      .catch(() => {})
+  }, [])
+
+  // Fetch conversion rate when crypto asset selected + base currency is not USD
+  useEffect(() => {
+    const FIAT_ASSETS = new Set(['cash', 'bank_transfer', 'customer_chooses'])
+    if (FIAT_ASSETS.has(paymentAsset) || baseCurrency === 'USD') {
+      setConversionRate(null)
+      return
+    }
+    setRateLoading(true)
+    fetch(`/api/rates?asset=${encodeURIComponent(paymentAsset)}&base=${baseCurrency}`)
+      .then(r => r.json())
+      .then((d: { rate: number }) => { setConversionRate(d.rate); setRateLoading(false) })
+      .catch(() => { setConversionRate(null); setRateLoading(false) })
+  }, [paymentAsset, baseCurrency])
 
   const setQty = (productId: string, qty: number) => {
     setQuantities(prev =>
@@ -222,7 +248,16 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
         {selectedItems.length > 0 && (
           <div className="pt-co-total">
             <span className="pt-co-total-lbl">{selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''}</span>
-            <span className="mono">${total.toFixed(2)}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+              <span className="mono">{formatAmount(total, baseCurrency)}</span>
+              {conversionRate && total > 0 && (
+                <span style={{ fontSize: 10.5, color: 'var(--pt-fg-4)' }}>
+                  {rateLoading
+                    ? 'fetching rate…'
+                    : `≈ ${(total / conversionRate).toFixed(4).replace(/\.?0+$/, '')} ${PAYMENT_BADGE[paymentAsset]?.label ?? paymentAsset}`}
+                </span>
+              )}
+            </div>
           </div>
         )}
       </div>

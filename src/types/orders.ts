@@ -17,6 +17,8 @@ export type DbOrderRow = {
   status: OrderStatus
   payment_asset: string
   payment_amount: number
+  currency: string
+  exchange_rate: number | null
   payment_address: string | null
   tx_hash: string | null
   shipping_address: ShippingAddress | null
@@ -61,6 +63,7 @@ export type OrderCard = {
   status: OrderStatus
   paymentAsset: string
   paymentAmount: number
+  currency: string
   conversationId: string | null
   items: { name: string; qty: number }[]
   minsAgo: number
@@ -88,6 +91,7 @@ export function dbOrderToCard(o: DbOrderRow): OrderCard {
     status: o.status,
     paymentAsset: o.payment_asset,
     paymentAmount: o.payment_amount,
+    currency: o.currency ?? 'USD',
     conversationId: o.conversation_id,
     items,
     minsAgo,

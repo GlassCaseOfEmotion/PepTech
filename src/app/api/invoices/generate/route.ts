@@ -7,7 +7,7 @@ import { buildInvoiceData } from '@/types/invoices'
 import type { TenantPaymentConfig } from '@/types/payments'
 
 const ORDER_SELECT = `
-  id, ref_number, payment_asset, payment_amount, payment_address, created_at,
+  id, ref_number, payment_asset, payment_amount, currency, exchange_rate, payment_address, created_at,
   customers ( display_name ),
   order_items ( qty, unit_price_snapshot, products ( name, sku ) )
 `
