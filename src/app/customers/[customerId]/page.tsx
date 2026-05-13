@@ -6,6 +6,7 @@ import { Icons } from '@/lib/icons'
 import { CustomerNewOrderButton } from '@/components/customers/CustomerNewOrderButton'
 import { ActiveCyclesCard } from '@/components/customers/ActiveCyclesCard'
 import { computeSupply } from '@/types/protocols'
+import { formatAmount } from '@/lib/currency'
 import type { ProductProtocol, CustomerProtocolOverride, CycleEntry } from '@/types/protocols'
 
 const CH_LABEL: Record<string, string> = { whatsapp: 'WhatsApp', telegram: 'Telegram', email: 'Email' }
@@ -75,7 +76,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
   if (!user) redirect('/login')
 
   const supabase = await createClient()
-  const [{ data: customer }, { data: notes }, { data: orders }] = await Promise.all([
+  const [{ data: customer }, { data: notes }, { data: orders }, { data: tenantRow }] = await Promise.all([
     supabase
       .from('customers')
       .select('id, display_name, trust_score, ltv, created_at, customer_channels(channel_type, display_handle, is_primary), customer_tags(tag)')
@@ -92,9 +93,15 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
       .select('id, ref_number, status, payment_asset, payment_amount, created_at, delivered_at, order_items(product_id, qty, unit_price_snapshot, products(name))')
       .eq('customer_id', customerId)
       .order('created_at', { ascending: false }),
+    supabase
+      .from('tenants')
+      .select('base_currency')
+      .single(),
   ])
 
   if (!customer) redirect('/customers')
+
+  const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
 
   const primary = customer.customer_channels?.find(c => c.is_primary) ?? customer.customer_channels?.[0]
   const chKey = primary ? CH_KEY[primary.channel_type] ?? 'wa' : 'wa'
@@ -208,7 +215,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
           <div className="pt-cu-strip">
             <div className="pt-cu-stat">
               <div className="lbl">LTV</div>
-              <div className="val mono">${customer.ltv.toLocaleString()}</div>
+              <div className="val mono">{formatAmount(customer.ltv, baseCurrency)}</div>
             </div>
             <div className="pt-cu-stat">
               <div className="lbl">Orders</div>
@@ -216,7 +223,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
             </div>
             <div className="pt-cu-stat">
               <div className="lbl">Avg order</div>
-              <div className="val mono">${avgOrder}</div>
+              <div className="val mono">{formatAmount(avgOrder, baseCurrency)}</div>
             </div>
             <div className="pt-cu-stat">
               <div className="lbl">Last order</div>
@@ -240,7 +247,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
               {/* Order history */}
               <section className="pt-card">
                 <header className="pt-card-hd">
-                  <div><h3>Order history</h3><p>{totalOrders} total · ${customer.ltv.toLocaleString()} LTV</p></div>
+                  <div><h3>Order history</h3><p>{totalOrders} total · {formatAmount(customer.ltv, baseCurrency)} LTV</p></div>
                 </header>
                 <div className="pt-card-body" style={{ padding: 0 }}>
                   {realOrders.length === 0 ? (
@@ -272,7 +279,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                                 {items.length === 0 && '—'}
                               </td>
                               <td><span className="pt-pay-asset" data-asset={badge.key}>{badge.label}</span></td>
-                              <td className="r mono">${o.payment_amount.toLocaleString()}</td>
+                              <td className="r mono">{formatAmount(Number(o.payment_amount), baseCurrency)}</td>
                               <td><OrderState state={o.status} /></td>
                             </tr>
                           )

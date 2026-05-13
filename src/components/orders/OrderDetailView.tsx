@@ -466,7 +466,7 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: 
                   <div className={`pt-trust-pill pt-trust-${trustCls}`}>{trust}</div>
                 </div>
                 <div className="pt-od-cust-stats">
-                  <div><span className="pt-od-stat-lbl">LTV</span><span className="mono">${order.customers.ltv.toLocaleString()}</span></div>
+                  <div><span className="pt-od-stat-lbl">LTV</span><span className="mono">{formatAmount(order.customers.ltv, order.currency ?? 'USD')}</span></div>
                 </div>
               </div>
             </section>
