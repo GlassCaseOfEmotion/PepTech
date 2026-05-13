@@ -11,7 +11,7 @@ export default async function CustomersPage() {
 
   const supabase = await createClient()
 
-  const [{ data: customers }, { data: recentOrders }, { data: protocols }, { data: allOverrides }] = await Promise.all([
+  const [{ data: customers }, { data: recentOrders }, { data: protocols }, { data: allOverrides }, { data: tenantRow }] = await Promise.all([
     supabase
       .from('customers')
       .select('id, display_name, trust_score, ltv, customer_channels(channel_type, display_handle, is_primary), customer_tags(tag)')
@@ -22,7 +22,10 @@ export default async function CustomersPage() {
       .order('created_at', { ascending: false }),
     supabase.from('product_protocols').select('*'),
     supabase.from('customer_protocol_overrides').select('customer_id, product_id, draw_volume_ml, frequency, notes, id, tenant_id, created_at, updated_at'),
+    supabase.from('tenants').select('base_currency').single(),
   ])
+
+  const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
 
   const protocolMap = Object.fromEntries(
     ((protocols ?? []) as ProductProtocol[]).map(p => [p.product_id, p])
@@ -89,7 +92,7 @@ export default async function CustomersPage() {
 
   return (
     <Shell section="Customers">
-      <CustomersListView customers={customers ?? []} supplyStatuses={supplyStatuses} orderStats={orderStats} />
+      <CustomersListView customers={customers ?? []} supplyStatuses={supplyStatuses} orderStats={orderStats} baseCurrency={baseCurrency} />
     </Shell>
   )
 }

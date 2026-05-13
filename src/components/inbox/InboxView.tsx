@@ -30,12 +30,12 @@ function actBullet(item: ActivityItem) {
   return ''
 }
 
-function actDetail(item: ActivityItem) {
+function actDetail(item: ActivityItem, baseCurrency: string) {
   if (item.source === 'tag') return item.note ? ` · ${item.note}` : ''
   const parts: string[] = []
   if (item.ref_number) parts.push(item.ref_number)
   if (item.amount != null && (item.label.toLowerCase().includes('creat') || item.label.toLowerCase().includes('draft'))) {
-    parts.push(`$${Number(item.amount).toLocaleString()}`)
+    parts.push(formatAmount(Number(item.amount), baseCurrency))
   }
   return parts.length ? ` · ${parts.join(' · ')}` : ''
 }
@@ -716,7 +716,7 @@ function ConversationRail({ thread, baseCurrency }: { thread: InboxThread; baseC
               <li key={item.id}>
                 <i className={`pt-act-dot ${actBullet(item)}`} />
                 <div>
-                  <b>{item.label}</b>{actDetail(item)}
+                  <b>{item.label}</b>{actDetail(item, baseCurrency)}
                   <div className="pt-act-time">{fmtRelative(item.created_at)}</div>
                 </div>
               </li>

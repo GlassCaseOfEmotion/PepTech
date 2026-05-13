@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
+import { formatAmount } from '@/lib/currency'
 import type { SupplyStatus } from '@/types/protocols'
 
 type CustomerChannel = { channel_type: string; display_handle: string; is_primary: boolean }
@@ -40,9 +41,10 @@ interface Props {
   customers: Customer[]
   supplyStatuses?: Record<string, SupplyStatus | null>
   orderStats?: Record<string, { count: number; lastOrderAt: string | null }>
+  baseCurrency: string
 }
 
-export function CustomersListView({ customers, supplyStatuses = {}, orderStats = {} }: Props) {
+export function CustomersListView({ customers, supplyStatuses = {}, orderStats = {}, baseCurrency }: Props) {
   const [search, setSearch] = useState('')
   const [channelFilter, setChannelFilter] = useState<string | null>(null)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
@@ -199,7 +201,7 @@ export function CustomersListView({ customers, supplyStatuses = {}, orderStats =
                         </span>
                       </td>
                       <td className="pt-cl-handle mono">{primary?.display_handle ?? '—'}</td>
-                      <td className="r pt-cl-ltv">${c.ltv.toLocaleString()}</td>
+                      <td className="r pt-cl-ltv">{formatAmount(c.ltv, baseCurrency)}</td>
                       <td className="r pt-cl-order-count">{stats?.count ?? '—'}</td>
                       <td className="pt-cl-last-order">
                         {stats?.lastOrderAt ? fmtLastOrder(stats.lastOrderAt) : <span className="pt-cl-no-supply">—</span>}
