@@ -12,7 +12,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const { conversation: initialConversationId, invoice_path: initialInvoicePath, invoice_name: initialInvoiceName, prefill: initialPrefill } = await searchParams
   const supabase = await createClient()
 
-  const [{ data: conversations }, { data: quickReplies }, { data: templates }, { count: resolvedCount }] = await Promise.all([
+  const [{ data: conversations }, { data: quickReplies }, { data: templates }, { count: resolvedCount }, { data: tenantRow }] = await Promise.all([
     supabase
       .from('conversations')
       .select(`
@@ -38,7 +38,9 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       .from('conversations')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'resolved'),
+    supabase.from('tenants').select('base_currency').single(),
   ])
+  const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
 
   return (
     <InboxView
@@ -50,6 +52,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       initialInvoicePath={initialInvoicePath}
       initialInvoiceName={initialInvoiceName}
       initialPrefill={initialPrefill}
+      baseCurrency={baseCurrency}
     />
   )
 }

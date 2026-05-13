@@ -9,7 +9,7 @@ export default async function InboxConversationPage() {
 
   const supabase = await createClient()
 
-  const [{ data: conversations }, { data: quickReplies }, { data: templates }] = await Promise.all([
+  const [{ data: conversations }, { data: quickReplies }, { data: templates }, { data: tenantRow }] = await Promise.all([
     supabase
       .from('conversations')
       .select(`
@@ -31,13 +31,16 @@ export default async function InboxConversationPage() {
       .from('templates')
       .select('id, tenant_id, title, content, sort_order')
       .order('sort_order'),
+    supabase.from('tenants').select('base_currency').single(),
   ])
+  const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
 
   return (
     <InboxView
       initialConversations={(conversations ?? []) as DbConversation[]}
       quickReplies={(quickReplies ?? []) as DbQuickReply[]}
       templates={(templates ?? []) as DbTemplate[]}
+      baseCurrency={baseCurrency}
     />
   )
 }

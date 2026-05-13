@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
+import { formatAmount } from '@/lib/currency'
 import { InboxProvider, useInbox } from './InboxProvider'
 import { InboxAIPanel } from './InboxAIPanel'
 import { OrderRail } from './OrderRail'
@@ -615,7 +616,7 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
 
 // ─── Conversation right rail ─────────────────────────────────────────────────
 
-function ConversationRail({ thread }: { thread: InboxThread }) {
+function ConversationRail({ thread, baseCurrency }: { thread: InboxThread; baseCurrency: string }) {
   const { notes, addNote } = useInbox()
   const [addingNote, setAddingNote] = useState(false)
   const [noteText, setNoteText] = useState('')
@@ -657,7 +658,7 @@ function ConversationRail({ thread }: { thread: InboxThread }) {
           </div>
         </Link>
         <div className="pt-cust-stats">
-          <div><div className="lbl">LTV</div><div className="val mono">${thread.ltv.toLocaleString()}</div></div>
+          <div><div className="lbl">LTV</div><div className="val mono">{formatAmount(thread.ltv, baseCurrency)}</div></div>
           <div><div className="lbl">Channel</div><div className="val">{CH_NAMES[thread.channel]}</div></div>
         </div>
         <div className="pt-cust-tags">
@@ -729,7 +730,7 @@ function ConversationRail({ thread }: { thread: InboxThread }) {
 
 // ─── Inner layout (consumes context) ────────────────────────────────────────
 
-function InboxLayout({ initialPrefill }: { initialPrefill?: string }) {
+function InboxLayout({ initialPrefill, baseCurrency }: { initialPrefill?: string; baseCurrency: string }) {
   const { threads, activeId, setActiveId, filter, setFilter, messages, isSending, sendMessage } = useInbox()
   const activeThread = threads.find(t => t.id === activeId) ?? threads[0]
   const [showOrderRail, setShowOrderRail] = useState(false)
@@ -755,7 +756,7 @@ function InboxLayout({ initialPrefill }: { initialPrefill?: string }) {
           initialPrefill={initialPrefill}
         />
       )}
-      {activeThread && !showOrderRail && <ConversationRail thread={activeThread} />}
+      {activeThread && !showOrderRail && <ConversationRail thread={activeThread} baseCurrency={baseCurrency} />}
       {activeThread && showOrderRail && (
         <OrderRail
           customerId={activeThread.customerId}
@@ -779,9 +780,10 @@ interface InboxViewProps {
   initialInvoicePath?: string
   initialInvoiceName?: string
   initialPrefill?: string
+  baseCurrency: string
 }
 
-export function InboxView({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId, initialInvoicePath, initialInvoiceName, initialPrefill }: InboxViewProps) {
+export function InboxView({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId, initialInvoicePath, initialInvoiceName, initialPrefill, baseCurrency }: InboxViewProps) {
   return (
     <InboxProvider
       initialConversations={initialConversations}
@@ -792,7 +794,7 @@ export function InboxView({ initialConversations, quickReplies, templates, initi
       initialInvoicePath={initialInvoicePath}
       initialInvoiceName={initialInvoiceName}
     >
-      <InboxLayout initialPrefill={initialPrefill} />
+      <InboxLayout initialPrefill={initialPrefill} baseCurrency={baseCurrency} />
     </InboxProvider>
   )
 }

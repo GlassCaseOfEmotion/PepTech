@@ -16,22 +16,22 @@ const CONV: ConversationWithCustomer = {
 
 describe('CustomerRail', () => {
   it('renders customer name', () => {
-    render(<CustomerRail conversation={CONV} />)
+    render(<CustomerRail conversation={CONV} baseCurrency="USD" />)
     expect(screen.getByText('K. (gymrat_84)')).toBeInTheDocument()
   })
 
   it('renders trust score', () => {
-    render(<CustomerRail conversation={CONV} />)
+    render(<CustomerRail conversation={CONV} baseCurrency="USD" />)
     expect(screen.getByText('92')).toBeInTheDocument()
   })
 
   it('renders LTV', () => {
-    render(<CustomerRail conversation={CONV} />)
+    render(<CustomerRail conversation={CONV} baseCurrency="USD" />)
     expect(screen.getByText(/2,840/)).toBeInTheDocument()
   })
 
   it('renders VIP tag', () => {
-    render(<CustomerRail conversation={CONV} />)
+    render(<CustomerRail conversation={CONV} baseCurrency="USD" />)
     expect(screen.getByText('vip')).toBeInTheDocument()
   })
 })

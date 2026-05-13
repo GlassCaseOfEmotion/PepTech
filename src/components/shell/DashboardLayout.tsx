@@ -14,11 +14,12 @@ interface DashboardLayoutProps {
   threads: InboxThread[]
   stockProducts: CatalogProduct[]
   stats: DashboardStats
+  baseCurrency: string
 }
 
 const MOCK_CHANNELS = ['whatsapp', 'telegram']
 
-export function DashboardLayout({ displayName, connectedChannels, threads, stockProducts, stats }: DashboardLayoutProps) {
+export function DashboardLayout({ displayName, connectedChannels, threads, stockProducts, stats, baseCurrency }: DashboardLayoutProps) {
   const [rightOpen, setRightOpen] = useState(true)
   const channels = connectedChannels.length > 0 ? connectedChannels : MOCK_CHANNELS
   const focusThread = threads.find(t => t.status === 'needs_reply') ?? threads[0] ?? null
@@ -33,9 +34,9 @@ export function DashboardLayout({ displayName, connectedChannels, threads, stock
           rightOpen={rightOpen}
           onRightToggle={() => setRightOpen(o => !o)}
         />
-        <DashboardView threads={threads} stockProducts={stockProducts} stats={stats} />
+        <DashboardView threads={threads} stockProducts={stockProducts} stats={stats} baseCurrency={baseCurrency} />
       </main>
-      {rightOpen && <DashboardRightRail focusThread={focusThread} />}
+      {rightOpen && <DashboardRightRail focusThread={focusThread} baseCurrency={baseCurrency} />}
     </div>
   )
 }

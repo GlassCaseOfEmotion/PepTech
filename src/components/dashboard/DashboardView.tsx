@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
+import { formatAmount } from '@/lib/currency'
 import {
   MOCK_REORDERS, MOCK_SHIPMENTS,
   type MockReorder, type MockShipment,
@@ -84,7 +85,7 @@ function DashCard({ title, subtitle, action, span, footer, scroll, children }: {
 
 // ─── KPI strip ──────────────────────────────────────────────────────────────
 
-function KpiRow({ active, needsReply, stats }: { active: number; needsReply: number; stats: DashboardStats }) {
+function KpiRow({ active, needsReply, stats, baseCurrency }: { active: number; needsReply: number; stats: DashboardStats; baseCurrency: string }) {
   const { revenue7d, revenuePrev7d, revenue90dDaily, pendingOrders, pendingTotal } = stats
   const spark7d = revenue90dDaily.slice(-7).map(d => d.v)
   const delta = revenuePrev7d > 0
@@ -96,13 +97,13 @@ function KpiRow({ active, needsReply, stats }: { active: number; needsReply: num
   const kpis = [
     {
       label: 'Revenue · 7d',
-      value: `$${revenue7d.toLocaleString()}`,
+      value: formatAmount(revenue7d, baseCurrency),
       delta,
       spark: spark7d,
     },
     {
       label: 'Pending crypto',
-      value: `$${pendingTotal.toLocaleString()}`,
+      value: formatAmount(pendingTotal, baseCurrency),
       delta: null,
       sub: pendingOrders.length === 0
         ? 'None outstanding'
@@ -219,7 +220,7 @@ function fmtAge(mins: number) {
 }
 
 
-function PaymentsCard({ orders }: { orders: PendingOrder[] }) {
+function PaymentsCard({ orders, baseCurrency }: { orders: PendingOrder[]; baseCurrency: string }) {
   return (
     <DashCard title="Payments" subtitle="Awaiting confirmation"
       action={<Link href="/orders" className="pt-link">View all →</Link>}>
@@ -241,7 +242,7 @@ function PaymentsCard({ orders }: { orders: PendingOrder[] }) {
               </div>
             </div>
             <div className="pt-pay-amt-col">
-              <div className="pt-pay-amt">${o.amount.toLocaleString()}</div>
+              <div className="pt-pay-amt">{formatAmount(o.amount, baseCurrency)}</div>
               <Link href={`/orders/${o.id}`} className="pt-pay-act">{o.refNumber}</Link>
             </div>
           </li>
@@ -255,7 +256,7 @@ function PaymentsCard({ orders }: { orders: PendingOrder[] }) {
 
 const PERIOD_DAYS: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90 }
 
-function RevenueCard({ daily90d }: { daily90d: { d: string; v: number }[] }) {
+function RevenueCard({ daily90d, baseCurrency }: { daily90d: { d: string; v: number }[]; baseCurrency: string }) {
   const [period, setPeriod] = useState('7d')
   const data = daily90d.slice(-PERIOD_DAYS[period])
   const max = Math.max(...data.map(d => d.v), 1)
@@ -267,7 +268,7 @@ function RevenueCard({ daily90d }: { daily90d: { d: string; v: number }[] }) {
   return (
     <DashCard
       title="Revenue"
-      subtitle={`Last ${period} · $${total.toLocaleString()} total`}
+      subtitle={`Last ${period} · ${formatAmount(total, baseCurrency)} total`}
       action={
         <div className="pt-segctl">
           {['7d', '30d', '90d'].map(p => (
@@ -280,7 +281,7 @@ function RevenueCard({ daily90d }: { daily90d: { d: string; v: number }[] }) {
           <div className="pt-bar-col" key={i}>
             <div className="pt-bar-track">
               <div className="pt-bar-fill" style={{ height: `${(d.v / max) * 100}%` }}>
-                {d.v > 0 && <span className="pt-bar-tip">${d.v.toLocaleString()}</span>}
+                {d.v > 0 && <span className="pt-bar-tip">{formatAmount(d.v, baseCurrency)}</span>}
               </div>
             </div>
             <div className="pt-bar-lbl">{i % labelEvery === 0 ? d.d : ''}</div>
@@ -398,7 +399,7 @@ function ShipmentsCard({ shipments }: { shipments: MockShipment[] }) {
 
 const CH_NAMES: Record<string, string> = { wa: 'WhatsApp', tg: 'Telegram', em: 'Email' }
 
-export function DashboardRightRail({ focusThread }: { focusThread: InboxThread | null }) {
+export function DashboardRightRail({ focusThread, baseCurrency }: { focusThread: InboxThread | null; baseCurrency: string }) {
   const t = focusThread
   return (
     <aside className="pt-right">
@@ -460,7 +461,7 @@ export function DashboardRightRail({ focusThread }: { focusThread: InboxThread |
                 <TrustBlock score={t.trust} />
               </div>
               <div className="pt-cust-stats">
-                <div><div className="lbl">LTV</div><div className="val mono">${t.ltv.toLocaleString()}</div></div>
+                <div><div className="lbl">LTV</div><div className="val mono">{formatAmount(t.ltv, baseCurrency)}</div></div>
                 <div><div className="lbl">Channel</div><div className="val">{CH_NAMES[t.channel]}</div></div>
               </div>
               <div className="pt-cust-tags">
@@ -490,7 +491,7 @@ export function DashboardRightRail({ focusThread }: { focusThread: InboxThread |
 
 // ─── Dashboard page content ──────────────────────────────────────────────────
 
-export function DashboardView({ threads, stockProducts, stats }: { threads: InboxThread[]; stockProducts: CatalogProduct[]; stats: DashboardStats }) {
+export function DashboardView({ threads, stockProducts, stats, baseCurrency }: { threads: InboxThread[]; stockProducts: CatalogProduct[]; stats: DashboardStats; baseCurrency: string }) {
   const active = threads.length
   const needsReply = threads.filter(t => t.status === 'needs_reply').length
 
@@ -509,12 +510,12 @@ export function DashboardView({ threads, stockProducts, stats }: { threads: Inbo
         </div>
       </div>
 
-      <KpiRow active={active} needsReply={needsReply} stats={stats} />
+      <KpiRow active={active} needsReply={needsReply} stats={stats} baseCurrency={baseCurrency} />
 
       <div className="pt-grid">
         <InboxCard threads={threads} />
-        <PaymentsCard orders={stats.pendingOrders} />
-        <RevenueCard daily90d={stats.revenue90dDaily} />
+        <PaymentsCard orders={stats.pendingOrders} baseCurrency={baseCurrency} />
+        <RevenueCard daily90d={stats.revenue90dDaily} baseCurrency={baseCurrency} />
         <ReordersCard reorders={MOCK_REORDERS} />
         <StockCard products={stockProducts} />
         <ShipmentsCard shipments={MOCK_SHIPMENTS} />

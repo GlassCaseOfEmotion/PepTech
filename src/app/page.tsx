@@ -32,8 +32,9 @@ export default async function Home() {
     { data: batches },
     { data: revenueRows },
     { data: pendingRaw },
+    { data: tenantRow },
   ] = await Promise.all([
-    supabase.from('users').select('display_name').eq('id', user.id).single(),
+    supabase.from('users').select('display_name, tenant_id').eq('id', user.id).single(),
     supabase.from('tenant_channels').select('channel_type').eq('is_active', true),
     supabase
       .from('conversations')
@@ -55,6 +56,7 @@ export default async function Home() {
       .neq('payment_asset', 'Cash')
       .order('created_at', { ascending: false })
       .limit(10),
+    supabase.from('tenants').select('base_currency').single(),
   ])
 
   // ── Revenue stats ────────────────────────────────────────────────────────
@@ -95,6 +97,7 @@ export default async function Home() {
   const pendingTotal = pendingOrders.reduce((s, o) => s + o.amount, 0)
 
   const stats: DashboardStats = { revenue7d, revenuePrev7d, revenue90dDaily, pendingOrders, pendingTotal }
+  const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
 
   // ── Other props ──────────────────────────────────────────────────────────
   const displayName      = userRow?.display_name ?? user.email?.split('@')[0] ?? 'User'
@@ -117,6 +120,7 @@ export default async function Home() {
       threads={threads}
       stockProducts={stockProducts}
       stats={stats}
+      baseCurrency={baseCurrency}
     />
   )
 }

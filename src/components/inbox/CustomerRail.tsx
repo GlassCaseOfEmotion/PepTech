@@ -1,12 +1,14 @@
 import Link from 'next/link'
 import { initials } from '@/types/inbox'
 import type { ConversationWithCustomer } from '@/types/inbox'
+import { formatAmount } from '@/lib/currency'
 
 interface CustomerRailProps {
   conversation: ConversationWithCustomer
+  baseCurrency: string
 }
 
-export function CustomerRail({ conversation }: CustomerRailProps) {
+export function CustomerRail({ conversation, baseCurrency }: CustomerRailProps) {
   const customer = conversation.customers
   if (!customer) return null
 
@@ -38,7 +40,7 @@ export function CustomerRail({ conversation }: CustomerRailProps) {
         <div className="pt-cust-stats">
           <div>
             <div className="lbl">LTV</div>
-            <div className="val mono">${customer.ltv.toLocaleString()}</div>
+            <div className="val mono">{formatAmount(customer.ltv, baseCurrency)}</div>
           </div>
           <div>
             <div className="lbl">Channel</div>
