@@ -10,6 +10,7 @@ import { PAYMENT_LABELS, PAYMENT_BADGE } from '@/types/payments'
 import type { TenantPaymentConfig } from '@/types/payments'
 import type { DbOrderRow, DbOrderEvent, OrderStatus } from '@/types/orders'
 import { SendInvoiceModal } from './SendInvoiceModal'
+import { formatAmount } from '@/lib/currency'
 
 const CH_MAP: Record<string, 'wa' | 'tg' | 'em'> = { whatsapp: 'wa', telegram: 'tg', email: 'em' }
 const CH_NAMES: Record<string, string> = { wa: 'WhatsApp', tg: 'Telegram', em: 'Email' }
@@ -212,6 +213,11 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: 
             {order.payment_asset === 'customer_chooses' && (
               <span style={{ fontSize: 11, color: 'var(--pt-fg-4)' }}>All configured methods offered</span>
             )}
+            {order.exchange_rate && (
+              <span style={{ fontSize: 11, color: 'var(--pt-fg-4)' }}>
+                rate: 1 {PAYMENT_BADGE[order.payment_asset]?.key?.toUpperCase() ?? order.payment_asset} = {formatAmount(order.exchange_rate, order.currency ?? 'USD')}
+              </span>
+            )}
           </div>
           {showConfirmDialog && (
             <div className="pt-od-confirm-dialog">
@@ -317,15 +323,15 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: 
                           : <span style={{ color: 'var(--pt-fg-4)' }}>—</span>}
                       </td>
                       <td className="pt-od-num mono">{it.qty}</td>
-                      <td className="pt-od-num mono">${it.unit_price_snapshot.toFixed(2)}</td>
-                      <td className="pt-od-num mono">${(it.qty * it.unit_price_snapshot).toFixed(2)}</td>
+                      <td className="pt-od-num mono">{formatAmount(it.unit_price_snapshot, order.currency ?? 'USD')}</td>
+                      <td className="pt-od-num mono">{formatAmount(it.qty * it.unit_price_snapshot, order.currency ?? 'USD')}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr><td colSpan={5} /><td className="pt-od-num">Subtotal</td><td className="pt-od-num mono">${total.toFixed(2)}</td></tr>
-                  <tr><td colSpan={5} /><td className="pt-od-num">Shipping</td><td className="pt-od-num mono">$0.00</td></tr>
-                  <tr className="pt-od-total"><td colSpan={5} /><td className="pt-od-num">Total</td><td className="pt-od-num mono">${total.toFixed(2)}</td></tr>
+                  <tr><td colSpan={5} /><td className="pt-od-num">Subtotal</td><td className="pt-od-num mono">{formatAmount(total, order.currency ?? 'USD')}</td></tr>
+                  <tr><td colSpan={5} /><td className="pt-od-num">Shipping</td><td className="pt-od-num mono">{formatAmount(0, order.currency ?? 'USD')}</td></tr>
+                  <tr className="pt-od-total"><td colSpan={5} /><td className="pt-od-num">Total</td><td className="pt-od-num mono">{formatAmount(total, order.currency ?? 'USD')}</td></tr>
                 </tfoot>
               </table>
             </div>
@@ -350,7 +356,7 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: 
                     <span className="pt-pay-asset" data-asset={PAYMENT_BADGE[order.payment_asset]?.key ?? 'other'}>
                       {PAYMENT_BADGE[order.payment_asset]?.label ?? order.payment_asset}
                     </span>
-                    <span className="mono" style={{ marginLeft: 8 }}>${order.payment_amount.toFixed(2)}</span>
+                    <span className="mono" style={{ marginLeft: 8 }}>{formatAmount(order.payment_amount, order.currency ?? 'USD')}</span>
                   </div>
                 </div>
                 {order.payment_address && (

@@ -1,5 +1,6 @@
 import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer'
 import type { InvoiceData } from '@/types/invoices'
+import { formatAmount } from '@/lib/currency'
 
 const S = StyleSheet.create({
   page:      { padding: 48, fontSize: 10, fontFamily: 'Helvetica', color: '#1a1a1a' },
@@ -31,8 +32,6 @@ const S = StyleSheet.create({
   payVal:    { fontSize: 9, flex: 1 },
   footer:    { position: 'absolute', bottom: 32, left: 48, right: 48, flexDirection: 'row', justifyContent: 'space-between', fontSize: 8, color: '#bbb', borderTopWidth: 0.5, borderTopColor: '#e0e0e0', paddingTop: 8 },
 })
-
-const fmt = (n: number) => `$${n.toFixed(2)}`
 
 export function InvoicePDF({ data }: { data: InvoiceData }) {
   return (
@@ -87,13 +86,13 @@ export function InvoicePDF({ data }: { data: InvoiceData }) {
             <Text style={S.colName}>{it.name}</Text>
             <Text style={S.colSku}>{it.sku}</Text>
             <Text style={S.colQty}>{it.qty}</Text>
-            <Text style={S.colPrice}>{fmt(it.unitPrice)}</Text>
-            <Text style={S.colTotal}>{fmt(it.subtotal)}</Text>
+            <Text style={S.colPrice}>{formatAmount(it.unitPrice, data.currency)}</Text>
+            <Text style={S.colTotal}>{formatAmount(it.subtotal, data.currency)}</Text>
           </View>
         ))}
         <View style={S.totalRow}>
           <Text style={S.totalLbl}>Total</Text>
-          <Text style={S.totalAmt}>{fmt(data.total)}</Text>
+          <Text style={S.totalAmt}>{formatAmount(data.total, data.currency)}</Text>
         </View>
 
         {/* Payment */}

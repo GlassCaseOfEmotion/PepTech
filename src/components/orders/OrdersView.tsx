@@ -7,6 +7,7 @@ import { updateOrderStatus } from '@/app/orders/actions'
 import { CreateOrderModal } from './CreateOrderModal'
 import { PAYMENT_BADGE } from '@/types/payments'
 import type { OrderCard, OrderStatus } from '@/types/orders'
+import { formatAmount } from '@/lib/currency'
 
 const COLUMNS: { id: OrderStatus; label: string; caption: string }[] = [
   { id: 'awaiting',   label: 'Awaiting payment', caption: 'Invoice sent · waiting for tx' },
@@ -82,7 +83,7 @@ function OrderCardUI({ order: o, pulse, onDragStart, onDragEnd, onAdvance, isDra
         <span className="pt-pay-asset" data-asset={PAYMENT_BADGE[o.paymentAsset]?.key ?? 'other'}>
           {PAYMENT_BADGE[o.paymentAsset]?.label ?? o.paymentAsset}
         </span>
-        <span className="pt-or-card-amt mono">${o.paymentAmount.toFixed(2)}</span>
+        <span className="pt-or-card-amt mono">{formatAmount(o.paymentAmount, o.currency)}</span>
       </div>
       {nextStatus && (
         <button
@@ -175,7 +176,7 @@ export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
       <div className="pt-or-hd">
         <div>
           <h1>Orders</h1>
-          <p>{orders.length} open · ${totalAwaiting.toLocaleString()} awaiting payment · {inFlight} in transit</p>
+          <p>{orders.length} open · {formatAmount(totalAwaiting, orders[0]?.currency ?? 'USD')} awaiting payment · {inFlight} in transit</p>
         </div>
         <div className="pt-or-hd-actions">
           <div className="pt-or-search">

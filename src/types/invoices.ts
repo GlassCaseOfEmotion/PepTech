@@ -29,6 +29,7 @@ export interface InvoiceData {
   customerName: string
   items: InvoiceItem[]
   total: number
+  currency: string
   paymentMethods: InvoicePaymentMethod[]
 }
 
@@ -41,6 +42,7 @@ export function buildInvoiceData(
     ref_number: string
     payment_asset: string
     payment_amount: number
+    currency?: string
     payment_address: string | null
     created_at: string
     customers: { display_name: string } | null
@@ -67,6 +69,7 @@ export function buildInvoiceData(
     customerName: order.customers?.display_name ?? 'Customer',
     items,
     total: items.reduce((s, it) => s + it.subtotal, 0),
+    currency: order.currency ?? 'USD',
     paymentMethods: buildInvoicePaymentMethods(order, configs),
   }
 }
