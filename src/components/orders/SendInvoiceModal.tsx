@@ -6,6 +6,7 @@ import { Icons } from '@/lib/icons'
 import { createClient } from '@/lib/supabase/client'
 import type { DbOrderRow } from '@/types/orders'
 import { formatInvoiceNumber } from '@/types/invoices'
+import { formatAmount } from '@/lib/currency'
 
 interface SendInvoiceModalProps {
   order: DbOrderRow
@@ -177,7 +178,7 @@ export function SendInvoiceModal({ order, onClose }: SendInvoiceModalProps) {
                     <tr key={i}>
                       <td>{it.products?.name ?? '—'}</td>
                       <td className="center">{it.qty}</td>
-                      <td className="right mono">${(it.qty * it.unit_price_snapshot).toFixed(2)}</td>
+                      <td className="right mono">{formatAmount(it.qty * it.unit_price_snapshot, order.currency ?? 'USD')}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -185,7 +186,7 @@ export function SendInvoiceModal({ order, onClose }: SendInvoiceModalProps) {
                   <tr>
                     <td className="label">Total</td>
                     <td />
-                    <td className="right mono">${total.toFixed(2)}</td>
+                    <td className="right mono">{formatAmount(total, order.currency ?? 'USD')}</td>
                   </tr>
                 </tfoot>
               </table>

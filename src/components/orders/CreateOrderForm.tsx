@@ -222,11 +222,11 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
                     <div key={p.id} className={`pt-co-product ${qty > 0 ? 'is-selected' : ''}`}>
                       <div className="pt-co-product-info">
                         <div className="pt-co-product-name">{p.name}</div>
-                        <div className="pt-co-product-meta mono">{p.sku} · ${p.unit_price}</div>
+                        <div className="pt-co-product-meta mono">{p.sku} · {formatAmount(p.unit_price, baseCurrency)}</div>
                       </div>
                       <div className="pt-co-product-right">
                         {qty > 0 && (
-                          <span className="pt-co-product-subtotal mono">${(qty * p.unit_price).toFixed(0)}</span>
+                          <span className="pt-co-product-subtotal mono">{formatAmount(qty * p.unit_price, baseCurrency)}</span>
                         )}
                         {qty === 0 ? (
                           <button className="pt-co-add-btn" onClick={() => setQty(p.id, 1)}>+ Add</button>

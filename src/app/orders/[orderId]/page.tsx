@@ -9,7 +9,7 @@ import type { TenantPaymentConfig } from '@/types/payments'
 
 const ORDER_SELECT = `
   id, ref_number, customer_id, conversation_id, status,
-  payment_asset, payment_amount, payment_address, tx_hash,
+  payment_asset, payment_amount, currency, exchange_rate, payment_address, tx_hash,
   shipping_address, carrier, tracking_number, notes,
   created_at, updated_at,
   customers (
