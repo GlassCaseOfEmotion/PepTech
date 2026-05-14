@@ -138,3 +138,66 @@ export async function upsertProtocol(data: {
     return { error: e instanceof Error ? e.message : 'Unknown error' }
   }
 }
+
+export async function updateProduct(
+  productId: string,
+  data: { name: string; sku: string; productFamily: string; unitPrice: number; costPrice: number | null }
+): Promise<{ success: true } | { error: string }> {
+  const sku = data.sku.trim().toUpperCase()
+  if (!sku) return { error: 'SKU is required' }
+  if (!data.name.trim()) return { error: 'Name is required' }
+  if (!data.productFamily.trim()) return { error: 'Product family is required' }
+  if (data.unitPrice <= 0) return { error: 'Unit price must be greater than 0' }
+  try {
+    const { supabase, tenantId } = await getTenantId()
+    const { error } = await supabase.from('products').update({
+      sku,
+      name: data.name.trim(),
+      product_family: data.productFamily.trim(),
+      unit_price: data.unitPrice,
+      cost_price: data.costPrice ?? null,
+    }).eq('id', productId).eq('tenant_id', tenantId)
+    if (error) {
+      if (error.code === '23505') return { error: `SKU "${sku}" already exists` }
+      return { error: error.message }
+    }
+    revalidatePath('/catalog')
+    return { success: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
+export async function updateBatch(
+  batchId: string,
+  data: { stock: number; expiresAt: string | null }
+): Promise<{ success: true } | { error: string }> {
+  if (data.stock < 0) return { error: 'Stock cannot be negative' }
+  try {
+    const { supabase, tenantId } = await getTenantId()
+    const { error } = await supabase.from('batches').update({
+      stock: data.stock,
+      expires_at: data.expiresAt || null,
+    }).eq('id', batchId).eq('tenant_id', tenantId)
+    if (error) return { error: error.message }
+    revalidatePath('/catalog')
+    return { success: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
+export async function deleteBatch(
+  batchId: string
+): Promise<{ success: true } | { error: string }> {
+  try {
+    const { supabase, tenantId } = await getTenantId()
+    const { error } = await supabase.from('batches').delete()
+      .eq('id', batchId).eq('tenant_id', tenantId)
+    if (error) return { error: error.message }
+    revalidatePath('/catalog')
+    return { success: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}

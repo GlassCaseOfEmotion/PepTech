@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import { Icons } from '@/lib/icons'
 import { formatAmount } from '@/lib/currency'
-import { createProduct, createBatch, saveBatchCoaPath, upsertProtocol } from '@/app/catalog/actions'
+import { createProduct, createBatch, saveBatchCoaPath, upsertProtocol, updateProduct, updateBatch, deleteBatch } from '@/app/catalog/actions'
 import type { CatalogProduct, DbBatch } from '@/types/catalog'
 import { grossMargin } from '@/types/catalog'
 import { FREQUENCY_LABELS, FREQUENCY_OPTIONS } from '@/types/protocols'
@@ -243,20 +243,74 @@ function AddBatchForm({ productId, onDone }: { productId: string; onDone: () => 
 
 // ── Batch row ────────────────────────────────────────────────────────────────
 function BatchRow({ batch }: { batch: DbBatch }) {
+  const [editing, setEditing] = useState(false)
+  const [stock, setStock] = useState(String(batch.stock))
+  const [expiresAt, setExpiresAt] = useState(batch.expires_at?.slice(0, 10) ?? '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
   const added = new Date(batch.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+  const save = async () => {
+    const stockNum = parseInt(stock)
+    if (isNaN(stockNum) || stockNum < 0) { setError('Invalid stock'); return }
+    setSaving(true)
+    const result = await updateBatch(batch.id, { stock: stockNum, expiresAt: expiresAt || null })
+    setSaving(false)
+    if ('error' in result) { setError(result.error); return }
+    setEditing(false)
+    setError('')
+  }
+
+  const del = async () => {
+    if (!confirm(`Delete batch ${batch.batch_number}?`)) return
+    await deleteBatch(batch.id)
+  }
+
+  if (editing) {
+    return (
+      <tr>
+        <td className="mono" style={{ color: 'var(--pt-accent)', fontWeight: 500 }}>{batch.batch_number}</td>
+        <td style={{ color: 'var(--pt-fg-3)' }}>{added}</td>
+        <td>
+          <input
+            type="number" min="0" value={stock}
+            onChange={e => setStock(e.target.value)}
+            style={{ width: 60, fontSize: 12, padding: '2px 5px', borderRadius: 4, border: '0.5px solid var(--pt-accent)', background: 'var(--pt-bg-2)', color: 'var(--pt-fg)' }}
+          />
+        </td>
+        <td>
+          <input
+            type="date" value={expiresAt}
+            onChange={e => setExpiresAt(e.target.value)}
+            style={{ fontSize: 11, padding: '2px 5px', borderRadius: 4, border: '0.5px solid var(--pt-line)', background: 'var(--pt-bg-2)', color: 'var(--pt-fg)' }}
+          />
+        </td>
+        <td style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <button className="pt-link" style={{ fontSize: 11 }} onClick={save} disabled={saving}>{saving ? '…' : 'Save'}</button>
+          <button className="pt-link" style={{ fontSize: 11, opacity: 0.5 }} onClick={() => { setEditing(false); setError(''); setStock(String(batch.stock)); setExpiresAt(batch.expires_at?.slice(0, 10) ?? '') }}>Cancel</button>
+          {error && <span style={{ fontSize: 10, color: 'var(--pt-danger)' }}>{error}</span>}
+        </td>
+      </tr>
+    )
+  }
+
   const expires = batch.expires_at
     ? new Date(batch.expires_at).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
     : '—'
+
   return (
     <tr>
       <td className="mono" style={{ color: 'var(--pt-accent)', fontWeight: 500 }}>{batch.batch_number}</td>
       <td style={{ color: 'var(--pt-fg-3)' }}>{added}</td>
       <td className="mono" style={{ fontWeight: 500 }}>{batch.stock}</td>
       <td style={{ color: 'var(--pt-fg-3)' }}>{expires}</td>
-      <td>
+      <td style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         {batch.coa_path
           ? <button className="pt-od-coa" onClick={() => void openCoa(batch.coa_path!)}>View →</button>
           : <span style={{ color: 'var(--pt-fg-4)', fontSize: 11 }}>—</span>}
+        <button className="pt-link" style={{ fontSize: 11 }} onClick={() => setEditing(true)}>Edit</button>
+        <button className="pt-link" style={{ fontSize: 11, color: 'var(--pt-danger)' }} onClick={del}>Delete</button>
       </td>
     </tr>
   )
@@ -270,6 +324,37 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
   baseCurrency: string
 }) {
   const [showAddBatch, setShowAddBatch] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editForm, setEditForm] = useState({
+    name: product.name,
+    sku: product.sku,
+    family: product.productFamily,
+    unitPrice: String(product.unitPrice),
+    costPrice: product.costPrice != null ? String(product.costPrice) : '',
+  })
+  const [editError, setEditError] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
+  const knownFamilies = products.map(p => p.productFamily).filter((f, i, a) => a.indexOf(f) === i).sort()
+
+  const saveEdit = async () => {
+    const unitPrice = parseFloat(editForm.unitPrice)
+    const costPrice = editForm.costPrice !== '' ? parseFloat(editForm.costPrice) : null
+    if (!editForm.name.trim()) { setEditError('Name is required'); return }
+    if (isNaN(unitPrice) || unitPrice <= 0) { setEditError('Invalid price'); return }
+    setEditSaving(true)
+    const result = await updateProduct(product.id, {
+      name: editForm.name.trim(),
+      sku: editForm.sku.trim(),
+      productFamily: editForm.family.trim(),
+      unitPrice,
+      costPrice: costPrice !== null && !isNaN(costPrice) ? costPrice : null,
+    })
+    setEditSaving(false)
+    if ('error' in result) { setEditError(result.error); return }
+    setEditing(false)
+    setEditError('')
+  }
+
   const flag = stockFlag(product.totalStock)
   const barPct = Math.min(100, (product.totalStock / BAR_MAX) * 100)
   const thrPct = (LOW_THRESHOLD / BAR_MAX) * 100
@@ -278,17 +363,50 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
 
   return (
     <aside className="pt-cat-detail">
-      <header className="pt-cat-detail-hd">
-        <div>
-          <span className="pt-cat-cat-pill" data-cat={product.productFamily}>{product.productFamily}</span>
-          <h2>{product.name}</h2>
-          <div className="pt-cat-sku mono">{product.sku}</div>
-        </div>
-        <div className="pt-cat-detail-actions">
-          <button className="pt-btn pt-btn-ghost">Edit</button>
-          <button className="pt-btn pt-btn-primary">Re-order</button>
-        </div>
-      </header>
+      {editing ? (
+        <header className="pt-cat-detail-hd" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div>
+              <label className="pt-sku-lbl">Name</label>
+              <input className="pt-input" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div>
+              <label className="pt-sku-lbl">SKU</label>
+              <input className="pt-input" value={editForm.sku} onChange={e => setEditForm(f => ({ ...f, sku: e.target.value }))} style={{ textTransform: 'uppercase' }} />
+            </div>
+            <div>
+              <label className="pt-sku-lbl">Family</label>
+              <input className="pt-input" list="edit-families" value={editForm.family} onChange={e => setEditForm(f => ({ ...f, family: e.target.value }))} />
+              <datalist id="edit-families">{knownFamilies.map(f => <option key={f} value={f} />)}</datalist>
+            </div>
+            <div>
+              <label className="pt-sku-lbl">Sale price <span className="pt-sku-lbl-opt">{baseCurrency}</span></label>
+              <input className="pt-input" type="number" min="0" step="any" value={editForm.unitPrice} onChange={e => setEditForm(f => ({ ...f, unitPrice: e.target.value }))} />
+            </div>
+            <div>
+              <label className="pt-sku-lbl">Cost price <span className="pt-sku-lbl-opt">optional</span></label>
+              <input className="pt-input" type="number" min="0" step="any" value={editForm.costPrice} onChange={e => setEditForm(f => ({ ...f, costPrice: e.target.value }))} />
+            </div>
+          </div>
+          {editError && <p style={{ fontSize: 11, color: 'var(--pt-danger)', margin: 0 }}>{editError}</p>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="pt-btn pt-btn-primary" onClick={saveEdit} disabled={editSaving}>{editSaving ? 'Saving…' : 'Save changes'}</button>
+            <button className="pt-btn pt-btn-ghost" onClick={() => { setEditing(false); setEditError(''); setEditForm({ name: product.name, sku: product.sku, family: product.productFamily, unitPrice: String(product.unitPrice), costPrice: product.costPrice != null ? String(product.costPrice) : '' }) }}>Cancel</button>
+          </div>
+        </header>
+      ) : (
+        <header className="pt-cat-detail-hd">
+          <div>
+            <span className="pt-cat-cat-pill" data-cat={product.productFamily}>{product.productFamily}</span>
+            <h2>{product.name}</h2>
+            <div className="pt-cat-sku mono">{product.sku}</div>
+          </div>
+          <div className="pt-cat-detail-actions">
+            <button className="pt-btn pt-btn-ghost" onClick={() => { setEditing(true); setEditError('') }}>Edit</button>
+            <button className="pt-btn pt-btn-primary">Re-order</button>
+          </div>
+        </header>
+      )}
 
       {flag && (
         <div className={`pt-cat-note ${flag === 'oos' ? 'pt-cat-note-critical' : 'pt-cat-note-low'}`}>
