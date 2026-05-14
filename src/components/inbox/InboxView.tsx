@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
 import { useSearchParams } from 'next/navigation'
@@ -829,7 +829,9 @@ export function InboxView({ initialConversations, quickReplies, templates, initi
       initialInvoicePath={initialInvoicePath}
       initialInvoiceName={initialInvoiceName}
     >
-      <InboxLayout initialPrefill={initialPrefill} baseCurrency={baseCurrency} />
+      <Suspense fallback={null}>
+        <InboxLayout initialPrefill={initialPrefill} baseCurrency={baseCurrency} />
+      </Suspense>
     </InboxProvider>
   )
 }
