@@ -41,13 +41,6 @@ const PAY_BADGE: Record<string, { label: string; key: string }> = {
 
 // ─── Mock data for sections not yet backed by the DB ────────────────────────
 
-const MOCK_TRUST_FACTORS = [
-  { label: 'On-time payments',    v: 14, of: 14, w: 30, neg: false },
-  { label: 'Repeat ordering',     v: 11, of: 12, w: 24, neg: false },
-  { label: 'Address consistency', v: 1,  of: 1,  w: 16, neg: false },
-  { label: 'Acct age (20mo)',     v: 20, of: 24, w: 12, neg: false },
-  { label: 'Disputes/refunds',    v: 0,  of: 0,  w: 10, neg: true  },
-]
 
 type ActivityItem = {
   id: string
@@ -215,6 +208,18 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
   const payMethods = [...new Set(realOrders.map(o => o.payment_asset))]
     .map(a => PAY_BADGE[a]?.label ?? a)
 
+  const deliveredCount = realOrders.filter(o => o.status === 'delivered').length
+  const cancelledCount = realOrders.filter(o => o.status === 'cancelled').length
+  const accountMonths = customer.created_at
+    ? Math.floor((Date.now() - new Date(customer.created_at).getTime()) / (30.44 * 86400_000))
+    : 0
+  const trustFactors = [
+    { label: 'Completed orders',               v: Math.min(deliveredCount, 8), of: 8,  w: 3,  neg: false },
+    { label: `Account age (${accountMonths}mo)`, v: Math.min(accountMonths, 6), of: 6,  w: 1,  neg: false },
+    { label: 'Payment issues',                 v: tags.includes('payment') ? 1 : 0, of: 0, w: 25, neg: true  },
+    { label: 'Cancellations',                  v: Math.min(cancelledCount, 3), of: 3,  w: 5,  neg: true  },
+  ]
+
   return (
     <Shell section="Customers">
       <div className="pt-cu">
@@ -344,7 +349,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
               {/* Trust score */}
               <section className="pt-card">
                 <header className="pt-card-hd">
-                  <div><h3>Trust score</h3><p>Weighted factors</p></div>
+                  <div><h3>Trust score</h3><p>Starts at 70 · grows with history</p></div>
                   <div className={`pt-trust pt-trust-${trustCls}`}>
                     <div className="pt-trust-num">{customer.trust_score}</div>
                     <div className="pt-trust-lbl">TRUST</div>
@@ -352,7 +357,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                 </header>
                 <div className="pt-card-body" style={{ padding: 0 }}>
                   <ul className="pt-cu-factors">
-                    {MOCK_TRUST_FACTORS.map((f, i) => {
+                    {trustFactors.map((f, i) => {
                       const pct = Math.min(1, f.v / Math.max(1, f.of || f.v || 1))
                       return (
                         <li key={i}>
