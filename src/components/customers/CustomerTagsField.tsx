@@ -3,6 +3,23 @@
 import { useState, useEffect, useRef } from 'react'
 import { addCustomerTag, removeCustomerTag } from '@/app/customers/actions'
 
+const TAG_CLASS: Record<string, string> = {
+  vip:      'pt-tag-vip',
+  new:      'pt-tag-new',
+  payment:  'pt-tag-warn',
+  waitlist: 'pt-tag',
+  repeat:   'pt-tag-soft',
+  referred: 'pt-tag-soft',
+  shipping: 'pt-tag-soft',
+  reorder:  'pt-tag-soft',
+}
+
+const PRESET_TAGS = ['vip', 'repeat', 'new', 'waitlist', 'payment', 'referred', 'shipping', 'reorder']
+
+function tagClass(tag: string) {
+  return TAG_CLASS[tag] ?? 'pt-tag-soft'
+}
+
 export function AddTagHeaderButton() {
   return (
     <button className="pt-btn pt-btn-ghost" onClick={() => {
@@ -31,17 +48,20 @@ export function CustomerTagsField({ customerId, initialTags }: { customerId: str
     if (adding) inputRef.current?.focus()
   }, [adding])
 
-  const submit = async () => {
-    const normalized = input.trim().toLowerCase()
-    if (!normalized) return
-    if (tags.includes(normalized)) { setError('Already exists'); return }
+  const open = () => { setAdding(true); setError('') }
+  const close = () => { setAdding(false); setInput(''); setError('') }
+
+  const applyTag = async (tag: string) => {
+    const normalized = tag.trim().toLowerCase()
+    if (!normalized || tags.includes(normalized)) return
     const result = await addCustomerTag(customerId, normalized)
     if ('error' in result) { setError(result.error); return }
     setTags(prev => [...prev, normalized])
     setInput('')
-    setAdding(false)
     setError('')
   }
+
+  const submitInput = () => applyTag(input).then(() => { if (!error) close() })
 
   const remove = async (tag: string) => {
     const result = await removeCustomerTag(customerId, tag)
@@ -49,14 +69,17 @@ export function CustomerTagsField({ customerId, initialTags }: { customerId: str
     setTags(prev => prev.filter(t => t !== tag))
   }
 
+  const visiblePresets = PRESET_TAGS.filter(t => !tags.includes(t))
+
   return (
     <dd className="pt-cu-tags" id="details-tags">
       {tags.map(tg => (
-        <span key={tg} className="pt-tag pt-tag-soft pt-tag-removable" title="Remove tag"
-          onClick={() => remove(tg)}>
-          {tg} <span className="pt-tag-x">×</span>
+        <span key={tg} className={`pt-tag ${tagClass(tg)} pt-tag-removable`}
+          title="Click to remove" onClick={() => remove(tg)}>
+          {tg}<span className="pt-tag-x">×</span>
         </span>
       ))}
+
       {adding ? (
         <span className="pt-tag-input-wrap">
           <input
@@ -64,18 +87,34 @@ export function CustomerTagsField({ customerId, initialTags }: { customerId: str
             className="pt-tag-input"
             value={input}
             onChange={e => { setInput(e.target.value); setError('') }}
-            onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') { setAdding(false); setInput(''); setError('') } }}
-            placeholder="new tag…"
+            onKeyDown={e => {
+              if (e.key === 'Enter') { e.preventDefault(); applyTag(input) }
+              if (e.key === 'Escape') close()
+            }}
+            placeholder="type a tag…"
             maxLength={32}
           />
-          <button className="pt-cu-add-tag" onClick={submit}>✓</button>
-          <button className="pt-cu-add-tag" style={{ opacity: 0.5 }} onClick={() => { setAdding(false); setInput(''); setError('') }}>✕</button>
-          {error && <span style={{ fontSize: 11, color: 'var(--pt-danger)', marginLeft: 4 }}>{error}</span>}
+          <button className="pt-cu-add-tag" title="Confirm" onClick={() => applyTag(input)}>✓</button>
+          <button className="pt-cu-add-tag" title="Cancel" style={{ opacity: 0.5 }} onClick={close}>✕</button>
+          {error && <span style={{ fontSize: 11, color: 'var(--pt-danger)', marginLeft: 2 }}>{error}</span>}
+          {visiblePresets.length > 0 && (
+            <div className="pt-tag-suggestions">
+              {visiblePresets.map(t => (
+                <span key={t} className={`pt-tag ${tagClass(t)} pt-tag-suggestion`}
+                  onClick={() => applyTag(t)}>
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
         </span>
       ) : (
-        <button className="pt-cu-add-tag" onClick={() => { setAdding(true); setError('') }}>+</button>
+        <button className="pt-cu-add-tag" title="Add tag" onClick={open}>+</button>
       )}
-      {tags.length === 0 && !adding && <span style={{ color: 'var(--pt-fg-4)', fontSize: 12 }}>None</span>}
+
+      {tags.length === 0 && !adding && (
+        <span style={{ color: 'var(--pt-fg-4)', fontSize: 12 }}>None</span>
+      )}
     </dd>
   )
 }

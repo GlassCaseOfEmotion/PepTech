@@ -198,6 +198,34 @@
   border: 0.5px dashed var(--pt-line); background: transparent;
   color: var(--pt-fg-3); cursor: pointer; font-size: 12px; line-height: 1;
 }
+.pt-cu-add-tag:hover { border-color: var(--pt-fg-3); color: var(--pt-fg); }
+
+/* Removable tags */
+.pt-tag-removable { cursor: pointer; user-select: none; }
+.pt-tag-removable:hover { opacity: 0.7; }
+.pt-tag-x { margin-left: 3px; opacity: 0.5; font-size: 9px; }
+.pt-tag-removable:hover .pt-tag-x { opacity: 1; }
+
+/* Inline tag input */
+.pt-tag-input-wrap { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+.pt-tag-input {
+  font-size: 11px; padding: 1px 6px; border-radius: 4px; height: 20px;
+  border: 0.5px solid var(--pt-accent); outline: none; width: 90px;
+  background: var(--pt-bg-2); color: var(--pt-fg);
+}
+.pt-tag-input:focus { border-color: var(--pt-accent); box-shadow: 0 0 0 2px oklch(from var(--pt-accent) l c h / 0.15); }
+
+/* Tag suggestions dropdown */
+.pt-tag-suggestions {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  padding: 8px 0 4px; width: 100%;
+}
+.pt-tag-suggestion {
+  cursor: pointer; opacity: 0.7;
+  transition: opacity 0.1s;
+}
+.pt-tag-suggestion:hover { opacity: 1; }
+.pt-tag-suggestion.is-applied { opacity: 0.3; cursor: default; pointer-events: none; }
 .pt-cu-pay-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
 
 /* Activity */
