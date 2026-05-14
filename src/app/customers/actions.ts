@@ -14,6 +14,46 @@ async function getTenantId() {
   return { supabase, tenantId: userRow.tenant_id }
 }
 
+export async function addCustomerTag(
+  customerId: string,
+  tag: string,
+): Promise<{ success: true } | { error: string }> {
+  const normalized = tag.trim().toLowerCase()
+  if (!normalized) return { error: 'Tag cannot be empty' }
+  if (normalized.length > 32) return { error: 'Tag too long' }
+  try {
+    const { supabase, tenantId } = await getTenantId()
+    const { error } = await supabase
+      .from('customer_tags')
+      .insert({ tenant_id: tenantId, customer_id: customerId, tag: normalized })
+    if (error) return { error: error.code === '23505' ? 'Tag already exists' : error.message }
+    revalidatePath(`/customers/${customerId}`)
+    return { success: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
+export async function removeCustomerTag(
+  customerId: string,
+  tag: string,
+): Promise<{ success: true } | { error: string }> {
+  try {
+    const { supabase, tenantId } = await getTenantId()
+    const { error } = await supabase
+      .from('customer_tags')
+      .delete()
+      .eq('tenant_id', tenantId)
+      .eq('customer_id', customerId)
+      .eq('tag', tag)
+    if (error) return { error: error.message }
+    revalidatePath(`/customers/${customerId}`)
+    return { success: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
 export async function addCustomerNote(
   customerId: string,
   content: string,

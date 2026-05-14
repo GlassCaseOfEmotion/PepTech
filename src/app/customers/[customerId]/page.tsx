@@ -5,6 +5,7 @@ import { Shell } from '@/components/shell/Shell'
 import { Icons } from '@/lib/icons'
 import { CustomerNewOrderButton } from '@/components/customers/CustomerNewOrderButton'
 import { CustomerNoteCard, AddNoteHeaderButton } from '@/components/customers/CustomerNoteCard'
+import { CustomerTagsField, AddTagHeaderButton } from '@/components/customers/CustomerTagsField'
 import { ActiveCyclesCard } from '@/components/customers/ActiveCyclesCard'
 import { computeSupply } from '@/types/protocols'
 import { formatAmount } from '@/lib/currency'
@@ -241,7 +242,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
           </div>
           <div className="pt-cu-hd-actions">
             <AddNoteHeaderButton />
-            <button className="pt-btn pt-btn-ghost">Add tag</button>
+            <AddTagHeaderButton />
             <button className="pt-btn pt-btn-ghost">
               <ChIcon size={12} /> Message
             </button>
@@ -377,12 +378,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                 <div className="pt-card-body" style={{ padding: 0 }}>
                   <dl className="pt-cu-dl">
                     <dt>Tags</dt>
-                    <dd className="pt-cu-tags">
-                      {tags.length > 0
-                        ? tags.map(tg => <span key={tg} className="pt-tag pt-tag-soft">{tg}</span>)
-                        : <span style={{ color: 'var(--pt-fg-4)', fontSize: 12 }}>None</span>}
-                      <button className="pt-cu-add-tag">+</button>
-                    </dd>
+                    <CustomerTagsField customerId={customer.id} initialTags={tags} />
                     <dt>Address</dt>
                     <dd>{fmtAddr ?? <span style={{ color: 'var(--pt-fg-4)', fontSize: 12 }}>None on file</span>}</dd>
                     <dt>Pay methods</dt>
