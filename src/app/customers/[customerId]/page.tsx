@@ -92,7 +92,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
   if (!user) redirect('/login')
 
   const supabase = await createClient()
-  const [{ data: customer }, { data: notes }, { data: orders }, { data: tenantRow }, { data: activityRaw }] = await Promise.all([
+  const [{ data: customer }, { data: notes }, { data: orders }, { data: tenantRow }, { data: activityRaw }, { data: conversation }] = await Promise.all([
     supabase
       .from('customers')
       .select('id, display_name, trust_score, ltv, created_at, customer_channels(channel_type, display_handle, is_primary), customer_tags(tag)')
@@ -120,6 +120,14 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
       .not('label', 'in', '("Moved to Awaiting payment","Moved to Confirming","Moved to Packing")')
       .order('created_at', { ascending: false })
       .limit(30),
+    supabase
+      .from('conversations')
+      .select('id')
+      .eq('customer_id', customerId)
+      .in('status', ['new', 'needs_reply', 'in_progress', 'snoozed'])
+      .order('last_message_at', { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle(),
   ])
 
   if (!customer) redirect('/customers')
@@ -248,9 +256,12 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
           <div className="pt-cu-hd-actions">
             <AddNoteHeaderButton />
             <AddTagHeaderButton />
-            <button className="pt-btn pt-btn-ghost">
+            <Link
+              href={conversation ? `/inbox?conversation=${conversation.id}` : '/inbox'}
+              className="pt-btn pt-btn-ghost"
+            >
               <ChIcon size={12} /> Message
-            </button>
+            </Link>
             <CustomerNewOrderButton customerId={customer.id} customerName={customer.display_name} />
           </div>
         </div>
