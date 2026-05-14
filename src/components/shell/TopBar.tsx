@@ -39,8 +39,7 @@ export function TopBar({ section = 'Inbox', connectedChannels = [], rightOpen, o
         >
           <Icons.bot size={15} />
         </button>
-        <button className="pt-iconbtn" title="Filter"><Icons.filter size={14} /></button>
-        <NotificationBell />
+<NotificationBell />
         {onRightToggle !== undefined && (
           <button
             className={`pt-iconbtn ${rightOpen ? 'is-on' : ''}`}
