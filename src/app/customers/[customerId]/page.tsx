@@ -48,13 +48,34 @@ const MOCK_TRUST_FACTORS = [
   { label: 'Disputes/refunds',    v: 0,  of: 0,  w: 10, neg: true  },
 ]
 
-const MOCK_ACTIVITY = [
-  { dot: 'cool', bold: 'USDT received', rest: ' · $330 · 4m ago' },
-  { dot: '',     bold: 'Order #A-2241 placed', rest: ' · today 13:18' },
-  { dot: '',     bold: 'Replied to broadcast "restock"', rest: ' · yesterday' },
-  { dot: 'warn', bold: 'Reorder ping sent', rest: ' · 4d ago' },
-  { dot: '',     bold: 'Order #A-2188 delivered', rest: ' · Apr 2' },
-]
+type ActivityItem = {
+  id: string
+  source: 'order' | 'tag' | 'note'
+  label: string
+  ref_number: string | null
+  amount: number | null
+  note: string | null
+  created_at: string
+}
+
+function actBullet(item: ActivityItem) {
+  if (item.source !== 'order') return ''
+  const l = item.label.toLowerCase()
+  if (l.includes('ship') || l.includes('deliver') || l.includes('creat') || l.includes('draft') || l.includes('pack')) return 'cool'
+  if (l.includes('confirm')) return 'warn'
+  return ''
+}
+
+function actDetail(item: ActivityItem, currency: string) {
+  if (item.source === 'tag') return item.note ? ` · ${item.note}` : ''
+  if (item.source === 'note') return item.note ? ` · ${item.note}` : ''
+  const parts: string[] = []
+  if (item.ref_number) parts.push(`#${item.ref_number}`)
+  if (item.amount != null && (item.label.toLowerCase().includes('creat') || item.label.toLowerCase().includes('draft'))) {
+    parts.push(formatAmount(Number(item.amount), currency))
+  }
+  return parts.length ? ` · ${parts.join(' · ')}` : ''
+}
 
 const MOCK_PAY_METHODS = ['USDT (TRC20)', 'BTC', 'Cash']
 
@@ -77,7 +98,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
   if (!user) redirect('/login')
 
   const supabase = await createClient()
-  const [{ data: customer }, { data: notes }, { data: orders }, { data: tenantRow }] = await Promise.all([
+  const [{ data: customer }, { data: notes }, { data: orders }, { data: tenantRow }, { data: activityRaw }] = await Promise.all([
     supabase
       .from('customers')
       .select('id, display_name, trust_score, ltv, created_at, customer_channels(channel_type, display_handle, is_primary), customer_tags(tag)')
@@ -98,11 +119,18 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
       .from('tenants')
       .select('base_currency')
       .single(),
+    supabase
+      .from('customer_activity')
+      .select('id, source, label, ref_number, amount, note, created_at')
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false })
+      .limit(30),
   ])
 
   if (!customer) redirect('/customers')
 
   const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
+  const activity = (activityRaw ?? []) as ActivityItem[]
 
   const primary = customer.customer_channels?.find(c => c.is_primary) ?? customer.customer_channels?.[0]
   const chKey = primary ? CH_KEY[primary.channel_type] ?? 'wa' : 'wa'
@@ -360,16 +388,26 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
 
               {/* Activity */}
               <section className="pt-card">
-                <header className="pt-card-hd"><div><h3>Activity</h3><p>Recent events</p></div></header>
+                <header className="pt-card-hd"><div><h3>Activity</h3><p>{activity.length} events</p></div></header>
                 <div className="pt-card-body" style={{ padding: 0 }}>
-                  <ul className="pt-cu-act">
-                    {MOCK_ACTIVITY.map((a, i) => (
-                      <li key={i}>
-                        <i className={`pt-cu-act-dot${a.dot ? ` pt-bul-${a.dot}` : ''}`} />
-                        <div><b>{a.bold}</b>{a.rest}</div>
-                      </li>
-                    ))}
-                  </ul>
+                  {activity.length === 0 ? (
+                    <div style={{ padding: '12px 14px', fontSize: 12, color: 'var(--pt-fg-4)' }}>No activity yet</div>
+                  ) : (
+                    <ul className="pt-cu-act">
+                      {activity.map(a => {
+                        const bullet = actBullet(a)
+                        return (
+                          <li key={a.id}>
+                            <i className={`pt-cu-act-dot${bullet ? ` pt-bul-${bullet}` : ''}`} />
+                            <div>
+                              <b>{a.label}</b>{actDetail(a, baseCurrency)}
+                              <div className="pt-act-time">{fmtDate(a.created_at)}</div>
+                            </div>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
                 </div>
               </section>
 
