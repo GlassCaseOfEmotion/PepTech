@@ -5,6 +5,16 @@ import { dbConversationToThread, type DbConversation } from '@/types/inbox'
 import { dbProductToDisplay, type DbProduct, type DbBatch } from '@/types/catalog'
 import type { DashboardStats } from '@/types/dashboard'
 
+const PINNED_SELECT = `
+  id, status, unread_count, last_message_at, last_message_snippet,
+  channel_type, channel_identifier, is_pinned,
+  customers (
+    id, display_name, trust_score, ltv,
+    customer_tags (tag),
+    customer_channels (channel_type, display_handle, is_primary)
+  )
+`
+
 const CONV_SELECT = `
   id, status, unread_count, last_message_at, last_message_snippet,
   channel_type, channel_identifier,
@@ -28,6 +38,7 @@ export default async function Home() {
     { data: userRow },
     { data: channels },
     { data: conversations },
+    { data: pinnedConversations },
     { data: products },
     { data: batches },
     { data: revenueRows },
@@ -42,6 +53,11 @@ export default async function Home() {
       .in('status', ['new', 'needs_reply', 'in_progress', 'snoozed'])
       .order('last_message_at', { ascending: false, nullsFirst: false })
       .limit(50),
+    supabase
+      .from('conversations')
+      .select(PINNED_SELECT)
+      .eq('is_pinned', true)
+      .order('last_message_at', { ascending: false, nullsFirst: false }),
     supabase.from('products').select('*').eq('is_active', true).order('name'),
     supabase.from('batches').select('*').order('created_at', { ascending: false }),
     supabase
@@ -118,6 +134,7 @@ export default async function Home() {
       displayName={displayName}
       connectedChannels={connectedChannels}
       threads={threads}
+      initialPinned={(pinnedConversations ?? []) as DbConversation[]}
       stockProducts={stockProducts}
       stats={stats}
       baseCurrency={baseCurrency}

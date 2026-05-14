@@ -4,8 +4,9 @@ import { useState } from 'react'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { GlobalNotifications } from './GlobalNotifications'
+import { AgentPalette } from './AgentPalette'
 import { DashboardView, DashboardRightRail } from '@/components/dashboard/DashboardView'
-import type { InboxThread } from '@/types/inbox'
+import type { InboxThread, DbConversation } from '@/types/inbox'
 import type { CatalogProduct } from '@/types/catalog'
 import type { DashboardStats } from '@/types/dashboard'
 
@@ -13,6 +14,7 @@ interface DashboardLayoutProps {
   displayName: string
   connectedChannels: string[]
   threads: InboxThread[]
+  initialPinned: DbConversation[]
   stockProducts: CatalogProduct[]
   stats: DashboardStats
   baseCurrency: string
@@ -20,7 +22,7 @@ interface DashboardLayoutProps {
 
 const MOCK_CHANNELS = ['whatsapp', 'telegram']
 
-export function DashboardLayout({ displayName, connectedChannels, threads, stockProducts, stats, baseCurrency }: DashboardLayoutProps) {
+export function DashboardLayout({ displayName, connectedChannels, threads, initialPinned, stockProducts, stats, baseCurrency }: DashboardLayoutProps) {
   const [rightOpen, setRightOpen] = useState(true)
   const channels = connectedChannels.length > 0 ? connectedChannels : MOCK_CHANNELS
   const focusThread = threads.find(t => t.status === 'needs_reply') ?? threads[0] ?? null
@@ -28,7 +30,8 @@ export function DashboardLayout({ displayName, connectedChannels, threads, stock
   return (
     <div className={`pt-root${rightOpen ? '' : ' no-right'}`}>
       <GlobalNotifications />
-      <Sidebar displayName={displayName} />
+      <AgentPalette />
+      <Sidebar displayName={displayName} initialPinned={initialPinned} />
       <main className="pt-main">
         <TopBar
           section="Dashboard"
