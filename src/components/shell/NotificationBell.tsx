@@ -11,6 +11,7 @@ export interface NotificationItem {
   body: string
   href: string
   at: number
+  count?: number
 }
 
 function fmtAge(ts: number) {
@@ -27,18 +28,28 @@ function fmtAge(ts: number) {
 export function NotificationBell() {
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<NotificationItem[]>([])
-  const [seenCount, setSeenCount] = useState(0)
+  const [unreadCount, setUnreadCount] = useState(0)
   const [animKey, setAnimKey] = useState(0)
   const panelRef = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLButtonElement>(null)
   const router = useRouter()
 
-  const unread = Math.max(0, items.length - seenCount)
+  const unread = unreadCount
 
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<NotificationItem>).detail
-      setItems(prev => [detail, ...prev].slice(0, 30))
+      setItems(prev => {
+        const existingIdx = prev.findIndex(it => it.href === detail.href)
+        if (existingIdx >= 0) {
+          // Same conversation — collapse: update content, move to top, increment count
+          const existing = prev[existingIdx]
+          const merged = { ...detail, count: (existing.count ?? 1) + 1 }
+          return [merged, ...prev.filter((_, i) => i !== existingIdx)].slice(0, 30)
+        }
+        return [detail, ...prev].slice(0, 30)
+      })
+      setUnreadCount(c => c + 1)
       setAnimKey(k => k + 1)
     }
     const updateHandler = (e: Event) => {
@@ -68,7 +79,7 @@ export function NotificationBell() {
 
   const toggleOpen = () => {
     setOpen(o => {
-      if (!o) setSeenCount(items.length) // opening → mark all seen
+      if (!o) setUnreadCount(0)
       return !o
     })
   }
@@ -80,7 +91,7 @@ export function NotificationBell() {
 
   const clearAll = () => {
     setItems([])
-    setSeenCount(0)
+    setUnreadCount(0)
     setOpen(false)
   }
 
@@ -120,7 +131,12 @@ export function NotificationBell() {
                 <li key={item.id} className="pt-notif-item" onClick={() => visit(item)}>
                   <div className={`pt-notif-bar pt-notif-bar-${item.type}`} />
                   <div className="pt-notif-body">
-                    <div className="pt-notif-item-title">{item.title}</div>
+                    <div className="pt-notif-item-title">
+                      <span>{item.title}</span>
+                      {item.count && item.count > 1 && (
+                        <span className="pt-notif-count">{item.count}</span>
+                      )}
+                    </div>
                     <div className="pt-notif-item-body">{item.body}</div>
                   </div>
                   <div className="pt-notif-item-time">{fmtAge(item.at)}</div>

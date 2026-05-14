@@ -398,8 +398,17 @@ kbd {
 .pt-notif-body { min-width: 0; }
 .pt-notif-item-title {
   font-size: 12px; font-weight: 500; color: var(--pt-fg);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   line-height: 1.35; margin-bottom: 1px;
+  display: flex; align-items: center; gap: 5px; overflow: hidden;
+}
+.pt-notif-item-title > :first-child { /* text node wrapper via span when count present */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;
+}
+.pt-notif-count {
+  flex-shrink: 0;
+  font-size: 10px; font-weight: 600; line-height: 1;
+  background: var(--pt-accent); color: #fff;
+  border-radius: 8px; padding: 2px 5px;
 }
 .pt-notif-item-body {
   font-size: 11px; color: var(--pt-fg-3);
