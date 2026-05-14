@@ -329,6 +329,9 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
   baseCurrency: string
 }) {
   const [showAddBatch, setShowAddBatch] = useState(false)
+  const [showReorder, setShowReorder] = useState(false)
+  const [reorderCopied, setReorderCopied] = useState(false)
+  const [reorderMsg, setReorderMsg] = useState('')
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({
     name: product.name,
@@ -412,7 +415,30 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
               setEditing(true)
               setEditError('')
             }}>Edit</button>
-            <button className="pt-btn pt-btn-primary">Re-order</button>
+            <button className="pt-btn pt-btn-primary" onClick={() => {
+              const dailyVel = product.velocity30dTotal / 30
+              const daysOfCover = dailyVel > 0 ? Math.floor(product.totalStock / dailyVel) : null
+              const suggestedQty = dailyVel > 0
+                ? Math.max(Math.ceil(dailyVel * 30) - product.totalStock, 10)
+                : 50
+              setReorderMsg([
+                `Hi,`,
+                ``,
+                `We'd like to place a reorder for the following:`,
+                ``,
+                `  Product: ${product.name}`,
+                `  SKU: ${product.sku}`,
+                `  Quantity: ${suggestedQty} units`,
+                ``,
+                `Current stock is ${product.totalStock} units${daysOfCover !== null ? ` (~${daysOfCover}d cover)` : ''}.`,
+                ``,
+                `Please confirm availability and lead time.`,
+                ``,
+                `Thanks`,
+              ].join('\n'))
+              setShowReorder(true)
+              setReorderCopied(false)
+            }}>Re-order</button>
           </div>
         </header>
       )}
@@ -536,6 +562,42 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
       )}
 
       <ProtocolSection productId={product.id} protocol={protocol} />
+
+      {showReorder && (
+        <div className="pt-modal-backdrop" onClick={() => setShowReorder(false)}>
+          <div className="pt-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+            <h3 style={{ marginBottom: 4 }}>Reorder — {product.name}</h3>
+            <p style={{ fontSize: 12, color: 'var(--pt-fg-3)', marginBottom: 12 }}>
+              Copy this message and send to your supplier.
+            </p>
+            <textarea
+              value={reorderMsg}
+              onChange={e => setReorderMsg(e.target.value)}
+              rows={13}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                fontFamily: 'var(--pt-mono)', fontSize: 12,
+                background: 'var(--pt-bg-2)', border: '1px solid var(--pt-border)',
+                borderRadius: 6, padding: '10px 12px',
+                color: 'var(--pt-fg-1)', resize: 'vertical', lineHeight: 1.55,
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+              <button className="pt-btn pt-btn-ghost" onClick={() => setShowReorder(false)}>Close</button>
+              <button
+                className="pt-btn pt-btn-primary"
+                onClick={() => {
+                  navigator.clipboard.writeText(reorderMsg)
+                  setReorderCopied(true)
+                  setTimeout(() => setReorderCopied(false), 2000)
+                }}
+              >
+                {reorderCopied ? 'Copied!' : 'Copy message'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   )
 }
