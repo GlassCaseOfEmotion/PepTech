@@ -9,15 +9,20 @@ import { grossMargin } from '@/types/catalog'
 import { FREQUENCY_LABELS, FREQUENCY_OPTIONS } from '@/types/protocols'
 import type { ProductProtocol, Frequency } from '@/types/protocols'
 
-// ── Mini sparkline (static placeholder — replace with real 7d velocity data) ─
-function MiniSparkline({ width = 44, height = 16 }: { width?: number; height?: number }) {
+// ── Velocity sparkline — area fill matching original design ─────────────────
+function MiniSparkline({ data, width = 44, height = 16 }: { data: number[]; width?: number; height?: number }) {
+  const max = Math.max(...data, 1)
+  const step = (width - 1) / Math.max(1, data.length - 1)
+  const pts = data.map((v, i) =>
+    `${(i * step).toFixed(1)},${(height - (v / max) * height * 0.88).toFixed(1)}`
+  ).join(' ')
+  const lastX = ((data.length - 1) * step).toFixed(1)
+  const area = `0,${height} ${pts} ${lastX},${height}`
   return (
-    <svg className="pt-cat-spark" width={width} height={height} viewBox="0 0 44 16">
-      <polyline
-        points="0,10 6,8 12,11 18,6 24,9 30,7 36,10 44,8"
-        fill="none" stroke="var(--pt-ok)" strokeWidth="1.5"
-        strokeLinecap="round" strokeLinejoin="round"
-      />
+    <svg className="pt-cat-spark" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+      <polygon points={area} fill="var(--pt-accent-soft)" stroke="none" />
+      <polyline points={pts} fill="none" stroke="var(--pt-accent)" strokeWidth="1.2"
+        strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   )
 }
@@ -433,14 +438,25 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
         </div>
         <div className="pt-cat-stat">
           <div className="lbl">Velocity</div>
-          <div className="val">—<span className="u">/wk</span></div>
-          <MiniSparkline width={110} height={28} />
-          <div className="pt-cat-stat-sub">last 7 days</div>
+          {(() => {
+            const wkTotal = product.velocity7d.reduce((s, v) => s + v, 0)
+            return <>
+              <div className="val">{wkTotal || '—'}<span className="u">/wk</span></div>
+              <MiniSparkline data={product.velocity7d} width={110} height={28} />
+              <div className="pt-cat-stat-sub">last 7 days</div>
+            </>
+          })()}
         </div>
         <div className="pt-cat-stat">
           <div className="lbl">Cover</div>
-          <div className="val">—<span className="u">days</span></div>
-          <div className="pt-cat-stat-sub">at current velocity</div>
+          {(() => {
+            const wkTotal = product.velocity7d.reduce((s, v) => s + v, 0)
+            const cover = wkTotal > 0 ? Math.ceil(product.totalStock / (wkTotal / 7)) : null
+            return <>
+              <div className="val">{cover ?? '—'}<span className="u">days</span></div>
+              <div className="pt-cat-stat-sub">at current velocity</div>
+            </>
+          })()}
         </div>
         <div className="pt-cat-stat">
           <div className="lbl">Unit Econ</div>
@@ -822,8 +838,8 @@ export function CatalogView({ products, protocols, baseCurrency }: { products: C
                       </div>
                     </div>
                     <div className="pt-cat-cell-velocity">
-                      {p.totalStock > 0 ? <MiniSparkline /> : null}
-                      <span className="pt-cat-vel">—/wk</span>
+                      <MiniSparkline data={p.velocity7d} />
+                      <span className="pt-cat-vel">{p.velocity7d.reduce((s, v) => s + v, 0) || '—'}/wk</span>
                     </div>
                     <div className="pt-cat-cell-cover">
                       <span className={`mono ${flag === 'oos' ? 'is-zero' : flag === 'critical' ? 'is-warn' : ''}`}>—</span>
