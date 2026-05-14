@@ -7,6 +7,7 @@ import { CustomerNewOrderButton } from '@/components/customers/CustomerNewOrderB
 import { CustomerNoteCard, AddNoteHeaderButton } from '@/components/customers/CustomerNoteCard'
 import { CustomerTagsField, AddTagHeaderButton } from '@/components/customers/CustomerTagsField'
 import { ActiveCyclesCard } from '@/components/customers/ActiveCyclesCard'
+import { CustomerDetailBody } from '@/components/customers/CustomerDetailBody'
 import { computeSupply } from '@/types/protocols'
 import { formatAmount } from '@/lib/currency'
 import type { ProductProtocol, CustomerProtocolOverride, CycleEntry } from '@/types/protocols'
@@ -251,6 +252,26 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
               <div className="pt-cu-hd-handle mono">
                 {primary?.display_handle ?? '—'} · {chLabel} · joined {joined}
               </div>
+              {/* Mobile hero stats — hidden on desktop via CSS */}
+              <div className="pt-cu-hd-mobile-stats">
+                <div className="pt-cu-hd-stat">
+                  <strong>{formatAmount(customer.ltv, baseCurrency)}</strong>
+                  <span>LTV</span>
+                </div>
+                <div className="pt-cu-hd-stat">
+                  <strong>{orders?.length ?? 0}</strong>
+                  <span>Orders</span>
+                </div>
+                <div className="pt-cu-hd-stat">
+                  <strong>{orders?.[0] ? new Date(orders[0].created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</strong>
+                  <span>Last order</span>
+                </div>
+              </div>
+            </div>
+            {/* Trust pill — hidden on desktop via CSS, shown mobile top-right */}
+            <div className="pt-cu-hd-trust-pill">
+              <div className="pt-cu-hd-trust-num">{customer.trust_score}</div>
+              <div className="pt-cu-hd-trust-lbl">Trust</div>
             </div>
           </div>
           <div className="pt-cu-hd-actions">
@@ -296,12 +317,8 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
             </div>
           </div>
 
-          <div className="pt-cu-grid">
-
-            {/* ── Left column ── */}
-            <div className="pt-cu-col">
-
-              {/* Order history */}
+          <CustomerDetailBody
+            orders={
               <section className="pt-card">
                 <header className="pt-card-hd">
                   <div><h3>Order history</h3><p>{totalOrders} total · {formatAmount(customer.ltv, baseCurrency)} LTV</p></div>
@@ -346,18 +363,10 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                   )}
                 </div>
               </section>
-
-              <ActiveCyclesCard cycles={cycles} customerId={customer.id} />
-
-              {/* Notes */}
-              <CustomerNoteCard customerId={customer.id} initialNotes={notes ?? []} />
-
-            </div>
-
-            {/* ── Right column ── */}
-            <div className="pt-cu-col">
-
-              {/* Trust score */}
+            }
+            cycles={<ActiveCyclesCard cycles={cycles} customerId={customer.id} />}
+            notes={<CustomerNoteCard customerId={customer.id} initialNotes={notes ?? []} />}
+            trust={
               <section className="pt-card">
                 <header className="pt-card-hd">
                   <div><h3>Trust score</h3><p>Starts at 70 · grows with history</p></div>
@@ -387,8 +396,8 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                   </ul>
                 </div>
               </section>
-
-              {/* Details */}
+            }
+            details={
               <section className="pt-card">
                 <header className="pt-card-hd"><div><h3>Details</h3></div></header>
                 <div className="pt-card-body" style={{ padding: 0 }}>
@@ -408,8 +417,8 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                   </dl>
                 </div>
               </section>
-
-              {/* Activity */}
+            }
+            activity={
               <section className="pt-card">
                 <header className="pt-card-hd"><div><h3>Activity</h3><p>{activity.length} events</p></div></header>
                 <div className="pt-card-body" style={{ padding: 0 }}>
@@ -433,9 +442,8 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                   )}
                 </div>
               </section>
-
-            </div>
-          </div>
+            }
+          />
         </div>
       </div>
     </Shell>

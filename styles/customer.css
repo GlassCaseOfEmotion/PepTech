@@ -254,3 +254,94 @@
 .pt-cu-supply-lbl.is-ok       { color: var(--pt-fg-4); }
 .pt-cu-supply-lbl.is-low      { color: var(--pt-warn); }
 .pt-cu-supply-lbl.is-critical { color: var(--pt-danger); }
+
+/* ─── Mobile customer detail (≤768px) ──────────────────────────────────── */
+
+/* Hidden on desktop */
+.pt-cu-hd-mobile-stats { display: none; }
+.pt-cu-hd-trust-pill   { display: none; }
+.pt-cd-tab-bar         { display: none; }
+
+@media (max-width: 768px) {
+  /* Mobile hero stats strip */
+  .pt-cu-hd-mobile-stats {
+    display: flex;
+    gap: 0;
+    margin-top: 8px;
+    border-top: 0.5px solid var(--pt-line-soft);
+    padding-top: 8px;
+  }
+  .pt-cu-hd-stat {
+    flex: 1; text-align: center;
+    border-right: 0.5px solid var(--pt-line-soft);
+  }
+  .pt-cu-hd-stat:last-child { border-right: none; }
+  .pt-cu-hd-stat strong {
+    display: block;
+    font-size: 13px; font-weight: 700; color: var(--pt-fg);
+  }
+  .pt-cu-hd-stat span {
+    font-size: 10px; color: var(--pt-fg-4);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+
+  /* Trust pill */
+  .pt-cu-hd-trust-pill {
+    display: block;
+    background: var(--pt-bg-2);
+    border: 0.5px solid var(--pt-line);
+    border-radius: 8px;
+    padding: 4px 8px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .pt-cu-hd-trust-num {
+    font-size: 15px; font-weight: 700; color: var(--pt-accent); line-height: 1.1;
+  }
+  .pt-cu-hd-trust-lbl {
+    font-size: 9px; color: var(--pt-fg-4);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+
+  /* Header: position relative so trust pill can go top-right */
+  .pt-cu-hd-id { position: relative; padding-right: 60px; }
+
+  /* Tab bar */
+  .pt-cd-tab-bar {
+    display: flex;
+    border-bottom: 0.5px solid var(--pt-line);
+    background: var(--pt-surface);
+    position: sticky; top: 48px; z-index: 10;
+  }
+  .pt-cd-tab {
+    flex: 1; padding: 10px 4px;
+    font-size: 12px; color: var(--pt-fg-4);
+    background: none; border: none; cursor: pointer;
+    border-bottom: 2px solid transparent;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pt-cd-tab.is-on {
+    color: var(--pt-accent);
+    border-bottom-color: var(--pt-accent);
+    font-weight: 500;
+  }
+
+  /* Body layout: single column on mobile */
+  .pt-cu-grid { display: block !important; }
+  .pt-cu-col  { width: 100% !important; }
+
+  /* Hide desktop-only sections */
+  .pt-cd-desktop-only { display: none !important; }
+
+  /* Show only active tab section */
+  .pt-cd-section         { display: none; }
+  .pt-cd-section.is-active { display: block; }
+}
+
+@media (min-width: 769px) {
+  /* Desktop: all sections visible */
+  .pt-cd-section         { display: block !important; }
+  .pt-cd-tab-bar         { display: none !important; }
+  .pt-cu-hd-mobile-stats { display: none !important; }
+  .pt-cu-hd-trust-pill   { display: none !important; }
+}
