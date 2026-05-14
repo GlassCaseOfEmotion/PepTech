@@ -16,31 +16,37 @@ export function GlobalNotifications() {
         schema: 'public',
         table: 'messages',
         filter: 'direction=eq.inbound',
-      }, async (payload) => {
+      }, (payload) => {
         playChime()
 
         const raw = payload.new as { id: string; conversation_id: string; content: string }
 
-        // Fetch customer name for the notification title
-        const { data: conv } = await supabase
-          .from('conversations')
-          .select('id, customers(display_name)')
-          .eq('id', raw.conversation_id)
-          .single()
-
-        const customerName =
-          (conv?.customers as { display_name: string } | null)?.display_name ?? 'Customer'
-
+        // Dispatch immediately so the bell always fires
         const item: NotificationItem = {
           id: raw.id,
           type: 'message',
-          title: `New message · ${customerName}`,
+          title: 'New message',
           body: raw.content?.slice(0, 80) ?? '',
           href: `/inbox?conversation=${raw.conversation_id}`,
           at: Date.now(),
         }
-
         window.dispatchEvent(new CustomEvent('pt:notification', { detail: item }))
+
+        // Enrich with customer name asynchronously — non-blocking
+        supabase
+          .from('conversations')
+          .select('id, customers(display_name)')
+          .eq('id', raw.conversation_id)
+          .single()
+          .then(({ data: conv }) => {
+            const name = (conv?.customers as { display_name: string } | null)?.display_name
+            if (name) {
+              window.dispatchEvent(new CustomEvent('pt:notification:update', {
+                detail: { id: raw.id, title: `New message · ${name}` },
+              }))
+            }
+          })
+          .catch(() => { /* non-fatal — notification already showing */ })
       })
       .subscribe()
 

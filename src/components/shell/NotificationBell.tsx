@@ -41,8 +41,16 @@ export function NotificationBell() {
       setItems(prev => [detail, ...prev].slice(0, 30))
       setAnimKey(k => k + 1)
     }
+    const updateHandler = (e: Event) => {
+      const { id, title } = (e as CustomEvent<{ id: string; title: string }>).detail
+      setItems(prev => prev.map(item => item.id === id ? { ...item, title } : item))
+    }
     window.addEventListener('pt:notification', handler)
-    return () => window.removeEventListener('pt:notification', handler)
+    window.addEventListener('pt:notification:update', updateHandler)
+    return () => {
+      window.removeEventListener('pt:notification', handler)
+      window.removeEventListener('pt:notification:update', updateHandler)
+    }
   }, [])
 
   // Close on outside click
