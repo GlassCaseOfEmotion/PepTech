@@ -6,9 +6,10 @@ import { Icons } from '@/lib/icons'
 import { formatAmount } from '@/lib/currency'
 import { createClient } from '@/lib/supabase/client'
 import {
-  MOCK_REORDERS, MOCK_SHIPMENTS,
-  type MockReorder, type MockShipment,
+  MOCK_SHIPMENTS,
+  type MockShipment,
 } from '@/lib/mock-data'
+import type { ReorderSignal } from '@/lib/reorder-signals'
 import type { InboxThread, DbConversation } from '@/types/inbox'
 import { dbConversationToThread } from '@/types/inbox'
 import type { CatalogProduct } from '@/types/catalog'
@@ -99,7 +100,7 @@ function DashCard({ title, subtitle, action, span, footer, scroll, children }: {
 
 // ─── KPI strip ──────────────────────────────────────────────────────────────
 
-function KpiRow({ active, needsReply, stats, baseCurrency }: { active: number; needsReply: number; stats: DashboardStats; baseCurrency: string }) {
+function KpiRow({ active, needsReply, reordersDue7d, highConf, stats, baseCurrency }: { active: number; needsReply: number; reordersDue7d: number; highConf: number; stats: DashboardStats; baseCurrency: string }) {
   const { revenue7d, revenuePrev7d, revenue90dDaily, pendingOrders, pendingTotal } = stats
   const spark7d = revenue90dDaily.slice(-7).map(d => d.v)
   const delta = revenuePrev7d > 0
@@ -129,7 +130,7 @@ function KpiRow({ active, needsReply, stats, baseCurrency }: { active: number; n
       delta: null,
       sub: `${needsReply} need reply`,
     },
-    { label: 'Reorders due · 7d', value: '11', delta: null, sub: '3 high-confidence' },
+    { label: 'Reorders due · 7d', value: String(reordersDue7d), delta: null, sub: `${highConf} high-confidence` },
   ]
   return (
     <div className="pt-kpis">
@@ -308,10 +309,15 @@ function RevenueCard({ daily90d, baseCurrency }: { daily90d: { d: string; v: num
 
 // ─── Reorders card ──────────────────────────────────────────────────────────
 
-function ReordersCard({ reorders }: { reorders: MockReorder[] }) {
+function ReordersCard({ reorders }: { reorders: ReorderSignal[] }) {
   return (
-    <DashCard title="Reorder signals" subtitle="Cycle-end approaching · ML guess"
+    <DashCard title="Reorder signals" subtitle="Protocol-driven · dosing schedule"
       action={<button className="pt-link">Configure →</button>}>
+      {reorders.length === 0 ? (
+        <div style={{ padding: '24px 16px', textAlign: 'center', fontSize: 12, color: 'var(--pt-fg-4)' }}>
+          No reorders due — all customers are well-stocked
+        </div>
+      ) : null}
       <ul className="pt-reorder-list">
         {reorders.map((r, i) => (
           <li key={i} className="pt-reorder">
@@ -511,7 +517,7 @@ function greeting(name: string) {
   return `${tod}, ${name}`
 }
 
-export function DashboardView({ threads: initialThreads, stockProducts, stats, baseCurrency, displayName }: { threads: InboxThread[]; stockProducts: CatalogProduct[]; stats: DashboardStats; baseCurrency: string; displayName: string }) {
+export function DashboardView({ threads: initialThreads, stockProducts, stats, reorderSignals, baseCurrency, displayName }: { threads: InboxThread[]; stockProducts: CatalogProduct[]; stats: DashboardStats; reorderSignals: ReorderSignal[]; baseCurrency: string; displayName: string }) {
   const [threads, setThreads] = useState(initialThreads)
   const supabase = useMemo(() => createClient(), [])
 
@@ -560,13 +566,15 @@ export function DashboardView({ threads: initialThreads, stockProducts, stats, b
 
   const active = threads.length
   const needsReply = threads.filter(t => t.status === 'needs_reply').length
+  const reordersDue7d = reorderSignals.filter(s => s.daysRemaining <= 7).length
+  const highConf = reorderSignals.filter(s => s.conf >= 0.8).length
 
   return (
     <div className="pt-page">
       <div className="pt-page-hd">
         <div>
           <h1>{greeting(displayName)}</h1>
-          <p>{active} active threads · {needsReply} need a reply · 3 reorders due in &lt;48h</p>
+          <p>{active} active threads · {needsReply} need a reply · {reordersDue7d} reorders due in &lt;7d</p>
         </div>
         <div className="pt-page-actions">
           <button className="pt-btn pt-btn-ghost">Daily summary</button>
@@ -576,13 +584,13 @@ export function DashboardView({ threads: initialThreads, stockProducts, stats, b
         </div>
       </div>
 
-      <KpiRow active={active} needsReply={needsReply} stats={stats} baseCurrency={baseCurrency} />
+      <KpiRow active={active} needsReply={needsReply} reordersDue7d={reordersDue7d} highConf={highConf} stats={stats} baseCurrency={baseCurrency} />
 
       <div className="pt-grid">
         <InboxCard threads={threads} />
         <PaymentsCard orders={stats.pendingOrders} baseCurrency={baseCurrency} />
         <RevenueCard daily90d={stats.revenue90dDaily} baseCurrency={baseCurrency} />
-        <ReordersCard reorders={MOCK_REORDERS} />
+        <ReordersCard reorders={reorderSignals} />
         <StockCard products={stockProducts} />
         <ShipmentsCard shipments={MOCK_SHIPMENTS} />
       </div>

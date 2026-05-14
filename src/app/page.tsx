@@ -4,6 +4,8 @@ import { DashboardLayout } from '@/components/shell/DashboardLayout'
 import { dbConversationToThread, type DbConversation } from '@/types/inbox'
 import { dbProductToDisplay, type DbProduct, type DbBatch } from '@/types/catalog'
 import type { DashboardStats } from '@/types/dashboard'
+import { computeReorderSignals } from '@/lib/reorder-signals'
+import type { ProductProtocol, CustomerProtocolOverride } from '@/types/protocols'
 
 const PINNED_SELECT = `
   id, status, unread_count, last_message_at, last_message_snippet,
@@ -34,6 +36,8 @@ export default async function Home() {
   const now = Date.now()
   const d90 = new Date(now - 90 * 86400_000).toISOString()
 
+  const d180 = new Date(now - 180 * 86400_000).toISOString()
+
   const [
     { data: userRow },
     { data: channels },
@@ -44,6 +48,9 @@ export default async function Home() {
     { data: revenueRows },
     { data: pendingRaw },
     { data: tenantRow },
+    { data: reorderOrdersRaw },
+    { data: reorderProtocols },
+    { data: reorderOverrides },
   ] = await Promise.all([
     supabase.from('users').select('display_name, tenant_id').eq('id', user.id).single(),
     supabase.from('tenant_channels').select('channel_type').eq('is_active', true),
@@ -73,6 +80,14 @@ export default async function Home() {
       .order('created_at', { ascending: false })
       .limit(10),
     supabase.from('tenants').select('base_currency').single(),
+    supabase
+      .from('orders')
+      .select('customer_id, status, created_at, delivered_at, customers(id, display_name), order_items(product_id, qty, products(id, name))')
+      .in('status', ['delivered', 'shipped'])
+      .gte('created_at', d180)
+      .order('created_at', { ascending: false }),
+    supabase.from('product_protocols').select('*'),
+    supabase.from('customer_protocol_overrides').select('customer_id, product_id, draw_volume_ml, frequency, notes, id, tenant_id, created_at, updated_at'),
   ])
 
   // ── Revenue stats ────────────────────────────────────────────────────────
@@ -115,6 +130,22 @@ export default async function Home() {
   const stats: DashboardStats = { revenue7d, revenuePrev7d, revenue90dDaily, pendingOrders, pendingTotal }
   const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
 
+  // ── Reorder signals ──────────────────────────────────────────────────────
+  const reorderOrders = (reorderOrdersRaw ?? []).map(o => ({
+    customer_id: o.customer_id as string,
+    customerName: (o.customers as { display_name: string } | null)?.display_name ?? 'Unknown',
+    status: o.status as string,
+    created_at: o.created_at as string,
+    delivered_at: (o as { delivered_at?: string | null }).delivered_at ?? null,
+    items: ((o.order_items ?? []) as { product_id: string; qty: number; products: { name: string } | null }[])
+      .map(i => ({ product_id: i.product_id, productName: i.products?.name ?? '', qty: i.qty })),
+  }))
+  const reorderSignals = computeReorderSignals(
+    reorderOrders,
+    (reorderProtocols ?? []) as ProductProtocol[],
+    (reorderOverrides ?? []) as CustomerProtocolOverride[],
+  )
+
   // ── Other props ──────────────────────────────────────────────────────────
   const displayName      = userRow?.display_name ?? user.email?.split('@')[0] ?? 'User'
   const connectedChannels = (channels ?? []).map(c => c.channel_type)
@@ -137,6 +168,7 @@ export default async function Home() {
       initialPinned={(pinnedConversations ?? []) as DbConversation[]}
       stockProducts={stockProducts}
       stats={stats}
+      reorderSignals={reorderSignals}
       baseCurrency={baseCurrency}
     />
   )
