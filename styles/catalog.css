@@ -432,6 +432,30 @@ li:first-child .pt-cat-family-hd { border-top: none; }
 }
 .pt-od-coa:hover { text-decoration-color: var(--pt-accent); }
 
+/* ─── Reorder modal ─────────────────────────────────────────────────────── */
+.pt-reorder-modal { max-width: 480px; width: 100%; }
+.pt-reorder-hint {
+  font-size: 12px; color: var(--pt-fg-3);
+  margin: 0 0 12px;
+}
+.pt-reorder-ta {
+  width: 100%; box-sizing: border-box;
+  font-family: var(--pt-mono); font-size: 12px; line-height: 1.6;
+  background: var(--pt-bg-2);
+  border: 0.5px solid var(--pt-line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: var(--pt-fg-1);
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.pt-reorder-ta:focus { border-color: var(--pt-accent); }
+.pt-btn.is-copied {
+  background: var(--pt-green, #22c55e);
+  border-color: var(--pt-green, #22c55e);
+}
+
 /* ─── Protocol section ───────────────────────────────────────────────────── */
 .pt-cat-proto-dl {
   display: grid; grid-template-columns: 110px 1fr;

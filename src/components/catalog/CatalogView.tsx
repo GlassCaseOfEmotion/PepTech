@@ -565,34 +565,31 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
 
       {showReorder && (
         <div className="pt-modal-backdrop" onClick={() => setShowReorder(false)}>
-          <div className="pt-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
-            <h3 style={{ marginBottom: 4 }}>Reorder — {product.name}</h3>
-            <p style={{ fontSize: 12, color: 'var(--pt-fg-3)', marginBottom: 12 }}>
-              Copy this message and send to your supplier.
-            </p>
-            <textarea
-              value={reorderMsg}
-              onChange={e => setReorderMsg(e.target.value)}
-              rows={13}
-              style={{
-                width: '100%', boxSizing: 'border-box',
-                fontFamily: 'var(--pt-mono)', fontSize: 12,
-                background: 'var(--pt-bg-2)', border: '1px solid var(--pt-border)',
-                borderRadius: 6, padding: '10px 12px',
-                color: 'var(--pt-fg-1)', resize: 'vertical', lineHeight: 1.55,
-              }}
-            />
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+          <div className="pt-modal pt-reorder-modal" onClick={e => e.stopPropagation()}>
+            <div className="pt-modal-hd">
+              <h3>Reorder — {product.name}</h3>
+              <button className="pt-iconbtn" onClick={() => setShowReorder(false)}><Icons.x size={14} /></button>
+            </div>
+            <div className="pt-modal-body">
+              <p className="pt-reorder-hint">Edit the message below then copy it to send to your supplier.</p>
+              <textarea
+                className="pt-reorder-ta"
+                value={reorderMsg}
+                onChange={e => setReorderMsg(e.target.value)}
+                rows={13}
+              />
+            </div>
+            <div className="pt-modal-ft">
               <button className="pt-btn pt-btn-ghost" onClick={() => setShowReorder(false)}>Close</button>
               <button
-                className="pt-btn pt-btn-primary"
+                className={`pt-btn pt-btn-primary${reorderCopied ? ' is-copied' : ''}`}
                 onClick={() => {
                   navigator.clipboard.writeText(reorderMsg)
                   setReorderCopied(true)
                   setTimeout(() => setReorderCopied(false), 2000)
                 }}
               >
-                {reorderCopied ? 'Copied!' : 'Copy message'}
+                {reorderCopied ? '✓ Copied!' : 'Copy message'}
               </button>
             </div>
           </div>
