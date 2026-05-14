@@ -113,10 +113,41 @@ export function Sidebar({ displayName, initialPinned = [] }: SidebarProps) {
     const channel = supabase
       .channel(`sidebar:pinned-${Math.random()}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations' }, (payload) => {
-        const updated = payload.new as { id: string; is_pinned: boolean; last_message_snippet: string | null; unread_count: number }
-        if (updated.is_pinned) {
-          // fetch full row so we have customer data
-          supabase
+        const updated = payload.new as {
+          id: string; is_pinned: boolean
+          last_message_snippet: string | null; last_message_at: string | null; unread_count: number
+        }
+
+        if (!updated.is_pinned) {
+          // Conversation was unpinned — remove it
+          setPinnedRaw(prev => {
+            const next = prev.filter(p => p.id !== updated.id)
+            _pinnedCache = next
+            return next
+          })
+          return
+        }
+
+        const alreadyPinned = _pinnedCache.some(p => p.id === updated.id)
+
+        if (alreadyPinned) {
+          // Already pinned — patch mutable fields directly, no re-fetch needed.
+          // Customer data (name, trust, tags) never changes on a message update.
+          setPinnedRaw(prev => {
+            const next = prev.map(p => p.id !== updated.id ? p : {
+              ...p,
+              snippet: updated.last_message_snippet ?? p.snippet,
+              unread: updated.unread_count,
+              ...(updated.last_message_at ? {
+                minsAgo: Math.floor((Date.now() - new Date(updated.last_message_at).getTime()) / 60000),
+              } : {}),
+            })
+            _pinnedCache = next
+            return next
+          })
+        } else {
+          // Newly pinned — re-fetch to get the customer join data
+          void supabase
             .from('conversations')
             .select(PINNED_SELECT)
             .eq('id', updated.id)
@@ -125,19 +156,11 @@ export function Sidebar({ displayName, initialPinned = [] }: SidebarProps) {
               if (!data) return
               const thread = dbConversationToThread(data as unknown as DbConversation)
               setPinnedRaw(prev => {
-                const next = prev.some(p => p.id === thread.id)
-                  ? prev.map(p => p.id === thread.id ? thread : p)
-                  : [thread, ...prev]
+                const next = [thread, ...prev.filter(p => p.id !== thread.id)]
                 _pinnedCache = next
                 return next
               })
             })
-        } else {
-          setPinnedRaw(prev => {
-            const next = prev.filter(p => p.id !== updated.id)
-            _pinnedCache = next
-            return next
-          })
         }
       })
       .subscribe()
