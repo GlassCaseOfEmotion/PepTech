@@ -720,18 +720,14 @@ export function CatalogView({ products, protocols, baseCurrency }: { products: C
     return result
   }, [products, familyFilter])
 
-  const families = useMemo(() =>
-    Array.from(new Set(filtered.map(p => p.productFamily))).sort()
-  , [filtered])
-
-  const byFamily = useMemo(() => {
+  const sortedProducts = useMemo(() => {
     const sortFn = sortBy === 'attention'
       ? (a: CatalogProduct, b: CatalogProduct) => flagOrder(stockFlag(a.totalStock)) - flagOrder(stockFlag(b.totalStock)) || a.name.localeCompare(b.name)
       : sortBy === 'stock-asc' ? (a: CatalogProduct, b: CatalogProduct) => a.totalStock - b.totalStock
       : sortBy === 'stock-desc' ? (a: CatalogProduct, b: CatalogProduct) => b.totalStock - a.totalStock
       : (a: CatalogProduct, b: CatalogProduct) => a.name.localeCompare(b.name)
-    return Object.fromEntries(families.map(f => [f, [...filtered.filter(p => p.productFamily === f)].sort(sortFn)]))
-  }, [families, filtered, sortBy])
+    return [...filtered].sort(sortFn)
+  }, [filtered, sortBy])
 
   const selected = products.find(p => p.id === selectedId) ?? products[0]
 
@@ -792,63 +788,60 @@ export function CatalogView({ products, protocols, baseCurrency }: { products: C
             <div className="pt-cat-cell-margin">Margin</div>
           </div>
           <ul>
-            {families.map(family => (
-              <li key={family}>
-                {byFamily[family].map(p => {
-                  const flag = stockFlag(p.totalStock)
-                  const barPct = Math.min(100, (p.totalStock / BAR_MAX) * 100)
-                  const thrPct = (LOW_THRESHOLD / BAR_MAX) * 100
-                  return (
-                    <div
-                      key={p.id}
-                      className={`pt-cat-row ${selectedId === p.id ? 'is-active' : ''} ${flag ? `pt-cat-row-${flag}` : ''}`}
-                      onClick={() => setSelectedId(p.id)}
-                    >
-                      <div className="pt-cat-cell-name">
-                        <div className="pt-cat-name-main">
-                          <span className="pt-cat-cat-pill" data-cat={p.productFamily}>{displayFamily(p.productFamily)}</span>
-                          <div className="pt-cat-prod-name">{p.name}</div>
-                        </div>
-                        <div className="pt-cat-sku mono">{p.sku}</div>
+            {sortedProducts.map(p => {
+              const flag = stockFlag(p.totalStock)
+              const barPct = Math.min(100, (p.totalStock / BAR_MAX) * 100)
+              const thrPct = (LOW_THRESHOLD / BAR_MAX) * 100
+              return (
+                <li key={p.id}>
+                  <div
+                    className={`pt-cat-row ${selectedId === p.id ? 'is-active' : ''} ${flag ? `pt-cat-row-${flag}` : ''}`}
+                    onClick={() => setSelectedId(p.id)}
+                  >
+                    <div className="pt-cat-cell-name">
+                      <div className="pt-cat-name-main">
+                        <span className="pt-cat-cat-pill" data-cat={p.productFamily}>{displayFamily(p.productFamily)}</span>
+                        <div className="pt-cat-prod-name">{p.name}</div>
                       </div>
-                      <div className="pt-cat-cell-stock">
-                        <div className="pt-cat-stock-row">
-                          <span className={`pt-cat-stock-num mono ${flag === 'oos' ? 'is-zero' : ''}`}>
-                            {p.totalStock === 0 ? 'OUT' : p.totalStock}
+                      <div className="pt-cat-sku mono">{p.sku}</div>
+                    </div>
+                    <div className="pt-cat-cell-stock">
+                      <div className="pt-cat-stock-row">
+                        <span className={`pt-cat-stock-num mono ${flag === 'oos' ? 'is-zero' : ''}`}>
+                          {p.totalStock === 0 ? 'OUT' : p.totalStock}
+                        </span>
+                        {flag && (
+                          <span className={`pt-cat-flag pt-cat-flag-${flag}`}>
+                            {flag === 'oos' ? 'out of stock' : flag === 'critical' ? 'critical' : 'below threshold'}
                           </span>
-                          {flag && (
-                            <span className={`pt-cat-flag pt-cat-flag-${flag}`}>
-                              {flag === 'oos' ? 'out of stock' : flag === 'critical' ? 'critical' : 'below threshold'}
-                            </span>
-                          )}
-                        </div>
-                        <div className="pt-cat-stock-bar">
-                          <div className={`pt-cat-stock-fill ${flag ? `is-${flag}` : ''}`} style={{ width: `${barPct}%` }} />
-                          <div className="pt-cat-stock-thr" style={{ left: `${thrPct}%` }} />
-                        </div>
+                        )}
                       </div>
-                      <div className="pt-cat-cell-velocity">
-                        {p.totalStock > 0 ? <MiniSparkline /> : null}
-                        <span className="pt-cat-vel">—/wk</span>
-                      </div>
-                      <div className="pt-cat-cell-cover">
-                        <span className={`mono ${flag === 'oos' ? 'is-zero' : flag === 'critical' ? 'is-warn' : ''}`}>—</span>
-                      </div>
-                      <div className="pt-cat-cell-price mono">{formatAmountCompact(p.unitPrice, baseCurrency)}</div>
-                      <div className="pt-cat-cell-margin">
-                        {(() => {
-                          const m = grossMargin(p.unitPrice, p.costPrice)
-                          return m !== null
-                            ? <span className={`mono pt-cat-margin ${m >= 50 ? 'is-hi' : m >= 25 ? 'is-md' : 'is-lo'}`}>{m.toFixed(0)}%</span>
-                            : <span style={{ color: 'var(--pt-fg-4)' }}>—</span>
-                        })()}
+                      <div className="pt-cat-stock-bar">
+                        <div className={`pt-cat-stock-fill ${flag ? `is-${flag}` : ''}`} style={{ width: `${barPct}%` }} />
+                        <div className="pt-cat-stock-thr" style={{ left: `${thrPct}%` }} />
                       </div>
                     </div>
-                  )
-                })}
-              </li>
-            ))}
-            {filtered.length === 0 && (
+                    <div className="pt-cat-cell-velocity">
+                      {p.totalStock > 0 ? <MiniSparkline /> : null}
+                      <span className="pt-cat-vel">—/wk</span>
+                    </div>
+                    <div className="pt-cat-cell-cover">
+                      <span className={`mono ${flag === 'oos' ? 'is-zero' : flag === 'critical' ? 'is-warn' : ''}`}>—</span>
+                    </div>
+                    <div className="pt-cat-cell-price mono">{formatAmountCompact(p.unitPrice, baseCurrency)}</div>
+                    <div className="pt-cat-cell-margin">
+                      {(() => {
+                        const m = grossMargin(p.unitPrice, p.costPrice)
+                        return m !== null
+                          ? <span className={`mono pt-cat-margin ${m >= 50 ? 'is-hi' : m >= 25 ? 'is-md' : 'is-lo'}`}>{m.toFixed(0)}%</span>
+                          : <span style={{ color: 'var(--pt-fg-4)' }}>—</span>
+                      })()}
+                    </div>
+                  </div>
+                </li>
+              )
+            })}
+            {sortedProducts.length === 0 && (
               <li style={{ padding: '24px', textAlign: 'center', color: 'var(--pt-fg-4)', fontSize: 13 }}>
                 No products yet — add your first SKU above
               </li>
