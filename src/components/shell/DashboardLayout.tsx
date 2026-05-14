@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { GlobalNotifications } from './GlobalNotifications'
 import { AgentPalette } from './AgentPalette'
+import { BottomNav } from './BottomNav'
 import { DashboardView, DashboardRightRail } from '@/components/dashboard/DashboardView'
 import type { InboxThread, DbConversation } from '@/types/inbox'
 import type { CatalogProduct } from '@/types/catalog'
@@ -28,6 +29,7 @@ export function DashboardLayout({ displayName, connectedChannels, threads, initi
   const [rightOpen, setRightOpen] = useState(true)
   const channels = connectedChannels.length > 0 ? connectedChannels : MOCK_CHANNELS
   const focusThread = threads.find(t => t.status === 'needs_reply') ?? threads[0] ?? null
+  const unreadCount = threads.filter(t => t.unread > 0).length
 
   return (
     <div className={`pt-root${rightOpen ? '' : ' no-right'}`}>
@@ -44,6 +46,7 @@ export function DashboardLayout({ displayName, connectedChannels, threads, initi
         <DashboardView threads={threads} stockProducts={stockProducts} stats={stats} reorderSignals={reorderSignals} baseCurrency={baseCurrency} displayName={displayName} />
       </main>
       {rightOpen && <DashboardRightRail focusThread={focusThread} baseCurrency={baseCurrency} />}
+      <BottomNav unreadCount={unreadCount} />
     </div>
   )
 }

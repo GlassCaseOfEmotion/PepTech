@@ -3,6 +3,7 @@ import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { GlobalNotifications } from './GlobalNotifications'
 import { AgentPalette } from './AgentPalette'
+import { BottomNav } from './BottomNav'
 
 interface ShellProps {
   children: React.ReactNode
@@ -46,6 +47,10 @@ export async function Shell({ children, section, isInbox = false, rightRail }: S
     // Render shell with defaults if data fetching fails
   }
 
+  const unreadCount = pinnedConversations.filter(
+    (c: { unread_count: number }) => c.unread_count > 0
+  ).length
+
   const rootClass = rightRail
     ? 'pt-root'
     : `pt-root no-right${isInbox ? ' is-inbox' : ''}`
@@ -60,6 +65,7 @@ export async function Shell({ children, section, isInbox = false, rightRail }: S
         {children}
       </main>
       {rightRail}
+      <BottomNav unreadCount={unreadCount} />
     </div>
   )
 }

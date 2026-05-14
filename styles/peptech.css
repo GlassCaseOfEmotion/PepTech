@@ -1142,3 +1142,24 @@ kbd {
   }
   .pt-bn-more-item:last-child { border-bottom: none; }
 }
+
+@media (max-width: 768px) {
+  /* Root grid — single column, bottom nav handled by fixed positioning */
+  .pt-root,
+  .pt-root.no-right,
+  .pt-root.is-inbox {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Hide desktop-only shell elements */
+  .pt-sidebar { display: none !important; }
+  .pt-right   { display: none !important; }
+  .pt-top-mid { display: none; }
+  .pt-topbar-right-toggle { display: none; }
+
+  /* Push page content above fixed bottom nav */
+  .pt-main { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
+
+  /* Top bar tighter on mobile */
+  .pt-top { padding: 0 12px; }
+}
