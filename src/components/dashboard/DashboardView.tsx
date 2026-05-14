@@ -144,7 +144,7 @@ function KpiRow({ active, needsReply, reordersDue7d, highConf, stats, baseCurren
                 {k.delta >= 0 ? '▲' : '▼'} {Math.abs(k.delta)}%
               </span>
             )}
-            {k.spark && <Spark data={k.spark} />}
+            {k.spark && <div className="pt-revenue-spark"><Spark data={k.spark} /></div>}
           </div>
           {k.sub && <div className="pt-kpi-sub">{k.sub}</div>}
         </div>
@@ -589,12 +589,12 @@ export function DashboardView({ threads: initialThreads, stockProducts, stats, r
       <KpiRow active={active} needsReply={needsReply} reordersDue7d={reordersDue7d} highConf={highConf} stats={stats} baseCurrency={baseCurrency} />
 
       <div className="pt-grid">
-        <InboxCard threads={threads} />
+        <div className="pt-dash-card-inbox"><InboxCard threads={threads} /></div>
         <PaymentsCard orders={stats.pendingOrders} baseCurrency={baseCurrency} />
         <RevenueCard daily90d={stats.revenue90dDaily} baseCurrency={baseCurrency} />
         <ReordersCard reorders={reorderSignals} />
-        <StockCard products={stockProducts} />
-        <ShipmentsCard shipments={MOCK_SHIPMENTS} />
+        <div className="pt-dash-card-stock"><StockCard products={stockProducts} /></div>
+        <div className="pt-dash-card-shipments"><ShipmentsCard shipments={MOCK_SHIPMENTS} /></div>
       </div>
 
       <footer className="pt-foot">

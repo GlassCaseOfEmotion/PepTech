@@ -1162,4 +1162,24 @@ kbd {
 
   /* Top bar tighter on mobile */
   .pt-top { padding: 0 12px; }
+
+  /* Dashboard KPIs: 2×2 grid */
+  .pt-kpis { grid-template-columns: 1fr 1fr !important; }
+
+  /* Card grid: single column, no min-height constraint */
+  .pt-grid {
+    grid-template-columns: 1fr !important;
+    grid-auto-rows: auto !important;
+  }
+
+  /* Span-2 cards become single column on mobile */
+  .pt-span-2 { grid-column: span 1 !important; }
+
+  /* Hide non-essential cards */
+  .pt-dash-card-inbox,
+  .pt-dash-card-stock,
+  .pt-dash-card-shipments { display: none !important; }
+
+  /* Hide revenue sparkline — show headline number only */
+  .pt-revenue-spark { display: none !important; }
 }
