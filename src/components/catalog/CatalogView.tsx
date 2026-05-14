@@ -407,7 +407,11 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
             <div className="pt-cat-sku mono">{product.sku}</div>
           </div>
           <div className="pt-cat-detail-actions">
-            <button className="pt-btn pt-btn-ghost" onClick={() => { setEditing(true); setEditError('') }}>Edit</button>
+            <button className="pt-btn pt-btn-ghost" onClick={() => {
+              setEditForm({ name: product.name, sku: product.sku, family: product.productFamily, unitPrice: String(product.unitPrice), costPrice: product.costPrice != null ? String(product.costPrice) : '' })
+              setEditing(true)
+              setEditError('')
+            }}>Edit</button>
             <button className="pt-btn pt-btn-primary">Re-order</button>
           </div>
         </header>
