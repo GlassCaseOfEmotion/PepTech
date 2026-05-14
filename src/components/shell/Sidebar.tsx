@@ -81,13 +81,15 @@ export function Sidebar({ displayName, initialPinned = [] }: SidebarProps) {
   const supabase = useMemo(() => createClient(), [])
   const { theme, cycle } = useTheme()
   const [pinned, setPinnedRaw] = useState<ReturnType<typeof dbConversationToThread>[]>(() => {
+    // Prefer the realtime-updated cache over server-fetched initialPinned — the cache
+    // reflects patches applied after mount, so it's always more current than the server render.
+    if (_pinnedCache.length > 0) return _pinnedCache
     if (initialPinned.length > 0) {
       const threads = initialPinned.map(c => dbConversationToThread(c))
       _pinnedCache = threads
       return threads
     }
-    // Fall back to cache from a previous mount (avoids flash during skeleton transitions)
-    return _pinnedCache
+    return []
   })
 
   const setPinned = (threads: ReturnType<typeof dbConversationToThread>[]) => {
@@ -133,13 +135,20 @@ export function Sidebar({ displayName, initialPinned = [] }: SidebarProps) {
         if (alreadyPinned) {
           // Already pinned — patch mutable fields directly, no re-fetch needed.
           // Customer data (name, trust, tags) never changes on a message update.
+          //
+          // Don't update snippet when unread_count is being cleared to 0 — that's a
+          // "conversation was read" event fired by InboxProvider, not a new message.
+          // Patching snippet from that event can revert to a stale DB value.
+          const isNewMessage = updated.unread_count > 0
           setPinnedRaw(prev => {
             const next = prev.map(p => p.id !== updated.id ? p : {
               ...p,
-              snippet: updated.last_message_snippet ?? p.snippet,
               unread: updated.unread_count,
-              ...(updated.last_message_at ? {
-                minsAgo: Math.floor((Date.now() - new Date(updated.last_message_at).getTime()) / 60000),
+              ...(isNewMessage ? {
+                snippet: updated.last_message_snippet ?? p.snippet,
+                ...(updated.last_message_at ? {
+                  minsAgo: Math.floor((Date.now() - new Date(updated.last_message_at).getTime()) / 60000),
+                } : {}),
               } : {}),
             })
             _pinnedCache = next
