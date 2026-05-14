@@ -33,20 +33,21 @@ export function GlobalNotifications() {
         window.dispatchEvent(new CustomEvent('pt:notification', { detail: item }))
 
         // Enrich with customer name asynchronously — non-blocking
-        supabase
-          .from('conversations')
-          .select('id, customers(display_name)')
-          .eq('id', raw.conversation_id)
-          .single()
-          .then(({ data: conv }) => {
+        void (async () => {
+          try {
+            const { data: conv } = await supabase
+              .from('conversations')
+              .select('id, customers(display_name)')
+              .eq('id', raw.conversation_id)
+              .single()
             const name = (conv?.customers as { display_name: string } | null)?.display_name
             if (name) {
               window.dispatchEvent(new CustomEvent('pt:notification:update', {
                 detail: { id: raw.id, title: `New message · ${name}` },
               }))
             }
-          })
-          .catch(() => { /* non-fatal — notification already showing */ })
+          } catch { /* non-fatal — notification already showing */ }
+        })()
       })
       .subscribe()
 
