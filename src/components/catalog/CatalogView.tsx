@@ -454,11 +454,11 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
         <div className="pt-cat-stat">
           <div className="lbl">Cover</div>
           {(() => {
-            const wkTotal = product.velocity7d.reduce((s, v) => s + v, 0)
-            const cover = wkTotal > 0 ? Math.ceil(product.totalStock / (wkTotal / 7)) : null
+            const dailyRate = product.velocity30dTotal / 30
+            const cover = dailyRate > 0 ? Math.ceil(product.totalStock / dailyRate) : null
             return <>
               <div className="val">{cover ?? '—'}<span className="u">days</span></div>
-              <div className="pt-cat-stat-sub">at current velocity</div>
+              <div className="pt-cat-stat-sub">30d avg · {product.velocity30dTotal} units</div>
             </>
           })()}
         </div>
@@ -846,7 +846,13 @@ export function CatalogView({ products, protocols, baseCurrency }: { products: C
                       <span className="pt-cat-vel">{p.velocity7d.reduce((s, v) => s + v, 0) || '—'}/wk</span>
                     </div>
                     <div className="pt-cat-cell-cover">
-                      <span className={`mono ${flag === 'oos' ? 'is-zero' : flag === 'critical' ? 'is-warn' : ''}`}>—</span>
+                      {(() => {
+                        const dailyRate = p.velocity30dTotal / 30
+                        const cover = dailyRate > 0 ? Math.ceil(p.totalStock / dailyRate) : null
+                        return <span className={`mono ${flag === 'oos' ? 'is-zero' : flag === 'critical' ? 'is-warn' : ''}`}>
+                          {cover !== null ? `${cover}d` : '—'}
+                        </span>
+                      })()}
                     </div>
                     <div className="pt-cat-cell-price mono">{formatAmountCompact(p.unitPrice, baseCurrency)}</div>
                     <div className="pt-cat-cell-margin">

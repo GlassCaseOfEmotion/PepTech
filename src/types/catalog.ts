@@ -33,7 +33,8 @@ export type CatalogProduct = {
   isActive: boolean
   batches: DbBatch[]
   totalStock: number
-  velocity7d: number[] // 7 daily unit totals, oldest→newest
+  velocity7d: number[]   // 7 daily unit totals, oldest→newest (sparkline)
+  velocity30dTotal: number // total units in last 30 days (cover denominator)
 }
 
 export function dbProductToDisplay(product: DbProduct, batches: DbBatch[]): CatalogProduct {
@@ -49,6 +50,7 @@ export function dbProductToDisplay(product: DbProduct, batches: DbBatch[]): Cata
     batches,
     totalStock: batches.reduce((sum, b) => sum + b.stock, 0),
     velocity7d: [0, 0, 0, 0, 0, 0, 0],
+    velocity30dTotal: 0,
   }
 }
 
