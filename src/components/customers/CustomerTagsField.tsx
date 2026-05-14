@@ -64,9 +64,9 @@ export function CustomerTagsField({ customerId, initialTags }: { customerId: str
   const submitInput = () => applyTag(input).then(() => { if (!error) close() })
 
   const remove = async (tag: string) => {
-    const result = await removeCustomerTag(customerId, tag)
-    if ('error' in result) return
     setTags(prev => prev.filter(t => t !== tag))
+    const result = await removeCustomerTag(customerId, tag)
+    if ('error' in result) setTags(prev => [...prev, tag])
   }
 
   const visiblePresets = PRESET_TAGS.filter(t => !tags.includes(t))
