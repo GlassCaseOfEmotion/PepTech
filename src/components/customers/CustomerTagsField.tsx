@@ -54,11 +54,14 @@ export function CustomerTagsField({ customerId, initialTags }: { customerId: str
   const applyTag = async (tag: string) => {
     const normalized = tag.trim().toLowerCase()
     if (!normalized || tags.includes(normalized)) return
-    const result = await addCustomerTag(customerId, normalized)
-    if ('error' in result) { setError(result.error); return }
     setTags(prev => [...prev, normalized])
     setInput('')
     setError('')
+    const result = await addCustomerTag(customerId, normalized)
+    if ('error' in result) {
+      setTags(prev => prev.filter(t => t !== normalized))
+      setError(result.error)
+    }
   }
 
   const submitInput = () => applyTag(input).then(() => { if (!error) close() })
