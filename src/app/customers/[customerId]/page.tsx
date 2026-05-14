@@ -77,7 +77,7 @@ function actDetail(item: ActivityItem, currency: string) {
   return parts.length ? ` · ${parts.join(' · ')}` : ''
 }
 
-const MOCK_PAY_METHODS = ['USDT (TRC20)', 'BTC', 'Cash']
+type ShippingAddr = { ln1: string; ln2?: string; city: string; state: string; zip: string }
 
 function OrderState({ state }: { state: string }) {
   const map: Record<string, { cls: string; label: string }> = {
@@ -112,7 +112,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
       .limit(10),
     supabase
       .from('orders')
-      .select('id, ref_number, status, payment_asset, payment_amount, created_at, delivered_at, order_items(product_id, qty, unit_price_snapshot, products(name))')
+      .select('id, ref_number, status, payment_asset, payment_amount, shipping_address, created_at, delivered_at, order_items(product_id, qty, unit_price_snapshot, products(name))')
       .eq('customer_id', customerId)
       .order('created_at', { ascending: false }),
     supabase
@@ -203,6 +203,16 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
     : '—'
   const joined = customer.created_at ? new Date(customer.created_at).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) : '—'
   const ChIcon = chKey === 'wa' ? Icons.wa : chKey === 'tg' ? Icons.tg : Icons.em
+
+  const latestAddr = realOrders
+    .map(o => o.shipping_address as ShippingAddr | null)
+    .find(a => a != null) ?? null
+  const fmtAddr = latestAddr
+    ? [latestAddr.ln1, latestAddr.ln2, `${latestAddr.city}${latestAddr.state ? ', ' + latestAddr.state : ''}${latestAddr.zip ? ' ' + latestAddr.zip : ''}`].filter(Boolean).join(', ')
+    : null
+
+  const payMethods = [...new Set(realOrders.map(o => o.payment_asset))]
+    .map(a => PAY_BADGE[a]?.label ?? a)
 
   return (
     <Shell section="Customers">
@@ -374,12 +384,12 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                       <button className="pt-cu-add-tag">+</button>
                     </dd>
                     <dt>Address</dt>
-                    <dd>K. — REDACTED, IL 60•••</dd>
+                    <dd>{fmtAddr ?? <span style={{ color: 'var(--pt-fg-4)', fontSize: 12 }}>None on file</span>}</dd>
                     <dt>Pay methods</dt>
                     <dd>
-                      <ul className="pt-cu-pay-list">
-                        {MOCK_PAY_METHODS.map(p => <li key={p} className="mono">{p}</li>)}
-                      </ul>
+                      {payMethods.length > 0
+                        ? <ul className="pt-cu-pay-list">{payMethods.map(p => <li key={p} className="mono">{p}</li>)}</ul>
+                        : <span style={{ color: 'var(--pt-fg-4)', fontSize: 12 }}>None</span>}
                     </dd>
                     <dt>Joined</dt>
                     <dd>{joined}</dd>
