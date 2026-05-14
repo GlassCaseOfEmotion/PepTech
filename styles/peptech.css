@@ -1158,7 +1158,7 @@ kbd {
   .pt-topbar-right-toggle { display: none; }
 
   /* Push page content above fixed bottom nav */
-  .pt-main { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
+  .pt-main { padding-bottom: calc(56px + env(safe-area-inset-bottom)); overflow-x: hidden; }
 
   /* Top bar tighter on mobile */
   .pt-top { padding: 0 12px; }
@@ -1166,10 +1166,11 @@ kbd {
   /* Dashboard KPIs: 2×2 grid */
   .pt-kpis { grid-template-columns: 1fr 1fr !important; }
 
-  /* Card grid: single column, no min-height constraint */
+  /* Card grid: single column, no min-height constraint, tighter gap */
   .pt-grid {
     grid-template-columns: 1fr !important;
     grid-auto-rows: auto !important;
+    gap: 8px !important;
   }
 
   /* Span-2 cards become single column on mobile */
@@ -1182,4 +1183,27 @@ kbd {
 
   /* Hide revenue sparkline — show headline number only */
   .pt-revenue-spark { display: none !important; }
+
+  /* Page layout — prevent horizontal overflow */
+  .pt-page { padding: 14px 14px 24px; overflow-x: hidden; }
+
+  /* Page header — compact, hide action buttons */
+  .pt-page-hd {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    gap: 6px;
+  }
+  .pt-page-hd h1 { font-size: 17px; }
+  .pt-page-hd p  { font-size: 11px; }
+  .pt-page-actions { display: none; }
+
+  /* KPI cells — smaller font so long currency values fit */
+  .pt-kpis { padding: 0; gap: 8px; margin-bottom: 8px; }
+  .pt-kpi  { padding: 10px 10px 11px; min-width: 0; overflow: hidden; }
+  .pt-kpi-val { font-size: 15px; }
+  .pt-kpi-lbl { font-size: 9.5px; }
+  .pt-kpi-sub { font-size: 10px; }
+  .pt-kpi-val-row { gap: 4px; }
+  .pt-kpi-delta { font-size: 10px; }
 }
