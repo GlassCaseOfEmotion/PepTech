@@ -15,6 +15,25 @@ export function formatAmount(amount: number, currency: string): string {
   }).format(amount)
 }
 
+// Compact format for tight UI columns — abbreviates large amounts.
+// IDR: 750000 → "Rp 750k", 1500000 → "Rp 1,5jt". Other currencies fall back to formatAmount.
+export function formatAmountCompact(amount: number, currency: string): string {
+  if (currency === 'IDR') {
+    if (amount >= 1_000_000) {
+      const m = amount / 1_000_000
+      const s = m % 1 === 0 ? m.toFixed(0) : m.toFixed(1).replace('.', ',')
+      return `Rp ${s}jt`
+    }
+    if (amount >= 1_000) {
+      const k = amount / 1_000
+      const s = k % 1 === 0 ? k.toFixed(0) : k.toFixed(1).replace('.', ',')
+      return `Rp ${s}k`
+    }
+    return `Rp ${amount.toFixed(0)}`
+  }
+  return formatAmount(amount, currency)
+}
+
 // Payment assets pegged 1:1 to USD — use fiat rate for conversion
 export const STABLECOIN_ASSETS = new Set(['usdt_trc20', 'usdc_erc20'])
 

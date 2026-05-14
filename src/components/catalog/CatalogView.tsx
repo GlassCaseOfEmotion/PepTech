@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo } from 'react'
 import { Icons } from '@/lib/icons'
-import { formatAmount } from '@/lib/currency'
+import { formatAmount, formatAmountCompact } from '@/lib/currency'
 import { createProduct, createBatch, saveBatchCoaPath, upsertProtocol, updateProduct, updateBatch, deleteBatch } from '@/app/catalog/actions'
 import type { CatalogProduct, DbBatch } from '@/types/catalog'
 import { grossMargin } from '@/types/catalog'
@@ -834,7 +834,7 @@ export function CatalogView({ products, protocols, baseCurrency }: { products: C
                       <div className="pt-cat-cell-cover">
                         <span className={`mono ${flag === 'oos' ? 'is-zero' : flag === 'critical' ? 'is-warn' : ''}`}>—</span>
                       </div>
-                      <div className="pt-cat-cell-price mono">{formatAmount(p.unitPrice, baseCurrency)}</div>
+                      <div className="pt-cat-cell-price mono">{formatAmountCompact(p.unitPrice, baseCurrency)}</div>
                       <div className="pt-cat-cell-margin">
                         {(() => {
                           const m = grossMargin(p.unitPrice, p.costPrice)
