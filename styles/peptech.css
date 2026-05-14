@@ -1075,3 +1075,68 @@ kbd {
 }
 .pt-inv-regen:hover:not(:disabled) { color: var(--pt-fg-2); }
 .pt-inv-regen:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ─── Bottom nav (mobile only) ──────────────────────────────────────────── */
+.pt-bottom-nav { display: none; }
+
+@media (max-width: 768px) {
+  .pt-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 56px;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--pt-surface);
+    border-top: 0.5px solid var(--pt-line);
+    z-index: 300;
+    align-items: stretch;
+    justify-content: space-around;
+  }
+  .pt-bn-tab {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 3px; flex: 1;
+    text-decoration: none;
+    color: var(--pt-fg-4);
+    background: none; border: none; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    padding: 0;
+  }
+  .pt-bn-tab.is-on { color: var(--pt-accent); }
+  .pt-bn-icon { position: relative; line-height: 0; }
+  .pt-bn-badge {
+    position: absolute; top: -4px; right: -8px;
+    background: var(--pt-accent); color: #fff;
+    border-radius: 10px; font-size: 9px; font-weight: 600;
+    min-width: 16px; height: 16px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 3px; line-height: 1;
+  }
+  .pt-bn-label { font-size: 10px; line-height: 1; }
+
+  /* More sheet */
+  .pt-bn-more-backdrop {
+    position: fixed; inset: 0; z-index: 299;
+    background: oklch(from var(--pt-bg) l c h / 0.65);
+    display: flex; align-items: flex-end;
+  }
+  .pt-bn-more-sheet {
+    width: 100%;
+    background: var(--pt-surface);
+    border-top: 0.5px solid var(--pt-line);
+    border-radius: 16px 16px 0 0;
+    padding-bottom: calc(56px + env(safe-area-inset-bottom));
+  }
+  .pt-bn-more-handle {
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--pt-line); margin: 10px auto 4px;
+  }
+  .pt-bn-more-item {
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 24px;
+    text-decoration: none; color: var(--pt-fg);
+    font-size: 15px;
+    border-bottom: 0.5px solid var(--pt-line-soft);
+  }
+  .pt-bn-more-item:last-child { border-bottom: none; }
+}
