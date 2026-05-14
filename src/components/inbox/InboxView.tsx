@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
-import { formatAmount } from '@/lib/currency'
+import { useSearchParams } from 'next/navigation'
+import { formatAmount, formatAmountCompact } from '@/lib/currency'
 import { InboxProvider, useInbox } from './InboxProvider'
 import { InboxAIPanel } from './InboxAIPanel'
 import { OrderRail } from './OrderRail'
@@ -519,17 +520,19 @@ function snoozeOptions() {
   ]
 }
 
-function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, initialPrefill }: {
+function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, initialPrefill, baseCurrency }: {
   thread: InboxThread
   messages: InboxMessage[]
   onSend: (text: string) => void
   isSending: boolean
   onCreateOrder: () => void
   initialPrefill?: string
+  baseCurrency: string
 }) {
   const { snooze, markDone, reopen } = useInbox()
   const [showSnooze, setShowSnooze] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
+  const [sheetExpanded, setSheetExpanded] = useState(false)
   const snoozeRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -608,6 +611,35 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
           <button className="pt-lightbox-close" onClick={() => setLightboxUrl(null)}>✕</button>
         </div>
       )}
+
+      <div className={`pt-ix-mobile-sheet${sheetExpanded ? ' pt-ix-mobile-sheet-expanded' : ''}`}>
+        <div
+          className="pt-ix-mobile-sheet-peek"
+          onClick={() => setSheetExpanded(o => !o)}
+        >
+          <span className="pt-ix-mobile-sheet-name">{thread.name}</span>
+          <span className="pt-ix-mobile-sheet-meta">
+            LTV {formatAmountCompact(thread.ltv, baseCurrency)} · Trust {thread.trust}
+          </span>
+          <span className="pt-ix-mobile-sheet-chevron">▾</span>
+        </div>
+        <div className="pt-ix-mobile-sheet-body">
+          <div className="pt-ix-mobile-detail-row">
+            <span className="pt-ix-mobile-detail-key">LTV</span>
+            <span className="pt-ix-mobile-detail-val">{formatAmount(thread.ltv, baseCurrency)}</span>
+          </div>
+          <div className="pt-ix-mobile-detail-row">
+            <span className="pt-ix-mobile-detail-key">Trust</span>
+            <span className="pt-ix-mobile-detail-val">{thread.trust} / 100</span>
+          </div>
+          <div className="pt-ix-mobile-detail-row">
+            <span className="pt-ix-mobile-detail-key">Tags</span>
+            <span className="pt-ix-mobile-detail-val">
+              {thread.tags.length > 0 ? thread.tags.join(', ') : '—'}
+            </span>
+          </div>
+        </div>
+      </div>
 
       <Composer thread={thread} onSend={onSend} isSending={isSending} initialText={initialPrefill} />
     </div>
@@ -734,11 +766,13 @@ function InboxLayout({ initialPrefill, baseCurrency }: { initialPrefill?: string
   const { threads, activeId, setActiveId, filter, setFilter, messages, isSending, sendMessage } = useInbox()
   const activeThread = threads.find(t => t.id === activeId) ?? threads[0]
   const [showOrderRail, setShowOrderRail] = useState(false)
+  const searchParams = useSearchParams()
+  const selectedConvId = searchParams.get('conversation')
 
   useEffect(() => { setShowOrderRail(false) }, [activeId])
 
   return (
-    <div className="pt-inbox">
+    <div className={`pt-inbox${selectedConvId ? ' has-conversation' : ''}`}>
       <ThreadColumn
         threads={threads}
         activeId={activeThread?.id ?? ''}
@@ -754,6 +788,7 @@ function InboxLayout({ initialPrefill, baseCurrency }: { initialPrefill?: string
           isSending={isSending}
           onCreateOrder={() => setShowOrderRail(true)}
           initialPrefill={initialPrefill}
+          baseCurrency={baseCurrency}
         />
       )}
       {activeThread && !showOrderRail && <ConversationRail thread={activeThread} baseCurrency={baseCurrency} />}
