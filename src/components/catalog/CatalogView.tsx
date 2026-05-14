@@ -836,9 +836,6 @@ export function CatalogView({ products, protocols, baseCurrency }: { products: C
           <p>{products.length} SKUs · {needsAttentionCount} need attention · {formatAmountCompact(Math.round(totalValue), baseCurrency)} on hand</p>
         </div>
         <div className="pt-cat-hd-actions">
-          <button className="pt-btn pt-btn-ghost">
-            <Icons.gear size={12} /> Import COA
-          </button>
           <button className="pt-btn pt-btn-primary" onClick={() => setShowAddProduct(true)}>
             <Icons.plus size={12} /> New SKU
           </button>
