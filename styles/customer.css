@@ -288,7 +288,7 @@
   /* Trust pill */
   .pt-cu-hd-trust-pill {
     display: block;
-    background: var(--pt-bg-2);
+    background: var(--pt-surface-2);
     border: 0.5px solid var(--pt-line);
     border-radius: 8px;
     padding: 4px 8px;
@@ -332,6 +332,9 @@
 
   /* Hide desktop-only sections */
   .pt-cd-desktop-only { display: none !important; }
+
+  /* Hide duplicate desktop stat strip (mobile hero stats strip replaces it) */
+  .pt-cu-strip { display: none; }
 
   /* Show only active tab section */
   .pt-cd-section         { display: none; }

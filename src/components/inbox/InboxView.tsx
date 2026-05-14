@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { formatAmount, formatAmountCompact } from '@/lib/currency'
 import { InboxProvider, useInbox } from './InboxProvider'
 import { InboxAIPanel } from './InboxAIPanel'
@@ -520,12 +520,13 @@ function snoozeOptions() {
   ]
 }
 
-function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, initialPrefill, baseCurrency }: {
+function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, onBack, initialPrefill, baseCurrency }: {
   thread: InboxThread
   messages: InboxMessage[]
   onSend: (text: string) => void
   isSending: boolean
   onCreateOrder: () => void
+  onBack: () => void
   initialPrefill?: string
   baseCurrency: string
 }) {
@@ -562,6 +563,9 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
   return (
     <div className={`pt-ix-conv pt-ix-${thread.channel}`}>
       <div className="pt-ix-conv-hd">
+        <button className="pt-ix-conv-back" onClick={onBack} title="Back to inbox">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
+        </button>
         <div className="pt-ix-conv-id">
           <div className="pt-ixt-av" data-channel={thread.channel}>
             <span>{initials(thread.name)}</span>
@@ -767,16 +771,26 @@ function InboxLayout({ initialPrefill, baseCurrency }: { initialPrefill?: string
   const activeThread = threads.find(t => t.id === activeId) ?? threads[0]
   const [showOrderRail, setShowOrderRail] = useState(false)
   const searchParams = useSearchParams()
+  const router = useRouter()
   const selectedConvId = searchParams.get('conversation')
 
   useEffect(() => { setShowOrderRail(false) }, [activeId])
+
+  const handleSelect = useCallback((id: string) => {
+    setActiveId(id)
+    router.replace(`?conversation=${id}`, { scroll: false })
+  }, [setActiveId, router])
+
+  const handleBack = useCallback(() => {
+    router.replace('?', { scroll: false })
+  }, [router])
 
   return (
     <div className={`pt-inbox${selectedConvId ? ' has-conversation' : ''}`}>
       <ThreadColumn
         threads={threads}
         activeId={activeThread?.id ?? ''}
-        onSelect={setActiveId}
+        onSelect={handleSelect}
         filter={filter}
         setFilter={setFilter}
       />
@@ -787,6 +801,7 @@ function InboxLayout({ initialPrefill, baseCurrency }: { initialPrefill?: string
           onSend={sendMessage}
           isSending={isSending}
           onCreateOrder={() => setShowOrderRail(true)}
+          onBack={handleBack}
           initialPrefill={initialPrefill}
           baseCurrency={baseCurrency}
         />
