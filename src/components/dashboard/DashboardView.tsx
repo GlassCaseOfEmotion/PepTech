@@ -1,18 +1,32 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
 import { formatAmount } from '@/lib/currency'
+import { createClient } from '@/lib/supabase/client'
 import {
   MOCK_REORDERS, MOCK_SHIPMENTS,
   type MockReorder, type MockShipment,
 } from '@/lib/mock-data'
-import type { InboxThread } from '@/types/inbox'
+import type { InboxThread, DbConversation } from '@/types/inbox'
+import { dbConversationToThread } from '@/types/inbox'
 import type { CatalogProduct } from '@/types/catalog'
 import type { DashboardStats, PendingOrder } from '@/types/dashboard'
 import { initials } from '@/types/inbox'
 import { PAYMENT_BADGE } from '@/types/payments'
+
+const ACTIVE_STATUSES = new Set(['new', 'needs_reply', 'in_progress', 'snoozed'])
+
+const CONV_SELECT = `
+  id, status, unread_count, last_message_at, last_message_snippet,
+  channel_type, channel_identifier,
+  customers (
+    id, display_name, trust_score, ltv,
+    customer_tags (tag),
+    customer_channels (channel_type, display_handle, is_primary)
+  )
+`
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -497,7 +511,53 @@ function greeting(name: string) {
   return `${tod}, ${name}`
 }
 
-export function DashboardView({ threads, stockProducts, stats, baseCurrency, displayName }: { threads: InboxThread[]; stockProducts: CatalogProduct[]; stats: DashboardStats; baseCurrency: string; displayName: string }) {
+export function DashboardView({ threads: initialThreads, stockProducts, stats, baseCurrency, displayName }: { threads: InboxThread[]; stockProducts: CatalogProduct[]; stats: DashboardStats; baseCurrency: string; displayName: string }) {
+  const [threads, setThreads] = useState(initialThreads)
+  const supabase = useMemo(() => createClient(), [])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`dashboard:convs-${Math.random()}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations' }, (payload) => {
+        const u = payload.new as {
+          id: string; status: string; unread_count: number
+          last_message_snippet: string | null; last_message_at: string | null
+        }
+        setThreads(prev => {
+          const inList = prev.some(t => t.id === u.id)
+          if (!ACTIVE_STATUSES.has(u.status)) {
+            return inList ? prev.filter(t => t.id !== u.id) : prev
+          }
+          if (inList) {
+            return prev.map(t => t.id !== u.id ? t : {
+              ...t,
+              status: u.status as InboxThread['status'],
+              unread: u.unread_count,
+              snippet: u.last_message_snippet ?? t.snippet,
+              minsAgo: u.last_message_at
+                ? Math.floor((Date.now() - new Date(u.last_message_at).getTime()) / 60000)
+                : t.minsAgo,
+            })
+          }
+          return prev
+        })
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversations' }, (payload) => {
+        const ins = payload.new as { id: string; status: string }
+        if (!ACTIVE_STATUSES.has(ins.status)) return
+        void supabase.from('conversations').select(CONV_SELECT).eq('id', ins.id).single()
+          .then(({ data }) => {
+            if (data) setThreads(prev =>
+              prev.some(t => t.id === ins.id) ? prev
+                : [dbConversationToThread(data as unknown as DbConversation), ...prev]
+            )
+          })
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [supabase])
+
   const active = threads.length
   const needsReply = threads.filter(t => t.status === 'needs_reply').length
 
