@@ -45,4 +45,9 @@ describe('BottomNav', () => {
     expect(screen.getByText('Catalog')).toBeInTheDocument()
     expect(screen.getByText('Settings')).toBeInTheDocument()
   })
+
+  it('caps badge at 9+ when unreadCount > 9', () => {
+    render(<BottomNav unreadCount={10} />)
+    expect(screen.getByTestId('unread-badge')).toHaveTextContent('9+')
+  })
 })

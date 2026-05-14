@@ -1126,6 +1126,8 @@ kbd {
     border-top: 0.5px solid var(--pt-line);
     border-radius: 16px 16px 0 0;
     padding-bottom: calc(56px + env(safe-area-inset-bottom));
+    position: relative;
+    z-index: 300;
   }
   .pt-bn-more-handle {
     width: 36px; height: 4px; border-radius: 2px;
