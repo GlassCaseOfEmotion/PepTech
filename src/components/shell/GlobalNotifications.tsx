@@ -15,11 +15,13 @@ export function GlobalNotifications() {
         event: 'INSERT',
         schema: 'public',
         table: 'messages',
-        filter: 'direction=eq.inbound',
+        // No server-side filter — row filters need specific Supabase publication
+        // config and can silently fail. Filter in the callback instead.
       }, (payload) => {
-        playChime()
+        const raw = payload.new as { id: string; conversation_id: string; content: string; direction: string }
+        if (raw.direction !== 'inbound') return
 
-        const raw = payload.new as { id: string; conversation_id: string; content: string }
+        playChime()
 
         // Dispatch immediately so the bell always fires
         const item: NotificationItem = {
