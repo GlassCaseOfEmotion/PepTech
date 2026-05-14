@@ -123,6 +123,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
       .from('customer_activity')
       .select('id, source, label, ref_number, amount, note, created_at')
       .eq('customer_id', customerId)
+      .not('label', 'in', '("Moved to Awaiting payment","Moved to Confirming","Moved to Packing")')
       .order('created_at', { ascending: false })
       .limit(30),
   ])
