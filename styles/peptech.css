@@ -499,7 +499,8 @@ kbd {
   grid-auto-rows: minmax(280px, auto);
   gap: var(--pt-gap);
 }
-.pt-span-2 { grid-column: span 2; grid-row: span 2; }
+.pt-span-2 { grid-column: span 2; grid-row: span 2; display: flex; flex-direction: column; }
+.pt-span-2 > .pt-card { flex: 1; min-height: 0; }
 .pt-card {
   background: var(--pt-surface);
   border-radius: var(--pt-radius);
