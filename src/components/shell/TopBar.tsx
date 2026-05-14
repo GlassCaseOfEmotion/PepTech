@@ -53,8 +53,6 @@ export function TopBar({ section = 'Inbox', connectedChannels = [], rightOpen, o
             </svg>
           </button>
         )}
-        <span className="pt-top-divider" />
-        <button className="pt-cta">Reload catalog</button>
       </div>
     </header>
   )
