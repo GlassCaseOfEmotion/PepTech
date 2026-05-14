@@ -320,7 +320,8 @@ function ReordersCard({ reorders }: { reorders: ReorderSignal[] }) {
       ) : null}
       <ul className="pt-reorder-list">
         {reorders.map((r, i) => (
-          <li key={i} className="pt-reorder">
+          <Link key={i} href={`/customers/${r.customerId}`} style={{ textDecoration: 'none', color: 'inherit', display: 'contents' }}>
+          <li className="pt-reorder">
             <div className="pt-reorder-due">
               <div className={`pt-reorder-when ${r.dueIn === 'now' ? 'is-now' : ''}`}>{r.dueIn}</div>
               <div className="pt-reorder-cycle">{r.cycle}</div>
@@ -335,10 +336,11 @@ function ReordersCard({ reorders }: { reorders: ReorderSignal[] }) {
               </div>
               <div className="pt-reorder-pct">{Math.round(r.conf * 100)}%</div>
             </div>
-            <button className="pt-reorder-act" title="Send pre-written reorder ping">
+            <button className="pt-reorder-act" title="Send pre-written reorder ping" onClick={e => e.preventDefault()}>
               <Icons.send size={12} />
             </button>
           </li>
+          </Link>
         ))}
       </ul>
     </DashCard>
