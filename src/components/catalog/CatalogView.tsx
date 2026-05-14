@@ -721,6 +721,7 @@ export function CatalogView({ products, protocols, baseCurrency }: { products: C
   const [showAddProduct, setShowAddProduct] = useState(false)
   const [familyFilter, setFamilyFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<string>('attention')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   const protocolByProduct = Object.fromEntries(protocols.map(p => [p.product_id, p]))
 
@@ -740,14 +741,31 @@ export function CatalogView({ products, protocols, baseCurrency }: { products: C
     return result
   }, [products, familyFilter])
 
+  const colSort = (col: string, defaultDir: 'asc' | 'desc' = 'asc') => {
+    if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortBy(col); setSortDir(defaultDir) }
+  }
+
   const sortedProducts = useMemo(() => {
-    const sortFn = sortBy === 'attention'
-      ? (a: CatalogProduct, b: CatalogProduct) => flagOrder(stockFlag(a.totalStock)) - flagOrder(stockFlag(b.totalStock)) || a.name.localeCompare(b.name)
-      : sortBy === 'stock-asc' ? (a: CatalogProduct, b: CatalogProduct) => a.totalStock - b.totalStock
-      : sortBy === 'stock-desc' ? (a: CatalogProduct, b: CatalogProduct) => b.totalStock - a.totalStock
-      : (a: CatalogProduct, b: CatalogProduct) => a.name.localeCompare(b.name)
-    return [...filtered].sort(sortFn)
-  }, [filtered, sortBy])
+    if (sortBy === 'attention') {
+      return [...filtered].sort((a, b) =>
+        flagOrder(stockFlag(a.totalStock)) - flagOrder(stockFlag(b.totalStock)) || a.name.localeCompare(b.name)
+      )
+    }
+    const d = sortDir === 'asc' ? 1 : -1
+    const cover = (p: CatalogProduct) => p.velocity30dTotal > 0 ? p.totalStock / (p.velocity30dTotal / 30) : Infinity
+    const vel = (p: CatalogProduct) => p.velocity7d.reduce((s, v) => s + v, 0)
+    const mg = (p: CatalogProduct) => grossMargin(p.unitPrice, p.costPrice) ?? -Infinity
+    const fns: Record<string, (a: CatalogProduct, b: CatalogProduct) => number> = {
+      name:     (a, b) => d * a.name.localeCompare(b.name),
+      stock:    (a, b) => d * (a.totalStock - b.totalStock),
+      velocity: (a, b) => d * (vel(a) - vel(b)),
+      cover:    (a, b) => d * (cover(a) - cover(b)),
+      price:    (a, b) => d * (a.unitPrice - b.unitPrice),
+      margin:   (a, b) => d * (mg(a) - mg(b)),
+    }
+    return [...filtered].sort(fns[sortBy] ?? fns.name)
+  }, [filtered, sortBy, sortDir])
 
   const selected = products.find(p => p.id === selectedId) ?? products[0]
 
@@ -787,25 +805,35 @@ export function CatalogView({ products, protocols, baseCurrency }: { products: C
           ))}
         </div>
         <div className="pt-cat-sort">
-          <span className="pt-cat-sort-lbl">Sort</span>
-          <select className="pt-cat-sort-sel" value={sortBy} onChange={e => setSortBy(e.target.value)}>
-            <option value="attention">Attention first</option>
-            <option value="name">Name A–Z</option>
-            <option value="stock-asc">Stock: low to high</option>
-            <option value="stock-desc">Stock: high to low</option>
-          </select>
+          <button
+            className={`pt-cat-filter ${sortBy === 'attention' ? 'is-active' : ''}`}
+            onClick={() => setSortBy('attention')}
+          >
+            ⚠ Attention first
+          </button>
         </div>
       </div>
 
       <div className="pt-cat-body">
         <div className="pt-cat-list">
           <div className="pt-cat-list-head">
-            <div className="pt-cat-cell-name">Product</div>
-            <div className="pt-cat-cell-stock">Stock</div>
-            <div className="pt-cat-cell-velocity">Vel · 7d</div>
-            <div className="pt-cat-cell-cover">Cover</div>
-            <div className="pt-cat-cell-price">Price</div>
-            <div className="pt-cat-cell-margin">Margin</div>
+            {([
+              ['name',     'Product',  'asc'],
+              ['stock',    'Stock',    'asc'],
+              ['velocity', 'Vel · 7d', 'desc'],
+              ['cover',    'Cover',    'asc'],
+              ['price',    'Price',    'asc'],
+              ['margin',   'Margin',   'desc'],
+            ] as [string, string, 'asc' | 'desc'][]).map(([col, label, def], i) => (
+              <button
+                key={col}
+                className={`pt-cat-col-hd ${['pt-cat-cell-name','pt-cat-cell-stock','pt-cat-cell-velocity','pt-cat-cell-cover','pt-cat-cell-price','pt-cat-cell-margin'][i]} ${sortBy === col ? 'is-sorted' : ''}`}
+                onClick={() => colSort(col, def)}
+              >
+                {label}
+                {sortBy === col && <span className="pt-cat-sort-arr">{sortDir === 'asc' ? '↑' : '↓'}</span>}
+              </button>
+            ))}
           </div>
           <ul>
             {sortedProducts.map(p => {

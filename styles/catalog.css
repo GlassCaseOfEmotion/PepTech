@@ -69,6 +69,16 @@
   border-bottom: 0.5px solid var(--pt-line);
   background: var(--pt-bg);
 }
+.pt-cat-col-hd {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-size: inherit; color: inherit; text-transform: inherit;
+  letter-spacing: inherit; font-weight: inherit;
+  display: flex; align-items: center; gap: 3px;
+  transition: color 0.1s;
+}
+.pt-cat-col-hd:hover { color: var(--pt-fg-2); }
+.pt-cat-col-hd.is-sorted { color: var(--pt-fg); }
+.pt-cat-sort-arr { font-size: 9px; opacity: 0.8; }
 .pt-cat-list ul { list-style: none; margin: 0; padding: 0; flex: 1; overflow-y: auto; }
 .pt-cat-row {
   display: grid;
