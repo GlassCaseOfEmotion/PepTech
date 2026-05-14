@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
+import { GlobalNotifications } from './GlobalNotifications'
 import { DashboardView, DashboardRightRail } from '@/components/dashboard/DashboardView'
 import type { InboxThread } from '@/types/inbox'
 import type { CatalogProduct } from '@/types/catalog'
@@ -26,6 +27,7 @@ export function DashboardLayout({ displayName, connectedChannels, threads, stock
 
   return (
     <div className={`pt-root${rightOpen ? '' : ' no-right'}`}>
+      <GlobalNotifications />
       <Sidebar displayName={displayName} />
       <main className="pt-main">
         <TopBar
