@@ -1,4 +1,4 @@
-/* customer.css */
+﻿/* customer.css */
 
 /* ── Customer list filters ──────────────────────────────────────────────── */
 .pt-cl-filters {
@@ -285,7 +285,7 @@
     text-transform: uppercase; letter-spacing: 0.04em;
   }
 
-  /* Trust pill */
+  /* Trust pill — absolutely positioned so it does not occupy flex space */
   .pt-cu-hd-trust-pill {
     display: block;
     background: var(--pt-surface-2);
@@ -293,7 +293,9 @@
     border-radius: 8px;
     padding: 4px 8px;
     text-align: center;
-    flex-shrink: 0;
+    position: absolute;
+    top: 0;
+    right: 0;
   }
   .pt-cu-hd-trust-num {
     font-size: 15px; font-weight: 700; color: var(--pt-accent); line-height: 1.1;
@@ -304,7 +306,7 @@
   }
 
   /* Header: position relative so trust pill can go top-right */
-  .pt-cu-hd-id { position: relative; padding-right: 60px; }
+  .pt-cu-hd-id { position: relative; padding-right: 60px; align-items: flex-start; }
 
   /* Tab bar */
   .pt-cd-tab-bar {
@@ -348,3 +350,4 @@
   .pt-cu-hd-mobile-stats { display: none !important; }
   .pt-cu-hd-trust-pill   { display: none !important; }
 }
+
