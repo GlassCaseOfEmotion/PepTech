@@ -675,4 +675,21 @@ html.pt-ai-expanded .pt-inbox-ai-msgs { flex: 1; max-height: none; }
 @media (min-width: 769px) {
   .pt-ix-mobile-sheet-peek,
   .pt-ix-mobile-sheet-body { display: none !important; }
+  .pt-ix-conv-back { display: none !important; }
+}
+
+/* Mobile: show back button */
+@media (max-width: 768px) {
+  .pt-ix-conv-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px; height: 32px;
+    border: none; background: none; cursor: pointer;
+    color: var(--pt-fg-3);
+    border-radius: 6px;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pt-ix-conv-back:active { background: var(--pt-surface-2); }
 }

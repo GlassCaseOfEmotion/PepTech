@@ -589,7 +589,7 @@ export function DashboardView({ threads: initialThreads, stockProducts, stats, r
       <KpiRow active={active} needsReply={needsReply} reordersDue7d={reordersDue7d} highConf={highConf} stats={stats} baseCurrency={baseCurrency} />
 
       <div className="pt-grid">
-        <div className="pt-dash-card-inbox"><InboxCard threads={threads} /></div>
+        <div className="pt-dash-card-inbox pt-span-2"><InboxCard threads={threads} /></div>
         <PaymentsCard orders={stats.pendingOrders} baseCurrency={baseCurrency} />
         <RevenueCard daily90d={stats.revenue90dDaily} baseCurrency={baseCurrency} />
         <ReordersCard reorders={reorderSignals} />
