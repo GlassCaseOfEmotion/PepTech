@@ -460,9 +460,9 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
         </div>
         <div className="pt-cat-stat">
           <div className="lbl">Unit Econ</div>
-          <div className="val">{formatAmount(product.unitPrice, baseCurrency)}</div>
+          <div className="val">{formatAmountCompact(product.unitPrice, baseCurrency)}</div>
           <div className="pt-cat-stat-sub">
-            {product.costPrice != null ? `cost ${formatAmount(product.costPrice, baseCurrency)}` : 'cost —'}
+            {product.costPrice != null ? `cost ${formatAmountCompact(product.costPrice, baseCurrency)}` : 'cost —'}
             {' · '}
             {(() => {
               const m = grossMargin(product.unitPrice, product.costPrice)
@@ -752,7 +752,7 @@ export function CatalogView({ products, protocols, baseCurrency }: { products: C
       <div className="pt-cat-hd">
         <div>
           <h1>Catalog</h1>
-          <p>{products.length} SKUs · {needsAttentionCount} need attention · {formatAmount(Math.round(totalValue), baseCurrency)} on hand</p>
+          <p>{products.length} SKUs · {needsAttentionCount} need attention · {formatAmountCompact(Math.round(totalValue), baseCurrency)} on hand</p>
         </div>
         <div className="pt-cat-hd-actions">
           <button className="pt-btn pt-btn-ghost">
