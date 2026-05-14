@@ -97,8 +97,8 @@ export function CustomerTagsField({ customerId, initialTags }: { customerId: str
             placeholder="type a tag…"
             maxLength={32}
           />
-          <button className="pt-cu-add-tag" title="Confirm" onClick={() => applyTag(input)}>✓</button>
-          <button className="pt-cu-add-tag" title="Cancel" style={{ opacity: 0.5 }} onClick={close}>✕</button>
+          <button className="pt-cu-add-tag is-confirm" title="Confirm" onClick={() => applyTag(input)}>✓</button>
+          <button className="pt-cu-add-tag is-cancel" title="Cancel" onClick={close}>✕</button>
           {error && <span style={{ fontSize: 11, color: 'var(--pt-danger)', marginLeft: 2 }}>{error}</span>}
           {visiblePresets.length > 0 && (
             <div className="pt-tag-suggestions">
