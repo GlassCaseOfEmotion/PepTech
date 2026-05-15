@@ -1,0 +1,61 @@
+/* ─── Admin shell ────────────────────────────────────────────────────────────*/
+.pt-admin-root {
+  display: flex; flex-direction: column;
+  min-height: 100vh;
+  background: var(--pt-bg);
+}
+.pt-admin-topbar {
+  display: flex; align-items: center; gap: 20px;
+  height: 48px; padding: 0 24px;
+  border-bottom: 0.5px solid var(--pt-line);
+  background: var(--pt-surface);
+  position: sticky; top: 0; z-index: 100;
+}
+.pt-admin-topbar-logo {
+  font-size: 13px; font-weight: 700; letter-spacing: -0.01em;
+  color: var(--pt-fg); text-decoration: none;
+}
+.pt-admin-topbar-badge {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--pt-accent); color: #fff;
+  border-radius: 4px; padding: 1px 6px;
+}
+.pt-admin-nav { display: flex; align-items: center; gap: 2px; margin-left: 8px; }
+.pt-admin-nav a {
+  font-size: 12.5px; font-weight: 500; color: var(--pt-fg-3);
+  text-decoration: none; padding: 4px 10px; border-radius: 6px;
+}
+.pt-admin-nav a.is-on,
+.pt-admin-nav a:hover { color: var(--pt-fg); background: var(--pt-surface-2); }
+.pt-admin-topbar-exit {
+  margin-left: auto; font-size: 12px; color: var(--pt-fg-4); text-decoration: none;
+}
+.pt-admin-topbar-exit:hover { color: var(--pt-fg-3); }
+.pt-admin-main {
+  flex: 1; padding: 28px 32px 48px;
+  max-width: 1200px; width: 100%; margin: 0 auto;
+}
+
+/* ─── Tenant / data table ────────────────────────────────────────────────────*/
+.pt-admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pt-admin-table th {
+  text-align: left; font-size: 11px; font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--pt-fg-3);
+  padding: 8px 12px; border-bottom: 0.5px solid var(--pt-line);
+}
+.pt-admin-table td {
+  padding: 11px 12px; border-bottom: 0.5px solid var(--pt-line-soft);
+  vertical-align: middle;
+}
+.pt-admin-table tr:last-child td { border-bottom: none; }
+.pt-admin-table tr:hover td { background: var(--pt-surface-2); }
+.pt-admin-table a { color: var(--pt-fg); text-decoration: none; }
+.pt-admin-table a:hover { text-decoration: underline; }
+
+.pt-admin-status-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 999px;
+}
+.pt-admin-status-pill.active   { background: var(--pt-ok-bg); color: var(--pt-ok); }
+.pt-admin-status-pill.disabled { background: var(--pt-danger-bg); color: var(--pt-danger); }

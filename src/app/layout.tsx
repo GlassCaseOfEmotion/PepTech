@@ -10,6 +10,7 @@ import '../../styles/automations.css'
 import '../../styles/vault.css'
 import '../../styles/order-detail.css'
 import '../../styles/agent.css'
+import '../../styles/admin.css'
 
 export const metadata: Metadata = {
   title: 'Peptech',
