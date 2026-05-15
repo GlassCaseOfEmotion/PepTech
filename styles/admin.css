@@ -57,5 +57,5 @@
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 999px;
 }
-.pt-admin-status-pill.active   { background: var(--pt-ok-bg); color: var(--pt-ok); }
-.pt-admin-status-pill.disabled { background: var(--pt-danger-bg); color: var(--pt-danger); }
+.pt-admin-status-pill.active   { background: var(--pt-ok-soft); color: var(--pt-ok); }
+.pt-admin-status-pill.disabled { background: oklch(from var(--pt-danger) l c h / 0.12); color: var(--pt-danger); }

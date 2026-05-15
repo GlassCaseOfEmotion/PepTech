@@ -793,6 +793,24 @@ export type Database = {
           },
         ]
       }
+      platform_admins: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       product_protocols: {
         Row: {
           created_at: string
@@ -1098,6 +1116,7 @@ export type Database = {
           base_currency: string
           created_at: string
           id: string
+          is_active: boolean
           logo_path: string | null
           name: string
           plan: string
@@ -1108,6 +1127,7 @@ export type Database = {
           base_currency?: string
           created_at?: string
           id?: string
+          is_active?: boolean
           logo_path?: string | null
           name: string
           plan?: string
@@ -1118,6 +1138,7 @@ export type Database = {
           base_currency?: string
           created_at?: string
           id?: string
+          is_active?: boolean
           logo_path?: string | null
           name?: string
           plan?: string
@@ -1180,6 +1201,10 @@ export type Database = {
     }
     Functions: {
       auth_tenant_id: { Args: never; Returns: string }
+      compute_customer_trust: {
+        Args: { p_customer_id: string }
+        Returns: number
+      }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       get_tenant_id_for_user: { Args: { user_id: string }; Returns: string }
       hide_platform_template: {
