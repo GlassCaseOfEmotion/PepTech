@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
-import { formatAmount } from '@/lib/currency'
+import { formatAmount, formatAmountCompact } from '@/lib/currency'
 import { createClient } from '@/lib/supabase/client'
 import type { ReorderSignal } from '@/lib/reorder-signals'
 import type { ShipmentRow } from '@/types/orders'
@@ -109,13 +109,13 @@ function KpiRow({ active, needsReply, reordersDue7d, highConf, stats, baseCurren
   const kpis = [
     {
       label: 'Revenue · 7d',
-      value: formatAmount(revenue7d, baseCurrency),
+      value: formatAmountCompact(revenue7d, baseCurrency),
       delta,
       spark: spark7d,
     },
     {
       label: 'Pending crypto',
-      value: formatAmount(pendingTotal, baseCurrency),
+      value: formatAmountCompact(pendingTotal, baseCurrency),
       delta: null,
       sub: pendingOrders.length === 0
         ? 'None outstanding'
@@ -254,7 +254,7 @@ function PaymentsCard({ orders, baseCurrency }: { orders: PendingOrder[]; baseCu
               </div>
             </div>
             <div className="pt-pay-amt-col">
-              <div className="pt-pay-amt">{formatAmount(o.amount, baseCurrency)}</div>
+              <div className="pt-pay-amt">{formatAmountCompact(o.amount, baseCurrency)}</div>
               <Link href={`/orders/${o.id}`} className="pt-pay-act">{o.refNumber}</Link>
             </div>
           </li>
@@ -280,7 +280,7 @@ function RevenueCard({ daily90d, baseCurrency }: { daily90d: { d: string; v: num
   return (
     <DashCard
       title="Revenue"
-      subtitle={`Last ${period} · ${formatAmount(total, baseCurrency)} total`}
+      subtitle={`Last ${period} · ${formatAmountCompact(total, baseCurrency)} total`}
       action={
         <div className="pt-segctl">
           {['7d', '30d', '90d'].map(p => (
