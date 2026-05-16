@@ -155,16 +155,28 @@ export default async function Home() {
   )
 
   // ── Shipments ────────────────────────────────────────────────────────────
-  const shipments: ShipmentRow[] = (shipmentsRaw ?? []).map(o => ({
+  type ShipmentRaw = {
+    id: string
+    ref_number: string
+    status: string
+    carrier: string | null
+    tracking_number: string | null
+    tracking_url: string | null
+    estimated_delivery: string | null
+    delivered_at: string | null
+    customers: { display_name: string } | null
+  }
+
+  const shipments: ShipmentRow[] = ((shipmentsRaw ?? []) as ShipmentRaw[]).map(o => ({
     id: o.id,
     refNumber: o.ref_number,
-    to: (o.customers as { display_name: string } | null)?.display_name ?? '—',
+    to: o.customers?.display_name ?? '—',
     carrier: o.carrier,
     trackingNumber: o.tracking_number,
-    trackingUrl: (o as { tracking_url?: string | null }).tracking_url ?? null,
+    trackingUrl: o.tracking_url,
     status: o.status as 'shipped' | 'delivered',
-    estimatedDelivery: (o as { estimated_delivery?: string | null }).estimated_delivery ?? null,
-    deliveredAt: (o as { delivered_at?: string | null }).delivered_at ?? null,
+    estimatedDelivery: o.estimated_delivery,
+    deliveredAt: o.delivered_at,
   }))
 
   // ── Other props ──────────────────────────────────────────────────────────

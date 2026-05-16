@@ -389,6 +389,15 @@ const SHIP_LABELS: Record<string, string> = {
   delivered: 'Delivered',
 }
 
+function isSafeUrl(url: string): boolean {
+  try {
+    const { protocol } = new URL(url)
+    return protocol === 'https:' || protocol === 'http:'
+  } catch {
+    return false
+  }
+}
+
 function ShipmentsCard({ shipments }: { shipments: ShipmentRow[] }) {
   return (
     <DashCard title="Shipments" subtitle="Carrier tracking"
@@ -406,8 +415,8 @@ function ShipmentsCard({ shipments }: { shipments: ShipmentRow[] }) {
               <div className="pt-ship-carrier mono">
                 {s.carrier ?? '—'}
                 {s.trackingNumber && (
-                  s.trackingUrl
-                    ? <a href={s.trackingUrl} target="_blank" rel="noreferrer" style={{ marginLeft: 6 }}>{s.trackingNumber}</a>
+                  s.trackingUrl && isSafeUrl(s.trackingUrl)
+                    ? <a href={s.trackingUrl} target="_blank" rel="noreferrer noopener" style={{ marginLeft: 6 }}>{s.trackingNumber}</a>
                     : <span style={{ marginLeft: 6 }}>{s.trackingNumber}</span>
                 )}
               </div>

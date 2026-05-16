@@ -42,16 +42,6 @@ export type MockReorder = {
   conf: number
 }
 
-export type MockShipment = {
-  id: string
-  to: string
-  carrier: string
-  status: 'label_made' | 'in_transit' | 'customs' | 'delivered'
-  step: number
-  of: number
-  eta: string
-}
-
 export type MockRevenueDay = { d: string; v: number }
 
 export const MOCK_THREADS: MockThread[] = [
@@ -89,13 +79,6 @@ export const MOCK_REORDERS: MockReorder[] = [
   { who: 'rxqueen', product: 'GHK-Cu 50mg', dueIn: '4 days', cycle: 'wk 6/8', conf: 0.78 },
   { who: 'K. (gymrat)', product: 'Reta 10mg', dueIn: '6 days', cycle: 'wk 2/16', conf: 0.71 },
   { who: '@hyp3rion', product: 'Sema 10mg', dueIn: '9 days', cycle: 'wk 7/12', conf: 0.62 },
-]
-
-export const MOCK_SHIPMENTS: MockShipment[] = [
-  { id: '9405-..-7821', to: 'K.', carrier: 'USPS', status: 'in_transit', step: 3, of: 4, eta: 'tomorrow' },
-  { id: '1Z-..-A41', to: 'marcus_r', carrier: 'UPS', status: 'delivered', step: 4, of: 4, eta: 'today' },
-  { id: '9405-..-3320', to: 'Dani V.', carrier: 'USPS', status: 'label_made', step: 1, of: 4, eta: '—' },
-  { id: 'EX-..-99', to: 'swolepriest', carrier: 'DHL', status: 'customs', step: 2, of: 4, eta: 'Apr 30' },
 ]
 
 export const MOCK_REVENUE_7D: MockRevenueDay[] = [
