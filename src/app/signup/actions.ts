@@ -61,5 +61,5 @@ export async function signupAction(formData: FormData) {
   const supabase = await createClient()
   await supabase.auth.signInWithPassword({ email, password })
 
-  redirect('/')
+  redirect('/onboarding')
 }

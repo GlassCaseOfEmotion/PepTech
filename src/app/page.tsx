@@ -39,6 +39,13 @@ export default async function Home() {
 
   const d180 = new Date(now - 180 * 86400_000).toISOString()
 
+  // Gate: bounce unboarded tenants to the wizard
+  const { data: gateUserRow } = await supabase
+    .from('users').select('tenant_id').eq('id', user.id).single()
+  const { data: tenantGate } = await supabase
+    .from('tenants').select('onboarded_at').eq('id', gateUserRow?.tenant_id ?? '').single()
+  if (!tenantGate?.onboarded_at) redirect('/onboarding')
+
   const [
     { data: userRow },
     { data: channels },
@@ -56,6 +63,7 @@ export default async function Home() {
     { data: packingRaw },
     { data: eventsRaw },
     { data: messagesRaw },
+    { count: paymentCount },
   ] = await Promise.all([
     supabase.from('users').select('display_name, tenant_id').eq('id', user.id).single(),
     supabase.from('tenant_channels').select('channel_type').eq('is_active', true),
@@ -116,6 +124,7 @@ export default async function Home() {
       .eq('direction', 'inbound')
       .order('sent_at', { ascending: false })
       .limit(10),
+    supabase.from('tenant_payment_configs').select('id', { count: 'exact', head: true }).eq('is_active', true),
   ])
 
   // ── Revenue stats ────────────────────────────────────────────────────────
@@ -252,6 +261,13 @@ export default async function Home() {
     .sort((a, b) => a.minsAgo - b.minsAgo)
     .slice(0, 15)
 
+  // Onboarding checklist status
+  const onboardingStatus = {
+    hasProducts: (products ?? []).length > 0,
+    hasChannel:  (channels ?? []).length > 0,
+    hasPayment:  (paymentCount ?? 0) > 0,
+  }
+
   // ── Other props ──────────────────────────────────────────────────────────
   const displayName      = userRow?.display_name ?? user.email?.split('@')[0] ?? 'User'
   const connectedChannels = (channels ?? []).map(c => c.channel_type)
@@ -279,6 +295,7 @@ export default async function Home() {
       shipments={shipments}
       packingOrders={packingOrders}
       activityItems={activityItems}
+      onboardingStatus={onboardingStatus}
     />
   )
 }
