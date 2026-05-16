@@ -556,7 +556,7 @@ kbd {
 .pt-segctl button.is-on { background: var(--pt-surface); color: var(--pt-fg); box-shadow: 0 0 0 0.5px var(--pt-line); }
 
 /* ─── Inbox / threads ────────────────────────────────────────────────────── */
-.pt-dash-card-inbox .pt-card-body { max-height: 480px; }
+.pt-dash-card-inbox .pt-card-body { max-height: 300px; }
 .pt-thread-list { list-style: none; margin: 0; padding: 0; }
 .pt-thread {
   display: grid; grid-template-columns: 32px 1fr auto;
