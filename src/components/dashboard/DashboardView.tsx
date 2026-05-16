@@ -346,33 +346,36 @@ function ReordersCard({ reorders }: { reorders: ReorderSignal[] }) {
 
 // ─── Stock card ─────────────────────────────────────────────────────────────
 
-function StockCard({ products }: { products: CatalogProduct[] }) {
+function StockCard({ products, velocity7dByProduct }: { products: CatalogProduct[]; velocity7dByProduct: Record<string, number> }) {
   return (
     <DashCard title="Stock" subtitle="On-hand by SKU"
       action={<Link href="/catalog" className="pt-link">Catalog →</Link>}
       scroll>
       <table className="pt-stock">
         <thead>
-          <tr><th>SKU</th><th>Lot</th><th className="r">On-hand</th><th className="r">7d Δ</th></tr>
+          <tr><th>Product</th><th className="r">On-hand</th><th className="r">7d Δ</th></tr>
         </thead>
         <tbody>
           {products.map(p => {
-            const latestBatch = p.batches[0]
             const isOut = p.totalStock === 0
             const isLow = !isOut && p.totalStock < 15
+            const sold7d = velocity7dByProduct[p.id] ?? 0
             return (
               <tr key={p.sku} className={isOut ? 'is-out' : isLow ? 'is-low' : ''}>
                 <td>
-                  <div className="pt-sku">{p.sku}</div>
-                  <div className="pt-sku-name">{p.name}</div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                    <span>{p.name}</span>
+                    <span className="pt-sku" style={{ fontSize: 10, opacity: 0.6 }}>{p.sku}</span>
+                  </div>
                 </td>
-                <td className="mono">{latestBatch?.batch_number ?? '—'}</td>
                 <td className="r mono">
                   {isOut
                     ? <span className="pt-out">OUT</span>
                     : <>{p.totalStock}<span className="pt-stock-unit">u</span></>}
                 </td>
-                <td className="r mono" style={{ color: 'var(--pt-fg-4)' }}>—</td>
+                <td className="r mono" style={{ color: sold7d > 0 ? 'var(--pt-fg-2)' : 'var(--pt-fg-4)' }}>
+                  {sold7d > 0 ? <>{sold7d}<span className="pt-stock-unit">u</span></> : '—'}
+                </td>
               </tr>
             )
           })}
@@ -665,7 +668,7 @@ export function DashboardView({ threads: initialThreads, stockProducts, stats, r
         <PaymentsCard orders={stats.pendingOrders} baseCurrency={baseCurrency} />
         <RevenueCard daily90d={stats.revenue90dDaily} baseCurrency={baseCurrency} />
         <ReordersCard reorders={reorderSignals} />
-        <div className="pt-dash-card-stock"><StockCard products={stockProducts} /></div>
+        <div className="pt-dash-card-stock"><StockCard products={stockProducts} velocity7dByProduct={stats.velocity7dByProduct} /></div>
         <div className="pt-dash-card-shipments"><ShipmentsCard shipments={shipments} /></div>
       </div>
 

@@ -31,4 +31,5 @@ export interface DashboardStats {
   revenue90dDaily: RevenueDay[]
   pendingOrders: PendingOrder[]
   pendingTotal: number
+  velocity7dByProduct: Record<string, number>
 }

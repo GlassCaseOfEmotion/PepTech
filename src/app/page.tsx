@@ -155,7 +155,7 @@ export default async function Home() {
   })
   const pendingTotal = pendingOrders.reduce((s, o) => s + o.amount, 0)
 
-  const stats: DashboardStats = { revenue7d, revenuePrev7d, revenue90dDaily, pendingOrders, pendingTotal }
+  const stats0 = { revenue7d, revenuePrev7d, revenue90dDaily, pendingOrders, pendingTotal }
   const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
 
   // ── Reorder signals ──────────────────────────────────────────────────────
@@ -173,6 +173,17 @@ export default async function Home() {
     (reorderProtocols ?? []) as ProductProtocol[],
     (reorderOverrides ?? []) as CustomerProtocolOverride[],
   )
+
+  // ── 7d product velocity (from already-fetched reorderOrders) ─────────────
+  const d7 = new Date(now - 7 * 86400_000).toISOString()
+  const velocity7dByProduct: Record<string, number> = {}
+  for (const order of reorderOrders) {
+    if (order.created_at < d7) continue
+    for (const item of order.items) {
+      velocity7dByProduct[item.product_id] = (velocity7dByProduct[item.product_id] ?? 0) + item.qty
+    }
+  }
+  const stats: DashboardStats = { ...stats0, velocity7dByProduct }
 
   // ── Shipments ────────────────────────────────────────────────────────────
   type ShipmentRaw = {
