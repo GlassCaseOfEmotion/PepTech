@@ -6,7 +6,7 @@ export const PUBLIC_PATHS = ['/login', '/signup', '/api/webhooks']
 function getJwtClaims(accessToken: string | undefined): Record<string, unknown> {
   if (!accessToken) return {}
   try {
-    return JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64url').toString('utf8'))
+    return JSON.parse(atob(accessToken.split('.')[1]))
   } catch {
     return {}
   }
