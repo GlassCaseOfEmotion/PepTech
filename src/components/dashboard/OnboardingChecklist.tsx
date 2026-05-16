@@ -50,6 +50,14 @@ export function OnboardingChecklist({ hasProducts, hasChannel, hasPayment }: Pro
             </li>
           ))}
         </ul>
+        <div className="pt-card-body ob-cl-tour-row">
+          <button
+            className="ob-cl-tour-btn"
+            onClick={() => window.dispatchEvent(new CustomEvent('pt:tour:open'))}
+          >
+            ✦ Take a tour of the platform
+          </button>
+        </div>
       </div>
     </section>
   )

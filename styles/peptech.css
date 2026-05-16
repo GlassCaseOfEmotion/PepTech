@@ -1746,3 +1746,101 @@ kbd {
 .ob-cl-item.is-done .ob-cl-label { color: var(--pt-fg-3); text-decoration: line-through; }
 .ob-cl-hint   { font-size: 11px; color: var(--pt-accent-fg); text-decoration: none; }
 .ob-cl-hint:hover { text-decoration: underline; }
+
+/* ─── Welcome tour ──────────────────────────────────────────────────────── */
+.pt-tour-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 9000;
+  animation: pt-tour-fade 250ms ease;
+}
+@keyframes pt-tour-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.pt-tour-spot {
+  position: fixed;
+  z-index: 9001;
+  border-radius: 10px;
+  pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.65), 0 0 0 2px var(--pt-accent), 0 0 20px 4px oklch(from var(--pt-accent) l c h / 0.35);
+  transition: top 300ms ease, left 300ms ease, width 300ms ease, height 300ms ease;
+  animation: pt-tour-spot-in 280ms ease;
+}
+@keyframes pt-tour-spot-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.pt-tour-tip {
+  position: fixed;
+  z-index: 9002;
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25), 0 0 0 0.5px var(--pt-line);
+  padding: 18px 20px 16px;
+  animation: pt-tour-tip-in 300ms 80ms ease both;
+}
+@keyframes pt-tour-tip-in {
+  from { opacity: 0; transform: translateY(-50%) scale(0.95); }
+  to   { opacity: 1; transform: translateY(-50%) scale(1); }
+}
+
+.pt-tour-tip-meta {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.pt-tour-tip-step {
+  font-family: var(--pt-mono); font-size: 10px;
+  color: var(--pt-fg-4); letter-spacing: 0.06em;
+}
+.pt-tour-tip-dots { display: flex; gap: 4px; }
+.pt-tour-tip-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--pt-line);
+  transition: background 200ms;
+}
+.pt-tour-tip-dot.is-on   { background: var(--pt-accent); }
+.pt-tour-tip-dot.is-done { background: oklch(from var(--pt-accent) l c h / 0.4); }
+
+.pt-tour-tip-title {
+  font-size: 14px; font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 7px; color: var(--pt-fg);
+}
+.pt-tour-tip-body {
+  font-size: 12.5px; color: var(--pt-fg-3);
+  line-height: 1.6; margin: 0 0 16px;
+}
+.pt-tour-tip-foot {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.pt-tour-skip {
+  font-size: 11.5px; color: var(--pt-fg-4);
+  background: none; border: none; cursor: pointer; padding: 0;
+  transition: color 150ms;
+}
+.pt-tour-skip:hover { color: var(--pt-fg-3); }
+.pt-tour-next {
+  font-size: 12.5px; font-weight: 500;
+  background: var(--pt-fg); color: var(--pt-bg);
+  border: none; border-radius: 7px;
+  padding: 7px 16px; cursor: pointer;
+  transition: opacity 140ms;
+}
+.pt-tour-next:hover { opacity: 0.82; }
+
+/* Tour trigger in checklist */
+.ob-cl-tour-row {
+  border-top: 0.5px solid var(--pt-line-soft);
+  padding: 10px 14px !important;
+}
+.ob-cl-tour-btn {
+  font-size: 12px; color: var(--pt-fg-4);
+  background: none; border: none; cursor: pointer; padding: 0;
+  transition: color 150ms;
+  font-family: inherit;
+}
+.ob-cl-tour-btn:hover { color: var(--pt-accent); }

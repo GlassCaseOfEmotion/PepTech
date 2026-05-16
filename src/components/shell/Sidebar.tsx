@@ -195,7 +195,7 @@ export function Sidebar({ displayName, initialPinned = [] }: SidebarProps) {
         <kbd>C</kbd>
       </button>
 
-      <button className="pt-search" onClick={() => window.dispatchEvent(new CustomEvent('pt:palette:open'))}>
+      <button data-tour="search" className="pt-search" onClick={() => window.dispatchEvent(new CustomEvent('pt:palette:open'))}>
         <Icons.search size={13} />
         <span>Search…</span>
         <kbd>⌘K</kbd>
@@ -206,7 +206,7 @@ export function Sidebar({ displayName, initialPinned = [] }: SidebarProps) {
           const Icon = n.icon
           const on = isActive(n.href)
           return (
-            <Link key={n.href} href={n.href} className={`pt-nav-item ${on ? 'is-on' : ''}`}>
+            <Link key={n.href} href={n.href} className={`pt-nav-item ${on ? 'is-on' : ''}`} {...(n.href === '/inbox' ? { 'data-tour': 'inbox-link' } : {})}>
               <Icon size={15} />
               <span className="pt-nav-label">{n.label}</span>
               {n.badge != null && <span className="pt-nav-badge">{n.badge}</span>}

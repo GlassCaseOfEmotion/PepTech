@@ -7,6 +7,7 @@ import { GlobalNotifications } from './GlobalNotifications'
 import { AgentPalette } from './AgentPalette'
 import { CommandPalette } from './CommandPalette'
 import { ComposeModal } from './ComposeModal'
+import { WelcomeTour } from './WelcomeTour'
 import { BottomNav } from './BottomNav'
 import { DashboardView, DashboardRightRail } from '@/components/dashboard/DashboardView'
 import type { InboxThread, DbConversation } from '@/types/inbox'
@@ -43,6 +44,7 @@ export function DashboardLayout({ displayName, connectedChannels, threads, initi
       <AgentPalette />
       <CommandPalette />
       <ComposeModal />
+      <WelcomeTour />
       <Sidebar displayName={displayName} initialPinned={initialPinned} />
       <main className="pt-main">
         <TopBar

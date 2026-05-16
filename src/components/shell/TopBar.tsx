@@ -42,6 +42,7 @@ export function TopBar({ section = 'Inbox', connectedChannels = [], rightOpen, o
 <NotificationBell />
         {onRightToggle !== undefined && (
           <button
+            data-tour="right-panel"
             className={`pt-iconbtn pt-topbar-right-toggle ${rightOpen ? 'is-on' : ''}`}
             title="Toggle right panel"
             onClick={onRightToggle}
