@@ -14,5 +14,5 @@ export async function loginAction(formData: FormData) {
     return redirect('/login?error=Invalid+credentials')
   }
 
-  redirect('/inbox')
+  redirect('/')
 }

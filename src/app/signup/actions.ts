@@ -3,6 +3,7 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
 import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
 
 export async function signupAction(formData: FormData) {
   const businessName = formData.get('businessName') as string
@@ -56,8 +57,9 @@ export async function signupAction(formData: FormData) {
     return redirect('/signup?error=Could+not+create+user+record')
   }
 
-  // 4. Redirect to login with success message
-  // signInWithPassword inside a Server Action does not reliably flush the
-  // session cookie before redirect(), so we send the user to login instead.
-  redirect('/login?message=Account+created+successfully')
+  // 4. Sign in immediately so the session cookie is set before redirect
+  const supabase = await createClient()
+  await supabase.auth.signInWithPassword({ email, password })
+
+  redirect('/')
 }
