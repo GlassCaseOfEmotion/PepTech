@@ -34,7 +34,13 @@ export function ComposeModal() {
     const openHandler = () => { setOpen(true) }
     const keyHandler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName
-      if (e.key === 'c' && tag !== 'INPUT' && tag !== 'TEXTAREA' && !e.metaKey && !e.ctrlKey) {
+      if (
+        e.key === 'c' &&
+        tag !== 'INPUT' &&
+        tag !== 'TEXTAREA' &&
+        !(e.target as HTMLElement).isContentEditable &&
+        !e.metaKey && !e.ctrlKey
+      ) {
         setOpen(true)
       }
       if (e.key === 'Escape') { setOpen(false); reset() }
@@ -51,10 +57,10 @@ export function ComposeModal() {
     if (open) setTimeout(() => inputRef.current?.focus(), 0)
   }, [open])
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setCustomerQuery(''); setCustomers([]); setSelected(null)
     setChannelType(''); setMessage(''); setError(null)
-  }
+  }, [])
 
   const close = () => { setOpen(false); reset() }
 
@@ -90,14 +96,21 @@ export function ComposeModal() {
       const result = await createOrFindConversation(selected.id, channelType)
       if ('error' in result) { setError(result.error); return }
 
-      const res = await fetch('/api/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId: result.conversationId, content: message.trim() }),
-      })
+      let res: Response
+      try {
+        res = await fetch('/api/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversationId: result.conversationId, content: message.trim() }),
+        })
+      } catch {
+        setError('Network error — please check your connection')
+        return
+      }
       if (!res.ok) {
-        const body = await res.json() as { error?: string }
-        setError(body.error ?? 'Failed to send')
+        let msg = 'Failed to send'
+        try { msg = ((await res.json()) as { error?: string }).error ?? msg } catch {}
+        setError(msg)
         return
       }
 
@@ -204,7 +217,7 @@ export function ComposeModal() {
 
         <div className="pt-modal-ft">
           <button className="pt-btn pt-btn-ghost" onClick={close} disabled={pending}>Cancel</button>
-          <button className="pt-btn pt-btn-primary" onClick={send} disabled={pending || !selected || !message.trim()}>
+          <button className="pt-btn pt-btn-primary" onClick={send} disabled={pending || !selected || !channelType || !message.trim()}>
             {pending ? 'Sending…' : `Send via ${(CH_NAMES[channelType] ?? channelType) || '…'} →`}
           </button>
         </div>
