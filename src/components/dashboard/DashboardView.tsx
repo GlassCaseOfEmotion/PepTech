@@ -363,10 +363,10 @@ function StockCard({ products, velocity7dByProduct }: { products: CatalogProduct
             return (
               <tr key={p.sku} className={isOut ? 'is-out' : isLow ? 'is-low' : ''}>
                 <td>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                    <span>{p.name}</span>
-                    <span className="pt-sku" style={{ fontSize: 10, opacity: 0.6 }}>{p.sku}</span>
-                  </div>
+                  <Link href={`/catalog?product=${p.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                    <span className="pt-reorder-who">{p.name}</span>
+                    <span className="pt-sku" style={{ opacity: 0.5 }}>{p.sku}</span>
+                  </Link>
                 </td>
                 <td className="r mono">
                   {isOut
