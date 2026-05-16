@@ -96,26 +96,16 @@ export function ComposeModal() {
       const result = await createOrFindConversation(selected.id, channelType)
       if ('error' in result) { setError(result.error); return }
 
-      let res: Response
-      try {
-        res = await fetch('/api/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ conversationId: result.conversationId, content: message.trim() }),
-        })
-      } catch {
-        setError('Network error — please check your connection')
-        return
-      }
-      if (!res.ok) {
-        let msg = 'Failed to send'
-        try { msg = ((await res.json()) as { error?: string }).error ?? msg } catch {}
-        setError(msg)
-        return
-      }
-
+      // Navigate immediately — fire send in background, inbox real-time will pick it up
+      const conversationId = result.conversationId
+      const content = message.trim()
       close()
-      router.push(`/inbox?conversation=${result.conversationId}`)
+      router.push(`/inbox?conversation=${conversationId}`)
+      void fetch('/api/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId, content }),
+      })
     })
   }
 
