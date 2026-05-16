@@ -749,6 +749,9 @@ kbd {
 .pt-out { color: var(--pt-danger); font-family: var(--pt-mono); font-weight: 600; font-size: 10.5px; }
 .pt-stock td.up { color: var(--pt-ok); }
 .pt-stock td.dn { color: var(--pt-danger); }
+.pt-stock tbody tr td:first-child { border-left: 3px solid var(--pt-ok); padding-left: 11px; }
+.pt-stock tbody tr.is-low td:first-child { border-left-color: var(--pt-warn); }
+.pt-stock tbody tr.is-out td:first-child { border-left-color: var(--pt-danger); }
 
 /* ─── Revenue bars ───────────────────────────────────────────────────────── */
 .pt-bars {
