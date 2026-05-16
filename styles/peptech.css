@@ -136,6 +136,12 @@ kbd {
 .pt-root.no-right { grid-template-columns: 232px 1fr; }
 .pt-d-compact .pt-root { grid-template-columns: 220px 1fr 296px; }
 
+/* Reflow dashboard grid to 2 cols when right rail is open on mid-size screens */
+@media (max-width: 1500px) {
+  .pt-root:not(.no-right) .pt-grid { grid-template-columns: repeat(2, 1fr); }
+  .pt-root:not(.no-right) .pt-kpis { grid-template-columns: repeat(2, 1fr); }
+}
+
 /* ─── Sidebar ────────────────────────────────────────────────────────────── */
 .pt-sidebar {
   background: var(--pt-bg-side);
