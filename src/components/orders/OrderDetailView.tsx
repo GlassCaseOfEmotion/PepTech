@@ -421,7 +421,14 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: 
                   <div className="pt-od-pay-lbl">Carrier</div>
                   <div className="pt-od-pay-val">
                     {order.carrier ?? '—'}
-                    {order.tracking_number && <> · <span className="mono">{order.tracking_number}</span></>}
+                    {order.tracking_number && (
+                      order.tracking_url
+                        ? <> · <a href={order.tracking_url} target="_blank" rel="noreferrer noopener" className="mono" style={{ color: 'inherit' }}>{order.tracking_number} ↗</a></>
+                        : <> · <span className="mono">{order.tracking_number}</span></>
+                    )}
+                    {!order.tracking_number && order.tracking_url && (
+                      <> · <a href={order.tracking_url} target="_blank" rel="noreferrer noopener" style={{ fontSize: 12 }}>Track ↗</a></>
+                    )}
                   </div>
                 </div>
               </div>

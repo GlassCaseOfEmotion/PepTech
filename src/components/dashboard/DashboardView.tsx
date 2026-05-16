@@ -426,6 +426,13 @@ function ShipmentsCard({ shipments }: { shipments: ShipmentRow[] }) {
                           >{s.trackingNumber} ↗</button>
                         : <span className="pt-ship-id">{s.trackingNumber}</span>
                     )}
+                    {!s.trackingNumber && s.trackingUrl && isSafeUrl(s.trackingUrl) && (
+                      <button
+                        className="pt-ship-id"
+                        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit', color: 'inherit', textDecoration: 'underline' }}
+                        onClick={e => { e.preventDefault(); e.stopPropagation(); window.open(s.trackingUrl!, '_blank', 'noreferrer noopener') }}
+                      >Track ↗</button>
+                    )}
                   </div>
                   <div className="pt-ship-track">
                     {[1,2,3,4].map(i => (

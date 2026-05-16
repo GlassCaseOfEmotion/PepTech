@@ -24,6 +24,7 @@ export type DbOrderRow = {
   shipping_address: ShippingAddress | null
   carrier: string | null
   tracking_number: string | null
+  tracking_url: string | null
   notes: string | null
   created_at: string
   updated_at: string
