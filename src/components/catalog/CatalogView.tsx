@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useTransition, useMemo } from 'react'
+import { useState, useTransition, useMemo, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Icons } from '@/lib/icons'
 import { formatAmount, formatAmountCompact } from '@/lib/currency'
 import { createProduct, createBatch, saveBatchCoaPath, upsertProtocol, updateProduct, updateBatch, deleteBatch } from '@/app/catalog/actions'
@@ -776,13 +777,23 @@ function ProtocolSection({ productId, protocol }: { productId: string; protocol:
 
 // ── Main catalog view ────────────────────────────────────────────────────────
 export function CatalogView({ products, protocols, baseCurrency }: { products: CatalogProduct[]; protocols: ProductProtocol[]; baseCurrency: string }) {
-  const [selectedId, setSelectedId] = useState(products[0]?.id ?? '')
+  const searchParams = useSearchParams()
+  const highlightId = searchParams.get('product') ?? ''
+  const [selectedId, setSelectedId] = useState(highlightId || (products[0]?.id ?? ''))
+  const highlightRowRef = useRef<HTMLDivElement>(null)
   const [showAddProduct, setShowAddProduct] = useState(false)
   const [familyFilter, setFamilyFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<string>('attention')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   const protocolByProduct = Object.fromEntries(protocols.map(p => [p.product_id, p]))
+
+  // Scroll highlighted product into view on mount
+  useEffect(() => {
+    if (highlightId && highlightRowRef.current) {
+      highlightRowRef.current.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    }
+  }, [highlightId])
 
   const allFamilies = useMemo(() =>
     Array.from(new Set(products.map(p => p.productFamily))).sort()
@@ -899,6 +910,7 @@ export function CatalogView({ products, protocols, baseCurrency }: { products: C
               return (
                 <li key={p.id}>
                   <div
+                    ref={p.id === highlightId ? highlightRowRef : null}
                     className={`pt-cat-row ${selectedId === p.id ? 'is-active' : ''} ${flag ? `pt-cat-row-${flag}` : ''}`}
                     onClick={() => setSelectedId(p.id)}
                   >
