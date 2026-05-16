@@ -28,9 +28,10 @@ interface DashboardLayoutProps {
   shipments: ShipmentRow[]
   packingOrders: PackingOrder[]
   activityItems: ActivityItem[]
+  onboardingStatus?: { hasProducts: boolean; hasChannel: boolean; hasPayment: boolean } | null
 }
 
-export function DashboardLayout({ displayName, connectedChannels, threads, initialPinned, stockProducts, stats, reorderSignals, baseCurrency, shipments, packingOrders, activityItems }: DashboardLayoutProps) {
+export function DashboardLayout({ displayName, connectedChannels, threads, initialPinned, stockProducts, stats, reorderSignals, baseCurrency, shipments, packingOrders, activityItems, onboardingStatus }: DashboardLayoutProps) {
   const [rightOpen, setRightOpen] = useState(true)
   const channels = connectedChannels
   const focusThread = threads.find(t => t.status === 'needs_reply') ?? threads[0] ?? null
@@ -50,7 +51,7 @@ export function DashboardLayout({ displayName, connectedChannels, threads, initi
           rightOpen={rightOpen}
           onRightToggle={() => setRightOpen(o => !o)}
         />
-        <DashboardView threads={threads} stockProducts={stockProducts} stats={stats} reorderSignals={reorderSignals} baseCurrency={baseCurrency} displayName={displayName} shipments={shipments} packingOrders={packingOrders} activityItems={activityItems} />
+        <DashboardView threads={threads} stockProducts={stockProducts} stats={stats} reorderSignals={reorderSignals} baseCurrency={baseCurrency} displayName={displayName} shipments={shipments} packingOrders={packingOrders} activityItems={activityItems} onboardingStatus={onboardingStatus} />
       </main>
       {rightOpen && (
         <DashboardRightRail

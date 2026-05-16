@@ -13,6 +13,7 @@ import type { CatalogProduct } from '@/types/catalog'
 import type { DashboardStats, PendingOrder, PackingOrder, ActivityItem } from '@/types/dashboard'
 import { initials } from '@/types/inbox'
 import { PAYMENT_BADGE } from '@/types/payments'
+import { OnboardingChecklist } from './OnboardingChecklist'
 
 const ACTIVE_STATUSES = new Set(['new', 'needs_reply', 'in_progress', 'snoozed'])
 
@@ -594,7 +595,7 @@ function greeting(name: string) {
   return `${tod}, ${name}`
 }
 
-export function DashboardView({ threads: initialThreads, stockProducts, stats, reorderSignals, baseCurrency, displayName, shipments, packingOrders, activityItems }: { threads: InboxThread[]; stockProducts: CatalogProduct[]; stats: DashboardStats; reorderSignals: ReorderSignal[]; baseCurrency: string; displayName: string; shipments: ShipmentRow[]; packingOrders: PackingOrder[]; activityItems: ActivityItem[] }) {
+export function DashboardView({ threads: initialThreads, stockProducts, stats, reorderSignals, baseCurrency, displayName, shipments, packingOrders, activityItems, onboardingStatus }: { threads: InboxThread[]; stockProducts: CatalogProduct[]; stats: DashboardStats; reorderSignals: ReorderSignal[]; baseCurrency: string; displayName: string; shipments: ShipmentRow[]; packingOrders: PackingOrder[]; activityItems: ActivityItem[]; onboardingStatus?: { hasProducts: boolean; hasChannel: boolean; hasPayment: boolean } | null }) {
   const [threads, setThreads] = useState(initialThreads)
   const supabase = useMemo(() => createClient(), [])
 
@@ -664,6 +665,13 @@ export function DashboardView({ threads: initialThreads, stockProducts, stats, r
       <KpiRow active={active} needsReply={needsReply} reordersDue7d={reordersDue7d} highConf={highConf} stats={stats} baseCurrency={baseCurrency} />
 
       <div className="pt-grid">
+        {onboardingStatus && (
+          <OnboardingChecklist
+            hasProducts={onboardingStatus.hasProducts}
+            hasChannel={onboardingStatus.hasChannel}
+            hasPayment={onboardingStatus.hasPayment}
+          />
+        )}
         <div className="pt-dash-card-inbox pt-span-2"><InboxCard threads={threads} /></div>
         <PaymentsCard orders={stats.pendingOrders} baseCurrency={baseCurrency} />
         <RevenueCard daily90d={stats.revenue90dDaily} baseCurrency={baseCurrency} />
