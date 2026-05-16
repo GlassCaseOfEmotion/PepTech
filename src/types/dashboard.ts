@@ -10,6 +10,21 @@ export interface PendingOrder {
   minsAgo: number
 }
 
+export type PackingOrder = {
+  id: string
+  refNumber: string
+  customerName: string
+}
+
+export type ActivityItem = {
+  id: string
+  type: 'order_event' | 'message'
+  label: string
+  detail: string | null
+  minsAgo: number
+  href: string
+}
+
 export interface DashboardStats {
   revenue7d: number
   revenuePrev7d: number

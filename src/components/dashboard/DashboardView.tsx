@@ -10,7 +10,7 @@ import type { ShipmentRow } from '@/types/orders'
 import type { InboxThread, DbConversation } from '@/types/inbox'
 import { dbConversationToThread } from '@/types/inbox'
 import type { CatalogProduct } from '@/types/catalog'
-import type { DashboardStats, PendingOrder } from '@/types/dashboard'
+import type { DashboardStats, PendingOrder, PackingOrder, ActivityItem } from '@/types/dashboard'
 import { initials } from '@/types/inbox'
 import { PAYMENT_BADGE } from '@/types/payments'
 
@@ -452,48 +452,61 @@ function ShipmentsCard({ shipments }: { shipments: ShipmentRow[] }) {
 
 const CH_NAMES: Record<string, string> = { wa: 'WhatsApp', tg: 'Telegram', em: 'Email' }
 
-export function DashboardRightRail({ focusThread, baseCurrency }: { focusThread: InboxThread | null; baseCurrency: string }) {
+export function DashboardRightRail({
+  focusThread,
+  baseCurrency,
+  pendingOrders,
+  needsReplyThreads,
+  reordersDueSoon,
+  packingOrders,
+  activityItems,
+}: {
+  focusThread: InboxThread | null
+  baseCurrency: string
+  pendingOrders: PendingOrder[]
+  needsReplyThreads: InboxThread[]
+  reordersDueSoon: ReorderSignal[]
+  packingOrders: PackingOrder[]
+  activityItems: ActivityItem[]
+}) {
   const t = focusThread
+
+  const agendaItems: { bullet: string; title: string; sub: string; href: string }[] = []
+  pendingOrders.filter(o => o.status === 'confirming').forEach(o => {
+    agendaItems.push({ bullet: 'pt-bul-warn', title: `Confirm ${o.asset} from ${o.customerName}`, sub: formatAmount(o.amount, baseCurrency), href: `/orders/${o.id}` })
+  })
+  packingOrders.forEach(o => {
+    agendaItems.push({ bullet: 'pt-bul-cool', title: `Ship #${o.refNumber} for ${o.customerName}`, sub: 'Ready to ship', href: `/orders/${o.id}` })
+  })
+  needsReplyThreads.forEach(t => {
+    agendaItems.push({ bullet: '', title: `Reply to ${t.name}`, sub: t.snippet ?? '', href: `/inbox?conversation=${t.id}` })
+  })
+  reordersDueSoon.forEach(r => {
+    agendaItems.push({ bullet: '', title: `Reorder ${r.product}`, sub: r.dueIn === 'now' ? 'Due now' : `Due in ${r.dueIn}`, href: `/customers/${r.customerId}` })
+  })
+
   return (
     <aside className="pt-right">
       <div className="pt-right-section">
-        <div className="pt-right-hd">
-          <span>Today</span>
-          <button className="pt-right-add"><Icons.plus size={11} /></button>
-        </div>
+        <div className="pt-right-hd"><span>Today</span></div>
         <ul className="pt-agenda">
-          <li className="pt-agenda-i">
-            <i className="pt-agenda-bullet pt-bul-warn" />
-            <div>
-              <div className="pt-agenda-t">Confirm USDT from K.</div>
-              <div className="pt-agenda-s">2/3 conf · ~9 min away</div>
-            </div>
-            <span className="pt-agenda-time">11:42</span>
-          </li>
-          <li className="pt-agenda-i">
-            <i className="pt-agenda-bullet pt-bul-cool" />
-            <div>
-              <div className="pt-agenda-t">Drop pkg at USPS</div>
-              <div className="pt-agenda-s">3 labels printed · cutoff 4pm</div>
-            </div>
-            <span className="pt-agenda-time">14:00</span>
-          </li>
-          <li className="pt-agenda-i">
-            <i className="pt-agenda-bullet" />
-            <div>
-              <div className="pt-agenda-t">Re-up tirz from supplier</div>
-              <div className="pt-agenda-s">9 vials left · 4 backorders</div>
-            </div>
-            <span className="pt-agenda-time pt-agenda-empty" />
-          </li>
-          <li className="pt-agenda-i">
-            <i className="pt-agenda-bullet" />
-            <div>
-              <div className="pt-agenda-t">Reply to swolepriest</div>
-              <div className="pt-agenda-s">2wk old · risk of churn</div>
-            </div>
-            <span className="pt-agenda-time pt-agenda-empty" />
-          </li>
+          {agendaItems.length === 0 && (
+            <li className="pt-agenda-i" style={{ opacity: 0.5, fontSize: 12 }}>
+              <i className="pt-agenda-bullet" />
+              <div><div className="pt-agenda-t">All caught up</div></div>
+            </li>
+          )}
+          {agendaItems.slice(0, 6).map((item, i) => (
+            <Link key={i} href={item.href} style={{ textDecoration: 'none', color: 'inherit', display: 'contents' }}>
+              <li className="pt-agenda-i">
+                <i className={`pt-agenda-bullet ${item.bullet}`} />
+                <div>
+                  <div className="pt-agenda-t">{item.title}</div>
+                  {item.sub && <div className="pt-agenda-s">{item.sub}</div>}
+                </div>
+              </li>
+            </Link>
+          ))}
         </ul>
       </div>
 
@@ -531,12 +544,33 @@ export function DashboardRightRail({ focusThread, baseCurrency }: { focusThread:
       )}
 
       <div className="pt-right-section">
-        <div className="pt-right-hd"><span>Quick replies</span></div>
-        <div className="pt-quicks">
-          {['send wallet addr', 'tracking uploaded', 'out of stock — eta?', 'first-time how-to', 'dosing protocol', 'discount: repeat 10%'].map(q => (
-            <button key={q} className="pt-quick">{q}</button>
+        <div className="pt-right-hd"><span>Activity</span></div>
+        <ul className="pt-agenda">
+          {activityItems.length === 0 && (
+            <li className="pt-agenda-i" style={{ opacity: 0.5, fontSize: 12 }}>
+              <i className="pt-agenda-bullet" />
+              <div><div className="pt-agenda-t">No recent activity</div></div>
+            </li>
+          )}
+          {activityItems.map(item => (
+            <Link key={item.id} href={item.href} style={{ textDecoration: 'none', color: 'inherit', display: 'contents' }}>
+              <li className="pt-agenda-i">
+                <i className={`pt-agenda-bullet ${item.type === 'message' ? 'pt-bul-cool' : ''}`} />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className="pt-agenda-t" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {item.label}
+                  </div>
+                  {item.detail && (
+                    <div className="pt-agenda-s" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.detail}
+                    </div>
+                  )}
+                </div>
+                <span className="pt-agenda-time" style={{ flexShrink: 0 }}>{fmtAge(item.minsAgo)}</span>
+              </li>
+            </Link>
           ))}
-        </div>
+        </ul>
       </div>
     </aside>
   )
@@ -550,7 +584,7 @@ function greeting(name: string) {
   return `${tod}, ${name}`
 }
 
-export function DashboardView({ threads: initialThreads, stockProducts, stats, reorderSignals, baseCurrency, displayName, shipments }: { threads: InboxThread[]; stockProducts: CatalogProduct[]; stats: DashboardStats; reorderSignals: ReorderSignal[]; baseCurrency: string; displayName: string; shipments: ShipmentRow[] }) {
+export function DashboardView({ threads: initialThreads, stockProducts, stats, reorderSignals, baseCurrency, displayName, shipments, packingOrders, activityItems }: { threads: InboxThread[]; stockProducts: CatalogProduct[]; stats: DashboardStats; reorderSignals: ReorderSignal[]; baseCurrency: string; displayName: string; shipments: ShipmentRow[]; packingOrders: PackingOrder[]; activityItems: ActivityItem[] }) {
   const [threads, setThreads] = useState(initialThreads)
   const supabase = useMemo(() => createClient(), [])
 

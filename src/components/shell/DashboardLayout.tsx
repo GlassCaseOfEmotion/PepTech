@@ -12,6 +12,7 @@ import type { CatalogProduct } from '@/types/catalog'
 import type { DashboardStats } from '@/types/dashboard'
 import type { ReorderSignal } from '@/lib/reorder-signals'
 import type { ShipmentRow } from '@/types/orders'
+import type { PackingOrder, ActivityItem } from '@/types/dashboard'
 
 interface DashboardLayoutProps {
   displayName: string
@@ -23,9 +24,11 @@ interface DashboardLayoutProps {
   reorderSignals: ReorderSignal[]
   baseCurrency: string
   shipments: ShipmentRow[]
+  packingOrders: PackingOrder[]
+  activityItems: ActivityItem[]
 }
 
-export function DashboardLayout({ displayName, connectedChannels, threads, initialPinned, stockProducts, stats, reorderSignals, baseCurrency, shipments }: DashboardLayoutProps) {
+export function DashboardLayout({ displayName, connectedChannels, threads, initialPinned, stockProducts, stats, reorderSignals, baseCurrency, shipments, packingOrders, activityItems }: DashboardLayoutProps) {
   const [rightOpen, setRightOpen] = useState(true)
   const channels = connectedChannels
   const focusThread = threads.find(t => t.status === 'needs_reply') ?? threads[0] ?? null
@@ -43,9 +46,19 @@ export function DashboardLayout({ displayName, connectedChannels, threads, initi
           rightOpen={rightOpen}
           onRightToggle={() => setRightOpen(o => !o)}
         />
-        <DashboardView threads={threads} stockProducts={stockProducts} stats={stats} reorderSignals={reorderSignals} baseCurrency={baseCurrency} displayName={displayName} shipments={shipments} />
+        <DashboardView threads={threads} stockProducts={stockProducts} stats={stats} reorderSignals={reorderSignals} baseCurrency={baseCurrency} displayName={displayName} shipments={shipments} packingOrders={packingOrders} activityItems={activityItems} />
       </main>
-      {rightOpen && <DashboardRightRail focusThread={focusThread} baseCurrency={baseCurrency} />}
+      {rightOpen && (
+        <DashboardRightRail
+          focusThread={focusThread}
+          baseCurrency={baseCurrency}
+          pendingOrders={stats.pendingOrders}
+          needsReplyThreads={threads.filter(t => t.status === 'needs_reply').slice(0, 3)}
+          reordersDueSoon={reorderSignals.filter(r => r.daysRemaining <= 3)}
+          packingOrders={packingOrders}
+          activityItems={activityItems}
+        />
+      )}
       <BottomNav unreadCount={unreadCount} />
     </div>
   )

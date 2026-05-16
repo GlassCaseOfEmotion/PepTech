@@ -3,7 +3,7 @@ import { createClient, getServerUser } from '@/lib/supabase/server'
 import { DashboardLayout } from '@/components/shell/DashboardLayout'
 import { dbConversationToThread, type DbConversation } from '@/types/inbox'
 import { dbProductToDisplay, type DbProduct, type DbBatch } from '@/types/catalog'
-import type { DashboardStats } from '@/types/dashboard'
+import type { DashboardStats, PackingOrder, ActivityItem } from '@/types/dashboard'
 import { computeReorderSignals } from '@/lib/reorder-signals'
 import type { ProductProtocol, CustomerProtocolOverride } from '@/types/protocols'
 import type { ShipmentRow } from '@/types/orders'
@@ -53,6 +53,9 @@ export default async function Home() {
     { data: reorderProtocols },
     { data: reorderOverrides },
     { data: shipmentsRaw },
+    { data: packingRaw },
+    { data: eventsRaw },
+    { data: messagesRaw },
   ] = await Promise.all([
     supabase.from('users').select('display_name, tenant_id').eq('id', user.id).single(),
     supabase.from('tenant_channels').select('channel_type').eq('is_active', true),
@@ -96,6 +99,23 @@ export default async function Home() {
       .in('status', ['shipped', 'delivered'])
       .order('updated_at', { ascending: false })
       .limit(6),
+    supabase
+      .from('orders')
+      .select('id, ref_number, customers(display_name)')
+      .eq('status', 'packing')
+      .order('created_at', { ascending: true })
+      .limit(5),
+    supabase
+      .from('order_events')
+      .select('id, action, note, created_at, order_id, orders(ref_number, customers(display_name))')
+      .order('created_at', { ascending: false })
+      .limit(20),
+    supabase
+      .from('messages')
+      .select('id, content, sent_at, conversation_id, conversations(id, customers(display_name))')
+      .eq('direction', 'inbound')
+      .order('sent_at', { ascending: false })
+      .limit(10),
   ])
 
   // ── Revenue stats ────────────────────────────────────────────────────────
@@ -179,6 +199,43 @@ export default async function Home() {
     deliveredAt: o.delivered_at,
   }))
 
+  // ── Packing orders (Today digest) ───────────────────────────────────────
+  const packingOrders: PackingOrder[] = (packingRaw ?? []).map(o => ({
+    id: o.id,
+    refNumber: o.ref_number,
+    customerName: (o.customers as { display_name: string } | null)?.display_name ?? '—',
+  }))
+
+  // ── Activity feed ────────────────────────────────────────────────────────
+  const eventItems: ActivityItem[] = (eventsRaw ?? []).map(e => {
+    const order = e.orders as { ref_number: string; customers: { display_name: string } | null } | null
+    return {
+      id: `ev-${e.id}`,
+      type: 'order_event' as const,
+      label: `#${order?.ref_number ?? '?'} · ${e.action}`,
+      detail: (e.note as string | null) ?? null,
+      minsAgo: Math.floor((now - new Date(e.created_at as string).getTime()) / 60000),
+      href: `/orders/${e.order_id}`,
+    }
+  })
+
+  const messageItems: ActivityItem[] = (messagesRaw ?? []).map(m => {
+    const conv = m.conversations as { id: string; customers: { display_name: string } | null } | null
+    const content = m.content as string
+    return {
+      id: `msg-${m.id}`,
+      type: 'message' as const,
+      label: `New msg · ${conv?.customers?.display_name ?? 'Unknown'}`,
+      detail: content.slice(0, 60) + (content.length > 60 ? '…' : ''),
+      minsAgo: Math.floor((now - new Date(m.sent_at as string).getTime()) / 60000),
+      href: `/inbox?conversation=${m.conversation_id}`,
+    }
+  })
+
+  const activityItems: ActivityItem[] = [...eventItems, ...messageItems]
+    .sort((a, b) => a.minsAgo - b.minsAgo)
+    .slice(0, 15)
+
   // ── Other props ──────────────────────────────────────────────────────────
   const displayName      = userRow?.display_name ?? user.email?.split('@')[0] ?? 'User'
   const connectedChannels = (channels ?? []).map(c => c.channel_type)
@@ -204,6 +261,8 @@ export default async function Home() {
       reorderSignals={reorderSignals}
       baseCurrency={baseCurrency}
       shipments={shipments}
+      packingOrders={packingOrders}
+      activityItems={activityItems}
     />
   )
 }
