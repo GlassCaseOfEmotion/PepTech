@@ -14,10 +14,10 @@ export async function createOrFindConversation(
   // Get the customer's channel identifier for this channel type
   const { data: ch } = await supabase
     .from('customer_channels')
-    .select('display_handle')
+    .select('identifier')
     .eq('customer_id', customerId)
     .eq('channel_type', channelType)
-    .single()
+    .maybeSingle()
 
   if (!ch) return { error: `Customer has no ${channelType} channel` }
 
@@ -27,10 +27,10 @@ export async function createOrFindConversation(
     .select('id')
     .eq('customer_id', customerId)
     .eq('channel_type', channelType)
-    .not('status', 'in', '("resolved","archived")')
+    .in('status', ['new', 'needs_reply', 'in_progress', 'snoozed'])
     .order('created_at', { ascending: false })
     .limit(1)
-    .single()
+    .maybeSingle()
 
   if (existing) return { conversationId: existing.id }
 
@@ -49,7 +49,7 @@ export async function createOrFindConversation(
       tenant_id: userRow.tenant_id,
       customer_id: customerId,
       channel_type: channelType,
-      channel_identifier: ch.display_handle,
+      channel_identifier: ch.identifier,
       status: 'new',
     })
     .select('id')
