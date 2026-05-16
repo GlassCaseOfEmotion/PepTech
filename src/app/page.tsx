@@ -219,18 +219,23 @@ export default async function Home() {
     }
   })
 
-  const messageItems: ActivityItem[] = (messagesRaw ?? []).map(m => {
+  const seenConvs = new Set<string>()
+  const messageItems: ActivityItem[] = []
+  for (const m of (messagesRaw ?? [])) {
+    const convId = m.conversation_id as string
+    if (seenConvs.has(convId)) continue
+    seenConvs.add(convId)
     const conv = m.conversations as { id: string; customers: { display_name: string } | null } | null
     const content = m.content as string
-    return {
+    messageItems.push({
       id: `msg-${m.id}`,
       type: 'message' as const,
       label: `New msg · ${conv?.customers?.display_name ?? 'Unknown'}`,
       detail: content.slice(0, 60) + (content.length > 60 ? '…' : ''),
       minsAgo: Math.floor((now - new Date(m.sent_at as string).getTime()) / 60000),
-      href: `/inbox?conversation=${m.conversation_id}`,
-    }
-  })
+      href: `/inbox?conversation=${convId}`,
+    })
+  }
 
   const activityItems: ActivityItem[] = [...eventItems, ...messageItems]
     .sort((a, b) => a.minsAgo - b.minsAgo)
