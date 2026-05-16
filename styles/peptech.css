@@ -140,6 +140,7 @@ kbd {
 @media (max-width: 1500px) {
   .pt-root:not(.no-right) .pt-grid { grid-template-columns: repeat(2, 1fr); }
   .pt-root:not(.no-right) .pt-kpis { grid-template-columns: repeat(2, 1fr); }
+  .pt-root:not(.no-right) .pt-dash-card-inbox { grid-column: span 1; grid-row: span 1; }
 }
 
 /* ─── Sidebar ────────────────────────────────────────────────────────────── */
