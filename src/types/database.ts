@@ -1123,33 +1123,39 @@ export type Database = {
       tenants: {
         Row: {
           base_currency: string
+          business_type: string | null
           created_at: string
           id: string
           is_active: boolean
           logo_path: string | null
           name: string
+          onboarded_at: string | null
           plan: string
           slug: string
           updated_at: string
         }
         Insert: {
           base_currency?: string
+          business_type?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
           logo_path?: string | null
           name: string
+          onboarded_at?: string | null
           plan?: string
           slug: string
           updated_at?: string
         }
         Update: {
           base_currency?: string
+          business_type?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
           logo_path?: string | null
           name?: string
+          onboarded_at?: string | null
           plan?: string
           slug?: string
           updated_at?: string
