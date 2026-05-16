@@ -4,7 +4,7 @@ import { useState, useTransition, useRef, Fragment } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
-import { updateOrderStatus, saveOrderNotes, confirmPayment, packOrder } from '@/app/orders/actions'
+import { updateOrderStatus, saveOrderNotes, confirmPayment, packOrder, shipOrder } from '@/app/orders/actions'
 import { buildPaymentMessage } from '@/lib/payments'
 import { PAYMENT_LABELS, PAYMENT_BADGE } from '@/types/payments'
 import type { TenantPaymentConfig } from '@/types/payments'
@@ -57,6 +57,12 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: 
   const [confirmAsset, setConfirmAsset] = useState('')
   const [txHash, setTxHash] = useState('')
   const [confirmError, setConfirmError] = useState('')
+  const [showShipForm, setShowShipForm] = useState(false)
+  const [shipCarrier, setShipCarrier] = useState('')
+  const [shipTracking, setShipTracking] = useState('')
+  const [shipUrl, setShipUrl] = useState('')
+  const [shipEta, setShipEta] = useState('')
+  const [shipError, setShipError] = useState<string | null>(null)
 
   const primaryChannel = order.customers?.customer_channels?.find(c => c.is_primary)
     ?? order.customers?.customer_channels?.[0]
@@ -89,6 +95,28 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: 
       setStatus(nextStatus)
       const result = await updateOrderStatus(order.id, nextStatus)
       if ('error' in result) setStatus(prevStatus)
+    })
+  }
+
+  const submitShipping = () => {
+    if (!shipCarrier.trim()) { setShipError('Carrier is required'); return }
+    setShipError(null)
+    startTransition(async () => {
+      const result = await shipOrder(order.id, {
+        carrier: shipCarrier.trim(),
+        trackingNumber: shipTracking.trim() || undefined,
+        trackingUrl: shipUrl.trim() || undefined,
+        estimatedDelivery: shipEta || undefined,
+      })
+      if (result && 'error' in result) { setShipError(result.error); return }
+      setStatus('shipped')
+      setShowShipForm(false)
+      setShipCarrier('')
+      setShipTracking('')
+      setShipUrl('')
+      setShipEta('')
+      setShipError(null)
+      router.refresh()
     })
   }
 
@@ -167,11 +195,49 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: 
           )}
           {nextStatus && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-              <button className="pt-btn pt-btn-primary" onClick={advance} disabled={pending}>
+              <button className="pt-btn pt-btn-primary" onClick={() => nextStatus === 'shipped' ? setShowShipForm(s => !s) : advance()} disabled={pending}>
                 {ADVANCE_LABELS[nextStatus] ?? `→ ${STATUS_LABELS[nextStatus]}`}
               </button>
               {packError && (
                 <span style={{ fontSize: 11, color: 'var(--pt-danger)' }}>{packError}</span>
+              )}
+              {showShipForm && status === 'packing' && (
+                <div className="pt-ship-form">
+                  <div className="pt-ship-form-row">
+                    <label className="pt-ship-form-label">Carrier *</label>
+                    <input className="pt-input" placeholder="USPS, UPS, DHL…"
+                      value={shipCarrier} onChange={e => setShipCarrier(e.target.value)} />
+                  </div>
+                  <div className="pt-ship-form-row">
+                    <label className="pt-ship-form-label">Tracking number</label>
+                    <input className="pt-input" placeholder="Optional"
+                      value={shipTracking} onChange={e => setShipTracking(e.target.value)} />
+                  </div>
+                  <div className="pt-ship-form-row">
+                    <label className="pt-ship-form-label">Tracking URL</label>
+                    <input className="pt-input" placeholder="https://… (optional)"
+                      value={shipUrl} onChange={e => setShipUrl(e.target.value)} />
+                  </div>
+                  <div className="pt-ship-form-row">
+                    <label className="pt-ship-form-label">Est. delivery</label>
+                    <input className="pt-input" type="date"
+                      value={shipEta} onChange={e => setShipEta(e.target.value)} />
+                  </div>
+                  {shipError && <p style={{ color: 'var(--pt-danger)', fontSize: 12, margin: '4px 0 0' }}>{shipError}</p>}
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    <button className="pt-btn pt-btn-primary" onClick={submitShipping} disabled={pending}>
+                      Confirm shipment
+                    </button>
+                    <button className="pt-btn" onClick={() => {
+                      setShowShipForm(false)
+                      setShipCarrier('')
+                      setShipTracking('')
+                      setShipUrl('')
+                      setShipEta('')
+                      setShipError(null)
+                    }}>Cancel</button>
+                  </div>
+                </div>
               )}
             </div>
           )}

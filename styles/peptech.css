@@ -807,6 +807,20 @@ kbd {
 .pt-ship-step { width: 22px; height: 3px; border-radius: 999px; background: oklch(from var(--pt-fg) l c h / 0.08); }
 .pt-ship-step.on { background: var(--pt-accent); }
 .pt-ship-status { font-size: 10.5px; color: var(--pt-fg-3); margin-left: 6px; }
+.pt-ship-form {
+  margin-top: 12px;
+  padding: 14px;
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line);
+  border-radius: var(--pt-radius);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.pt-ship-form-row { display: flex; align-items: center; gap: 10px; }
+.pt-ship-form-label {
+  width: 110px; flex-shrink: 0;
+  font-size: 12px; color: var(--pt-fg-3);
+}
+.pt-ship-form .pt-input { flex: 1; }
 
 /* ─── Right rail ─────────────────────────────────────────────────────────── */
 .pt-right {
