@@ -11,6 +11,7 @@ import type { InboxThread, DbConversation } from '@/types/inbox'
 import type { CatalogProduct } from '@/types/catalog'
 import type { DashboardStats } from '@/types/dashboard'
 import type { ReorderSignal } from '@/lib/reorder-signals'
+import type { ShipmentRow } from '@/types/orders'
 
 interface DashboardLayoutProps {
   displayName: string
@@ -21,9 +22,10 @@ interface DashboardLayoutProps {
   stats: DashboardStats
   reorderSignals: ReorderSignal[]
   baseCurrency: string
+  shipments: ShipmentRow[]
 }
 
-export function DashboardLayout({ displayName, connectedChannels, threads, initialPinned, stockProducts, stats, reorderSignals, baseCurrency }: DashboardLayoutProps) {
+export function DashboardLayout({ displayName, connectedChannels, threads, initialPinned, stockProducts, stats, reorderSignals, baseCurrency, shipments }: DashboardLayoutProps) {
   const [rightOpen, setRightOpen] = useState(true)
   const channels = connectedChannels
   const focusThread = threads.find(t => t.status === 'needs_reply') ?? threads[0] ?? null
@@ -41,7 +43,7 @@ export function DashboardLayout({ displayName, connectedChannels, threads, initi
           rightOpen={rightOpen}
           onRightToggle={() => setRightOpen(o => !o)}
         />
-        <DashboardView threads={threads} stockProducts={stockProducts} stats={stats} reorderSignals={reorderSignals} baseCurrency={baseCurrency} displayName={displayName} />
+        <DashboardView threads={threads} stockProducts={stockProducts} stats={stats} reorderSignals={reorderSignals} baseCurrency={baseCurrency} displayName={displayName} shipments={shipments} />
       </main>
       {rightOpen && <DashboardRightRail focusThread={focusThread} baseCurrency={baseCurrency} />}
       <BottomNav unreadCount={unreadCount} />

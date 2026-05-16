@@ -5,11 +5,8 @@ import Link from 'next/link'
 import { Icons } from '@/lib/icons'
 import { formatAmount } from '@/lib/currency'
 import { createClient } from '@/lib/supabase/client'
-import {
-  MOCK_SHIPMENTS,
-  type MockShipment,
-} from '@/lib/mock-data'
 import type { ReorderSignal } from '@/lib/reorder-signals'
+import type { ShipmentRow } from '@/types/orders'
 import type { InboxThread, DbConversation } from '@/types/inbox'
 import { dbConversationToThread } from '@/types/inbox'
 import type { CatalogProduct } from '@/types/catalog'
@@ -388,31 +385,48 @@ function StockCard({ products }: { products: CatalogProduct[] }) {
 // ─── Shipments card ──────────────────────────────────────────────────────────
 
 const SHIP_LABELS: Record<string, string> = {
-  label_made: 'Label', in_transit: 'In transit', customs: 'Customs', delivered: 'Delivered',
+  shipped: 'In transit',
+  delivered: 'Delivered',
 }
 
-function ShipmentsCard({ shipments }: { shipments: MockShipment[] }) {
+function ShipmentsCard({ shipments }: { shipments: ShipmentRow[] }) {
   return (
     <DashCard title="Shipments" subtitle="Carrier tracking"
       action={<button className="pt-link">All →</button>}>
-      <ul className="pt-ship-list">
-        {shipments.map(s => (
-          <li key={s.id} className={`pt-ship pt-ship-${s.status}`}>
-            <div className="pt-ship-icon"><Icons.truck size={13} /></div>
+      {shipments.map(s => {
+        const step = s.status === 'delivered' ? 4 : 3
+        const eta = s.estimatedDelivery
+          ? new Date(s.estimatedDelivery).toLocaleDateString('en', { month: 'short', day: 'numeric' })
+          : s.deliveredAt ? 'Delivered' : '—'
+        return (
+          <div key={s.id} className="pt-ship-row">
+            <span className="pt-ship-icon"><Icons.truck size={14} /></span>
             <div className="pt-ship-mid">
-              <div className="pt-ship-row1">
-                <span className="pt-ship-to">→ {s.to}</span>
-                <span className="pt-ship-carrier">{s.carrier}</span>
-                <span className="pt-ship-id mono">{s.id}</span>
+              <div className="pt-ship-to">→ {s.to}</div>
+              <div className="pt-ship-carrier mono">
+                {s.carrier ?? '—'}
+                {s.trackingNumber && (
+                  s.trackingUrl
+                    ? <a href={s.trackingUrl} target="_blank" rel="noreferrer" style={{ marginLeft: 6 }}>{s.trackingNumber}</a>
+                    : <span style={{ marginLeft: 6 }}>{s.trackingNumber}</span>
+                )}
               </div>
-              <div className="pt-ship-track">
-                {[1,2,3,4].map(n => <i key={n} className={`pt-ship-step ${n <= s.step ? 'on' : ''}`} />)}
-                <span className="pt-ship-status">{SHIP_LABELS[s.status]} · ETA {s.eta}</span>
+              <div className="pt-ship-steps">
+                {[1,2,3,4].map(i => (
+                  <span key={i} className={`pt-ship-step${i <= step ? ' on' : ''}`} />
+                ))}
               </div>
             </div>
-          </li>
-        ))}
-      </ul>
+            <div className="pt-ship-right">
+              <div className="pt-ship-status">{SHIP_LABELS[s.status] ?? s.status}</div>
+              <div className="pt-ship-eta">ETA {eta}</div>
+            </div>
+          </div>
+        )
+      })}
+      {shipments.length === 0 && (
+        <p style={{ fontSize: 12, color: 'var(--pt-fg-4)', padding: '12px 14px' }}>No active shipments</p>
+      )}
     </DashCard>
   )
 }
@@ -519,7 +533,7 @@ function greeting(name: string) {
   return `${tod}, ${name}`
 }
 
-export function DashboardView({ threads: initialThreads, stockProducts, stats, reorderSignals, baseCurrency, displayName }: { threads: InboxThread[]; stockProducts: CatalogProduct[]; stats: DashboardStats; reorderSignals: ReorderSignal[]; baseCurrency: string; displayName: string }) {
+export function DashboardView({ threads: initialThreads, stockProducts, stats, reorderSignals, baseCurrency, displayName, shipments }: { threads: InboxThread[]; stockProducts: CatalogProduct[]; stats: DashboardStats; reorderSignals: ReorderSignal[]; baseCurrency: string; displayName: string; shipments: ShipmentRow[] }) {
   const [threads, setThreads] = useState(initialThreads)
   const supabase = useMemo(() => createClient(), [])
 
@@ -594,7 +608,7 @@ export function DashboardView({ threads: initialThreads, stockProducts, stats, r
         <RevenueCard daily90d={stats.revenue90dDaily} baseCurrency={baseCurrency} />
         <ReordersCard reorders={reorderSignals} />
         <div className="pt-dash-card-stock"><StockCard products={stockProducts} /></div>
-        <div className="pt-dash-card-shipments"><ShipmentsCard shipments={MOCK_SHIPMENTS} /></div>
+        <div className="pt-dash-card-shipments"><ShipmentsCard shipments={shipments} /></div>
       </div>
 
       <footer className="pt-foot">

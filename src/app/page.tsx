@@ -6,6 +6,7 @@ import { dbProductToDisplay, type DbProduct, type DbBatch } from '@/types/catalo
 import type { DashboardStats } from '@/types/dashboard'
 import { computeReorderSignals } from '@/lib/reorder-signals'
 import type { ProductProtocol, CustomerProtocolOverride } from '@/types/protocols'
+import type { ShipmentRow } from '@/types/orders'
 
 const PINNED_SELECT = `
   id, status, unread_count, last_message_at, last_message_snippet,
@@ -51,6 +52,7 @@ export default async function Home() {
     { data: reorderOrdersRaw },
     { data: reorderProtocols },
     { data: reorderOverrides },
+    { data: shipmentsRaw },
   ] = await Promise.all([
     supabase.from('users').select('display_name, tenant_id').eq('id', user.id).single(),
     supabase.from('tenant_channels').select('channel_type').eq('is_active', true),
@@ -88,6 +90,12 @@ export default async function Home() {
       .order('created_at', { ascending: false }),
     supabase.from('product_protocols').select('*'),
     supabase.from('customer_protocol_overrides').select('customer_id, product_id, draw_volume_ml, frequency, notes, id, tenant_id, created_at, updated_at'),
+    supabase
+      .from('orders')
+      .select('id, ref_number, status, carrier, tracking_number, tracking_url, estimated_delivery, delivered_at, customers(display_name)')
+      .in('status', ['shipped', 'delivered'])
+      .order('updated_at', { ascending: false })
+      .limit(6),
   ])
 
   // ── Revenue stats ────────────────────────────────────────────────────────
@@ -146,6 +154,19 @@ export default async function Home() {
     (reorderOverrides ?? []) as CustomerProtocolOverride[],
   )
 
+  // ── Shipments ────────────────────────────────────────────────────────────
+  const shipments: ShipmentRow[] = (shipmentsRaw ?? []).map(o => ({
+    id: o.id,
+    refNumber: o.ref_number,
+    to: (o.customers as { display_name: string } | null)?.display_name ?? '—',
+    carrier: o.carrier,
+    trackingNumber: o.tracking_number,
+    trackingUrl: (o as { tracking_url?: string | null }).tracking_url ?? null,
+    status: o.status as 'shipped' | 'delivered',
+    estimatedDelivery: (o as { estimated_delivery?: string | null }).estimated_delivery ?? null,
+    deliveredAt: (o as { delivered_at?: string | null }).delivered_at ?? null,
+  }))
+
   // ── Other props ──────────────────────────────────────────────────────────
   const displayName      = userRow?.display_name ?? user.email?.split('@')[0] ?? 'User'
   const connectedChannels = (channels ?? []).map(c => c.channel_type)
@@ -170,6 +191,7 @@ export default async function Home() {
       stats={stats}
       reorderSignals={reorderSignals}
       baseCurrency={baseCurrency}
+      shipments={shipments}
     />
   )
 }
