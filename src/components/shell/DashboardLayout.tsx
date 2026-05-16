@@ -5,6 +5,8 @@ import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { GlobalNotifications } from './GlobalNotifications'
 import { AgentPalette } from './AgentPalette'
+import { CommandPalette } from './CommandPalette'
+import { ComposeModal } from './ComposeModal'
 import { BottomNav } from './BottomNav'
 import { DashboardView, DashboardRightRail } from '@/components/dashboard/DashboardView'
 import type { InboxThread, DbConversation } from '@/types/inbox'
@@ -38,6 +40,8 @@ export function DashboardLayout({ displayName, connectedChannels, threads, initi
     <div className={`pt-root${rightOpen ? '' : ' no-right'}`}>
       <GlobalNotifications />
       <AgentPalette />
+      <CommandPalette />
+      <ComposeModal />
       <Sidebar displayName={displayName} initialPinned={initialPinned} />
       <main className="pt-main">
         <TopBar
