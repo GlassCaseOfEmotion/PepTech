@@ -40,7 +40,10 @@ export function CommandPalette() {
   useEffect(() => {
     const openHandler = () => { setOpen(true); setQuery('') }
     const keyHandler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setOpen(o => !o); if (!open) setQuery('') }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setOpen(o => { if (!o) setQuery(''); return !o })
+      }
       if (e.key === 'Escape') setOpen(false)
     }
     window.addEventListener('pt:palette:open', openHandler)
@@ -49,7 +52,7 @@ export function CommandPalette() {
       window.removeEventListener('pt:palette:open', openHandler)
       window.removeEventListener('keydown', keyHandler)
     }
-  }, [open])
+  }, []) // empty dep — functional updaters need no closure over state
 
   // Focus input when opened
   useEffect(() => {
@@ -66,7 +69,7 @@ export function CommandPalette() {
   const search = useCallback(async (q: string) => {
     if (!q.trim()) { setResults([]); return }
 
-    const [{ data: customers }, { data: orders }, { data: matchCusts }] = await Promise.all([
+    const [{ data: customers }, { data: orders }] = await Promise.all([
       supabase
         .from('customers')
         .select('id, display_name, customer_channels(channel_type, display_handle, is_primary)')
@@ -77,14 +80,9 @@ export function CommandPalette() {
         .select('id, ref_number, status, customers(display_name)')
         .ilike('ref_number', `%${q}%`)
         .limit(3),
-      supabase
-        .from('customers')
-        .select('id')
-        .ilike('display_name', `%${q}%`)
-        .limit(5),
     ])
 
-    const custIds = (matchCusts ?? []).map(c => c.id)
+    const custIds = (customers ?? []).map(c => c.id)
     const { data: convs } = custIds.length > 0
       ? await supabase
           .from('conversations')
@@ -134,6 +132,7 @@ export function CommandPalette() {
     if (r.kind === 'customer')      { href = `/customers/${r.id}`;                   label = r.name }
     if (r.kind === 'order')         { href = `/orders/${r.id}`;                       label = `#${r.refNumber}` }
     if (r.kind === 'conversation')  { href = `/inbox?conversation=${r.id}`;           label = r.customerName }
+    if (!href) return
     writeRecent({ label, href })
     router.push(href)
     setOpen(false)
@@ -176,6 +175,8 @@ export function CommandPalette() {
   const orderStart = customerResults.length
   const convStart = orderStart + orderResults.length
   const aiIdx = convStart + convResults.length
+
+  const aiHighlightIdx = query.trim() ? aiIdx : recent.length
 
   return (
     <div className="pt-modal-backdrop" onClick={() => setOpen(false)}>
@@ -267,9 +268,9 @@ export function CommandPalette() {
           )}
         </div>
 
-        <div className={`pt-cmd-row pt-cmd-ai ${aiIdx === highlighted ? 'is-on' : ''}`}
+        <div className={`pt-cmd-row pt-cmd-ai ${aiHighlightIdx === highlighted ? 'is-on' : ''}`}
           onClick={() => navigate({ kind: 'ai' })}
-          onMouseEnter={() => setHighlighted(aiIdx)}>
+          onMouseEnter={() => setHighlighted(aiHighlightIdx)}>
           <span style={{ fontSize: 14 }}>✨</span>
           <span className="pt-cmd-row-label">Open AI assistant →</span>
         </div>
