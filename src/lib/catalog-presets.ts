@@ -9,16 +9,25 @@ export type PresetProduct = {
 }
 
 const PEPTIDES: PresetProduct[] = [
-  { name: 'BPC-157',                  sku: 'PEP-BPC157',  product_family: 'Peptides', unit_price: 0, description: null },
-  { name: 'TB-500',                   sku: 'PEP-TB500',   product_family: 'Peptides', unit_price: 0, description: null },
-  { name: 'Ipamorelin',               sku: 'PEP-IPA',     product_family: 'Peptides', unit_price: 0, description: null },
-  { name: 'CJC-1295 No DAC',          sku: 'PEP-CJC1295', product_family: 'Peptides', unit_price: 0, description: null },
-  { name: 'Semaglutide',              sku: 'PEP-SEMA',    product_family: 'Peptides', unit_price: 0, description: null },
-  { name: 'Sermorelin',               sku: 'PEP-SERM',    product_family: 'Peptides', unit_price: 0, description: null },
-  { name: 'GHRP-6',                   sku: 'PEP-GHRP6',   product_family: 'Peptides', unit_price: 0, description: null },
-  { name: 'Hexarelin',                sku: 'PEP-HEX',     product_family: 'Peptides', unit_price: 0, description: null },
-  { name: 'PT-141 (Bremelanotide)',   sku: 'PEP-PT141',   product_family: 'Peptides', unit_price: 0, description: null },
-  { name: 'Tirzepatide',              sku: 'PEP-TIRZ',    product_family: 'Peptides', unit_price: 0, description: null },
+  // GLP-1 — weight management / metabolic
+  { name: 'Semaglutide 10mg',   sku: 'SEMA-10',   product_family: 'GLP-1',   unit_price: 0, description: null },
+  { name: 'Tirzepatide 30mg',   sku: 'TIRZ-30',   product_family: 'GLP-1',   unit_price: 0, description: null },
+  { name: 'Retatrutide 10mg',   sku: 'RETA-10',   product_family: 'GLP-1',   unit_price: 0, description: null },
+  // HEALING — recovery & repair
+  { name: 'BPC-157 5mg',        sku: 'BPC-157',   product_family: 'HEALING', unit_price: 0, description: null },
+  { name: 'TB-500 10mg',        sku: 'TB-500',    product_family: 'HEALING', unit_price: 0, description: null },
+  { name: 'Thymosin Alpha-1',   sku: 'TA1-5',     product_family: 'HEALING', unit_price: 0, description: null },
+  // GH — growth hormone secretagogues
+  { name: 'CJC-1295 w/ DAC',    sku: 'CJC-DAC',   product_family: 'GH',      unit_price: 0, description: null },
+  { name: 'Ipamorelin 5mg',     sku: 'IPA-5',     product_family: 'GH',      unit_price: 0, description: null },
+  { name: 'GHRP-6 5mg',         sku: 'GHRP6-5',   product_family: 'GH',      unit_price: 0, description: null },
+  // COSMETIC — skin & anti-aging
+  { name: 'GHK-Cu 500mcg',      sku: 'GHK-CU',    product_family: 'COSMETIC', unit_price: 0, description: null },
+  { name: 'Epithalon 10mg',     sku: 'EPITH-10',  product_family: 'COSMETIC', unit_price: 0, description: null },
+  { name: 'PT-141 10mg',        sku: 'PT141-10',  product_family: 'COSMETIC', unit_price: 0, description: null },
+  // MITO — mitochondrial & longevity
+  { name: 'MOTS-c 10mg',        sku: 'MOTS-C',    product_family: 'MITO',    unit_price: 0, description: null },
+  { name: 'Humanin 1mg',        sku: 'HMN-1',     product_family: 'MITO',    unit_price: 0, description: null },
 ]
 
 const NOOTROPICS: PresetProduct[] = [
