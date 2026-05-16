@@ -23,11 +23,9 @@ interface DashboardLayoutProps {
   baseCurrency: string
 }
 
-const MOCK_CHANNELS = ['whatsapp', 'telegram']
-
 export function DashboardLayout({ displayName, connectedChannels, threads, initialPinned, stockProducts, stats, reorderSignals, baseCurrency }: DashboardLayoutProps) {
   const [rightOpen, setRightOpen] = useState(true)
-  const channels = connectedChannels.length > 0 ? connectedChannels : MOCK_CHANNELS
+  const channels = connectedChannels
   const focusThread = threads.find(t => t.status === 'needs_reply') ?? threads[0] ?? null
   const unreadCount = threads.filter(t => t.unread > 0).length
 
