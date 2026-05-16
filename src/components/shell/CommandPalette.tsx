@@ -151,7 +151,7 @@ export function CommandPalette() {
 
   const navigate = useCallback((r: Result) => {
     if (r.kind === 'ai') {
-      window.dispatchEvent(new CustomEvent('pt:agent:open'))
+      window.dispatchEvent(new CustomEvent('pt:agent:open', { detail: { query } }))
       setOpen(false)
       return
     }
@@ -165,7 +165,7 @@ export function CommandPalette() {
     writeRecent({ label, href })
     router.push(href)
     setOpen(false)
-  }, [router])
+  }, [router, query])
 
   // Keyboard navigation
   const keyDown = (e: React.KeyboardEvent) => {

@@ -104,10 +104,14 @@ export function AgentPalette() {
   const inputRef = useRef<HTMLInputElement>(null)
   const msgsRef = useRef<HTMLDivElement>(null)
   const lastSessionTime = useRef<number>(0)
+  const pendingQueryRef = useRef<string>('')
 
   // pt:agent:open event listener
   useEffect(() => {
-    const openHandler = () => setOpen(true)
+    const openHandler = (e: Event) => {
+      pendingQueryRef.current = (e as CustomEvent<{ query?: string }>).detail?.query ?? ''
+      setOpen(true)
+    }
     const keyHandler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
     }
@@ -119,10 +123,18 @@ export function AgentPalette() {
     }
   }, [])
 
-  // Focus input when opened
+  // Focus input when opened; auto-send pending query from command palette
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 50)
-  }, [open])
+    if (open) {
+      setTimeout(() => {
+        inputRef.current?.focus()
+        if (pendingQueryRef.current) {
+          send(pendingQueryRef.current, sessionId)
+          pendingQueryRef.current = ''
+        }
+      }, 50)
+    }
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll to bottom on new messages
   useEffect(() => {
