@@ -189,13 +189,13 @@ export function Sidebar({ displayName, initialPinned = [] }: SidebarProps) {
         <button className="pt-brand-menu" title="Workspace"><Icons.arrowDn size={12} /></button>
       </div>
 
-      <button className="pt-compose">
+      <button className="pt-compose" onClick={() => window.dispatchEvent(new CustomEvent('pt:compose:open'))}>
         <Icons.plus size={13} />
         <span>New message</span>
         <kbd>C</kbd>
       </button>
 
-      <button className="pt-search">
+      <button className="pt-search" onClick={() => window.dispatchEvent(new CustomEvent('pt:palette:open'))}>
         <Icons.search size={13} />
         <span>Search…</span>
         <kbd>⌘K</kbd>
