@@ -24,10 +24,9 @@ export async function deleteTenant(tenantId: string) {
   await assertPlatformAdmin()
   const svc = createServiceClient()
   const { data: tenantUsers } = await svc.from('users').select('id').eq('tenant_id', tenantId)
+  // Delete auth users first (parallel), then tenant cascade cleans public.users
+  await Promise.all((tenantUsers ?? []).map(u => svc.auth.admin.deleteUser(u.id)))
   await svc.from('tenants').delete().eq('id', tenantId)
-  for (const u of tenantUsers ?? []) {
-    await svc.auth.admin.deleteUser(u.id)
-  }
   revalidatePath('/admin')
   redirect('/admin')
 }
