@@ -19,6 +19,37 @@ const CHIPS = [
   { label: "What's still outstanding?",   prompt: 'Look at the recent messages in this conversation and tell me what questions or requests from the customer are still unresolved.' },
 ]
 
+type FollowUp = { label: string; prompt: string }
+
+function getFollowUps(userMsg: string): FollowUp[] {
+  const m = userMsg.toLowerCase()
+  if (m.includes('create an order') || (m.includes('order') && m.includes('requested'))) return [
+    { label: 'Send a confirmation',   prompt: 'Draft a short confirmation message I can send the customer about their order.' },
+    { label: "What's still outstanding?", prompt: 'Are there any other requests or questions from the customer still unresolved?' },
+    { label: 'Add a note',            prompt: 'Write a brief internal note summarising what was ordered and any important details.' },
+  ]
+  if (m.includes('draft a reply') || m.includes('draft me a reply') || (m.includes('draft') && m.includes('send to the customer'))) return [
+    { label: 'Make it shorter',       prompt: 'Rewrite that reply but shorter and more direct — keep it to 2–3 sentences.' },
+    { label: 'More formal tone',      prompt: 'Rewrite that reply in a more formal, professional tone.' },
+    { label: 'Add payment details',   prompt: 'Add clear payment instructions to the draft reply.' },
+  ]
+  if (m.includes('summar')) return [
+    { label: 'Draft a follow-up',     prompt: 'Based on the summary, draft a friendly follow-up message for this customer.' },
+    { label: 'Is a reorder due?',     prompt: 'Based on their order history and protocols, is a reorder due for this customer soon?' },
+    { label: "What's outstanding?",   prompt: 'Are there any unresolved questions or requests from this customer?' },
+  ]
+  if (m.includes('outstanding') || m.includes('unresolved')) return [
+    { label: 'Draft a reply',         prompt: 'Draft a reply that addresses all the outstanding items you just identified.' },
+    { label: 'Create an order',       prompt: 'If the outstanding items include an order request, create the order now.' },
+    { label: 'Summarise this customer', prompt: 'Summarise this customer — their order history, LTV, tags, and anything notable.' },
+  ]
+  return [
+    { label: 'Tell me more',          prompt: 'Expand on your last response with more detail.' },
+    { label: 'Draft a reply',         prompt: 'Based on the conversation so far, draft a reply I can send to the customer.' },
+    { label: "What's next?",          prompt: 'Based on this conversation, what should I do next with this customer?' },
+  ]
+}
+
 interface Msg {
   id: string
   role: 'user' | 'assistant'
@@ -73,6 +104,8 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
   const [streaming, setStreaming] = useState(false)
   const [input, setInput] = useState('')
   const [customInput, setCustomInput] = useState('')
+  const [followUps, setFollowUps] = useState<FollowUp[]>([])
+  const lastUserMsgRef = useRef<string>('')
   const msgsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -96,6 +129,8 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
     setStreaming(false)
     setInput('')
     setCustomInput('')
+    setFollowUps([])
+    lastUserMsgRef.current = ''
   }, [conversationId])
 
   const appendDelta = useCallback((delta: string) => {
@@ -119,6 +154,7 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
     setSessionId(newSid)
     setStreaming(false)
     setMessages(prev => prev.map(m => ({ ...m, streaming: false })))
+    setFollowUps(getFollowUps(lastUserMsgRef.current))
   }, [])
 
   const replaceOrAppendError = useCallback((msg: string) => {
@@ -136,6 +172,8 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
   const send = useCallback(async (text: string) => {
     if (!text.trim() || streaming) return
     setStreaming(true)
+    setFollowUps([])
+    lastUserMsgRef.current = text
     // Add user message + typing placeholder in one update — dots appear immediately
     setMessages(prev => [
       ...prev,
@@ -229,6 +267,20 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
                   : <div className="pt-agent-md"><ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{m.text}</ReactMarkdown></div>
                 : m.text.replace(/^\[Context:[^\]]+\]\n\n/, '')}
             </div>
+          ))}
+        </div>
+      )}
+
+      {followUps.length > 0 && !streaming && (
+        <div className="pt-inbox-ai-followups">
+          {followUps.map(f => (
+            <button
+              key={f.label}
+              className="pt-inbox-ai-followup"
+              onClick={() => void send(f.prompt)}
+            >
+              {f.label}
+            </button>
           ))}
         </div>
       )}

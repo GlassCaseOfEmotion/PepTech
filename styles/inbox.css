@@ -616,6 +616,26 @@ html.pt-ai-expanded .pt-inbox-ai-msgs { flex: 1; max-height: none; }
 }
 .pt-inbox-ai-send:disabled { opacity: 0.4; cursor: default; }
 
+.pt-inbox-ai-followups {
+  display: flex; flex-wrap: wrap; gap: 5px;
+  padding: 8px 12px;
+  border-top: 0.5px solid var(--pt-line-soft);
+  flex-shrink: 0;
+}
+.pt-inbox-ai-followup {
+  font-size: 11.5px; font-family: inherit;
+  padding: 4px 10px; border-radius: 20px;
+  border: 0.5px solid var(--pt-line);
+  background: var(--pt-surface-2); color: var(--pt-fg-2);
+  cursor: pointer; transition: border-color 0.1s, background 0.1s, color 0.1s;
+  white-space: nowrap;
+}
+.pt-inbox-ai-followup:hover {
+  border-color: var(--pt-accent);
+  background: var(--pt-accent-soft);
+  color: var(--pt-fg);
+}
+
 /* ─── Mobile inbox layout (≤768px) ─────────────────────────────────────── */
 @media (max-width: 768px) {
   .pt-inbox {
