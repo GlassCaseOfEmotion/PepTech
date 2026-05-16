@@ -112,7 +112,7 @@ export function ComposeModal() {
   if (!open) return null
 
   return (
-    <div className="pt-modal-backdrop" onClick={close}>
+    <div className="pt-modal-backdrop" style={{ alignItems: 'flex-start', paddingTop: '15vh' }} onClick={close}>
       <div className="pt-modal" style={{ width: 480 }} onClick={e => e.stopPropagation()}>
         <div className="pt-modal-hd">
           <h3>New message</h3>
