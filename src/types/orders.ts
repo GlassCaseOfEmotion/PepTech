@@ -74,6 +74,18 @@ const CH_MAP: Record<string, 'wa' | 'tg' | 'em'> = {
   whatsapp: 'wa', telegram: 'tg', email: 'em',
 }
 
+export type ShipmentRow = {
+  id: string
+  refNumber: string
+  to: string              // customer display_name
+  carrier: string | null
+  trackingNumber: string | null
+  trackingUrl: string | null
+  status: 'shipped' | 'delivered'
+  estimatedDelivery: string | null   // ISO date string e.g. '2026-05-20'
+  deliveredAt: string | null
+}
+
 export function dbOrderToCard(o: DbOrderRow): OrderCard {
   const primaryChannel = o.customers?.customer_channels?.find(c => c.is_primary)
     ?? o.customers?.customer_channels?.[0]
