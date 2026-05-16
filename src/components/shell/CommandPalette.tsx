@@ -145,7 +145,20 @@ export function CommandPalette() {
     if (e.key === 'ArrowDown') { e.preventDefault(); setHighlighted(h => Math.min(h + 1, total - 1)) }
     if (e.key === 'ArrowUp')   { e.preventDefault(); setHighlighted(h => Math.max(h - 1, 0)) }
     if (e.key === 'Enter') {
-      if (query.trim() && results[highlighted]) navigate(results[highlighted])
+      if (query.trim()) {
+        if (results[highlighted]) navigate(results[highlighted])
+      } else {
+        // Empty state: navigate highlighted recent item or AI row
+        const aiRowIdx = recent.length
+        if (highlighted === aiRowIdx) {
+          navigate({ kind: 'ai' })
+        } else if (recent[highlighted]) {
+          const r = recent[highlighted]
+          writeRecent(r)
+          router.push(r.href)
+          setOpen(false)
+        }
+      }
     }
   }
 
