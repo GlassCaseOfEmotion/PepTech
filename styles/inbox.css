@@ -407,7 +407,7 @@ html.pt-ai-expanded .pt-inbox-ai-msgs { flex: 1; max-height: none; }
 }
 .pt-rail-note-meta { font-size: 10px; color: var(--pt-fg-4); font-family: var(--pt-mono); margin-bottom: 3px; }
 
-.pt-rail-activity { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pt-rail-activity { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; }
 .pt-rail-activity li {
   display: grid; grid-template-columns: 14px 1fr;
   gap: 8px; align-items: flex-start;
@@ -514,6 +514,7 @@ html.pt-ai-expanded .pt-inbox-ai-msgs { flex: 1; max-height: none; }
   box-shadow: var(--pt-shadow-card);
   display: flex; flex-direction: column;
   overflow: hidden; min-width: 0;
+  flex-shrink: 0;
 }
 
 .pt-inbox-ai-card-hd {
