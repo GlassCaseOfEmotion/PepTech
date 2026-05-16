@@ -105,17 +105,18 @@ export function AgentPalette() {
   const msgsRef = useRef<HTMLDivElement>(null)
   const lastSessionTime = useRef<number>(0)
 
-  // ⌘K listener
+  // pt:agent:open event listener
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setOpen(v => !v)
-      }
+    const openHandler = () => setOpen(true)
+    const keyHandler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
     }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
+    window.addEventListener('pt:agent:open', openHandler)
+    window.addEventListener('keydown', keyHandler)
+    return () => {
+      window.removeEventListener('pt:agent:open', openHandler)
+      window.removeEventListener('keydown', keyHandler)
+    }
   }, [])
 
   // Focus input when opened
