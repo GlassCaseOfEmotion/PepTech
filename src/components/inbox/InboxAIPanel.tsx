@@ -121,10 +121,27 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
     setMessages(prev => prev.map(m => ({ ...m, streaming: false })))
   }, [])
 
+  const replaceOrAppendError = useCallback((msg: string) => {
+    setMessages(prev => {
+      const last = prev[prev.length - 1]
+      const errMsg = { id: `err-${Date.now()}`, role: 'assistant' as const, text: `⚠ ${msg}`, streaming: false }
+      if (last?.role === 'assistant' && last.streaming) {
+        return [...prev.slice(0, -1), errMsg]
+      }
+      return [...prev, errMsg]
+    })
+    setStreaming(false)
+  }, [])
+
   const send = useCallback(async (text: string) => {
     if (!text.trim() || streaming) return
     setStreaming(true)
-    setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user', text }])
+    // Add user message + typing placeholder in one update — dots appear immediately
+    setMessages(prev => [
+      ...prev,
+      { id: `u-${Date.now()}`, role: 'user' as const, text },
+      { id: `a-${Date.now()}`, role: 'assistant' as const, text: '', streaming: true },
+    ])
 
     // Prepend conversation context so agent knows where we are
     const contextualMessage = `[Context: conversation ${conversationId}, customer ${customerName} (id: ${customerId})]\n\n${text}`
@@ -143,16 +160,12 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
         () => {},
         () => {},
         markDone,
-        (msg) => {
-          setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${msg}` }])
-          setStreaming(false)
-        },
+        replaceOrAppendError,
       )
     } catch (e) {
-      setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${e instanceof Error ? e.message : 'Error'}` }])
-      setStreaming(false)
+      replaceOrAppendError(e instanceof Error ? e.message : 'Error')
     }
-  }, [streaming, sessionId, conversationId, customerId, customerName, appendDelta, startNewBubble, markDone])
+  }, [streaming, sessionId, conversationId, customerId, customerName, appendDelta, startNewBubble, markDone, replaceOrAppendError])
 
   return (
     <div className="pt-inbox-ai-card">
