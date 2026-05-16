@@ -710,6 +710,7 @@ export type Database = {
           currency: string
           customer_id: string
           delivered_at: string | null
+          estimated_delivery: string | null
           exchange_rate: number | null
           id: string
           notes: string | null
@@ -718,10 +719,12 @@ export type Database = {
           payment_amount_base: number | null
           payment_asset: string
           ref_number: string
+          shipped_at: string | null
           shipping_address: Json | null
           status: string
           tenant_id: string
           tracking_number: string | null
+          tracking_url: string | null
           tx_hash: string | null
           updated_at: string
         }
@@ -732,6 +735,7 @@ export type Database = {
           currency?: string
           customer_id: string
           delivered_at?: string | null
+          estimated_delivery?: string | null
           exchange_rate?: number | null
           id?: string
           notes?: string | null
@@ -740,10 +744,12 @@ export type Database = {
           payment_amount_base?: number | null
           payment_asset?: string
           ref_number: string
+          shipped_at?: string | null
           shipping_address?: Json | null
           status?: string
           tenant_id: string
           tracking_number?: string | null
+          tracking_url?: string | null
           tx_hash?: string | null
           updated_at?: string
         }
@@ -754,6 +760,7 @@ export type Database = {
           currency?: string
           customer_id?: string
           delivered_at?: string | null
+          estimated_delivery?: string | null
           exchange_rate?: number | null
           id?: string
           notes?: string | null
@@ -762,10 +769,12 @@ export type Database = {
           payment_amount_base?: number | null
           payment_asset?: string
           ref_number?: string
+          shipped_at?: string | null
           shipping_address?: Json | null
           status?: string
           tenant_id?: string
           tracking_number?: string | null
+          tracking_url?: string | null
           tx_hash?: string | null
           updated_at?: string
         }
@@ -1206,6 +1215,7 @@ export type Database = {
         Returns: number
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      get_auth_tenant_id: { Args: never; Returns: string }
       get_tenant_id_for_user: { Args: { user_id: string }; Returns: string }
       hide_platform_template: {
         Args: { template_id: string }
