@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
 import { updateOrderStatus } from '@/app/orders/actions'
 import { CreateOrderModal } from './CreateOrderModal'
+import { ShipOrderModal } from './ShipOrderModal'
 import { PAYMENT_BADGE } from '@/types/payments'
 import type { OrderCard, OrderStatus } from '@/types/orders'
 import { formatAmount } from '@/lib/currency'
@@ -105,6 +106,7 @@ export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
   const [pulse, setPulse] = useState<Record<string, string>>({})
   const [toast, setToast] = useState<{ text: string; kind: string; id: number } | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [pendingShipOrder, setPendingShipOrder] = useState<{ id: string; refNumber: string } | null>(null)
 
   const showToast = (text: string, kind = 'ok') => {
     setToast({ text, kind, id: Date.now() })
@@ -117,7 +119,6 @@ export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
   }
 
   const tryMove = async (orderId: string, toStatus: OrderStatus) => {
-    // Strict sequential progression guard
     const ALLOWED_FROM: Partial<Record<OrderStatus, OrderStatus[]>> = {
       awaiting:   ['confirming'],
       confirming: ['packing'],
@@ -125,40 +126,28 @@ export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
       shipped:    ['delivered'],
     }
 
-    let originalStatus: OrderStatus | undefined
-    let refNumber = ''
-
-    setOrders(prev => {
-      const target = prev.find(x => x.id === orderId)
-      if (!target || target.status === toStatus) return prev
-      const allowed = ALLOWED_FROM[target.status] ?? []
-      if (!allowed.includes(toStatus)) return prev
-      originalStatus = target.status
-      refNumber = target.refNumber
-      return prev.map(x => x.id === orderId ? { ...x, status: toStatus } : x)
-    })
-
-    if (!originalStatus) {
-      // Either same status or transition not allowed — check current state for error message
-      setOrders(prev => {
-        const target = prev.find(x => x.id === orderId)
-        if (target && target.status !== toStatus) {
-          const allowed = ALLOWED_FROM[target.status] ?? []
-          if (!allowed.includes(toStatus)) {
-            flash(orderId, 'err')
-            showToast(`Cannot move directly to ${toStatus}`, 'err')
-          }
-        }
-        return prev
-      })
+    const target = orders.find(x => x.id === orderId)
+    if (!target || target.status === toStatus) return
+    const allowed = ALLOWED_FROM[target.status] ?? []
+    if (!allowed.includes(toStatus)) {
+      flash(orderId, 'err')
+      showToast(`Cannot move directly to ${toStatus}`, 'err')
       return
     }
 
-    showToast(`#${refNumber} → ${COLUMNS.find(c => c.id === toStatus)?.label}`)
+    // Intercept packing → shipped: collect carrier info via modal first
+    if (toStatus === 'shipped') {
+      setPendingShipOrder({ id: orderId, refNumber: target.refNumber })
+      return
+    }
+
+    const originalStatus = target.status
+    setOrders(prev => prev.map(x => x.id === orderId ? { ...x, status: toStatus } : x))
+    showToast(`#${target.refNumber} → ${COLUMNS.find(c => c.id === toStatus)?.label}`)
 
     const result = await updateOrderStatus(orderId, toStatus)
     if ('error' in result) {
-      setOrders(prev => prev.map(x => x.id === orderId ? { ...x, status: originalStatus! } : x))
+      setOrders(prev => prev.map(x => x.id === orderId ? { ...x, status: originalStatus } : x))
       flash(orderId, 'err')
       showToast(`Failed: ${result.error}`, 'err')
     } else {
@@ -238,6 +227,19 @@ export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
 
       {showCreateModal && (
         <CreateOrderModal onClose={() => setShowCreateModal(false)} />
+      )}
+      {pendingShipOrder && (
+        <ShipOrderModal
+          orderId={pendingShipOrder.id}
+          refNumber={pendingShipOrder.refNumber}
+          onSuccess={() => {
+            setOrders(prev => prev.map(x => x.id === pendingShipOrder.id ? { ...x, status: 'shipped' } : x))
+            flash(pendingShipOrder.id, 'ok')
+            showToast(`#${pendingShipOrder.refNumber} → Shipped`)
+            setPendingShipOrder(null)
+          }}
+          onClose={() => setPendingShipOrder(null)}
+        />
       )}
 
       {toast && (
