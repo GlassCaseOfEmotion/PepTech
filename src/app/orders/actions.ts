@@ -248,6 +248,50 @@ export async function updateOrderShipping(orderId: string, data: {
   }
 }
 
+export async function shipOrder(
+  orderId: string,
+  data: { carrier: string; trackingNumber?: string; trackingUrl?: string; estimatedDelivery?: string }
+): Promise<{ success: true } | { error: string }> {
+  if (!data.carrier.trim()) return { error: 'Carrier is required' }
+
+  try {
+    const { supabase, tenantId } = await getTenantId()
+
+    const { data: updated, error: updateError } = await supabase
+      .from('orders')
+      .update({
+        status: 'shipped',
+        carrier: data.carrier,
+        tracking_number: data.trackingNumber ?? null,
+        tracking_url: data.trackingUrl ?? null,
+        estimated_delivery: data.estimatedDelivery ?? null,
+        shipped_at: new Date().toISOString(),
+      })
+      .eq('id', orderId)
+      .eq('tenant_id', tenantId)
+      .eq('status', 'packing')
+      .select('id')
+
+    if (updateError) return { error: updateError.message }
+    if (!updated || updated.length === 0) return { error: 'Order not found or not in packing status' }
+
+    await supabase.from('order_events').insert({
+      tenant_id: tenantId,
+      order_id: orderId,
+      actor: 'operator',
+      action: 'Moved to Shipped',
+      note: `Carrier: ${data.carrier}${data.trackingNumber ? ', Tracking: ' + data.trackingNumber : ''}`,
+    })
+
+    revalidatePath('/orders')
+    revalidatePath(`/orders/${orderId}`)
+    revalidatePath('/')
+    return { success: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
 export async function saveOrderNotes(orderId: string, notes: string): Promise<{ success: true } | { error: string }> {
   try {
     const { supabase, tenantId } = await getTenantId()
