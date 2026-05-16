@@ -139,8 +139,8 @@ kbd {
 /* Reflow dashboard grid to 2 cols when right rail is open on mid-size screens */
 @media (max-width: 1500px) {
   .pt-root:not(.no-right) .pt-grid { grid-template-columns: repeat(2, 1fr); }
-  .pt-root:not(.no-right) .pt-kpis { grid-template-columns: repeat(2, 1fr); }
   .pt-root:not(.no-right) .pt-dash-card-inbox { grid-column: span 1; grid-row: span 1; }
+  .pt-root:not(.no-right) .pt-revenue-spark { display: none; }
 }
 
 /* ─── Sidebar ────────────────────────────────────────────────────────────── */
