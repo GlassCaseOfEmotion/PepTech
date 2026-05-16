@@ -410,28 +410,34 @@ function ShipmentsCard({ shipments }: { shipments: ShipmentRow[] }) {
             ? new Date(s.estimatedDelivery).toLocaleDateString('en', { month: 'short', day: 'numeric' })
             : s.deliveredAt ? 'Delivered' : null
           return (
-            <li key={s.id} className={`pt-ship ${statusCls}`}>
-              <div className="pt-ship-icon"><Icons.truck size={14} /></div>
-              <div>
-                <div className="pt-ship-row1">
-                  <span className="pt-ship-to">→ {s.to}</span>
-                  {s.carrier && <span className="pt-ship-carrier">{s.carrier}</span>}
-                  {s.trackingNumber && (
-                    s.trackingUrl && isSafeUrl(s.trackingUrl)
-                      ? <a href={s.trackingUrl} target="_blank" rel="noreferrer noopener" className="pt-ship-id">{s.trackingNumber}</a>
-                      : <span className="pt-ship-id">{s.trackingNumber}</span>
-                  )}
+            <Link key={s.id} href={`/orders/${s.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'contents' }}>
+              <li className={`pt-ship ${statusCls}`} style={{ cursor: 'pointer' }}>
+                <div className="pt-ship-icon"><Icons.truck size={14} /></div>
+                <div>
+                  <div className="pt-ship-row1">
+                    <span className="pt-ship-to">→ {s.to}</span>
+                    {s.carrier && <span className="pt-ship-carrier">{s.carrier}</span>}
+                    {s.trackingNumber && (
+                      s.trackingUrl && isSafeUrl(s.trackingUrl)
+                        ? <button
+                            className="pt-ship-id"
+                            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit', color: 'inherit', textDecoration: 'underline' }}
+                            onClick={e => { e.preventDefault(); e.stopPropagation(); window.open(s.trackingUrl!, '_blank', 'noreferrer noopener') }}
+                          >{s.trackingNumber} ↗</button>
+                        : <span className="pt-ship-id">{s.trackingNumber}</span>
+                    )}
+                  </div>
+                  <div className="pt-ship-track">
+                    {[1,2,3,4].map(i => (
+                      <span key={i} className={`pt-ship-step${i <= step ? ' on' : ''}`} />
+                    ))}
+                    <span className="pt-ship-status">
+                      {SHIP_LABELS[s.status] ?? s.status}{eta ? ` · ETA ${eta}` : ''}
+                    </span>
+                  </div>
                 </div>
-                <div className="pt-ship-track">
-                  {[1,2,3,4].map(i => (
-                    <span key={i} className={`pt-ship-step${i <= step ? ' on' : ''}`} />
-                  ))}
-                  <span className="pt-ship-status">
-                    {SHIP_LABELS[s.status] ?? s.status}{eta ? ` · ETA ${eta}` : ''}
-                  </span>
-                </div>
-              </div>
-            </li>
+              </li>
+            </Link>
           )
         })}
         {shipments.length === 0 && (
