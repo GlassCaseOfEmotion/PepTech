@@ -3,6 +3,8 @@ import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { GlobalNotifications } from './GlobalNotifications'
 import { AgentPalette } from './AgentPalette'
+import { CommandPalette } from './CommandPalette'
+import { ComposeModal } from './ComposeModal'
 import { BottomNav } from './BottomNav'
 
 interface ShellProps {
@@ -59,6 +61,8 @@ export async function Shell({ children, section, isInbox = false, rightRail }: S
     <div className={rootClass}>
       <GlobalNotifications />
       <AgentPalette />
+      <CommandPalette />
+      <ComposeModal />
       <Sidebar displayName={displayName} initialPinned={pinnedConversations} />
       <main className="pt-main">
         <TopBar section={section} connectedChannels={connectedChannels} />
