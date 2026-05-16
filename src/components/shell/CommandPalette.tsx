@@ -210,7 +210,7 @@ export function CommandPalette() {
   const aiHighlightIdx = query.trim() ? aiIdx : recent.length
 
   return (
-    <div className="pt-modal-backdrop" onClick={() => setOpen(false)}>
+    <div className="pt-modal-backdrop" style={{ alignItems: 'flex-start', paddingTop: '15vh' }} onClick={() => setOpen(false)}>
       <div className="pt-cmd" onClick={e => e.stopPropagation()}>
         <div className="pt-cmd-input-row">
           <Icons.search size={14} />
