@@ -402,40 +402,42 @@ function ShipmentsCard({ shipments }: { shipments: ShipmentRow[] }) {
   return (
     <DashCard title="Shipments" subtitle="Carrier tracking"
       action={<button className="pt-link">All →</button>}>
-      {shipments.map(s => {
-        const step = s.status === 'delivered' ? 4 : 3
-        const eta = s.estimatedDelivery
-          ? new Date(s.estimatedDelivery).toLocaleDateString('en', { month: 'short', day: 'numeric' })
-          : s.deliveredAt ? 'Delivered' : '—'
-        return (
-          <div key={s.id} className="pt-ship-row">
-            <span className="pt-ship-icon"><Icons.truck size={14} /></span>
-            <div className="pt-ship-mid">
-              <div className="pt-ship-to">→ {s.to}</div>
-              <div className="pt-ship-carrier mono">
-                {s.carrier ?? '—'}
-                {s.trackingNumber && (
-                  s.trackingUrl && isSafeUrl(s.trackingUrl)
-                    ? <a href={s.trackingUrl} target="_blank" rel="noreferrer noopener" style={{ marginLeft: 6 }}>{s.trackingNumber}</a>
-                    : <span style={{ marginLeft: 6 }}>{s.trackingNumber}</span>
-                )}
+      <ul className="pt-ship-list">
+        {shipments.map(s => {
+          const step = s.status === 'delivered' ? 4 : 3
+          const statusCls = s.status === 'delivered' ? 'pt-ship-delivered' : 'pt-ship-in_transit'
+          const eta = s.estimatedDelivery
+            ? new Date(s.estimatedDelivery).toLocaleDateString('en', { month: 'short', day: 'numeric' })
+            : s.deliveredAt ? 'Delivered' : null
+          return (
+            <li key={s.id} className={`pt-ship ${statusCls}`}>
+              <div className="pt-ship-icon"><Icons.truck size={14} /></div>
+              <div>
+                <div className="pt-ship-row1">
+                  <span className="pt-ship-to">→ {s.to}</span>
+                  {s.carrier && <span className="pt-ship-carrier">{s.carrier}</span>}
+                  {s.trackingNumber && (
+                    s.trackingUrl && isSafeUrl(s.trackingUrl)
+                      ? <a href={s.trackingUrl} target="_blank" rel="noreferrer noopener" className="pt-ship-id">{s.trackingNumber}</a>
+                      : <span className="pt-ship-id">{s.trackingNumber}</span>
+                  )}
+                </div>
+                <div className="pt-ship-track">
+                  {[1,2,3,4].map(i => (
+                    <span key={i} className={`pt-ship-step${i <= step ? ' on' : ''}`} />
+                  ))}
+                  <span className="pt-ship-status">
+                    {SHIP_LABELS[s.status] ?? s.status}{eta ? ` · ETA ${eta}` : ''}
+                  </span>
+                </div>
               </div>
-              <div className="pt-ship-steps">
-                {[1,2,3,4].map(i => (
-                  <span key={i} className={`pt-ship-step${i <= step ? ' on' : ''}`} />
-                ))}
-              </div>
-            </div>
-            <div className="pt-ship-right">
-              <div className="pt-ship-status">{SHIP_LABELS[s.status] ?? s.status}</div>
-              <div className="pt-ship-eta">ETA {eta}</div>
-            </div>
-          </div>
-        )
-      })}
-      {shipments.length === 0 && (
-        <p style={{ fontSize: 12, color: 'var(--pt-fg-4)', padding: '12px 14px' }}>No active shipments</p>
-      )}
+            </li>
+          )
+        })}
+        {shipments.length === 0 && (
+          <li className="pt-ship" style={{ fontSize: 12, color: 'var(--pt-fg-4)' }}>No active shipments</li>
+        )}
+      </ul>
     </DashCard>
   )
 }
