@@ -9,6 +9,7 @@ type Result =
   | { kind: 'customer'; id: string; name: string; handle: string; channel: string }
   | { kind: 'order'; id: string; refNumber: string; customerName: string; status: string }
   | { kind: 'conversation'; id: string; customerName: string; snippet: string | null }
+  | { kind: 'catalog'; id: string; sku: string; name: string }
   | { kind: 'ai' }
 
 const RECENT_KEY = 'pt:recent'
@@ -69,7 +70,7 @@ export function CommandPalette() {
   const search = useCallback(async (q: string) => {
     if (!q.trim()) { setResults([]); return }
 
-    const [{ data: customers }, { data: orders }] = await Promise.all([
+    const [{ data: customers }, { data: ordersByRef }, { data: products }] = await Promise.all([
       supabase
         .from('customers')
         .select('id, display_name, customer_channels(channel_type, display_handle, is_primary)')
@@ -80,17 +81,40 @@ export function CommandPalette() {
         .select('id, ref_number, status, customers(display_name)')
         .ilike('ref_number', `%${q}%`)
         .limit(3),
+      supabase
+        .from('products')
+        .select('id, sku, name')
+        .or(`name.ilike.%${q}%,sku.ilike.%${q}%`)
+        .eq('is_active', true)
+        .limit(3),
     ])
 
     const custIds = (customers ?? []).map(c => c.id)
-    const { data: convs } = custIds.length > 0
-      ? await supabase
-          .from('conversations')
-          .select('id, last_message_snippet, customers(display_name)')
-          .in('customer_id', custIds)
-          .in('status', ['new', 'needs_reply', 'in_progress', 'snoozed'])
-          .limit(3)
-      : { data: [] }
+    const [{ data: convs }, { data: ordersByCust }] = await Promise.all([
+      custIds.length > 0
+        ? supabase
+            .from('conversations')
+            .select('id, last_message_snippet, customers(display_name)')
+            .in('customer_id', custIds)
+            .in('status', ['new', 'needs_reply', 'in_progress', 'snoozed'])
+            .limit(3)
+        : Promise.resolve({ data: [] }),
+      custIds.length > 0
+        ? supabase
+            .from('orders')
+            .select('id, ref_number, status, customers(display_name)')
+            .in('customer_id', custIds)
+            .limit(3)
+        : Promise.resolve({ data: [] }),
+    ])
+
+    // Merge order results, deduplicate by id
+    const seenOrderIds = new Set<string>()
+    const allOrders = [...(ordersByRef ?? []), ...(ordersByCust ?? [])].filter(o => {
+      if (seenOrderIds.has(o.id)) return false
+      seenOrderIds.add(o.id)
+      return true
+    }).slice(0, 4)
 
     const next: Result[] = []
 
@@ -100,7 +124,7 @@ export function CommandPalette() {
       next.push({ kind: 'customer', id: c.id, name: c.display_name, handle: primary?.display_handle ?? '', channel: primary?.channel_type ?? '' })
     }
 
-    for (const o of orders ?? []) {
+    for (const o of allOrders) {
       const cust = o.customers as { display_name: string } | null
       next.push({ kind: 'order', id: o.id, refNumber: o.ref_number, customerName: cust?.display_name ?? '—', status: o.status })
     }
@@ -108,6 +132,10 @@ export function CommandPalette() {
     for (const cv of convs ?? []) {
       const cust = cv.customers as { display_name: string } | null
       next.push({ kind: 'conversation', id: cv.id, customerName: cust?.display_name ?? '—', snippet: cv.last_message_snippet })
+    }
+
+    for (const p of products ?? []) {
+      next.push({ kind: 'catalog', id: p.id, sku: p.sku, name: p.name })
     }
 
     next.push({ kind: 'ai' })
@@ -132,6 +160,7 @@ export function CommandPalette() {
     if (r.kind === 'customer')      { href = `/customers/${r.id}`;                   label = r.name }
     if (r.kind === 'order')         { href = `/orders/${r.id}`;                       label = `#${r.refNumber}` }
     if (r.kind === 'conversation')  { href = `/inbox?conversation=${r.id}`;           label = r.customerName }
+    if (r.kind === 'catalog')       { href = `/catalog`;                               label = r.name }
     if (!href) return
     writeRecent({ label, href })
     router.push(href)
@@ -169,12 +198,14 @@ export function CommandPalette() {
   const customerResults = results.filter(r => r.kind === 'customer') as Extract<Result, { kind: 'customer' }>[]
   const orderResults    = results.filter(r => r.kind === 'order')    as Extract<Result, { kind: 'order' }>[]
   const convResults     = results.filter(r => r.kind === 'conversation') as Extract<Result, { kind: 'conversation' }>[]
+  const catalogResults  = results.filter(r => r.kind === 'catalog')  as Extract<Result, { kind: 'catalog' }>[]
 
   // Flat indices for keyboard highlight
-  const custStart = 0
-  const orderStart = customerResults.length
-  const convStart = orderStart + orderResults.length
-  const aiIdx = convStart + convResults.length
+  const custStart    = 0
+  const orderStart   = customerResults.length
+  const convStart    = orderStart + orderResults.length
+  const catalogStart = convStart + convResults.length
+  const aiIdx        = catalogStart + catalogResults.length
 
   const aiHighlightIdx = query.trim() ? aiIdx : recent.length
 
@@ -186,7 +217,7 @@ export function CommandPalette() {
           <input
             ref={inputRef}
             className="pt-cmd-input"
-            placeholder="Search customers, orders, conversations…"
+            placeholder="Search customers, orders, conversations, catalog…"
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={keyDown}
@@ -261,7 +292,24 @@ export function CommandPalette() {
                 </>
               )}
 
-              {customerResults.length === 0 && orderResults.length === 0 && convResults.length === 0 && results.length <= 1 && (
+              {catalogResults.length > 0 && (
+                <>
+                  <div className="pt-cmd-group-label">Catalog</div>
+                  {catalogResults.map((r, i) => (
+                    <div key={r.id} className={`pt-cmd-row ${catalogStart + i === highlighted ? 'is-on' : ''}`}
+                      onClick={() => navigate(r)} onMouseEnter={() => setHighlighted(catalogStart + i)}>
+                      <span className="pt-cmd-row-icon"><Icons.box size={12} /></span>
+                      <div className="pt-cmd-row-mid">
+                        <span className="pt-cmd-row-label">{r.name}</span>
+                        <span className="pt-cmd-row-sub mono">{r.sku}</span>
+                      </div>
+                      <span className="pt-cmd-enter">↵</span>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {customerResults.length === 0 && orderResults.length === 0 && convResults.length === 0 && catalogResults.length === 0 && results.length <= 1 && (
                 <div className="pt-cmd-empty">No results for &ldquo;{query}&rdquo;</div>
               )}
             </>
