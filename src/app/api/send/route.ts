@@ -48,6 +48,10 @@ export async function POST(request: Request) {
   const text = body.content ?? ''
   const { storagePath } = body
   let effectiveContent = text
+  let twilioSid: string | undefined
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const statusCallbackUrl = appUrl ? `${appUrl}/api/webhooks/twilio-status` : undefined
 
   if (conv.channel_type === 'whatsapp') {
     try {
@@ -59,11 +63,11 @@ export async function POST(request: Request) {
           .single()
         if (!tmpl?.content_sid) return NextResponse.json({ error: 'Template not approved' }, { status: 422 })
         effectiveContent = tmpl.body ?? text
-        await sendWhatsAppTemplate(to, tmpl.content_sid, body.templateVariables ?? {})
+        twilioSid = await sendWhatsAppTemplate(to, tmpl.content_sid, body.templateVariables ?? {}, statusCallbackUrl)
       } else if (storagePath) {
-        await sendWhatsAppMedia(await generateSignedUrl(supabase, storagePath), to)
+        twilioSid = await sendWhatsAppMedia(await generateSignedUrl(supabase, storagePath), to, statusCallbackUrl)
       } else {
-        await sendWhatsAppMessage(to, text)
+        twilioSid = await sendWhatsAppMessage(to, text, statusCallbackUrl)
       }
     } catch (err) {
       if (err instanceof TwilioWindowError) {
@@ -115,6 +119,7 @@ export async function POST(request: Request) {
       direction: 'outbound',
       content: storagePath ? '[Photo]' : effectiveContent,
       status: 'sent',
+      external_id: twilioSid ?? null,
       metadata: storagePath ? { kind: 'photo', storagePath } : null,
     })
     .select('id')

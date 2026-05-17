@@ -46,102 +46,96 @@ export function extractTwilioMessage(params: Record<string, string>): {
   }
 }
 
-export async function sendWhatsAppMessage(to: string, text: string): Promise<void> {
+function twilioAuth(accountSid: string, authToken: string) {
+  return 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64')
+}
+
+function handleTwilioError(status: number, errText: string, label: string): never {
+  let code: number | undefined
+  try { code = (JSON.parse(errText) as { code?: number }).code } catch { /* ignore */ }
+  if (code === 63016) throw new TwilioWindowError()
+  throw new Error(`Twilio ${label} failed: ${status} ${errText}`)
+}
+
+export async function sendWhatsAppMessage(to: string, text: string, statusCallbackUrl?: string): Promise<string> {
   if (!to || !text) throw new Error('to and text are required')
   const accountSid = process.env.TWILIO_ACCOUNT_SID!
   const authToken = process.env.TWILIO_AUTH_TOKEN!
   const from = process.env.TWILIO_WHATSAPP_NUMBER!
 
-  const body = new URLSearchParams({
+  const params: Record<string, string> = {
     From: from.startsWith('whatsapp:') ? from : `whatsapp:${from}`,
     To: to.startsWith('whatsapp:') ? to : `whatsapp:${to}`,
     Body: text,
-  })
+  }
+  if (statusCallbackUrl) params.StatusCallback = statusCallbackUrl
 
   const res = await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
-      },
-      body: body.toString(),
-    },
+    { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: twilioAuth(accountSid, authToken) },
+      body: new URLSearchParams(params).toString() },
   )
   if (!res.ok) {
     const errText = await res.text()
-    try {
-      const errJson = JSON.parse(errText) as { code?: number }
-      if (errJson.code === 63016) throw new TwilioWindowError()
-    } catch (e) { if (e instanceof TwilioWindowError) throw e }
-    throw new Error(`Twilio send failed: ${res.status} ${errText}`)
+    handleTwilioError(res.status, errText, 'send')
   }
+  const json = await res.json() as { sid: string }
+  return json.sid
 }
 
-export async function sendWhatsAppMedia(mediaUrl: string, to: string): Promise<void> {
+export async function sendWhatsAppMedia(mediaUrl: string, to: string, statusCallbackUrl?: string): Promise<string> {
   const accountSid = process.env.TWILIO_ACCOUNT_SID!
   const authToken = process.env.TWILIO_AUTH_TOKEN!
   const from = process.env.TWILIO_WHATSAPP_NUMBER!
 
-  const body = new URLSearchParams({
+  const params: Record<string, string> = {
     From: from.startsWith('whatsapp:') ? from : `whatsapp:${from}`,
     To: to.startsWith('whatsapp:') ? to : `whatsapp:${to}`,
     MediaUrl: mediaUrl,
-  })
+  }
+  if (statusCallbackUrl) params.StatusCallback = statusCallbackUrl
 
   const res = await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
-      },
-      body: body.toString(),
-    },
+    { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: twilioAuth(accountSid, authToken) },
+      body: new URLSearchParams(params).toString() },
   )
   if (!res.ok) {
     const errText = await res.text()
-    try {
-      const errJson = JSON.parse(errText) as { code?: number }
-      if (errJson.code === 63016) throw new TwilioWindowError()
-    } catch (e) { if (e instanceof TwilioWindowError) throw e }
-    throw new Error(`Twilio media send failed: ${res.status} ${errText}`)
+    handleTwilioError(res.status, errText, 'media send')
   }
+  const json = await res.json() as { sid: string }
+  return json.sid
 }
 
 export async function sendWhatsAppTemplate(
   to: string,
   contentSid: string,
   variables: Record<string, string>,
-): Promise<void> {
+  statusCallbackUrl?: string,
+): Promise<string> {
   const accountSid = process.env.TWILIO_ACCOUNT_SID!
-  const authToken = process.env.TWILIO_AUTH_TOKEN!
-  const from = process.env.TWILIO_WHATSAPP_NUMBER!
-  const body = new URLSearchParams({
+  const authToken  = process.env.TWILIO_AUTH_TOKEN!
+  const from       = process.env.TWILIO_WHATSAPP_NUMBER!
+  const params: Record<string, string> = {
     From: from.startsWith('whatsapp:') ? from : `whatsapp:${from}`,
-    To: to.startsWith('whatsapp:') ? to : `whatsapp:${to}`,
+    To:   to.startsWith('whatsapp:')   ? to   : `whatsapp:${to}`,
     ContentSid: contentSid,
     ContentVariables: JSON.stringify(variables),
-  })
+  }
+  if (statusCallbackUrl) params.StatusCallback = statusCallbackUrl
   const res = await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
-      },
-      body: body.toString(),
-    },
+    { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: twilioAuth(accountSid, authToken) },
+      body: new URLSearchParams(params).toString() },
   )
   if (!res.ok) {
     const errText = await res.text()
-    try {
-      const errJson = JSON.parse(errText) as { code?: number }
-      if (errJson.code === 63016) throw new TwilioWindowError()
-    } catch (e) { if (e instanceof TwilioWindowError) throw e }
-    throw new Error(`Twilio template send failed: ${res.status} ${errText}`)
+    handleTwilioError(res.status, errText, 'template send')
   }
+  const json = await res.json() as { sid: string }
+  return json.sid
 }
