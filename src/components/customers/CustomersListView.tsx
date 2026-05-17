@@ -43,9 +43,10 @@ interface Props {
   supplyStatuses?: Record<string, SupplyStatus | null>
   orderStats?: Record<string, { count: number; lastOrderAt: string | null }>
   baseCurrency: string
+  hasChannels?: boolean
 }
 
-export function CustomersListView({ customers, supplyStatuses = {}, orderStats = {}, baseCurrency }: Props) {
+export function CustomersListView({ customers, supplyStatuses = {}, orderStats = {}, baseCurrency, hasChannels = false }: Props) {
   const [search, setSearch] = useState('')
   const [channelFilter, setChannelFilter] = useState<string | null>(null)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
@@ -170,7 +171,7 @@ export function CustomersListView({ customers, supplyStatuses = {}, orderStats =
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 && (
+                {filtered.length === 0 && customers.length === 0 && !hasChannels && (
                   <tr>
                     <td colSpan={99} style={{ padding: 0 }}>
                       <div className="pt-empty-page" style={{ minHeight: 360 }}>
@@ -178,9 +179,7 @@ export function CustomersListView({ customers, supplyStatuses = {}, orderStats =
                           size="lg"
                           icon={
                             <svg width="130" height="100" viewBox="0 0 130 100" fill="none" stroke="currentColor" strokeLinecap="round">
-                              {/* Center node */}
                               <circle cx="65" cy="50" r="11" strokeWidth="1.2"/>
-                              {/* Satellite nodes */}
                               <circle cx="25" cy="22" r="8" strokeWidth="1" opacity="0.45"/>
                               <circle cx="105" cy="25" r="8" strokeWidth="1" opacity="0.45"/>
                               <circle cx="112" cy="70" r="7" strokeWidth="0.9" opacity="0.35"/>
@@ -188,7 +187,6 @@ export function CustomersListView({ customers, supplyStatuses = {}, orderStats =
                               <circle cx="65" cy="90" r="6" strokeWidth="0.9" opacity="0.3"/>
                               <circle cx="10" cy="47" r="5" strokeWidth="0.8" opacity="0.22"/>
                               <circle cx="120" cy="47" r="5" strokeWidth="0.8" opacity="0.22"/>
-                              {/* Connection lines */}
                               <line x1="65" y1="50" x2="25" y2="22" strokeWidth="0.8" opacity="0.2"/>
                               <line x1="65" y1="50" x2="105" y2="25" strokeWidth="0.8" opacity="0.2"/>
                               <line x1="65" y1="50" x2="112" y2="70" strokeWidth="0.7" opacity="0.18"/>
@@ -196,12 +194,68 @@ export function CustomersListView({ customers, supplyStatuses = {}, orderStats =
                               <line x1="65" y1="50" x2="65" y2="90" strokeWidth="0.7" opacity="0.16"/>
                               <line x1="65" y1="50" x2="10" y2="47" strokeWidth="0.6" opacity="0.14"/>
                               <line x1="65" y1="50" x2="120" y2="47" strokeWidth="0.6" opacity="0.14"/>
-                              {/* Outer ring */}
+                              <circle cx="65" cy="50" r="28" strokeWidth="0.6" strokeDasharray="3 3" opacity="0.18"/>
+                            </svg>
+                          }
+                          title="No customers yet"
+                          body="Connect a messaging channel so customers can reach you — they'll appear here automatically."
+                          action={{ label: 'Connect a channel →', href: '/settings/channels' }}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {filtered.length === 0 && customers.length === 0 && hasChannels && (
+                  <tr>
+                    <td colSpan={99} style={{ padding: 0 }}>
+                      <div className="pt-empty-page" style={{ minHeight: 360 }}>
+                        <EmptyState
+                          size="lg"
+                          icon={
+                            <svg width="130" height="100" viewBox="0 0 130 100" fill="none" stroke="currentColor" strokeLinecap="round">
+                              <circle cx="65" cy="50" r="11" strokeWidth="1.2"/>
+                              <circle cx="25" cy="22" r="8" strokeWidth="1" opacity="0.45"/>
+                              <circle cx="105" cy="25" r="8" strokeWidth="1" opacity="0.45"/>
+                              <circle cx="112" cy="70" r="7" strokeWidth="0.9" opacity="0.35"/>
+                              <circle cx="22" cy="72" r="7" strokeWidth="0.9" opacity="0.35"/>
+                              <circle cx="65" cy="90" r="6" strokeWidth="0.9" opacity="0.3"/>
+                              <circle cx="10" cy="47" r="5" strokeWidth="0.8" opacity="0.22"/>
+                              <circle cx="120" cy="47" r="5" strokeWidth="0.8" opacity="0.22"/>
+                              <line x1="65" y1="50" x2="25" y2="22" strokeWidth="0.8" opacity="0.2"/>
+                              <line x1="65" y1="50" x2="105" y2="25" strokeWidth="0.8" opacity="0.2"/>
+                              <line x1="65" y1="50" x2="112" y2="70" strokeWidth="0.7" opacity="0.18"/>
+                              <line x1="65" y1="50" x2="22" y2="72" strokeWidth="0.7" opacity="0.18"/>
+                              <line x1="65" y1="50" x2="65" y2="90" strokeWidth="0.7" opacity="0.16"/>
+                              <line x1="65" y1="50" x2="10" y2="47" strokeWidth="0.6" opacity="0.14"/>
+                              <line x1="65" y1="50" x2="120" y2="47" strokeWidth="0.6" opacity="0.14"/>
                               <circle cx="65" cy="50" r="28" strokeWidth="0.6" strokeDasharray="3 3" opacity="0.18"/>
                             </svg>
                           }
                           title="No customers yet"
                           body="Customers are added automatically when they contact you through any connected channel."
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {filtered.length === 0 && customers.length > 0 && (
+                  <tr>
+                    <td colSpan={99} style={{ padding: 0 }}>
+                      <div className="pt-empty-page" style={{ minHeight: 360 }}>
+                        <EmptyState
+                          size="lg"
+                          icon={
+                            <svg width="80" height="64" viewBox="0 0 80 64" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="32" cy="26" r="16" strokeWidth="1.2"/>
+                              <line x1="43" y1="37" x2="58" y2="52" strokeWidth="2" strokeLinecap="round"/>
+                              <line x1="26" y1="26" x2="38" y2="26" strokeWidth="1.2" opacity="0.4"/>
+                              <line x1="32" y1="20" x2="32" y2="32" strokeWidth="1.2" opacity="0.4"/>
+                              <circle cx="32" cy="26" r="2" fill="currentColor" stroke="none" opacity="0.3"/>
+                            </svg>
+                          }
+                          title="No results found"
+                          body="Try a different search or clear your filters."
+                          action={{ label: 'Clear filters', onClick: () => { setSearch(''); setChannelFilter(null); setTagFilter(null) } }}
                         />
                       </div>
                     </td>
