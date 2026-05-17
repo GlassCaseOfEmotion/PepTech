@@ -24,3 +24,16 @@ export async function generateSignedUrl(
   if (error || !data) throw new Error(`Failed to generate signed URL: ${error?.message}`)
   return data.signedUrl
 }
+
+export async function generateSignedUrlFromBucket(
+  supabase: SupabaseClient,
+  bucket: string,
+  path: string,
+  expiresIn = 3600,
+): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(path, expiresIn)
+  if (error || !data) throw new Error(`Failed to generate signed URL: ${error?.message}`)
+  return data.signedUrl
+}

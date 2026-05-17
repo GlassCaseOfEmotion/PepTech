@@ -4,11 +4,12 @@ import { sendWhatsAppMessage, sendWhatsAppMedia, sendWhatsAppTemplate, TwilioWin
 import { sendTelegramMessage, sendTelegramPhoto } from '@/lib/channels/telegram'
 import { sendGmailMessage, sendMicrosoftMessage } from '@/lib/channels/email'
 import type { GoogleCredentials, MicrosoftCredentials } from '@/lib/channels/email'
-import { generateSignedUrl } from '@/lib/media/storage'
+import { generateSignedUrl, generateSignedUrlFromBucket } from '@/lib/media/storage'
 
 export async function POST(request: Request) {
   const body = await request.json() as {
     conversationId?: string; content?: string; storagePath?: string
+    bucket?: 'media' | 'coa' | 'product-media'
     templateId?: string; templateVariables?: Record<string, string>
   }
 
@@ -47,6 +48,7 @@ export async function POST(request: Request) {
   const to = conv.channel_identifier
   const text = body.content ?? ''
   const { storagePath } = body
+  const bucket = body.bucket ?? 'media'
   let effectiveContent = text
   let twilioSid: string | undefined
 
@@ -65,7 +67,10 @@ export async function POST(request: Request) {
         effectiveContent = tmpl.body ?? text
         twilioSid = await sendWhatsAppTemplate(to, tmpl.content_sid, body.templateVariables ?? {}, statusCallbackUrl)
       } else if (storagePath) {
-        twilioSid = await sendWhatsAppMedia(await generateSignedUrl(supabase, storagePath), to, statusCallbackUrl)
+        const mediaUrl = bucket === 'media'
+          ? await generateSignedUrl(supabase, storagePath)
+          : await generateSignedUrlFromBucket(supabase, bucket, storagePath)
+        twilioSid = await sendWhatsAppMedia(mediaUrl, to, statusCallbackUrl)
       } else {
         twilioSid = await sendWhatsAppMessage(to, text, statusCallbackUrl)
       }
@@ -84,7 +89,7 @@ export async function POST(request: Request) {
     const creds = channel.credentials as { bot_token: string; business_connection_id?: string }
     if (storagePath) {
       try {
-        const { data: blob } = await supabase.storage.from('media').download(storagePath)
+        const { data: blob } = await supabase.storage.from(bucket).download(storagePath)
         if (!blob) throw new Error('Failed to download media from storage')
         await sendTelegramPhoto(creds.bot_token, to, blob, creds.business_connection_id)
       } catch {
