@@ -21,6 +21,8 @@ export async function updateWaTemplate(id: string, patch: {
   variables?: { key: string; label: string }[]
 }): Promise<{ error?: string }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
   const { error } = await supabase.from('whatsapp_templates').update(patch).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/settings/whatsapp-templates')
@@ -29,6 +31,8 @@ export async function updateWaTemplate(id: string, patch: {
 
 export async function deleteWaTemplate(id: string): Promise<{ error?: string }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
   const { error } = await supabase.from('whatsapp_templates').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/settings/whatsapp-templates')
