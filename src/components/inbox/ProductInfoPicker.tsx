@@ -18,6 +18,18 @@ type PickerProduct = {
   coa_path: string | null
 }
 
+const FAMILY_COLORS: Record<string, string> = {
+  peptide:    '#10b981',
+  semaglutide:'#6366f1',
+  hormone:    '#f59e0b',
+  sermorelin: '#06b6d4',
+  supplement: '#8b5cf6',
+}
+function familyColor(family: string): string {
+  const key = family?.toLowerCase().split(' ')[0]
+  return FAMILY_COLORS[key] ?? 'var(--pt-fg-4)'
+}
+
 export function ProductInfoPicker({
   onInsert,
   onAttachCoa,
@@ -70,7 +82,6 @@ export function ProductInfoPicker({
       })
   }, [supabase])
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
@@ -84,6 +95,11 @@ export function ProductInfoPicker({
   )
 
   const preview = selected ? formatProductInfo(selected, selected.protocol, include) : ''
+
+  function selectProduct(p: PickerProduct) {
+    setSelected(p)
+    setInclude({ description: !!p.description, protocol: !!p.protocol, resources: p.resources.length > 0 })
+  }
 
   function handleInsert() {
     if (!selected || !preview) return
@@ -99,82 +115,158 @@ export function ProductInfoPicker({
   }
 
   return (
-    <div className="pt-tpl-picker">
-      <div style={{ display: 'flex', borderBottom: '0.5px solid var(--pt-line-soft)' }}>
-        <input
-          className="pt-tpl-search"
-          autoFocus
-          placeholder="Search products…"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-        />
-        <button className="pt-iconbtn" style={{ margin: '0 8px' }} onClick={onClose} title="Close">✕</button>
-      </div>
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        {/* Left: product list */}
-        <div className="pt-tpl-list" style={{ width: 220, flexShrink: 0 }}>
-          {filtered.length === 0 && (
-            <div style={{ padding: '12px 14px', fontSize: 12, color: 'var(--pt-fg-4)' }}>
-              {query ? `No products match "${query}"` : 'No products'}
-            </div>
-          )}
-          {filtered.map(p => (
-            <button
-              key={p.id}
-              className={`pt-tpl-item ${selected?.id === p.id ? 'is-selected' : ''}`}
-              onClick={() => { setSelected(p); setInclude({ description: !!p.description, protocol: !!p.protocol, resources: p.resources.length > 0 }) }}
-            >
-              <div style={{ fontWeight: 600, fontSize: 12 }}>{p.name}</div>
-              <div style={{ fontSize: 11, color: 'var(--pt-fg-4)' }}>{p.sku} · {p.product_family}</div>
-            </button>
-          ))}
+    <div className="pt-modal-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="pt-pip" role="dialog" aria-modal="true" aria-label="Insert product info">
+
+        {/* Header */}
+        <div className="pt-pip-hd">
+          <div className="pt-pip-hd-title">
+            <span className="pt-pip-hd-icon">⬡</span>
+            Product Info
+          </div>
+          <button className="pt-pip-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
-        {/* Right: toggles + preview */}
-        {selected && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '12px 14px', gap: 10, minWidth: 0, borderLeft: '0.5px solid var(--pt-line-soft)' }}>
-            {/* Toggles */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {selected.description && (
-                <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, cursor: 'pointer' }}>
-                  <input type="checkbox" checked={include.description} onChange={e => setInclude(v => ({ ...v, description: e.target.checked }))} />
-                  Description
-                </label>
-              )}
-              {selected.protocol && (
-                <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, cursor: 'pointer' }}>
-                  <input type="checkbox" checked={include.protocol} onChange={e => setInclude(v => ({ ...v, protocol: e.target.checked }))} />
-                  Protocol (dosing instructions)
-                </label>
-              )}
-              {selected.resources.length > 0 && (
-                <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, cursor: 'pointer' }}>
-                  <input type="checkbox" checked={include.resources} onChange={e => setInclude(v => ({ ...v, resources: e.target.checked }))} />
-                  Resources ({selected.resources.length} link{selected.resources.length !== 1 ? 's' : ''})
-                </label>
-              )}
+        <div className="pt-pip-body">
+          {/* Left: search + product list */}
+          <div className="pt-pip-sidebar">
+            <div className="pt-pip-search-wrap">
+              <span className="pt-pip-search-icon">⌕</span>
+              <input
+                className="pt-pip-search"
+                autoFocus
+                placeholder="Search by name or SKU…"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+              />
             </div>
 
-            {/* Preview */}
-            {preview && (
-              <div style={{ flex: 1, overflow: 'auto', fontSize: 11.5, color: 'var(--pt-fg-3)', background: 'var(--pt-bg)', borderRadius: 'var(--pt-radius)', padding: '8px 10px', whiteSpace: 'pre-wrap', fontFamily: 'var(--pt-mono)', lineHeight: 1.5 }}>
-                {preview.length > 400 ? preview.slice(0, 400) + '…' : preview}
-              </div>
-            )}
-
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
-              {selected.coa_path && (
-                <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11 }} onClick={handleAttachCoa}>
-                  Attach COA PDF
+            <div className="pt-pip-list">
+              {filtered.length === 0 ? (
+                <div className="pt-pip-empty">
+                  {query ? `No match for "${query}"` : 'No active products'}
+                </div>
+              ) : filtered.map(p => (
+                <button
+                  key={p.id}
+                  className={`pt-pip-item${selected?.id === p.id ? ' is-selected' : ''}`}
+                  onClick={() => selectProduct(p)}
+                >
+                  <span
+                    className="pt-pip-family-dot"
+                    style={{ background: familyColor(p.product_family) }}
+                  />
+                  <div className="pt-pip-item-info">
+                    <div className="pt-pip-item-name">{p.name}</div>
+                    <div className="pt-pip-item-meta">{p.sku}</div>
+                  </div>
+                  {selected?.id === p.id && (
+                    <span className="pt-pip-item-check">✓</span>
+                  )}
                 </button>
-              )}
-              <button className="pt-btn pt-btn-primary" style={{ fontSize: 11 }} onClick={handleInsert} disabled={!preview}>
-                Insert into message →
-              </button>
+              ))}
             </div>
           </div>
-        )}
+
+          {/* Right: content builder + preview */}
+          <div className="pt-pip-detail">
+            {!selected ? (
+              <div className="pt-pip-detail-empty">
+                <div className="pt-pip-detail-empty-icon">◈</div>
+                <div className="pt-pip-detail-empty-text">Select a product to build your message</div>
+              </div>
+            ) : (
+              <>
+                {/* Product identity */}
+                <div className="pt-pip-product-hd">
+                  <div className="pt-pip-product-name">{selected.name}</div>
+                  <div className="pt-pip-product-tags">
+                    <span className="pt-pip-tag">{selected.sku}</span>
+                    <span
+                      className="pt-pip-tag"
+                      style={{ background: familyColor(selected.product_family) + '18', color: familyColor(selected.product_family) }}
+                    >
+                      {selected.product_family}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Include toggles */}
+                <div className="pt-pip-section-label">Include in message</div>
+                <div className="pt-pip-toggles">
+                  {selected.description && (
+                    <button
+                      className={`pt-pip-toggle${include.description ? ' is-on' : ''}`}
+                      onClick={() => setInclude(v => ({ ...v, description: !v.description }))}
+                    >
+                      <span className="pt-pip-toggle-icon">≡</span>
+                      <div className="pt-pip-toggle-info">
+                        <div className="pt-pip-toggle-name">Description</div>
+                        <div className="pt-pip-toggle-hint">Product overview text</div>
+                      </div>
+                      <span className="pt-pip-toggle-check">{include.description ? '✓' : '+'}</span>
+                    </button>
+                  )}
+                  {selected.protocol && (
+                    <button
+                      className={`pt-pip-toggle${include.protocol ? ' is-on' : ''}`}
+                      onClick={() => setInclude(v => ({ ...v, protocol: !v.protocol }))}
+                    >
+                      <span className="pt-pip-toggle-icon">⊕</span>
+                      <div className="pt-pip-toggle-info">
+                        <div className="pt-pip-toggle-name">Protocol</div>
+                        <div className="pt-pip-toggle-hint">Dosing, frequency &amp; storage</div>
+                      </div>
+                      <span className="pt-pip-toggle-check">{include.protocol ? '✓' : '+'}</span>
+                    </button>
+                  )}
+                  {selected.resources.length > 0 && (
+                    <button
+                      className={`pt-pip-toggle${include.resources ? ' is-on' : ''}`}
+                      onClick={() => setInclude(v => ({ ...v, resources: !v.resources }))}
+                    >
+                      <span className="pt-pip-toggle-icon">⊘</span>
+                      <div className="pt-pip-toggle-info">
+                        <div className="pt-pip-toggle-name">Resources</div>
+                        <div className="pt-pip-toggle-hint">
+                          {selected.resources.length} link{selected.resources.length !== 1 ? 's' : ''}
+                          {selected.resources[0] && ` · ${selected.resources[0].label}`}
+                        </div>
+                      </div>
+                      <span className="pt-pip-toggle-check">{include.resources ? '✓' : '+'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Preview bubble */}
+                {preview && (
+                  <>
+                    <div className="pt-pip-section-label">Preview</div>
+                    <div className="pt-pip-preview-wrap">
+                      <div className="pt-pip-bubble">{preview}</div>
+                    </div>
+                  </>
+                )}
+
+                {/* Actions */}
+                <div className="pt-pip-actions">
+                  {selected.coa_path && (
+                    <button className="pt-btn pt-btn-ghost" onClick={handleAttachCoa}>
+                      Attach COA PDF
+                    </button>
+                  )}
+                  <button
+                    className="pt-btn pt-btn-primary"
+                    onClick={handleInsert}
+                    disabled={!preview}
+                  >
+                    Insert into message →
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
