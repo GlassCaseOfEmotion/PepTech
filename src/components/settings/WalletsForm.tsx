@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { upsertPaymentConfig, togglePaymentConfig } from '@/app/settings/wallets/actions'
 import { PAYMENT_METHODS, PAYMENT_LABELS } from '@/types/payments'
 import type { TenantPaymentConfig } from '@/types/payments'
@@ -85,7 +86,7 @@ export function WalletsForm({ configs }: { configs: TenantPaymentConfig[] }) {
           </svg>
           <p>
             Configure at least one payment method so customers can pay for orders.
-            {' '}<a href="/settings/wallets" className="pt-link">Set up now</a>
+            {' '}<Link href="/settings/wallets" className="pt-link">Set up now</Link>
           </p>
         </div>
       )}
