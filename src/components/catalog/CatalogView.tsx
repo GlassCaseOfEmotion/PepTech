@@ -11,6 +11,7 @@ import { grossMargin } from '@/types/catalog'
 import { FREQUENCY_LABELS, FREQUENCY_OPTIONS } from '@/types/protocols'
 import type { ProductProtocol, Frequency } from '@/types/protocols'
 import { createClient } from '@/lib/supabase/client'
+import { ProductSendModal } from '@/components/catalog/ProductSendModal'
 
 // ── Velocity sparkline — area fill matching original design ─────────────────
 function MiniSparkline({ data, width = 44, height = 16 }: { data: number[]; width?: number; height?: number }) {
@@ -333,6 +334,7 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
 }) {
   const [showAddBatch, setShowAddBatch] = useState(false)
   const [showReorder, setShowReorder] = useState(false)
+  const [showSendModal, setShowSendModal] = useState(false)
   const [reorderCopied, setReorderCopied] = useState(false)
   const [reorderMsg, setReorderMsg] = useState('')
   const [editing, setEditing] = useState(false)
@@ -479,6 +481,9 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
             <div className="pt-cat-sku mono">{product.sku}</div>
           </div>
           <div className="pt-cat-detail-actions">
+            <button className="pt-btn pt-btn-ghost" onClick={() => setShowSendModal(true)}>
+              Send info →
+            </button>
             <button className="pt-btn pt-btn-ghost" onClick={() => {
               setEditForm({ name: product.name, sku: product.sku, family: product.productFamily, unitPrice: String(product.unitPrice), costPrice: product.costPrice != null ? String(product.costPrice) : '', resources: product.resources ?? [] })
               setEditing(true)
@@ -654,6 +659,14 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
       )}
 
       <ProtocolSection productId={product.id} protocol={protocol} />
+
+      {showSendModal && (
+        <ProductSendModal
+          product={product}
+          protocol={protocol}
+          onClose={() => setShowSendModal(false)}
+        />
+      )}
 
       {showReorder && (
         <div className="pt-modal-backdrop" onClick={() => setShowReorder(false)}>
