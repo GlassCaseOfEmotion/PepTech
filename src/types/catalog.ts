@@ -44,8 +44,8 @@ export type CatalogProduct = {
   media: ProductMediaItem[]
   batches: DbBatch[]
   totalStock: number
-  velocity7d: number[]
-  velocity30dTotal: number
+  velocity7d: number[]   // 7 daily unit totals, oldest→newest (sparkline)
+  velocity30dTotal: number // total units in last 30 days (cover denominator)
 }
 
 export function dbProductToDisplay(
