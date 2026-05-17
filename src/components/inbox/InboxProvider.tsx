@@ -30,7 +30,9 @@ type InboxCtx = {
   templates: DbTemplate[]
   isSending: boolean
   resolvedCount: number
+  activeThread: InboxThread | null
   sendMessage: (text: string) => Promise<void>
+  sendTemplate: (templateId: string, variables: Record<string, string>) => Promise<void>
   addNote: (content: string) => Promise<void>
   snooze: (until: Date) => Promise<void>
   markDone: () => Promise<void>
@@ -200,10 +202,18 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conversationId: activeId, content: text }),
       })
+      const data = await res.json() as { messageId?: string; error?: string }
+
+      if (data.error === 'window_expired') {
+        setMessages(prev => prev.map(m => m.id === tempId
+          ? { ...m, id: data.messageId ?? tempId, optimistic: false, status: 'failed', error: 'window_expired' as const }
+          : m))
+        return
+      }
       if (!res.ok) throw new Error(`Send failed: ${res.status}`)
-      const { messageId } = await res.json() as { messageId: string }
+      const { messageId } = data
       setMessages(prev => prev.map(m =>
-        m.id === tempId ? { ...m, id: messageId, optimistic: false } : m
+        m.id === tempId ? { ...m, id: messageId!, optimistic: false } : m
       ))
       setThreads(prev => prev.map(t =>
         t.id === activeId ? { ...t, snippet: text.slice(0, 120), minsAgo: 0 } : t
@@ -214,6 +224,20 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
       setIsSending(false)
     }
   }, [activeId])
+
+  // ── Active thread derived value ───────────────────────────────────────────
+  const activeThread = useMemo(() => threads.find(t => t.id === activeId) ?? null, [threads, activeId])
+
+  // ── Send a template message ────────────────────────────────────────────────
+  const sendTemplate = useCallback(async (templateId: string, variables: Record<string, string>) => {
+    if (!activeId) return
+    setIsSending(true)
+    try {
+      await fetch('/api/send', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: activeId, templateId, templateVariables: variables }) })
+      await fetchMessages(activeId)
+    } finally { setIsSending(false) }
+  }, [activeId, fetchMessages])
 
   // ── Snooze active conversation until a given time ──────────────────────────
   const snooze = useCallback(async (until: Date) => {
@@ -366,7 +390,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
   return (
     <InboxContext.Provider value={{
       threads, activeId, setActiveId, filter, setFilter,
-      messages, notes, quickReplies, templates, isSending, resolvedCount, sendMessage, addNote, snooze, markDone, reopen, togglePin,
+      messages, notes, quickReplies, templates, isSending, resolvedCount, activeThread, sendMessage, sendTemplate, addNote, snooze, markDone, reopen, togglePin,
       pendingInvoicePath, pendingInvoiceName, clearPendingInvoice,
     }}>
       {children}

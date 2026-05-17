@@ -17,7 +17,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       .from('conversations')
       .select(`
         id, status, unread_count, last_message_at, last_message_snippet,
-        channel_type, channel_identifier,
+        channel_type, channel_identifier, window_expires_at,
         customers (
           id, display_name, trust_score, ltv,
           customer_tags (tag),
