@@ -560,6 +560,20 @@ kbd {
 .pt-dash-card-inbox .pt-card-body { max-height: 480px; }
 .pt-dash-card-stock .pt-card-body   { max-height: 320px; }
 .pt-dash-card-reorder .pt-card-body { max-height: 320px; overflow-y: auto; }
+
+/* Make second-row card wrappers fill the grid row height */
+.pt-dash-card-reorder,
+.pt-dash-card-stock,
+.pt-dash-card-shipments { display: flex; flex-direction: column; }
+.pt-dash-card-reorder > .pt-card,
+.pt-dash-card-stock > .pt-card,
+.pt-dash-card-shipments > .pt-card { flex: 1; }
+
+/* Vertically centre empty states in the expanded card body */
+.pt-dash-card-reorder .pt-card-body,
+.pt-dash-card-shipments .pt-card-body { display: flex; flex-direction: column; }
+.pt-dash-card-reorder .pt-empty-box,
+.pt-dash-card-shipments .pt-empty-box { flex: 1; display: flex; align-items: center; justify-content: center; }
 .pt-thread-list { list-style: none; margin: 0; padding: 0; }
 .pt-thread {
   display: grid; grid-template-columns: 32px 1fr auto;
