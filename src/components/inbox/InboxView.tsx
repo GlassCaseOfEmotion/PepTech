@@ -10,6 +10,7 @@ import { InboxAIPanel } from './InboxAIPanel'
 import { OrderRail } from './OrderRail'
 import { TemplatePicker } from './TemplatePicker'
 import { WaTemplatePicker } from './WaTemplatePicker'
+import { ProductInfoPicker } from './ProductInfoPicker'
 import type { DbConversation, DbQuickReply, DbTemplate, InboxThread, InboxMessage } from '@/types/inbox'
 import { initials } from '@/types/inbox'
 import { createClient } from '@/lib/supabase/client'
@@ -452,6 +453,8 @@ function Composer({ thread, onSend, isSending, initialText, showTemplates, onSho
   const [isUploading, setIsUploading] = useState(false)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null)
+  const [showProductPicker, setShowProductPicker] = useState(false)
+  const [pendingCoaPath, setPendingCoaPath] = useState<string | null>(null)
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -513,11 +516,32 @@ function Composer({ thread, onSend, isSending, initialText, showTemplates, onSho
     }
   }, [pendingInvoicePath, pendingInvoiceName, activeId, clearPendingInvoice, draft, send])
 
+  const sendCoa = useCallback(async () => {
+    if (!pendingCoaPath || !activeId) return
+    setIsUploading(true)
+    try {
+      await fetch('/api/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: activeId, storagePath: pendingCoaPath }),
+      })
+      setPendingCoaPath(null)
+    } finally {
+      setIsUploading(false)
+    }
+  }, [pendingCoaPath, activeId])
+
+  const sendTextThenCoa = useCallback(async () => {
+    if (draft.trim()) send()
+    await sendCoa()
+  }, [draft, send, sendCoa])
+
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
       if (pendingFile) void sendPhoto()
       else if (pendingInvoicePath) void sendInvoice()
+      else if (pendingCoaPath) void sendTextThenCoa()
       else send()
     }
   }
@@ -579,6 +603,31 @@ function Composer({ thread, onSend, isSending, initialText, showTemplates, onSho
           {isUploading && <span className="pt-composer-photo-status">Sending…</span>}
         </div>
       )}
+      {pendingCoaPath && (
+        <div className="pt-composer-photo-preview">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icons.doc size={16} />
+            <span style={{ fontSize: 12, fontWeight: 500 }}>COA PDF</span>
+          </div>
+          {!isUploading && (
+            <button className="pt-composer-photo-clear" onClick={() => setPendingCoaPath(null)} title="Remove">✕</button>
+          )}
+          {isUploading && <span className="pt-composer-photo-status">Sending…</span>}
+        </div>
+      )}
+      {showProductPicker && (
+        <ProductInfoPicker
+          onInsert={(text) => {
+            setDraft(d => d ? `${d}\n\n${text}` : text)
+            setShowProductPicker(false)
+          }}
+          onAttachCoa={(storagePath) => {
+            setPendingCoaPath(storagePath)
+            setShowProductPicker(false)
+          }}
+          onClose={() => setShowProductPicker(false)}
+        />
+      )}
       <div className="pt-composer-field">
         <textarea
           ref={taRef}
@@ -607,7 +656,7 @@ function Composer({ thread, onSend, isSending, initialText, showTemplates, onSho
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21 12-8.5 8.5a5 5 0 0 1-7-7L14 5a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-2.8-2.8L15 8.5"/></svg>
               </button>
             </>
-            <button className="pt-iconbtn" title="Drop COA"><Icons.flask size={14} /></button>
+            <button className="pt-iconbtn" title="Drop COA" onClick={() => setShowProductPicker(true)}><Icons.flask size={14} /></button>
             <button className="pt-iconbtn" title="Send wallet"><Icons.vault size={14} /></button>
             <span className="pt-composer-sep" />
             <button
@@ -620,8 +669,8 @@ function Composer({ thread, onSend, isSending, initialText, showTemplates, onSho
             <span className="pt-composer-hint">⌘↵ to send</span>
             <button
               className={`pt-btn pt-btn-primary ${(isSending || isUploading) ? 'is-sending' : ''}`}
-              onClick={() => { if (pendingFile) void sendPhoto(); else if (pendingInvoicePath) void sendInvoice(); else send() }}
-              disabled={pendingFile ? isUploading : pendingInvoicePath ? isUploading : (!draft.trim() || isSending)}
+              onClick={() => { if (pendingFile) void sendPhoto(); else if (pendingInvoicePath) void sendInvoice(); else if (pendingCoaPath) void sendTextThenCoa(); else send() }}
+              disabled={pendingFile ? isUploading : pendingInvoicePath ? isUploading : pendingCoaPath ? isUploading : (!draft.trim() || isSending)}
             >
               <Icons.send size={12} /> Send
             </button>
