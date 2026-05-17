@@ -419,6 +419,7 @@ li:first-child .pt-cat-family-hd { border-top: none; }
   border-color: var(--pt-accent);
   box-shadow: 0 0 0 2px oklch(from var(--pt-accent) l c h / 0.15);
 }
+textarea.pt-input { height: auto; padding: 7px 10px; }
 
 .pt-od-coa {
   font-family: var(--pt-mono);
