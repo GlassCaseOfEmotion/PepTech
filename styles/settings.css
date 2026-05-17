@@ -345,3 +345,15 @@ select.pt-st-input { cursor: pointer; }
 .pt-st-toggle.is-on { background: var(--pt-accent); }
 .pt-st-toggle.is-on::after { left: 17px; }
 .pt-st-toggle:disabled { opacity: 0.4; cursor: default; }
+
+/* ── WA Templates form ───────────────────────────────────────────────────── */
+.pt-wat-row         { flex-direction: column; align-items: stretch; gap: 10px; }
+.pt-wat-row-top     { display: flex; align-items: flex-start; gap: 10px; }
+.pt-wat-controls    { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pt-wat-form-body   { display: flex; flex-direction: column; gap: 10px; }
+.pt-wat-var-lbl     { font-size: 12px; color: var(--pt-fg-3); margin-bottom: 6px; }
+.pt-wat-var-list    { list-style: none; padding: 0; margin: 0 0 8px; display: flex; flex-direction: column; gap: 4px; }
+.pt-wat-var-item    { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.pt-wat-var-inputs  { display: flex; gap: 6px; }
+.pt-wat-empty       { padding: 12px 16px; color: var(--pt-fg-4); font-size: 12px; }
+.pt-wat-no-pad      { padding: 0; }

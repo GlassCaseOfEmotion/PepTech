@@ -119,7 +119,7 @@ export async function processInboundMessage(
     : 'needs_reply'
 
   const windowUpdate = channelType === 'whatsapp'
-    ? { window_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() }
+    ? { window_expires_at: new Date((sentAt ? new Date(sentAt).getTime() : Date.now()) + 24 * 60 * 60 * 1000).toISOString() }
     : {}
 
   await supabase

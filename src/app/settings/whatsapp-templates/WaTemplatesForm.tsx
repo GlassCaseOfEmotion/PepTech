@@ -83,8 +83,8 @@ function TemplateRow({ template }: { template: WaTemplate }) {
   const dirty = contentSid !== (template.content_sid ?? '') || status !== template.status
 
   return (
-    <li className="pt-tpl-settings-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+    <li className="pt-tpl-settings-row pt-wat-row">
+      <div className="pt-wat-row-top">
         <div className="pt-tpl-settings-info" style={{ flex: 1 }}>
           <div className="pt-tpl-settings-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {template.name}
@@ -104,7 +104,7 @@ function TemplateRow({ template }: { template: WaTemplate }) {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="pt-wat-controls">
         <input
           value={contentSid}
           onChange={e => { setContentSid(e.target.value); setSaved(false) }}
@@ -171,7 +171,7 @@ function NewTemplateForm() {
       <header className="pt-card-hd pt-st-card-hd">
         <div><h3>New template</h3></div>
       </header>
-      <div className="pt-card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="pt-card-body pt-wat-form-body">
         <input
           value={name}
           onChange={e => setName(e.target.value)}
@@ -194,11 +194,11 @@ function NewTemplateForm() {
 
         {/* Variable labels */}
         <div>
-          <p style={{ fontSize: 12, color: 'var(--pt-fg-3)', marginBottom: 6 }}>Variable labels (optional — for your reference)</p>
+          <p className="pt-wat-var-lbl">Variable labels (optional — for your reference)</p>
           {variables.length > 0 && (
-            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <ul className="pt-wat-var-list">
               {variables.map((v, i) => (
-                <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                <li key={i} className="pt-wat-var-item">
                   <code style={{ fontFamily: 'monospace', background: 'var(--pt-line)', padding: '1px 5px', borderRadius: 3 }}>{v.key}</code>
                   <span style={{ color: 'var(--pt-fg-3)' }}>=</span>
                   <span>{v.label}</span>
@@ -213,7 +213,7 @@ function NewTemplateForm() {
               ))}
             </ul>
           )}
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div className="pt-wat-var-inputs">
             <input
               value={varKey}
               onChange={e => setVarKey(e.target.value)}
@@ -263,11 +263,11 @@ export function WaTemplatesForm({ templates }: { templates: WaTemplate[] }) {
             <p>{templates.length} template{templates.length !== 1 ? 's' : ''}</p>
           </div>
         </header>
-        <div className="pt-card-body" style={{ padding: 0 }}>
+        <div className="pt-card-body pt-wat-no-pad">
           <ul className="pt-tpl-settings-list">
             {templates.map(t => <TemplateRow key={t.id} template={t} />)}
             {templates.length === 0 && (
-              <li style={{ padding: '12px 16px', color: 'var(--pt-fg-4)', fontSize: 12 }}>
+              <li className="pt-wat-empty">
                 No templates yet — create one below.
               </li>
             )}

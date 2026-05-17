@@ -54,7 +54,9 @@ export async function POST(request: Request) {
       if (body.templateId) {
         const { data: tmpl } = await supabase
           .from('whatsapp_templates').select('content_sid, body')
-          .eq('id', body.templateId).single()
+          .eq('id', body.templateId)
+          .eq('status', 'approved')
+          .single()
         if (!tmpl?.content_sid) return NextResponse.json({ error: 'Template not approved' }, { status: 422 })
         effectiveContent = tmpl.body ?? text
         await sendWhatsAppTemplate(to, tmpl.content_sid, body.templateVariables ?? {})
@@ -70,7 +72,7 @@ export async function POST(request: Request) {
           direction: 'outbound', content: effectiveContent, status: 'failed',
           metadata: { error_code: 63016, ...(body.templateId ? { templateId: body.templateId } : {}) },
         }).select('id').single()
-        return NextResponse.json({ error: 'window_expired', messageId: failedMsg?.id }, { status: 200 })
+        return NextResponse.json({ error: 'window_expired', messageId: failedMsg?.id }, { status: 422 })
       }
       throw err
     }
