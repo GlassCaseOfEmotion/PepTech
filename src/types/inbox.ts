@@ -52,6 +52,7 @@ export type DbConversation = {
   channel_type: 'whatsapp' | 'telegram' | 'email'
   channel_identifier: string
   is_pinned: boolean
+  window_expires_at: string | null
   customers: {
     id: string
     display_name: string
@@ -113,6 +114,16 @@ export type DbTemplate = {
   sort_order: number
 }
 
+export type DbWaTemplate = {
+  id: string
+  name: string
+  body: string
+  variables: { key: string; label: string }[]
+  content_sid: string | null
+  status: 'draft' | 'pending' | 'approved' | 'rejected'
+  created_at: string
+}
+
 // Display shape used by InboxView components
 export type InboxThread = {
   id: string              // conversation id
@@ -128,6 +139,7 @@ export type InboxThread = {
   trust: number
   ltv: number
   pinned: boolean
+  windowExpiresAt: string | null
 }
 
 export type InboxMessage = {
@@ -138,6 +150,7 @@ export type InboxMessage = {
   kind?: 'text' | 'wallet' | 'tx' | 'photo' | 'invoice'
   optimistic?: boolean
   status?: string
+  error?: 'window_expired'
   metadata?: MessageMetadata | null
 }
 
@@ -166,6 +179,7 @@ export function dbConversationToThread(c: DbConversation): InboxThread {
     trust: c.customers?.trust_score ?? 0,
     ltv: c.customers?.ltv ?? 0,
     pinned: c.is_pinned,
+    windowExpiresAt: c.window_expires_at ?? null,
   }
 }
 
