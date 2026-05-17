@@ -97,7 +97,7 @@ describe('sendWhatsAppMessage', () => {
   })
 
   it('POSTs to Twilio API with correct auth and form body', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: true })
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ sid: 'SMtest123' }) })
     vi.stubGlobal('fetch', mockFetch)
 
     await sendWhatsAppMessage('+15005550001', 'Hello')
@@ -115,7 +115,7 @@ describe('sendWhatsAppMessage', () => {
   })
 
   it('adds whatsapp: prefix to numbers that lack it', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: true })
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ sid: 'SMtest123' }) })
     vi.stubGlobal('fetch', mockFetch)
 
     await sendWhatsAppMessage('+15005550001', 'Hi')
@@ -184,7 +184,7 @@ describe('sendWhatsAppMedia', () => {
   afterEach(() => { process.env = originalEnv; vi.restoreAllMocks() })
 
   it('POSTs to Twilio with MediaUrl and no Body', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: true })
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ sid: 'SMtest123' }) })
     vi.stubGlobal('fetch', mockFetch)
     await sendWhatsAppMedia('https://sb.co/signed', '+15005550001')
     const [url, options] = mockFetch.mock.calls[0]

@@ -98,7 +98,7 @@ describe('POST /api/send', () => {
     const res = await POST(req)
     expect(res.status).toBe(200)
     expect(generateSignedUrl).toHaveBeenCalledWith(expect.anything(), 'tid/abc.jpg')
-    expect(sendWhatsAppMedia).toHaveBeenCalledWith('https://sb.co/signed-photo', '+15005550001')
+    expect(sendWhatsAppMedia).toHaveBeenCalledWith('https://sb.co/signed-photo', '+15005550001', expect.anything())
   })
 
   it('sends a Telegram photo: downloads blob from storage and calls sendTelegramPhoto', async () => {
