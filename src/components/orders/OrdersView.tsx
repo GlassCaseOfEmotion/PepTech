@@ -9,6 +9,7 @@ import { ShipOrderModal } from './ShipOrderModal'
 import { PAYMENT_BADGE } from '@/types/payments'
 import type { OrderCard, OrderStatus } from '@/types/orders'
 import { formatAmount } from '@/lib/currency'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 const COLUMNS: { id: OrderStatus; label: string; caption: string }[] = [
   { id: 'awaiting',   label: 'Awaiting payment', caption: 'Invoice sent · waiting for tx' },
@@ -217,7 +218,20 @@ export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
                   />
                 ))}
                 {colOrders.length === 0 && (
-                  <div className="pt-or-col-empty">— nothing here —</div>
+                  <div className="pt-or-col-empty">
+                    <EmptyState
+                      size="sm"
+                      icon={
+                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="26" height="26" rx="4" strokeDasharray="3 2.5" opacity="0.5"/>
+                          <line x1="9" y1="11" x2="23" y2="11" opacity="0.3"/>
+                          <line x1="9" y1="16" x2="18" y2="16" opacity="0.22"/>
+                          <line x1="9" y1="21" x2="20" y2="21" opacity="0.15"/>
+                        </svg>
+                      }
+                      title="Empty"
+                    />
+                  </div>
                 )}
               </div>
             </div>

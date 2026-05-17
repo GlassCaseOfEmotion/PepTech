@@ -12,6 +12,7 @@ import { TemplatePicker } from './TemplatePicker'
 import type { DbConversation, DbQuickReply, DbTemplate, InboxThread, InboxMessage } from '@/types/inbox'
 import { initials } from '@/types/inbox'
 import { createClient } from '@/lib/supabase/client'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 interface ActivityItem {
   id: string
@@ -190,12 +191,76 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
       <ul className="pt-ix-threads">
         {visible.map(t => <IxThread key={t.id} t={t} active={t.id === activeId} onClick={() => onSelect(t.id)} />)}
         {visible.length === 0 && (
-          <li className="pt-ix-empty">
-            {filter === 'all' && 'Inbox is clear'}
-            {filter === 'needs_reply' && 'Nothing needs a reply'}
-            {filter === 'new' && 'No new conversations'}
-            {filter === 'snoozed' && 'No snoozed conversations'}
-            {filter === 'resolved' && 'No resolved conversations'}
+          <li className="pt-ix-empty" style={{ padding: 0, listStyle: 'none' }}>
+            {filter === 'all' && (
+              <EmptyState
+                size="md"
+                icon={
+                  <svg width="56" height="42" viewBox="0 0 56 42" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="6" width="52" height="34" rx="4" strokeWidth="1.2"/>
+                    <path d="M2 16l26 17 26-17" strokeWidth="1"/>
+                    <path d="M2 6l26 20L54 6" strokeWidth="0.8" opacity="0.35"/>
+                    <circle cx="46" cy="9" r="7" fill="currentColor" opacity="0.07" strokeWidth="0"/>
+                    <circle cx="46" cy="9" r="7" strokeWidth="1.1" opacity="0.45"/>
+                    <polyline points="42,9 45,12 50,5" strokeWidth="1.3" opacity="0.65"/>
+                  </svg>
+                }
+                title="Inbox is clear"
+                body="New conversations appear here when customers reach out via any connected channel."
+              />
+            )}
+            {filter === 'needs_reply' && (
+              <EmptyState
+                size="md"
+                icon={
+                  <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 6h28a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H10l-6 5V8a2 2 0 0 1 2-2z"/>
+                    <line x1="10" y1="13" x2="26" y2="13" opacity="0.45"/>
+                    <line x1="10" y1="18" x2="20" y2="18" opacity="0.3"/>
+                  </svg>
+                }
+                title="Nothing needs a reply"
+              />
+            )}
+            {filter === 'new' && (
+              <EmptyState
+                size="md"
+                icon={
+                  <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+                    <circle cx="18" cy="18" r="13"/>
+                    <line x1="18" y1="12" x2="18" y2="24"/>
+                    <line x1="12" y1="18" x2="24" y2="18"/>
+                  </svg>
+                }
+                title="No new conversations"
+              />
+            )}
+            {filter === 'snoozed' && (
+              <EmptyState
+                size="md"
+                icon={
+                  <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+                    <circle cx="18" cy="19" r="13"/>
+                    <polyline points="18,11 18,19 23,22"/>
+                    <line x1="10" y1="5" x2="15" y2="9" opacity="0.4"/>
+                    <line x1="26" y1="5" x2="21" y2="9" opacity="0.4"/>
+                  </svg>
+                }
+                title="No snoozed conversations"
+              />
+            )}
+            {filter === 'resolved' && (
+              <EmptyState
+                size="md"
+                icon={
+                  <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="18" cy="18" r="13"/>
+                    <polyline points="11,18 16,23 25,13"/>
+                  </svg>
+                }
+                title="No resolved conversations"
+              />
+            )}
           </li>
         )}
       </ul>
