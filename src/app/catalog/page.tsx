@@ -5,7 +5,7 @@ import { createClient, getServerUser } from '@/lib/supabase/server'
 import { Shell } from '@/components/shell/Shell'
 import { CatalogView } from '@/components/catalog/CatalogView'
 import { dbProductToDisplay } from '@/types/catalog'
-import type { DbProduct, DbBatch } from '@/types/catalog'
+import type { DbProduct, DbBatch, ProductMediaItem } from '@/types/catalog'
 import type { ProductProtocol } from '@/types/protocols'
 
 export default async function CatalogPage() {
@@ -16,7 +16,14 @@ export default async function CatalogPage() {
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString()
 
-  const [{ data: products }, { data: batches }, { data: protocols }, { data: tenantRow }, { data: recentOrders }] = await Promise.all([
+  const [
+    { data: products },
+    { data: batches },
+    { data: protocols },
+    { data: tenantRow },
+    { data: recentOrders },
+    { data: allMedia },
+  ] = await Promise.all([
     supabase.from('products').select('*').eq('is_active', true).order('product_family').order('name'),
     supabase.from('batches').select('*').order('created_at', { ascending: false }),
     supabase.from('product_protocols').select('*'),
@@ -26,11 +33,13 @@ export default async function CatalogPage() {
       .select('created_at, order_items(product_id, qty)')
       .in('status', ['packing', 'shipped', 'delivered'])
       .gte('created_at', thirtyDaysAgo),
+    supabase
+      .from('product_media')
+      .select('id, product_id, label, type, storage_path, sort_order')
+      .not('storage_path', 'is', null)
+      .order('sort_order', { ascending: true }),
   ])
 
-  // Build velocity map from 30 days of data.
-  // velocity7d: 7 daily slots for sparkline (oldest→newest)
-  // velocity30dTotal: total units over 30d for cover calculation
   const now = Date.now()
   const velocity7dMap: Record<string, number[]> = {}
   const velocity30dMap: Record<string, number> = {}
@@ -40,9 +49,7 @@ export default async function CatalogPage() {
     if (daysAgo < 0 || daysAgo > 29) continue
     const items = (order.order_items ?? []) as { product_id: string; qty: number }[]
     for (const item of items) {
-      // 30d total
       velocity30dMap[item.product_id] = (velocity30dMap[item.product_id] ?? 0) + item.qty
-      // 7d sparkline (last 7 days only)
       if (daysAgo <= 6) {
         const slot = 6 - daysAgo
         if (!velocity7dMap[item.product_id]) velocity7dMap[item.product_id] = [0, 0, 0, 0, 0, 0, 0]
@@ -57,8 +64,21 @@ export default async function CatalogPage() {
     return acc
   }, {})
 
+  const mediaByProduct = ((allMedia ?? []) as (ProductMediaItem & { product_id: string })[])
+    .reduce<Record<string, ProductMediaItem[]>>((acc, m) => {
+      if (!acc[m.product_id]) acc[m.product_id] = []
+      acc[m.product_id].push({
+        id: m.id,
+        label: m.label,
+        type: m.type as 'image' | 'video',
+        storage_path: m.storage_path,
+        sort_order: m.sort_order,
+      })
+      return acc
+    }, {})
+
   const catalogProducts = ((products ?? []) as DbProduct[]).map(p => ({
-    ...dbProductToDisplay(p, batchesByProduct[p.id] ?? []),
+    ...dbProductToDisplay(p, batchesByProduct[p.id] ?? [], mediaByProduct[p.id] ?? []),
     velocity7d: velocity7dMap[p.id] ?? [0, 0, 0, 0, 0, 0, 0],
     velocity30dTotal: velocity30dMap[p.id] ?? 0,
   }))
