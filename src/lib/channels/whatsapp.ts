@@ -136,5 +136,12 @@ export async function sendWhatsAppTemplate(
       body: body.toString(),
     },
   )
-  if (!res.ok) throw new Error(`Twilio template send failed: ${res.status} ${await res.text()}`)
+  if (!res.ok) {
+    const errText = await res.text()
+    try {
+      const errJson = JSON.parse(errText) as { code?: number }
+      if (errJson.code === 63016) throw new TwilioWindowError()
+    } catch (e) { if (e instanceof TwilioWindowError) throw e }
+    throw new Error(`Twilio template send failed: ${res.status} ${errText}`)
+  }
 }
