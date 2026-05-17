@@ -10,6 +10,7 @@ import { ComposeModal } from './ComposeModal'
 import { WelcomeTour } from './WelcomeTour'
 import { BottomNav } from './BottomNav'
 import { DashboardView, DashboardRightRail } from '@/components/dashboard/DashboardView'
+import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist'
 import type { InboxThread, DbConversation } from '@/types/inbox'
 import type { CatalogProduct } from '@/types/catalog'
 import type { DashboardStats } from '@/types/dashboard'
@@ -45,6 +46,13 @@ export function DashboardLayout({ displayName, connectedChannels, threads, initi
       <CommandPalette />
       <ComposeModal />
       <WelcomeTour />
+      {onboardingStatus && (
+        <OnboardingChecklist
+          hasProducts={onboardingStatus.hasProducts}
+          hasChannel={onboardingStatus.hasChannel}
+          hasPayment={onboardingStatus.hasPayment}
+        />
+      )}
       <Sidebar displayName={displayName} initialPinned={initialPinned} />
       <main className="pt-main">
         <TopBar

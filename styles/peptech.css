@@ -1735,19 +1735,100 @@ kbd {
   .ob-right { padding: 32px 20px; min-height: auto; }
 }
 
-/* ─── Onboarding checklist (dashboard card) ─────────────────────────────── */
-.ob-cl-list { list-style: none; margin: 0; padding: 0; }
-.ob-cl-item {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 10px 14px; border-top: 0.5px solid var(--pt-line-soft);
+/* ─── Getting started floating widget ──────────────────────────────────── */
+.pt-gs-widget {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 500;
+  animation: pt-gs-in 0.3s ease both;
 }
-.ob-cl-item:first-child { border-top: 0; }
-.ob-cl-check  { flex-shrink: 0; margin-top: 1px; }
-.ob-cl-body   { display: flex; flex-direction: column; gap: 2px; }
-.ob-cl-label  { font-size: 12.5px; font-weight: 500; }
-.ob-cl-item.is-done .ob-cl-label { color: var(--pt-fg-3); text-decoration: line-through; }
-.ob-cl-hint   { font-size: 11px; color: var(--pt-accent-fg); text-decoration: none; }
-.ob-cl-hint:hover { text-decoration: underline; }
+@keyframes pt-gs-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Collapsed pill */
+.pt-gs-pill {
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 13px 9px 11px;
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line);
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06);
+  cursor: pointer; font-family: inherit; font-size: 13px; color: var(--pt-fg);
+  transition: box-shadow 150ms, border-color 150ms;
+}
+.pt-gs-pill:hover {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.13), 0 2px 6px rgba(0,0,0,0.08);
+  border-color: var(--pt-fg-3);
+}
+.pt-gs-pill-icon { color: var(--pt-accent); display: flex; align-items: center; }
+.pt-gs-pill-label { font-weight: 500; }
+.pt-gs-pill-count {
+  font-family: var(--pt-mono); font-size: 11px; color: var(--pt-fg-4);
+  background: var(--pt-surface-2); padding: 1px 7px; border-radius: 10px;
+}
+.pt-gs-pill-chevron { color: var(--pt-fg-4); }
+
+/* Expanded card */
+.pt-gs-card {
+  width: 292px;
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+  overflow: hidden;
+  animation: pt-gs-expand 0.2s ease both;
+  transform-origin: bottom right;
+}
+@keyframes pt-gs-expand {
+  from { opacity: 0; transform: scale(0.95) translateY(6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.pt-gs-hd {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 14px 12px 10px 16px;
+}
+.pt-gs-title { font-size: 13.5px; font-weight: 600; color: var(--pt-fg); }
+.pt-gs-sub   { font-size: 11px; color: var(--pt-fg-4); margin-top: 2px; }
+.pt-gs-hd-btns { display: flex; gap: 2px; flex-shrink: 0; }
+
+/* Progress bar */
+.pt-gs-bar {
+  height: 2px; margin: 0 16px 12px;
+  background: var(--pt-line-soft); border-radius: 999px; overflow: hidden;
+}
+.pt-gs-bar-fill {
+  height: 100%; background: var(--pt-accent); border-radius: 999px;
+  transition: width 400ms ease;
+}
+
+/* Checklist */
+.pt-gs-list { list-style: none; margin: 0; padding: 0; }
+.pt-gs-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 16px;
+  border-top: 0.5px solid var(--pt-line-soft);
+}
+.pt-gs-item-body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.pt-gs-item-label { font-size: 12.5px; font-weight: 500; color: var(--pt-fg); }
+.pt-gs-item.is-done .pt-gs-item-label { color: var(--pt-fg-4); text-decoration: line-through; }
+.pt-gs-item-hint { font-size: 11px; color: var(--pt-accent-fg); text-decoration: none; }
+.pt-gs-item-hint:hover { text-decoration: underline; }
+
+/* Footer */
+.pt-gs-foot {
+  padding: 9px 16px 12px;
+  border-top: 0.5px solid var(--pt-line-soft);
+}
+.pt-gs-tour-btn {
+  font-size: 11.5px; color: var(--pt-fg-4);
+  background: none; border: none; cursor: pointer;
+  padding: 0; font-family: inherit; transition: color 150ms;
+}
+.pt-gs-tour-btn:hover { color: var(--pt-accent); }
 
 /* ─── Welcome tour ──────────────────────────────────────────────────────── */
 .pt-tour-backdrop {
@@ -1833,19 +1914,6 @@ kbd {
   transition: opacity 140ms;
 }
 .pt-tour-next:hover { opacity: 0.82; }
-
-/* Tour trigger in checklist */
-.ob-cl-tour-row {
-  border-top: 0.5px solid var(--pt-line-soft);
-  padding: 10px 14px !important;
-}
-.ob-cl-tour-btn {
-  font-size: 12px; color: var(--pt-fg-4);
-  background: none; border: none; cursor: pointer; padding: 0;
-  transition: color 150ms;
-  font-family: inherit;
-}
-.ob-cl-tour-btn:hover { color: var(--pt-accent); }
 
 /* ─── Empty states ──────────────────────────────────────────────────────── */
 .pt-empty {

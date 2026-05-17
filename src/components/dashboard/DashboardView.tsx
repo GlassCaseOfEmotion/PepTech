@@ -13,7 +13,6 @@ import type { CatalogProduct } from '@/types/catalog'
 import type { DashboardStats, PendingOrder, PackingOrder, ActivityItem } from '@/types/dashboard'
 import { initials } from '@/types/inbox'
 import { PAYMENT_BADGE } from '@/types/payments'
-import { OnboardingChecklist } from './OnboardingChecklist'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 const ACTIVE_STATUSES = new Set(['new', 'needs_reply', 'in_progress', 'snoozed'])
@@ -789,13 +788,6 @@ export function DashboardView({ threads: initialThreads, stockProducts, stats, r
       <KpiRow active={active} needsReply={needsReply} reordersDue7d={reordersDue7d} highConf={highConf} stats={stats} baseCurrency={baseCurrency} />
 
       <div className="pt-grid">
-        {onboardingStatus && (
-          <OnboardingChecklist
-            hasProducts={onboardingStatus.hasProducts}
-            hasChannel={onboardingStatus.hasChannel}
-            hasPayment={onboardingStatus.hasPayment}
-          />
-        )}
         <div className="pt-dash-card-inbox pt-span-2"><InboxCard threads={threads} connectedChannels={connectedChannels} /></div>
         <PaymentsCard orders={stats.pendingOrders} baseCurrency={baseCurrency} hasPayment={onboardingStatus?.hasPayment ?? true} />
         <RevenueCard daily90d={stats.revenue90dDaily} baseCurrency={baseCurrency} />
