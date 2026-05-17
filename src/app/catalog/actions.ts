@@ -202,3 +202,73 @@ export async function deleteBatch(
     return { error: e instanceof Error ? e.message : 'Unknown error' }
   }
 }
+
+export async function createProductMedia(
+  productId: string,
+  label: string,
+  type: 'image' | 'video',
+  ext: string,
+): Promise<{ id: string; uploadUrl: string; storagePath: string } | { error: string }> {
+  if (!label.trim()) return { error: 'Label is required' }
+  if (!['image', 'video'].includes(type)) return { error: 'Invalid type' }
+  const safeExt = ext.replace(/[^a-z0-9]/gi, '').toLowerCase().slice(0, 5)
+  if (!safeExt) return { error: 'Invalid file extension' }
+  try {
+    const { supabase, tenantId } = await getTenantId()
+    const { data: row, error: insertErr } = await supabase
+      .from('product_media')
+      .insert({ tenant_id: tenantId, product_id: productId, label: label.trim(), type, storage_path: null })
+      .select('id')
+      .single()
+    if (insertErr || !row) return { error: insertErr?.message ?? 'Insert failed' }
+    const storagePath = `${tenantId}/${productId}/${row.id}.${safeExt}`
+    const { data: uploadData, error: urlErr } = await supabase.storage
+      .from('product-media')
+      .createSignedUploadUrl(storagePath)
+    if (urlErr || !uploadData) return { error: urlErr?.message ?? 'Could not create upload URL' }
+    return { id: row.id, uploadUrl: uploadData.signedUrl, storagePath }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
+export async function saveProductMediaPath(
+  id: string,
+  storagePath: string,
+): Promise<{ success: true } | { error: string }> {
+  try {
+    const { supabase, tenantId } = await getTenantId()
+    if (!storagePath.startsWith(`${tenantId}/`)) return { error: 'Invalid path' }
+    const { error } = await supabase
+      .from('product_media')
+      .update({ storage_path: storagePath })
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+    if (error) return { error: error.message }
+    revalidatePath('/catalog')
+    return { success: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
+export async function deleteProductMedia(
+  id: string,
+  storagePath: string,
+): Promise<{ success: true } | { error: string }> {
+  try {
+    const { supabase, tenantId } = await getTenantId()
+    if (!storagePath.startsWith(`${tenantId}/`)) return { error: 'Invalid path' }
+    const { error } = await supabase
+      .from('product_media')
+      .delete()
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+    if (error) return { error: error.message }
+    await supabase.storage.from('product-media').remove([storagePath])
+    revalidatePath('/catalog')
+    return { success: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
