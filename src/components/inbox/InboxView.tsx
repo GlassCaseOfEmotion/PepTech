@@ -288,9 +288,30 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChann
   )
 }
 
+// ─── WhatsApp window status hook ─────────────────────────────────────────────
+
+function useWindowStatus(windowExpiresAt: string | null, channel: string) {
+  const [status, setStatus] = useState<'none' | 'active' | 'expired'>('none')
+  const [timeLeft, setTimeLeft] = useState('')
+  useEffect(() => {
+    if (channel !== 'wa' || !windowExpiresAt) { setStatus('none'); return }
+    const tick = () => {
+      const ms = new Date(windowExpiresAt).getTime() - Date.now()
+      if (ms <= 0) { setStatus('expired'); return }
+      setStatus('active')
+      const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000)
+      setTimeLeft(h > 0 ? `${h}h ${m}m` : `${m}m`)
+    }
+    tick()
+    const id = setInterval(tick, 60000)
+    return () => clearInterval(id)
+  }, [windowExpiresAt, channel])
+  return { status, timeLeft }
+}
+
 // ─── Message bubbles ─────────────────────────────────────────────────────────
 
-function Bubble({ m, onImageClick }: { m: InboxMessage; onImageClick?: (url: string) => void }) {
+function Bubble({ m, onImageClick, onOpenWaPicker }: { m: InboxMessage; onImageClick?: (url: string) => void; onOpenWaPicker?: () => void }) {
   if (m.kind === 'wallet') {
     const { asset, network, address, amount } = m.metadata ?? {}
     return (
@@ -387,13 +408,19 @@ function Bubble({ m, onImageClick }: { m: InboxMessage; onImageClick?: (url: str
         {m.optimistic && <span className="pt-bubble-pending"> · sending…</span>}
         {m.from === 'me' && !m.optimistic && <span className="pt-bubble-read"> · read</span>}
       </div>
+      {m.status === 'failed' && m.error === 'window_expired' && (
+        <div className="pt-ix-msg-error">
+          <span>✕ Not delivered · WhatsApp window expired</span>
+          <button className="pt-link" onClick={() => onOpenWaPicker?.()}>Send as template →</button>
+        </div>
+      )}
     </div>
   )
 }
 
 // ─── Composer ────────────────────────────────────────────────────────────────
 
-function Composer({ thread, onSend, isSending, initialText }: { thread: InboxThread; onSend: (text: string) => void; isSending: boolean; initialText?: string }) {
+function Composer({ thread, onSend, isSending, initialText, showTemplates, onShowTemplatesChange }: { thread: InboxThread; onSend: (text: string) => void; isSending: boolean; initialText?: string; showTemplates?: boolean; onShowTemplatesChange?: (v: boolean) => void }) {
   const { quickReplies, templates, activeId, pendingInvoicePath, pendingInvoiceName, clearPendingInvoice } = useInbox()
   const [draft, setDraft] = useState(initialText ?? '')
 
@@ -405,7 +432,12 @@ function Composer({ thread, onSend, isSending, initialText }: { thread: InboxThr
       window.history.replaceState({}, '', url.toString())
     }
   }, []) // intentionally empty — only runs on mount
-  const [showTemplates, setShowTemplates] = useState(false)
+  const [localShowTemplates, setLocalShowTemplates] = useState(false)
+  const effectiveShowTemplates = showTemplates ?? localShowTemplates
+  const setEffectiveShowTemplates = (v: boolean) => {
+    setLocalShowTemplates(v)
+    onShowTemplatesChange?.(v)
+  }
   const taRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = useState(false)
@@ -488,11 +520,11 @@ function Composer({ thread, onSend, isSending, initialText }: { thread: InboxThr
 
   return (
     <div className="pt-ix-composer">
-      {showTemplates && (
+      {effectiveShowTemplates && (
         <TemplatePicker
           templates={templates}
           onSelect={content => { setDraft(d => d ? `${d}\n\n${content}` : content); setTimeout(() => taRef.current?.focus(), 0) }}
-          onClose={() => setShowTemplates(false)}
+          onClose={() => setEffectiveShowTemplates(false)}
         />
       )}
       <div className="pt-quicks pt-quicks-bar">
@@ -570,9 +602,9 @@ function Composer({ thread, onSend, isSending, initialText }: { thread: InboxThr
             <button className="pt-iconbtn" title="Send wallet"><Icons.vault size={14} /></button>
             <span className="pt-composer-sep" />
             <button
-              className={`pt-tag pt-tag-soft ${showTemplates ? 'is-on' : ''}`}
+              className={`pt-tag pt-tag-soft ${effectiveShowTemplates ? 'is-on' : ''}`}
               title="Templates"
-              onClick={() => setShowTemplates(v => !v)}
+              onClick={() => setEffectiveShowTemplates(!effectiveShowTemplates)}
             >{'{{ template }}'}</button>
           </div>
           <div className="pt-composer-r">
@@ -619,6 +651,8 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
   const [showSnooze, setShowSnooze] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [sheetExpanded, setSheetExpanded] = useState(false)
+  const [showWaPicker, setShowWaPicker] = useState(false)
+  const { status: windowStatus, timeLeft } = useWindowStatus(thread.windowExpiresAt, thread.channel)
   const snoozeRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -691,8 +725,22 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
       </div>
 
       <div ref={scrollRef} className="pt-ix-stream">
-        {messages.map(m => <Bubble key={m.id} m={m} onImageClick={setLightboxUrl} />)}
+        {messages.map(m => <Bubble key={m.id} m={m} onImageClick={setLightboxUrl} onOpenWaPicker={() => setShowWaPicker(true)} />)}
       </div>
+
+      {windowStatus === 'active' && (
+        <div className="pt-ix-window-banner is-active">
+          ⏱ WhatsApp window closes in {timeLeft}
+        </div>
+      )}
+      {windowStatus === 'expired' && (
+        <div className="pt-ix-window-banner is-expired">
+          ⚠ 24hr window expired — use a template to reach this customer
+          <button className="pt-link" style={{ marginLeft: 8 }} onClick={() => setShowWaPicker(true)}>
+            Send template →
+          </button>
+        </div>
+      )}
 
       {lightboxUrl && (
         <div className="pt-lightbox" onClick={() => setLightboxUrl(null)}>
@@ -730,7 +778,7 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
         </div>
       </div>
 
-      <Composer thread={thread} onSend={onSend} isSending={isSending} initialText={initialPrefill} />
+      <Composer thread={thread} onSend={onSend} isSending={isSending} initialText={initialPrefill} showTemplates={showWaPicker || undefined} onShowTemplatesChange={v => { if (!v) setShowWaPicker(false) }} />
     </div>
   )
 }
