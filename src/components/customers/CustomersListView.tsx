@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { formatAmount } from '@/lib/currency'
 import type { SupplyStatus } from '@/types/protocols'
 
@@ -169,6 +170,43 @@ export function CustomersListView({ customers, supplyStatuses = {}, orderStats =
                 </tr>
               </thead>
               <tbody>
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={99} style={{ padding: 0 }}>
+                      <div className="pt-empty-page" style={{ minHeight: 360 }}>
+                        <EmptyState
+                          size="lg"
+                          icon={
+                            <svg width="130" height="100" viewBox="0 0 130 100" fill="none" stroke="currentColor" strokeLinecap="round">
+                              {/* Center node */}
+                              <circle cx="65" cy="50" r="11" strokeWidth="1.2"/>
+                              {/* Satellite nodes */}
+                              <circle cx="25" cy="22" r="8" strokeWidth="1" opacity="0.45"/>
+                              <circle cx="105" cy="25" r="8" strokeWidth="1" opacity="0.45"/>
+                              <circle cx="112" cy="70" r="7" strokeWidth="0.9" opacity="0.35"/>
+                              <circle cx="22" cy="72" r="7" strokeWidth="0.9" opacity="0.35"/>
+                              <circle cx="65" cy="90" r="6" strokeWidth="0.9" opacity="0.3"/>
+                              <circle cx="10" cy="47" r="5" strokeWidth="0.8" opacity="0.22"/>
+                              <circle cx="120" cy="47" r="5" strokeWidth="0.8" opacity="0.22"/>
+                              {/* Connection lines */}
+                              <line x1="65" y1="50" x2="25" y2="22" strokeWidth="0.8" opacity="0.2"/>
+                              <line x1="65" y1="50" x2="105" y2="25" strokeWidth="0.8" opacity="0.2"/>
+                              <line x1="65" y1="50" x2="112" y2="70" strokeWidth="0.7" opacity="0.18"/>
+                              <line x1="65" y1="50" x2="22" y2="72" strokeWidth="0.7" opacity="0.18"/>
+                              <line x1="65" y1="50" x2="65" y2="90" strokeWidth="0.7" opacity="0.16"/>
+                              <line x1="65" y1="50" x2="10" y2="47" strokeWidth="0.6" opacity="0.14"/>
+                              <line x1="65" y1="50" x2="120" y2="47" strokeWidth="0.6" opacity="0.14"/>
+                              {/* Outer ring */}
+                              <circle cx="65" cy="50" r="28" strokeWidth="0.6" strokeDasharray="3 3" opacity="0.18"/>
+                            </svg>
+                          }
+                          title="No customers yet"
+                          body="Customers are added automatically when they contact you through any connected channel."
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                )}
                 {filtered.map(c => {
                   const primary = c.customer_channels.find(ch => ch.is_primary) ?? c.customer_channels[0]
                   const chKey = primary ? CH_KEY[primary.channel_type] : 'wa'

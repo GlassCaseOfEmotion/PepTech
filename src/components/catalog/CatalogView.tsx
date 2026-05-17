@@ -3,6 +3,7 @@
 import { useState, useTransition, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Icons } from '@/lib/icons'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { formatAmount, formatAmountCompact } from '@/lib/currency'
 import { createProduct, createBatch, saveBatchCoaPath, upsertProtocol, updateProduct, updateBatch, deleteBatch } from '@/app/catalog/actions'
 import type { CatalogProduct, DbBatch } from '@/types/catalog'
@@ -531,7 +532,21 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
               </tbody>
             </table>
           ) : (
-            !showAddBatch && <div className="pt-cat-empty"><span>No batches yet.</span></div>
+            !showAddBatch && (
+              <EmptyState
+                size="sm"
+                icon={
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+                    <rect x="4" y="3" width="16" height="18" rx="2"/>
+                    <line x1="8" y1="8" x2="16" y2="8" opacity="0.5"/>
+                    <line x1="8" y1="12" x2="14" y2="12" opacity="0.35"/>
+                    <line x1="8" y1="16" x2="13" y2="16" opacity="0.25"/>
+                  </svg>
+                }
+                title="No batches yet"
+                body="Add a batch to track stock and expiry."
+              />
+            )
           )}
         </div>
       </section>
@@ -696,9 +711,18 @@ function ProtocolSection({ productId, protocol }: { productId: string; protocol:
       </header>
       <div className="pt-card-body" style={{ padding: editing ? '12px 14px' : 0 }}>
         {!protocol && !editing && (
-          <div className="pt-cat-empty">
-            <span>No protocol configured. Add one to enable supply tracking.</span>
-          </div>
+          <EmptyState
+            size="sm"
+            icon={
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+                <circle cx="12" cy="12" r="9"/>
+                <line x1="12" y1="8" x2="12" y2="13"/>
+                <circle cx="12" cy="16" r="0.8" fill="currentColor" stroke="none"/>
+              </svg>
+            }
+            title="No protocol configured"
+            body="Add a protocol to enable automatic reorder signals."
+          />
         )}
         {protocol && !editing && (
           <dl className="pt-cat-proto-dl">
@@ -964,8 +988,39 @@ export function CatalogView({ products, protocols, baseCurrency }: { products: C
               )
             })}
             {sortedProducts.length === 0 && (
-              <li style={{ padding: '24px', textAlign: 'center', color: 'var(--pt-fg-4)', fontSize: 13 }}>
-                No products yet — add your first SKU above
+              <li>
+                <div className="pt-empty-page">
+                  <EmptyState
+                    size="lg"
+                    icon={
+                      <svg width="120" height="100" viewBox="0 0 120 100" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                        {/* Center vial */}
+                        <rect x="47" y="12" width="26" height="76" rx="13" strokeWidth="1.2"/>
+                        <rect x="51" y="6" width="18" height="10" rx="3" strokeWidth="1.1"/>
+                        {/* Liquid fill */}
+                        <rect x="48" y="68" width="24" height="18" rx="0 0 12 12" fill="currentColor" opacity="0.06" strokeWidth="0"/>
+                        {/* Measurement ticks left */}
+                        <line x1="36" y1="32" x2="47" y2="32" strokeWidth="0.8" opacity="0.4"/>
+                        <line x1="40" y1="42" x2="47" y2="42" strokeWidth="0.6" opacity="0.28"/>
+                        <line x1="36" y1="52" x2="47" y2="52" strokeWidth="0.8" opacity="0.4"/>
+                        <line x1="40" y1="62" x2="47" y2="62" strokeWidth="0.6" opacity="0.28"/>
+                        <line x1="36" y1="72" x2="47" y2="72" strokeWidth="0.8" opacity="0.4"/>
+                        {/* Label area (dashed) */}
+                        <rect x="52" y="30" width="16" height="26" rx="1.5" strokeWidth="0.8" strokeDasharray="2 1.5" opacity="0.45"/>
+                        {/* Right vial (smaller) */}
+                        <rect x="78" y="28" width="18" height="60" rx="9" strokeWidth="1" opacity="0.38"/>
+                        <rect x="81" y="23" width="12" height="8" rx="2.5" strokeWidth="0.9" opacity="0.38"/>
+                        {/* Left vial (smallest) */}
+                        <rect x="24" y="36" width="16" height="52" rx="8" strokeWidth="0.9" opacity="0.28"/>
+                        <rect x="27" y="31" width="10" height="8" rx="2" strokeWidth="0.8" opacity="0.28"/>
+                        {/* Base line */}
+                        <line x1="16" y1="90" x2="104" y2="90" strokeWidth="0.7" opacity="0.22"/>
+                      </svg>
+                    }
+                    title="Your catalog is empty"
+                    body="Add your first product to start tracking stock, pricing, and batch certificates."
+                  />
+                </div>
               </li>
             )}
           </ul>
