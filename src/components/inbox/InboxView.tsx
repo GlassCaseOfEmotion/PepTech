@@ -419,7 +419,8 @@ function Bubble({ m, onImageClick, onOpenWaPicker }: { m: InboxMessage; onImageC
       )}
       {m.status === 'failed' && !m.error && (
         <div className="pt-ix-msg-error">
-          ✕ Not delivered
+          <span>✕ Not delivered</span>
+          <button className="pt-link" onClick={() => onOpenWaPicker?.()}>Send as template →</button>
         </div>
       )}
     </div>
