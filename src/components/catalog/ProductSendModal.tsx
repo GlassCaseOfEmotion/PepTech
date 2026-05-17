@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatProductInfo } from '@/lib/product-info'
 import type { ProductInfoIncludes } from '@/lib/product-info'
-import type { CatalogProduct } from '@/types/catalog'
+import type { CatalogProduct, ProductMediaItem } from '@/types/catalog'
 import type { ProductProtocol } from '@/types/protocols'
 import { Icons } from '@/lib/icons'
 
@@ -37,12 +37,37 @@ export function ProductSendModal({
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
+  const [selectedMedia, setSelectedMedia] = useState<ProductMediaItem | null>(null)
+  const [mediaThumbnails, setMediaThumbnails] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
+
+  useEffect(() => {
+    if (product.media.length === 0) return
+    setMediaThumbnails(current => {
+      const images = product.media.filter(m => m.type === 'image' && !current[m.id])
+      if (images.length === 0) return current
+      void Promise.all(
+        images.map(async m => {
+          const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(m.storage_path)}`)
+          if (!res.ok) return null
+          const { url } = await res.json() as { url: string }
+          return { id: m.id, url }
+        })
+      ).then(results => {
+        const updates: Record<string, string> = {}
+        for (const r of results) { if (r) updates[r.id] = r.url }
+        if (Object.keys(updates).length > 0) {
+          setMediaThumbnails(prev => ({ ...prev, ...updates }))
+        }
+      })
+      return current
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (query.length < 1) { setConversations([]); return }
@@ -72,22 +97,41 @@ export function ProductSendModal({
   const preview = formatProductInfo(product, protocol, include)
 
   const send = useCallback(async () => {
-    if (!selected || !preview) return
+    if (!selected || (!preview && !selectedMedia)) return
     setSending(true)
     setError('')
     try {
-      const res = await fetch('/api/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId: selected.id, content: preview }),
-      })
-      if (!res.ok) { setError('Failed to send — please try again'); return }
+      if (preview) {
+        const res = await fetch('/api/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversationId: selected.id, content: preview }),
+        })
+        if (!res.ok) { setError('Failed to send message — please try again'); return }
+      }
+      if (selectedMedia) {
+        const res = await fetch('/api/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conversationId: selected.id,
+            storagePath: selectedMedia.storage_path,
+            bucket: 'product-media',
+          }),
+        })
+        if (!res.ok) { setError('Message sent but media failed — please try again'); return }
+      }
       setSent(true)
       setTimeout(onClose, 1400)
     } finally {
       setSending(false)
     }
-  }, [selected, preview, onClose])
+  }, [selected, preview, selectedMedia, onClose])
+
+  const sendLabel = sending ? 'Sending…'
+    : sent ? 'Sent ✓'
+    : (!!preview && !!selectedMedia) ? 'Send message + media →'
+    : 'Send →'
 
   function selectConv(c: ConvResult) {
     setSelected(c)
@@ -215,6 +259,31 @@ export function ProductSendModal({
             </div>
           </div>
 
+          {product.media.length > 0 && (
+            <div className="pt-psm-section">
+              <div className="pt-psm-label">
+                Media · {product.media.length} item{product.media.length !== 1 ? 's' : ''}
+              </div>
+              <div className="pt-pip-media-grid" style={{ padding: 0 }}>
+                {product.media.map(m => (
+                  <button
+                    key={m.id}
+                    className={`pt-pip-media-tile${selectedMedia?.id === m.id ? ' is-selected' : ''}`}
+                    onClick={() => setSelectedMedia(prev => prev?.id === m.id ? null : m)}
+                    title={m.label}
+                  >
+                    {m.type === 'image' && mediaThumbnails[m.id] ? (
+                      <img src={mediaThumbnails[m.id]} alt={m.label} className="pt-pip-media-img" />
+                    ) : (
+                      <div className="pt-pip-media-video"><span style={{ fontSize: 14 }}>▶</span></div>
+                    )}
+                    <div className="pt-pip-media-label">{m.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Preview */}
           {preview && (
             <div className="pt-psm-section">
@@ -234,9 +303,9 @@ export function ProductSendModal({
           <button
             className="pt-btn pt-btn-primary"
             onClick={() => void send()}
-            disabled={!selected || !preview || sending || sent}
+            disabled={!selected || (!preview && !selectedMedia) || sending || sent}
           >
-            {sending ? 'Sending…' : sent ? 'Sent ✓' : 'Send →'}
+            {sendLabel}
           </button>
         </div>
       </div>
