@@ -381,7 +381,11 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
         body: pendingFile.file,
         headers: { 'Content-Type': pendingFile.file.type },
       })
-      if (!putRes.ok) { setUploadError('Upload failed — please try again'); return }
+      if (!putRes.ok) {
+        setUploadError('Upload failed — please try again')
+        void deleteProductMedia(result.id, result.storagePath)
+        return
+      }
       const saveResult = await saveProductMediaPath(result.id, result.storagePath)
       if ('error' in saveResult) {
         setUploadError(saveResult.error)

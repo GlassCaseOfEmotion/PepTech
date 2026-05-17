@@ -83,7 +83,9 @@ export function ProductInfoPicker({
                 ? ((p.batches as Record<string, unknown>[]).find(b => b.coa_path)?.coa_path as string | null) ?? null
                 : null,
             media: Array.isArray(p.product_media)
-              ? (p.product_media as ProductMediaItem[]).filter(m => m.storage_path)
+              ? (p.product_media as ProductMediaItem[])
+                  .filter(m => m.storage_path)
+                  .sort((a, b) => a.sort_order - b.sort_order)
               : [],
           }))
         )

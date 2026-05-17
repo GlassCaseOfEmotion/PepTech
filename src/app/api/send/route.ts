@@ -48,7 +48,11 @@ export async function POST(request: Request) {
   const to = conv.channel_identifier
   const text = body.content ?? ''
   const { storagePath } = body
+  const SEND_ALLOWED_BUCKETS = new Set(['media', 'coa', 'product-media'])
   const bucket = body.bucket ?? 'media'
+  if (!SEND_ALLOWED_BUCKETS.has(bucket)) {
+    return NextResponse.json({ error: 'Invalid bucket' }, { status: 400 })
+  }
   let effectiveContent = text
   let twilioSid: string | undefined
 
