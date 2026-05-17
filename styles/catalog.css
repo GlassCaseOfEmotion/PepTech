@@ -471,3 +471,178 @@ textarea.pt-input { height: auto; padding: 7px 10px; }
 .pt-cat-proto-derived { font-size: 10.5px; color: var(--pt-fg-4); font-family: inherit; margin-left: 6px; }
 .pt-cat-proto-form { display: flex; flex-direction: column; gap: 12px; }
 .pt-cat-proto-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ── Product Send Modal (pt-psm) ─────────────────────────────────────────── */
+.pt-psm {
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line);
+  border-radius: var(--pt-radius-lg);
+  box-shadow: 0 4px 12px oklch(0 0 0 / 0.06), 0 24px 64px oklch(0 0 0 / 0.16);
+  width: min(500px, 96vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: pt-pip-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pt-psm-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 16px 20px;
+  min-height: 0;
+}
+
+.pt-psm-product-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 8px;
+  background: var(--pt-accent-soft);
+  border-radius: 6px;
+  margin-bottom: 16px;
+  align-self: flex-start;
+}
+.pt-psm-product-pill-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pt-accent-fg);
+  letter-spacing: -0.01em;
+}
+.pt-psm-product-pill-sku {
+  font-size: 10.5px;
+  font-family: var(--pt-mono);
+  color: oklch(from var(--pt-accent-fg) l c h / 0.65);
+}
+
+.pt-psm-section {
+  margin-bottom: 16px;
+}
+.pt-psm-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--pt-fg-4);
+  margin-bottom: 7px;
+}
+
+/* Recipient search */
+.pt-psm-search-wrap { position: relative; }
+.pt-psm-search {
+  width: 100%;
+  background: var(--pt-bg-side);
+  border: 0.5px solid var(--pt-line);
+  border-radius: var(--pt-radius-sm);
+  padding: 8px 11px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--pt-fg);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+.pt-psm-search:focus {
+  border-color: var(--pt-accent);
+  box-shadow: 0 0 0 3px oklch(from var(--pt-accent) l c h / 0.12);
+}
+.pt-psm-search::placeholder { color: var(--pt-fg-4); }
+
+.pt-psm-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line);
+  border-radius: var(--pt-radius-sm);
+  box-shadow: 0 4px 16px oklch(0 0 0 / 0.1);
+  overflow: hidden;
+  z-index: 50;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.pt-psm-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  border-bottom: 0.5px solid var(--pt-line-soft);
+  transition: background 0.1s;
+}
+.pt-psm-result:last-child { border-bottom: none; }
+.pt-psm-result:hover { background: oklch(from var(--pt-fg) l c h / 0.04); }
+.pt-psm-result-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--pt-fg);
+}
+
+/* Channel badges */
+.pt-psm-channel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+.pt-psm-channel-whatsapp {
+  background: oklch(0.55 0.18 145 / 0.12);
+  color: oklch(0.42 0.15 145);
+}
+.pt-psm-channel-telegram {
+  background: oklch(0.58 0.16 230 / 0.12);
+  color: oklch(0.44 0.14 230);
+}
+.pt-psm-channel-email {
+  background: oklch(0.62 0.12 280 / 0.12);
+  color: oklch(0.46 0.12 280);
+}
+
+/* Selected recipient pill */
+.pt-psm-recipient {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  background: var(--pt-accent-soft);
+  border: 0.5px solid oklch(from var(--pt-accent) l c h / 0.3);
+  border-radius: var(--pt-radius-sm);
+}
+.pt-psm-recipient-info { display: flex; align-items: center; gap: 10px; }
+.pt-psm-recipient-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--pt-fg);
+}
+.pt-psm-recipient-clear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--pt-fg-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  transition: background 0.1s, color 0.1s;
+}
+.pt-psm-recipient-clear:hover { background: oklch(from var(--pt-fg) l c h / 0.08); color: var(--pt-fg); }
+
+.pt-psm-error {
+  font-size: 12px;
+  color: var(--pt-danger, oklch(0.55 0.22 25));
+  padding: 8px 10px;
+  background: oklch(0.55 0.22 25 / 0.08);
+  border-radius: var(--pt-radius-sm);
+  border: 0.5px solid oklch(0.55 0.22 25 / 0.2);
+}
