@@ -179,6 +179,33 @@ export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
         </div>
       </div>
 
+      {orders.length === 0 ? (
+        <div className="pt-or-board-empty-page">
+          <EmptyState
+            size="lg"
+            icon={
+              <svg width="160" height="80" viewBox="0 0 160 80" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                {[0,1,2,3,4].map(i => (
+                  <rect key={i} x={8 + i * 31} y="12" width="22" height="56" rx="3.5"
+                    strokeWidth="1.1"
+                    strokeDasharray={i === 0 ? 'none' : '3 2.5'}
+                    opacity={Math.max(0.2, 1 - i * 0.18)}
+                  />
+                ))}
+                <line x1="30" y1="40" x2="39" y2="40" strokeWidth="0.8" opacity="0.3"/>
+                <line x1="61" y1="40" x2="70" y2="40" strokeWidth="0.8" opacity="0.22"/>
+                <line x1="92" y1="40" x2="101" y2="40" strokeWidth="0.8" opacity="0.16"/>
+                <line x1="123" y1="40" x2="132" y2="40" strokeWidth="0.8" opacity="0.11"/>
+                <line x1="19" y1="34" x2="19" y2="46" strokeWidth="1.3" opacity="0.4"/>
+                <line x1="13" y1="40" x2="25" y2="40" strokeWidth="1.3" opacity="0.4"/>
+              </svg>
+            }
+            title="No orders yet"
+            body="Create an order from a conversation in the inbox, or add one manually."
+            action={{ label: 'New order', onClick: () => setShowCreateModal(true) }}
+          />
+        </div>
+      ) : (
       <div className="pt-or-board">
         {COLUMNS.map(col => {
           const colOrders = orders.filter(o => o.status === col.id)
@@ -238,6 +265,7 @@ export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
           )
         })}
       </div>
+      )}
 
       {showCreateModal && (
         <CreateOrderModal onClose={() => setShowCreateModal(false)} />

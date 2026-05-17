@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { createClient, getServerUser } from '@/lib/supabase/server'
 import { Shell } from '@/components/shell/Shell'
 import { Icons } from '@/lib/icons'
-import { CustomerNewOrderButton } from '@/components/customers/CustomerNewOrderButton'
+import { CustomerNewOrderButton, CustomerOrderEmptyState } from '@/components/customers/CustomerNewOrderButton'
 import { CustomerNoteCard, AddNoteHeaderButton } from '@/components/customers/CustomerNoteCard'
 import { CustomerTagsField, AddTagHeaderButton } from '@/components/customers/CustomerTagsField'
 import { ActiveCyclesCard } from '@/components/customers/ActiveCyclesCard'
@@ -325,7 +325,9 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                 </header>
                 <div className="pt-card-body" style={{ padding: 0 }}>
                   {realOrders.length === 0 ? (
-                    <div style={{ padding: '14px 16px', fontSize: 12, color: 'var(--pt-fg-4)' }}>No orders yet</div>
+                    <div style={{ padding: '8px 0' }}>
+                      <CustomerOrderEmptyState customerId={customer.id} customerName={customer.display_name} />
+                    </div>
                   ) : (
                     <table className="pt-cu-orders">
                       <thead>
