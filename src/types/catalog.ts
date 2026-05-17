@@ -1,4 +1,12 @@
-﻿export type DbProduct = {
+export type ProductMediaItem = {
+  id: string
+  label: string
+  type: 'image' | 'video'
+  storage_path: string
+  sort_order: number
+}
+
+export type DbProduct = {
   id: string
   tenant_id: string
   sku: string
@@ -33,13 +41,18 @@ export type CatalogProduct = {
   description: string | null
   isActive: boolean
   resources: { label: string; url: string }[]
+  media: ProductMediaItem[]
   batches: DbBatch[]
   totalStock: number
-  velocity7d: number[]   // 7 daily unit totals, oldest→newest (sparkline)
-  velocity30dTotal: number // total units in last 30 days (cover denominator)
+  velocity7d: number[]
+  velocity30dTotal: number
 }
 
-export function dbProductToDisplay(product: DbProduct, batches: DbBatch[]): CatalogProduct {
+export function dbProductToDisplay(
+  product: DbProduct,
+  batches: DbBatch[],
+  media: ProductMediaItem[] = [],
+): CatalogProduct {
   return {
     id: product.id,
     sku: product.sku,
@@ -50,6 +63,7 @@ export function dbProductToDisplay(product: DbProduct, batches: DbBatch[]): Cata
     description: product.description,
     isActive: product.is_active,
     resources: product.resources,
+    media,
     batches,
     totalStock: batches.reduce((sum, b) => sum + b.stock, 0),
     velocity7d: [0, 0, 0, 0, 0, 0, 0],

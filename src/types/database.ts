@@ -886,6 +886,54 @@ export type Database = {
           },
         ]
       }
+      product_media: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          product_id: string
+          sort_order: number
+          storage_path: string | null
+          tenant_id: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          product_id: string
+          sort_order?: number
+          storage_path?: string | null
+          tenant_id: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          product_id?: string
+          sort_order?: number
+          storage_path?: string | null
+          tenant_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_media_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_media_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           cost_price: number | null
