@@ -6,8 +6,7 @@ import { Icons } from '@/lib/icons'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatAmount, formatAmountCompact } from '@/lib/currency'
 import { createProduct, createBatch, saveBatchCoaPath, upsertProtocol, updateProduct, updateBatch, deleteBatch, createProductMedia, saveProductMediaPath, deleteProductMedia } from '@/app/catalog/actions'
-import type { CatalogProduct, DbBatch } from '@/types/catalog'
-import type { ProductMediaItem } from '@/types/catalog'
+import type { CatalogProduct, DbBatch, ProductMediaItem } from '@/types/catalog'
 import { grossMargin } from '@/types/catalog'
 import { FREQUENCY_LABELS, FREQUENCY_OPTIONS } from '@/types/protocols'
 import type { ProductProtocol, Frequency } from '@/types/protocols'
@@ -339,21 +338,25 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
   const [thumbnailUrls, setThumbnailUrls] = useState<Record<string, string>>({})
 
   useEffect(() => {
-    const images = items.filter(m => m.type === 'image' && !thumbnailUrls[m.id])
-    if (images.length === 0) return
-    void Promise.all(
-      images.map(async m => {
-        const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(m.storage_path)}`)
-        if (!res.ok) return null
-        const { url } = await res.json() as { url: string }
-        return { id: m.id, url }
+    setThumbnailUrls(current => {
+      const images = items.filter(m => m.type === 'image' && !current[m.id])
+      if (images.length === 0) return current
+      void Promise.all(
+        images.map(async m => {
+          const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(m.storage_path)}`)
+          if (!res.ok) return null
+          const { url } = await res.json() as { url: string }
+          return { id: m.id, url }
+        })
+      ).then(results => {
+        const updates: Record<string, string> = {}
+        for (const r of results) { if (r) updates[r.id] = r.url }
+        if (Object.keys(updates).length > 0) {
+          setThumbnailUrls(prev => ({ ...prev, ...updates }))
+        }
       })
-    ).then(results => {
-      const updates: Record<string, string> = {}
-      for (const r of results) { if (r) updates[r.id] = r.url }
-      setThumbnailUrls(prev => ({ ...prev, ...updates }))
+      return current
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items])
 
   function onFilePick(e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') {
@@ -380,7 +383,12 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
       })
       if (!putRes.ok) { setUploadError('Upload failed — please try again'); return }
       const saveResult = await saveProductMediaPath(result.id, result.storagePath)
-      if ('error' in saveResult) { setUploadError(saveResult.error); return }
+      if ('error' in saveResult) {
+        setUploadError(saveResult.error)
+        setPendingFile(null)
+        setLabelInput('')
+        return
+      }
       const newItem: ProductMediaItem = {
         id: result.id,
         label: labelInput.trim(),
