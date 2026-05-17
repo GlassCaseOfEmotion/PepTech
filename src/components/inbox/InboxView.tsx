@@ -9,6 +9,7 @@ import { InboxProvider, useInbox } from './InboxProvider'
 import { InboxAIPanel } from './InboxAIPanel'
 import { OrderRail } from './OrderRail'
 import { TemplatePicker } from './TemplatePicker'
+import { WaTemplatePicker } from './WaTemplatePicker'
 import type { DbConversation, DbQuickReply, DbTemplate, InboxThread, InboxMessage } from '@/types/inbox'
 import { initials } from '@/types/inbox'
 import { createClient } from '@/lib/supabase/client'
@@ -749,6 +750,8 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
         </div>
       )}
 
+      {showWaPicker && <WaTemplatePicker onClose={() => setShowWaPicker(false)} />}
+
       <div className={`pt-ix-mobile-sheet${sheetExpanded ? ' pt-ix-mobile-sheet-expanded' : ''}`}>
         <div
           className="pt-ix-mobile-sheet-peek"
@@ -778,7 +781,7 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
         </div>
       </div>
 
-      <Composer thread={thread} onSend={onSend} isSending={isSending} initialText={initialPrefill} showTemplates={showWaPicker || undefined} onShowTemplatesChange={v => { if (!v) setShowWaPicker(false) }} />
+      <Composer thread={thread} onSend={onSend} isSending={isSending} initialText={initialPrefill} />
     </div>
   )
 }
