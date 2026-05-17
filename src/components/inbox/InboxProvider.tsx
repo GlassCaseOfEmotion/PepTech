@@ -357,6 +357,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
             unread: updated.unread_count ?? t.unread,
             status: updated.status,
             pinned: updated.is_pinned ?? t.pinned,
+            windowExpiresAt: updated.window_expires_at ?? t.windowExpiresAt,
             minsAgo: updated.last_message_at
               ? Math.floor((Date.now() - new Date(updated.last_message_at).getTime()) / 60000)
               : t.minsAgo,
