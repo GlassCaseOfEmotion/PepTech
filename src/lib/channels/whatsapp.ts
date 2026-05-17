@@ -1,5 +1,10 @@
 import { createHmac, timingSafeEqual } from 'crypto'
 
+export class TwilioWindowError extends Error {
+  readonly code = 63016
+  constructor() { super('WhatsApp 24-hour messaging window has expired') }
+}
+
 export function verifyTwilioSignature(
   authToken: string,
   url: string,
@@ -64,7 +69,14 @@ export async function sendWhatsAppMessage(to: string, text: string): Promise<voi
       body: body.toString(),
     },
   )
-  if (!res.ok) throw new Error(`Twilio send failed: ${res.status} ${await res.text()}`)
+  if (!res.ok) {
+    const errText = await res.text()
+    try {
+      const errJson = JSON.parse(errText) as { code?: number }
+      if (errJson.code === 63016) throw new TwilioWindowError()
+    } catch (e) { if (e instanceof TwilioWindowError) throw e }
+    throw new Error(`Twilio send failed: ${res.status} ${errText}`)
+  }
 }
 
 export async function sendWhatsAppMedia(mediaUrl: string, to: string): Promise<void> {
@@ -89,5 +101,40 @@ export async function sendWhatsAppMedia(mediaUrl: string, to: string): Promise<v
       body: body.toString(),
     },
   )
-  if (!res.ok) throw new Error(`Twilio media send failed: ${res.status} ${await res.text()}`)
+  if (!res.ok) {
+    const errText = await res.text()
+    try {
+      const errJson = JSON.parse(errText) as { code?: number }
+      if (errJson.code === 63016) throw new TwilioWindowError()
+    } catch (e) { if (e instanceof TwilioWindowError) throw e }
+    throw new Error(`Twilio media send failed: ${res.status} ${errText}`)
+  }
+}
+
+export async function sendWhatsAppTemplate(
+  to: string,
+  contentSid: string,
+  variables: Record<string, string>,
+): Promise<void> {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID!
+  const authToken = process.env.TWILIO_AUTH_TOKEN!
+  const from = process.env.TWILIO_WHATSAPP_NUMBER!
+  const body = new URLSearchParams({
+    From: from.startsWith('whatsapp:') ? from : `whatsapp:${from}`,
+    To: to.startsWith('whatsapp:') ? to : `whatsapp:${to}`,
+    ContentSid: contentSid,
+    ContentVariables: JSON.stringify(variables),
+  })
+  const res = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
+      },
+      body: body.toString(),
+    },
+  )
+  if (!res.ok) throw new Error(`Twilio template send failed: ${res.status} ${await res.text()}`)
 }
