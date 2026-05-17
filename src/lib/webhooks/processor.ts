@@ -118,12 +118,17 @@ export async function processInboundMessage(
     : currentStatus === 'new' ? 'new'
     : 'needs_reply'
 
+  const windowUpdate = channelType === 'whatsapp'
+    ? { window_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() }
+    : {}
+
   await supabase
     .from('conversations')
     .update({
       status: newStatus,
       last_message_at: sentAt,
       last_message_snippet: content.slice(0, 100),
+      ...windowUpdate,
     })
     .eq('id', conversationId)
     .eq('tenant_id', tenantId)
