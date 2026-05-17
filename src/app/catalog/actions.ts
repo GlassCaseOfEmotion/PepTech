@@ -141,7 +141,7 @@ export async function upsertProtocol(data: {
 
 export async function updateProduct(
   productId: string,
-  data: { name: string; sku: string; productFamily: string; unitPrice: number; costPrice: number | null }
+  data: { name: string; sku: string; productFamily: string; unitPrice: number; costPrice: number | null; resources?: { label: string; url: string }[] }
 ): Promise<{ success: true } | { error: string }> {
   const sku = data.sku.trim().toUpperCase()
   if (!sku) return { error: 'SKU is required' }
@@ -156,6 +156,7 @@ export async function updateProduct(
       product_family: data.productFamily.trim(),
       unit_price: data.unitPrice,
       cost_price: data.costPrice ?? null,
+      resources: data.resources ?? [],
     }).eq('id', productId).eq('tenant_id', tenantId)
     if (error) {
       if (error.code === '23505') return { error: `SKU "${sku}" already exists` }

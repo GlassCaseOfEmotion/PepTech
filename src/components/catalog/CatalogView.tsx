@@ -342,6 +342,7 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
     family: product.productFamily,
     unitPrice: String(product.unitPrice),
     costPrice: product.costPrice != null ? String(product.costPrice) : '',
+    resources: product.resources ?? [],
   })
   const [editError, setEditError] = useState('')
   const [editSaving, setEditSaving] = useState(false)
@@ -359,6 +360,7 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
       productFamily: editForm.family.trim(),
       unitPrice,
       costPrice: costPrice !== null && !isNaN(costPrice) ? costPrice : null,
+      resources: editForm.resources.filter(r => r.label.trim() && r.url.trim()),
     })
     setEditSaving(false)
     if ('error' in result) { setEditError(result.error); return }
@@ -445,11 +447,28 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
               <label className="pt-sku-lbl">Cost price <span className="pt-sku-lbl-opt">optional</span></label>
               <input className="pt-input" type="number" min="0" step="any" value={editForm.costPrice} onChange={e => setEditForm(f => ({ ...f, costPrice: e.target.value }))} />
             </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label className="pt-sku-lbl">Resources <span className="pt-sku-lbl-opt">links &amp; videos</span></label>
+              {editForm.resources.map((r, i) => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 6, marginBottom: 6 }}>
+                  <input className="pt-input" placeholder="Label (e.g. Tutorial video)" value={r.label}
+                    onChange={e => setEditForm(f => ({ ...f, resources: f.resources.map((x, j) => j === i ? { ...x, label: e.target.value } : x) }))} />
+                  <input className="pt-input" placeholder="https://..." value={r.url}
+                    onChange={e => setEditForm(f => ({ ...f, resources: f.resources.map((x, j) => j === i ? { ...x, url: e.target.value } : x) }))} />
+                  <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11 }}
+                    onClick={() => setEditForm(f => ({ ...f, resources: f.resources.filter((_, j) => j !== i) }))}>✕</button>
+                </div>
+              ))}
+              <button className="pt-link" style={{ fontSize: 11 }}
+                onClick={() => setEditForm(f => ({ ...f, resources: [...f.resources, { label: '', url: '' }] }))}>
+                + Add resource
+              </button>
+            </div>
           </div>
           {editError && <p style={{ fontSize: 11, color: 'var(--pt-danger)', margin: 0 }}>{editError}</p>}
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="pt-btn pt-btn-primary" onClick={saveEdit} disabled={editSaving}>{editSaving ? 'Saving…' : 'Save changes'}</button>
-            <button className="pt-btn pt-btn-ghost" onClick={() => { setEditing(false); setEditError(''); setEditForm({ name: product.name, sku: product.sku, family: product.productFamily, unitPrice: String(product.unitPrice), costPrice: product.costPrice != null ? String(product.costPrice) : '' }) }}>Cancel</button>
+            <button className="pt-btn pt-btn-ghost" onClick={() => { setEditing(false); setEditError(''); setEditForm({ name: product.name, sku: product.sku, family: product.productFamily, unitPrice: String(product.unitPrice), costPrice: product.costPrice != null ? String(product.costPrice) : '', resources: product.resources ?? [] }) }}>Cancel</button>
           </div>
         </header>
       ) : (
@@ -461,7 +480,7 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
           </div>
           <div className="pt-cat-detail-actions">
             <button className="pt-btn pt-btn-ghost" onClick={() => {
-              setEditForm({ name: product.name, sku: product.sku, family: product.productFamily, unitPrice: String(product.unitPrice), costPrice: product.costPrice != null ? String(product.costPrice) : '' })
+              setEditForm({ name: product.name, sku: product.sku, family: product.productFamily, unitPrice: String(product.unitPrice), costPrice: product.costPrice != null ? String(product.costPrice) : '', resources: product.resources ?? [] })
               setEditing(true)
               setEditError('')
             }}>Edit</button>
