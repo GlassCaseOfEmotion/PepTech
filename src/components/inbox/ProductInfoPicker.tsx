@@ -136,21 +136,15 @@ export function ProductInfoPicker({
   }
 
   function handleInsert() {
-    if (!selected || !preview) return
-    onInsert(preview)
+    if (!selected) return
+    if (preview) onInsert(preview)
+    if (selectedMedia) onAttachFile(selectedMedia.storage_path, selectedMedia.label, 'product-media')
     onClose()
   }
 
   function handleAttachCoa() {
     if (selected?.coa_path) {
       onAttachFile(selected.coa_path, 'COA PDF', 'coa')
-      onClose()
-    }
-  }
-
-  function handleAttachMedia() {
-    if (selectedMedia) {
-      onAttachFile(selectedMedia.storage_path, selectedMedia.label, 'product-media')
       onClose()
     }
   }
@@ -332,18 +326,17 @@ export function ProductInfoPicker({
                       Attach COA PDF
                     </button>
                   )}
-                  {selectedMedia && (
-                    <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11 }} onClick={handleAttachMedia}>
-                      Attach {selectedMedia.label} →
-                    </button>
-                  )}
                   <button
                     className="pt-btn pt-btn-primary"
                     style={{ fontSize: 11 }}
                     onClick={handleInsert}
-                    disabled={!preview}
+                    disabled={!preview && !selectedMedia}
                   >
-                    Insert into message →
+                    {preview && selectedMedia
+                      ? 'Insert & attach media →'
+                      : selectedMedia
+                        ? `Attach ${selectedMedia.label} →`
+                        : 'Insert into message →'}
                   </button>
                 </div>
               </>
