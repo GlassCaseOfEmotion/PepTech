@@ -158,7 +158,7 @@ const CHANNEL_ICONS: Record<string, React.FC<{ size?: number }>> = {
   wa: Icons.wa, tg: Icons.tg, em: Icons.em,
 }
 
-function InboxCard({ threads }: { threads: InboxThread[] }) {
+function InboxCard({ threads, connectedChannels }: { threads: InboxThread[]; connectedChannels: string[] }) {
   const [filter, setFilter] = useState('needs_reply')
   const filters = [
     { id: 'needs_reply', label: 'Needs reply', count: threads.filter(t => t.status === 'needs_reply').length },
@@ -220,17 +220,35 @@ function InboxCard({ threads }: { threads: InboxThread[] }) {
         {shown.length === 0 && (
           <li>
             <div className="pt-empty-box">
-              <EmptyState
-                size="sm"
-                icon={
-                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="6" width="22" height="16" rx="2.5"/>
-                    <path d="M3 11l11 7 11-7" strokeWidth="1"/>
-                  </svg>
-                }
-                title="No conversations"
-                body="Messages will appear here when customers reach out."
-              />
+              {connectedChannels.length === 0 ? (
+                <EmptyState
+                  size="sm"
+                  icon={
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="6" width="22" height="16" rx="2.5"/>
+                      <path d="M3 11l11 7 11-7" strokeWidth="1"/>
+                      <circle cx="21" cy="7" r="4" fill="var(--pt-warn-soft)" stroke="var(--pt-warn)" strokeWidth="1"/>
+                      <line x1="21" y1="5.5" x2="21" y2="8" stroke="var(--pt-warn)" strokeWidth="1.2"/>
+                      <circle cx="21" cy="9.2" r="0.6" fill="var(--pt-warn)" stroke="none"/>
+                    </svg>
+                  }
+                  title="No channels connected"
+                  body="Connect WhatsApp, Telegram or email to start receiving messages."
+                  action={{ label: 'Connect a channel →', href: '/settings/channels' }}
+                />
+              ) : (
+                <EmptyState
+                  size="sm"
+                  icon={
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="6" width="22" height="16" rx="2.5"/>
+                      <path d="M3 11l11 7 11-7" strokeWidth="1"/>
+                    </svg>
+                  }
+                  title="No conversations"
+                  body="Messages will appear here when customers reach out."
+                />
+              )}
             </div>
           </li>
         )}
@@ -694,7 +712,7 @@ function greeting(name: string) {
   return `${tod}, ${name}`
 }
 
-export function DashboardView({ threads: initialThreads, stockProducts, stats, reorderSignals, baseCurrency, displayName, shipments, packingOrders, activityItems, onboardingStatus }: { threads: InboxThread[]; stockProducts: CatalogProduct[]; stats: DashboardStats; reorderSignals: ReorderSignal[]; baseCurrency: string; displayName: string; shipments: ShipmentRow[]; packingOrders: PackingOrder[]; activityItems: ActivityItem[]; onboardingStatus?: { hasProducts: boolean; hasChannel: boolean; hasPayment: boolean } | null }) {
+export function DashboardView({ threads: initialThreads, stockProducts, stats, reorderSignals, baseCurrency, displayName, shipments, packingOrders, activityItems, onboardingStatus, connectedChannels }: { threads: InboxThread[]; stockProducts: CatalogProduct[]; stats: DashboardStats; reorderSignals: ReorderSignal[]; baseCurrency: string; displayName: string; shipments: ShipmentRow[]; packingOrders: PackingOrder[]; activityItems: ActivityItem[]; onboardingStatus?: { hasProducts: boolean; hasChannel: boolean; hasPayment: boolean } | null; connectedChannels: string[] }) {
   const [threads, setThreads] = useState(initialThreads)
   const supabase = useMemo(() => createClient(), [])
 
@@ -771,7 +789,7 @@ export function DashboardView({ threads: initialThreads, stockProducts, stats, r
             hasPayment={onboardingStatus.hasPayment}
           />
         )}
-        <div className="pt-dash-card-inbox pt-span-2"><InboxCard threads={threads} /></div>
+        <div className="pt-dash-card-inbox pt-span-2"><InboxCard threads={threads} connectedChannels={connectedChannels} /></div>
         <PaymentsCard orders={stats.pendingOrders} baseCurrency={baseCurrency} />
         <RevenueCard daily90d={stats.revenue90dDaily} baseCurrency={baseCurrency} />
         <ReordersCard reorders={reorderSignals} />

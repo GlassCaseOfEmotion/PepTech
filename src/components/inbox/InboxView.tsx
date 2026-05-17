@@ -105,9 +105,9 @@ function IxThread({ t, active, onClick }: { t: InboxThread; active: boolean; onC
 
 // ─── Thread column ───────────────────────────────────────────────────────────
 
-function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
+function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChannels }: {
   threads: InboxThread[]; activeId: string; onSelect: (id: string) => void
-  filter: string; setFilter: (f: string) => void
+  filter: string; setFilter: (f: string) => void; hasChannels: boolean
 }) {
   const { resolvedCount } = useInbox()
   const [search, setSearch] = useState('')
@@ -193,21 +193,41 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter }: {
         {visible.length === 0 && (
           <li className="pt-ix-empty" style={{ padding: 0, listStyle: 'none' }}>
             {filter === 'all' && (
-              <EmptyState
-                size="md"
-                icon={
-                  <svg width="56" height="42" viewBox="0 0 56 42" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="6" width="52" height="34" rx="4" strokeWidth="1.2"/>
-                    <path d="M2 16l26 17 26-17" strokeWidth="1"/>
-                    <path d="M2 6l26 20L54 6" strokeWidth="0.8" opacity="0.35"/>
-                    <circle cx="46" cy="9" r="7" fill="currentColor" opacity="0.07" strokeWidth="0"/>
-                    <circle cx="46" cy="9" r="7" strokeWidth="1.1" opacity="0.45"/>
-                    <polyline points="42,9 45,12 50,5" strokeWidth="1.3" opacity="0.65"/>
-                  </svg>
-                }
-                title="Inbox is clear"
-                body="New conversations appear here when customers reach out via any connected channel."
-              />
+              hasChannels ? (
+                <EmptyState
+                  size="md"
+                  icon={
+                    <svg width="56" height="42" viewBox="0 0 56 42" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="6" width="52" height="34" rx="4" strokeWidth="1.2"/>
+                      <path d="M2 16l26 17 26-17" strokeWidth="1"/>
+                      <path d="M2 6l26 20L54 6" strokeWidth="0.8" opacity="0.35"/>
+                      <circle cx="46" cy="9" r="7" fill="currentColor" opacity="0.07" strokeWidth="0"/>
+                      <circle cx="46" cy="9" r="7" strokeWidth="1.1" opacity="0.45"/>
+                      <polyline points="42,9 45,12 50,5" strokeWidth="1.3" opacity="0.65"/>
+                    </svg>
+                  }
+                  title="Inbox is clear"
+                  body="New conversations appear here when customers reach out via any connected channel."
+                />
+              ) : (
+                <EmptyState
+                  size="md"
+                  icon={
+                    <svg width="56" height="48" viewBox="0 0 56 48" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="10" width="52" height="34" rx="4" strokeWidth="1.2"/>
+                      <path d="M2 20l26 17 26-17" strokeWidth="1"/>
+                      <path d="M2 10l26 20L54 10" strokeWidth="0.8" opacity="0.35"/>
+                      <circle cx="43" cy="10" r="9" fill="var(--pt-warn-soft)" stroke="var(--pt-warn)" strokeWidth="0"/>
+                      <circle cx="43" cy="10" r="9" stroke="var(--pt-warn)" strokeWidth="1.1"/>
+                      <line x1="43" y1="6.5" x2="43" y2="11" stroke="var(--pt-warn)" strokeWidth="1.3"/>
+                      <circle cx="43" cy="13.2" r="0.9" fill="var(--pt-warn)" stroke="none"/>
+                    </svg>
+                  }
+                  title="No channels connected"
+                  body="Connect WhatsApp, Telegram or email to start receiving customer messages."
+                  action={{ label: 'Connect a channel →', href: '/settings/channels' }}
+                />
+              )
             )}
             {filter === 'needs_reply' && (
               <EmptyState
@@ -831,7 +851,7 @@ function ConversationRail({ thread, baseCurrency }: { thread: InboxThread; baseC
 
 // ─── Inner layout (consumes context) ────────────────────────────────────────
 
-function InboxLayout({ initialPrefill, baseCurrency }: { initialPrefill?: string; baseCurrency: string }) {
+function InboxLayout({ initialPrefill, baseCurrency, hasChannels }: { initialPrefill?: string; baseCurrency: string; hasChannels: boolean }) {
   const { threads, activeId, setActiveId, filter, setFilter, messages, isSending, sendMessage } = useInbox()
   const activeThread = threads.find(t => t.id === activeId) ?? threads[0]
   const [showOrderRail, setShowOrderRail] = useState(false)
@@ -858,6 +878,7 @@ function InboxLayout({ initialPrefill, baseCurrency }: { initialPrefill?: string
         onSelect={handleSelect}
         filter={filter}
         setFilter={setFilter}
+        hasChannels={hasChannels}
       />
       {activeThread && (
         <ConversationPane
@@ -896,9 +917,10 @@ interface InboxViewProps {
   initialInvoiceName?: string
   initialPrefill?: string
   baseCurrency: string
+  hasChannels?: boolean
 }
 
-export function InboxView({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId, initialInvoicePath, initialInvoiceName, initialPrefill, baseCurrency }: InboxViewProps) {
+export function InboxView({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId, initialInvoicePath, initialInvoiceName, initialPrefill, baseCurrency, hasChannels = true }: InboxViewProps) {
   return (
     <InboxProvider
       initialConversations={initialConversations}
@@ -910,7 +932,7 @@ export function InboxView({ initialConversations, quickReplies, templates, initi
       initialInvoiceName={initialInvoiceName}
     >
       <Suspense fallback={null}>
-        <InboxLayout initialPrefill={initialPrefill} baseCurrency={baseCurrency} />
+        <InboxLayout initialPrefill={initialPrefill} baseCurrency={baseCurrency} hasChannels={hasChannels} />
       </Suspense>
     </InboxProvider>
   )

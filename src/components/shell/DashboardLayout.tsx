@@ -53,7 +53,7 @@ export function DashboardLayout({ displayName, connectedChannels, threads, initi
           rightOpen={rightOpen}
           onRightToggle={() => setRightOpen(o => !o)}
         />
-        <DashboardView threads={threads} stockProducts={stockProducts} stats={stats} reorderSignals={reorderSignals} baseCurrency={baseCurrency} displayName={displayName} shipments={shipments} packingOrders={packingOrders} activityItems={activityItems} onboardingStatus={onboardingStatus} />
+        <DashboardView threads={threads} stockProducts={stockProducts} stats={stats} reorderSignals={reorderSignals} baseCurrency={baseCurrency} displayName={displayName} shipments={shipments} packingOrders={packingOrders} activityItems={activityItems} onboardingStatus={onboardingStatus} connectedChannels={channels} />
       </main>
       {rightOpen && (
         <DashboardRightRail
