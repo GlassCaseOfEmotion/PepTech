@@ -189,6 +189,7 @@ export type Database = {
           tenant_id: string
           unread_count: number
           updated_at: string
+          window_expires_at: string | null
         }
         Insert: {
           assigned_to?: string | null
@@ -205,6 +206,7 @@ export type Database = {
           tenant_id: string
           unread_count?: number
           updated_at?: string
+          window_expires_at?: string | null
         }
         Update: {
           assigned_to?: string | null
@@ -221,6 +223,7 @@ export type Database = {
           tenant_id?: string
           unread_count?: number
           updated_at?: string
+          window_expires_at?: string | null
         }
         Relationships: [
           {
@@ -1190,6 +1193,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_templates: {
+        Row: {
+          body: string
+          content_sid: string | null
+          created_at: string
+          id: string
+          name: string
+          status: string
+          tenant_id: string
+          updated_at: string
+          variables: { key: string; label: string }[]
+        }
+        Insert: {
+          body: string
+          content_sid?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          variables?: { key: string; label: string }[]
+        }
+        Update: {
+          body?: string
+          content_sid?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          variables?: { key: string; label: string }[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_templates_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
