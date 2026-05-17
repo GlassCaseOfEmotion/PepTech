@@ -270,7 +270,7 @@ function fmtAge(mins: number) {
 }
 
 
-function PaymentsCard({ orders, baseCurrency }: { orders: PendingOrder[]; baseCurrency: string }) {
+function PaymentsCard({ orders, baseCurrency, hasPayment }: { orders: PendingOrder[]; baseCurrency: string; hasPayment: boolean }) {
   return (
     <DashCard title="Payments" subtitle="Awaiting confirmation"
       action={<Link href="/orders" className="pt-link">View all →</Link>}>
@@ -287,6 +287,8 @@ function PaymentsCard({ orders, baseCurrency }: { orders: PendingOrder[]; baseCu
                   </svg>
                 }
                 title="No pending payments"
+                body={!hasPayment ? 'Configure a wallet address so customers can pay.' : undefined}
+                action={!hasPayment ? { label: 'Set up wallets →', href: '/settings/wallets' } : undefined}
               />
             </div>
           </li>
@@ -795,7 +797,7 @@ export function DashboardView({ threads: initialThreads, stockProducts, stats, r
           />
         )}
         <div className="pt-dash-card-inbox pt-span-2"><InboxCard threads={threads} connectedChannels={connectedChannels} /></div>
-        <PaymentsCard orders={stats.pendingOrders} baseCurrency={baseCurrency} />
+        <PaymentsCard orders={stats.pendingOrders} baseCurrency={baseCurrency} hasPayment={onboardingStatus?.hasPayment ?? true} />
         <RevenueCard daily90d={stats.revenue90dDaily} baseCurrency={baseCurrency} />
         <div className="pt-dash-card-reorder"><ReordersCard reorders={reorderSignals} /></div>
         <div className="pt-dash-card-stock"><StockCard products={stockProducts} velocity7dByProduct={stats.velocity7dByProduct} /></div>
