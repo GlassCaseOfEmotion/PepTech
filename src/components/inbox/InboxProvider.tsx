@@ -7,6 +7,7 @@ import {
   dbConversationToThread, dbMessageToInboxMessage,
   type DbConversation, type DbMessage, type DbQuickReply, type InboxThread, type InboxMessage, type DbNote, type DbTemplate
 } from '@/types/inbox'
+import { playChime, tryNotify } from '@/lib/notifications'
 
 const CONV_SELECT = `
   id, status, unread_count, last_message_at, last_message_snippet,
@@ -316,7 +317,8 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
         event: 'INSERT', schema: 'public', table: 'messages',
         filter: `conversation_id=eq.${activeId}`,
       }, (payload) => {
-        const newMsg = dbMessageToInboxMessage(payload.new as unknown as DbMessage)
+        const raw = payload.new as unknown as DbMessage & { conversation_id: string }
+        const newMsg = dbMessageToInboxMessage(raw)
         setMessages(prev => {
           if (prev.some(m => m.id === newMsg.id)) return prev
           if (newMsg.from === 'me') {
@@ -325,6 +327,17 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
           }
           return [...prev, newMsg]
         })
+        // GlobalNotifications may not fire when InboxProvider has a filtered
+        // subscription on the same table — handle chime + notification here for inbound
+        if (raw.direction === 'inbound' && tryNotify(raw.id)) {
+          playChime()
+          window.dispatchEvent(new CustomEvent('pt:notification', { detail: {
+            id: raw.id, type: 'message', title: 'New message',
+            body: raw.content?.slice(0, 80) ?? '',
+            href: `/inbox?conversation=${raw.conversation_id}`,
+            at: Date.now(),
+          }}))
+        }
       })
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'messages',

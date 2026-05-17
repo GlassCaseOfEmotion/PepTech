@@ -1,3 +1,14 @@
+// Tracks message IDs already chimied to prevent double-fire when both
+// InboxProvider (filtered) and GlobalNotifications (unfiltered) subscriptions
+// receive the same event on the same Supabase realtime connection.
+const _notified = new Set<string>()
+export function tryNotify(messageId: string): boolean {
+  if (_notified.has(messageId)) return false
+  _notified.add(messageId)
+  setTimeout(() => _notified.delete(messageId), 5000)
+  return true
+}
+
 export function playChime() {
   try {
     const ctx = new AudioContext()

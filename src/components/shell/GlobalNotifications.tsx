@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { playChime } from '@/lib/notifications'
+import { playChime, tryNotify } from '@/lib/notifications'
 import type { NotificationItem } from './NotificationBell'
 
 export function GlobalNotifications() {
@@ -20,6 +20,7 @@ export function GlobalNotifications() {
       }, (payload) => {
         const raw = payload.new as { id: string; conversation_id: string; content: string; direction: string }
         if (raw.direction !== 'inbound') return
+        if (!tryNotify(raw.id)) return  // already handled by InboxProvider
 
         playChime()
 
