@@ -43,6 +43,22 @@ describe('GET /api/catalog/file-url', () => {
     expect(res.status).toBe(400)
   })
 
+  it('returns 400 when path param is missing', async () => {
+    ;(getServerUser as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'u1' })
+    ;(createClient as ReturnType<typeof vi.fn>).mockResolvedValue(makeSupabase())
+    const req = new Request('http://localhost/api/catalog/file-url?bucket=coa')
+    const res = await GET(req)
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when path contains ..', async () => {
+    ;(getServerUser as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'u1' })
+    ;(createClient as ReturnType<typeof vi.fn>).mockResolvedValue(makeSupabase())
+    const req = new Request(`http://localhost/api/catalog/file-url?bucket=coa&path=${TENANT_ID}/../secret.pdf`)
+    const res = await GET(req)
+    expect(res.status).toBe(400)
+  })
+
   it('returns 403 for path not scoped to tenant', async () => {
     ;(getServerUser as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'u1' })
     ;(createClient as ReturnType<typeof vi.fn>).mockResolvedValue(makeSupabase())
