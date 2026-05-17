@@ -1,15 +1,18 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { sendWhatsAppMessage, sendWhatsAppMedia } from '@/lib/channels/whatsapp'
+import { sendWhatsAppMessage, sendWhatsAppMedia, sendWhatsAppTemplate, TwilioWindowError } from '@/lib/channels/whatsapp'
 import { sendTelegramMessage, sendTelegramPhoto } from '@/lib/channels/telegram'
 import { sendGmailMessage, sendMicrosoftMessage } from '@/lib/channels/email'
 import type { GoogleCredentials, MicrosoftCredentials } from '@/lib/channels/email'
 import { generateSignedUrl } from '@/lib/media/storage'
 
 export async function POST(request: Request) {
-  const body = await request.json() as { conversationId?: string; content?: string; storagePath?: string }
+  const body = await request.json() as {
+    conversationId?: string; content?: string; storagePath?: string
+    templateId?: string; templateVariables?: Record<string, string>
+  }
 
-  if (!body.conversationId || (!body.content?.trim() && !body.storagePath)) {
+  if (!body.conversationId || (!body.content?.trim() && !body.storagePath && !body.templateId)) {
     return NextResponse.json({ error: 'conversationId and content or storagePath are required' }, { status: 400 })
   }
 
@@ -44,13 +47,32 @@ export async function POST(request: Request) {
   const to = conv.channel_identifier
   const text = body.content ?? ''
   const { storagePath } = body
+  let effectiveContent = text
 
   if (conv.channel_type === 'whatsapp') {
-    if (storagePath) {
-      const signedUrl = await generateSignedUrl(supabase, storagePath)
-      await sendWhatsAppMedia(signedUrl, to)
-    } else {
-      await sendWhatsAppMessage(to, text)
+    try {
+      if (body.templateId) {
+        const { data: tmpl } = await supabase
+          .from('whatsapp_templates').select('content_sid, body')
+          .eq('id', body.templateId).single()
+        if (!tmpl?.content_sid) return NextResponse.json({ error: 'Template not approved' }, { status: 422 })
+        effectiveContent = tmpl.body ?? text
+        await sendWhatsAppTemplate(to, tmpl.content_sid, body.templateVariables ?? {})
+      } else if (storagePath) {
+        await sendWhatsAppMedia(await generateSignedUrl(supabase, storagePath), to)
+      } else {
+        await sendWhatsAppMessage(to, text)
+      }
+    } catch (err) {
+      if (err instanceof TwilioWindowError) {
+        const { data: failedMsg } = await supabase.from('messages').insert({
+          tenant_id: conv.tenant_id, conversation_id: conv.id,
+          direction: 'outbound', content: text, status: 'failed',
+          metadata: { error_code: 63016 },
+        }).select('id').single()
+        return NextResponse.json({ error: 'window_expired', messageId: failedMsg?.id }, { status: 200 })
+      }
+      throw err
     }
   } else if (conv.channel_type === 'telegram') {
     const creds = channel.credentials as { bot_token: string; business_connection_id?: string }
@@ -89,7 +111,7 @@ export async function POST(request: Request) {
       tenant_id: conv.tenant_id,
       conversation_id: conv.id,
       direction: 'outbound',
-      content: storagePath ? '[Photo]' : text,
+      content: storagePath ? '[Photo]' : effectiveContent,
       status: 'sent',
       metadata: storagePath ? { kind: 'photo', storagePath } : null,
     })
@@ -102,7 +124,7 @@ export async function POST(request: Request) {
     .update({
       status: 'in_progress',
       last_message_at: new Date().toISOString(),
-      last_message_snippet: storagePath ? 'You: [Photo]' : `You: ${text.slice(0, 97)}`,
+      last_message_snippet: storagePath ? 'You: [Photo]' : `You: ${effectiveContent.slice(0, 97)}`,
     })
     .eq('id', conv.id)
 
