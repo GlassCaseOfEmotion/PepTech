@@ -1894,3 +1894,23 @@ kbd {
   flex: 1; min-height: 420px; width: 100%;
   animation: pt-empty-in 0.4s ease both;
 }
+
+/* ─── Orders board-level empty ─────────────────────────────────────────── */
+.pt-or-board-empty-page {
+  display: flex; align-items: center; justify-content: center;
+  flex: 1; min-height: 420px; width: 100%;
+  animation: pt-empty-in 0.4s ease both;
+}
+
+/* ─── Settings info banner ───────────────────────────────────────────────── */
+.pt-settings-banner {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 14px;
+  background: oklch(from var(--pt-warn) l c h / 0.08);
+  border: 0.5px solid oklch(from var(--pt-warn) l c h / 0.3);
+  border-radius: var(--pt-radius);
+  margin-bottom: 20px;
+  font-size: 13px; color: var(--pt-fg-2); line-height: 1.5;
+}
+.pt-settings-banner svg { color: var(--pt-warn); flex-shrink: 0; margin-top: 1px; }
+.pt-settings-banner p { margin: 0; }

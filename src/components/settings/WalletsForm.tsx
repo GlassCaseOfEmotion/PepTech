@@ -22,6 +22,10 @@ export function WalletsForm({ configs }: { configs: TenantPaymentConfig[] }) {
 
   const cfg = (type: string) => configs.find(c => c.type === type) ?? null
 
+  const hasNothingConfigured =
+    CRYPTO_TYPES.every(type => !cfg(type)?.wallet_address) &&
+    !cfg('bank_transfer')
+
   const saveCrypto = (type: string) => {
     if (!editValue.trim()) return
     setError('')
@@ -71,6 +75,20 @@ export function WalletsForm({ configs }: { configs: TenantPaymentConfig[] }) {
           <p>Configure the payment methods you accept. Only active methods appear on orders.</p>
         </div>
       </div>
+
+      {hasNothingConfigured && (
+        <div className="pt-settings-banner">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+            <circle cx="8" cy="8" r="6.5"/>
+            <line x1="8" y1="5.5" x2="8" y2="8.5"/>
+            <circle cx="8" cy="10.5" r="0.7" fill="currentColor" stroke="none"/>
+          </svg>
+          <p>
+            Configure at least one payment method so customers can pay for orders.
+            {' '}<a href="/settings/wallets" className="pt-link">Set up now</a>
+          </p>
+        </div>
+      )}
 
       {error && (
         <p style={{ fontSize: 12, color: 'var(--pt-danger)', marginBottom: 10 }}>{error}</p>
