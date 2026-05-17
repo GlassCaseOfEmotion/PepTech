@@ -67,8 +67,8 @@ export async function POST(request: Request) {
       if (err instanceof TwilioWindowError) {
         const { data: failedMsg } = await supabase.from('messages').insert({
           tenant_id: conv.tenant_id, conversation_id: conv.id,
-          direction: 'outbound', content: text, status: 'failed',
-          metadata: { error_code: 63016 },
+          direction: 'outbound', content: effectiveContent, status: 'failed',
+          metadata: { error_code: 63016, ...(body.templateId ? { templateId: body.templateId } : {}) },
         }).select('id').single()
         return NextResponse.json({ error: 'window_expired', messageId: failedMsg?.id }, { status: 200 })
       }
