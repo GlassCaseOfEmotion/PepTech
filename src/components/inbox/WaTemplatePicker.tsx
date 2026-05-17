@@ -11,23 +11,24 @@ export function WaTemplatePicker({ onClose }: { onClose: () => void }) {
   const [selected, setSelected] = useState<DbWaTemplate | null>(null)
   const [vars, setVars] = useState<Record<string, string>>({})
   const [loaded, setLoaded] = useState(false)
+  const [sendError, setSendError] = useState('')
 
   useEffect(() => {
     supabase.from('whatsapp_templates')
       .select('id, name, body, variables, content_sid, status, created_at')
       .eq('status', 'approved').not('content_sid', 'is', null)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) { console.error('Failed to load templates:', error); setLoaded(true); return }
         setTemplates((data ?? []) as DbWaTemplate[])
         setLoaded(true)
       })
   }, [supabase])
 
   useEffect(() => {
-    if (!loaded) return
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [loaded, onClose])
+  }, [onClose])
 
   const selectTemplate = (t: DbWaTemplate) => {
     setSelected(t)
@@ -36,8 +37,13 @@ export function WaTemplatePicker({ onClose }: { onClose: () => void }) {
 
   const send = async () => {
     if (!selected) return
-    await sendTemplate(selected.id, vars)
-    onClose()
+    setSendError('')
+    try {
+      await sendTemplate(selected.id, vars)
+      onClose()
+    } catch {
+      setSendError('Failed to send. Please try again.')
+    }
   }
 
   return (
@@ -98,6 +104,7 @@ export function WaTemplatePicker({ onClose }: { onClose: () => void }) {
       )}
 
       <div className="pt-wa-picker-actions">
+        {sendError && <p style={{ color: 'var(--pt-danger)', fontSize: 11, margin: 0 }}>{sendError}</p>}
         <button className="pt-btn pt-btn-ghost" onClick={onClose}>Cancel</button>
         <button
           className="pt-btn pt-btn-primary"

@@ -727,3 +727,40 @@ html.pt-ai-expanded .pt-inbox-ai-msgs { flex: 1; max-height: none; }
   }
   .pt-ix-conv-back:active { background: var(--pt-surface-2); }
 }
+
+/* ── WhatsApp template picker ───────────────────────────────────────────── */
+.pt-wa-picker {
+  max-height: 420px;
+}
+.pt-wa-picker-body {
+  display: flex; gap: 0; min-height: 0; flex: 1;
+}
+.pt-wa-picker-list {
+  width: 220px; flex-shrink: 0;
+  border-right: 0.5px solid var(--pt-line);
+  overflow-y: auto;
+}
+.pt-wa-picker-vars {
+  padding: 14px; flex: 1;
+  display: flex; flex-direction: column; gap: 12px;
+  overflow-y: auto;
+}
+.pt-wa-picker-vars-title {
+  font-size: 12px; font-weight: 600; color: var(--pt-fg-3);
+}
+.pt-wa-picker-var-row {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.pt-wa-picker-var-label {
+  font-size: 11px; color: var(--pt-fg-4);
+}
+.pt-wa-picker-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 10px 14px;
+  border-top: 0.5px solid var(--pt-line-soft);
+  flex-shrink: 0;
+}
+.pt-tpl-item.is-selected {
+  background: var(--pt-accent-soft);
+  border-left: 2px solid var(--pt-accent);
+}
