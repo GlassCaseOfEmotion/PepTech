@@ -407,12 +407,19 @@ function Bubble({ m, onImageClick, onOpenWaPicker }: { m: InboxMessage; onImageC
       <div className="pt-bubble-meta">
         {m.at}
         {m.optimistic && <span className="pt-bubble-pending"> · sending…</span>}
-        {m.from === 'me' && !m.optimistic && <span className="pt-bubble-read"> · read</span>}
+        {m.from === 'me' && !m.optimistic && m.status === 'delivered' && <span className="pt-bubble-read"> · delivered</span>}
+        {m.from === 'me' && !m.optimistic && m.status === 'read' && <span className="pt-bubble-read"> · read</span>}
+        {m.from === 'me' && !m.optimistic && (m.status === 'sent' || !m.status) && <span className="pt-bubble-pending"> · sent</span>}
       </div>
       {m.status === 'failed' && m.error === 'window_expired' && (
         <div className="pt-ix-msg-error">
           <span>✕ Not delivered · WhatsApp window expired</span>
           <button className="pt-link" onClick={() => onOpenWaPicker?.()}>Send as template →</button>
+        </div>
+      )}
+      {m.status === 'failed' && !m.error && (
+        <div className="pt-ix-msg-error">
+          ✕ Not delivered
         </div>
       )}
     </div>

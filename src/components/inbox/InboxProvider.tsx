@@ -326,6 +326,17 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
           return [...prev, newMsg]
         })
       })
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'messages',
+        filter: `conversation_id=eq.${activeId}`,
+      }, (payload) => {
+        const updated = payload.new as unknown as DbMessage
+        setMessages(prev => prev.map(m =>
+          m.id === updated.id
+            ? { ...m, status: updated.status, metadata: updated.metadata }
+            : m
+        ))
+      })
       .subscribe((status, err) => {
         console.log('[RT] messages subscription:', status, err ?? '')
       })
