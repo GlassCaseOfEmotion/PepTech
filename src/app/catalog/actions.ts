@@ -225,7 +225,10 @@ export async function createProductMedia(
     const { data: uploadData, error: urlErr } = await supabase.storage
       .from('product-media')
       .createSignedUploadUrl(storagePath)
-    if (urlErr || !uploadData) return { error: urlErr?.message ?? 'Could not create upload URL' }
+    if (urlErr || !uploadData) {
+      await supabase.from('product_media').delete().eq('id', row.id)
+      return { error: urlErr?.message ?? 'Could not create upload URL' }
+    }
     return { id: row.id, uploadUrl: uploadData.signedUrl, storagePath }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }
@@ -265,7 +268,10 @@ export async function deleteProductMedia(
       .eq('id', id)
       .eq('tenant_id', tenantId)
     if (error) return { error: error.message }
-    await supabase.storage.from('product-media').remove([storagePath])
+    const { error: storageErr } = await supabase.storage.from('product-media').remove([storagePath])
+    if (storageErr) {
+      console.error('product-media storage removal failed:', storagePath, storageErr.message)
+    }
     revalidatePath('/catalog')
     return { success: true }
   } catch (e) {
