@@ -297,7 +297,7 @@ function useWindowStatus(windowExpiresAt: string | null, channel: string) {
     if (channel !== 'wa' || !windowExpiresAt) { setStatus('none'); return }
     const tick = () => {
       const ms = new Date(windowExpiresAt).getTime() - Date.now()
-      if (ms <= 0) { setStatus('expired'); return }
+      if (ms <= 0) { setStatus('expired'); setTimeLeft(''); return }
       setStatus('active')
       const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000)
       setTimeLeft(h > 0 ? `${h}h ${m}m` : `${m}m`)
@@ -736,7 +736,7 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
       {windowStatus === 'expired' && (
         <div className="pt-ix-window-banner is-expired">
           ⚠ 24hr window expired — use a template to reach this customer
-          <button className="pt-link" style={{ marginLeft: 8 }} onClick={() => setShowWaPicker(true)}>
+          <button className="pt-link" onClick={() => setShowWaPicker(true)}>
             Send template →
           </button>
         </div>
