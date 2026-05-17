@@ -895,6 +895,7 @@ export type Database = {
           is_active: boolean
           name: string
           product_family: string
+          resources: { label: string; url: string }[]
           sku: string
           tenant_id: string
           unit_price: number
@@ -907,6 +908,7 @@ export type Database = {
           is_active?: boolean
           name: string
           product_family: string
+          resources?: { label: string; url: string }[]
           sku: string
           tenant_id: string
           unit_price: number
@@ -919,6 +921,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           product_family?: string
+          resources?: { label: string; url: string }[]
           sku?: string
           tenant_id?: string
           unit_price?: number

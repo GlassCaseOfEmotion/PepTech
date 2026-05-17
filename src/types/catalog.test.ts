@@ -6,6 +6,7 @@ const BASE_PRODUCT: DbProduct = {
   id: 'p1', tenant_id: 't1', sku: 'BPC-157-5MG', name: 'BPC-157 5mg',
   product_family: 'BPC-157', unit_price: 38, description: null,
   is_active: true, created_at: '2024-01-01T00:00:00Z',
+  cost_price: null, resources: [],
 }
 const BASE_BATCH: DbBatch = {
   id: 'b1', tenant_id: 't1', product_id: 'p1', batch_number: 'BPC-0408-B',

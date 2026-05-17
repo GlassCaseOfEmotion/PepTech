@@ -9,6 +9,7 @@
   description: string | null
   is_active: boolean
   created_at: string
+  resources: { label: string; url: string }[]
 }
 
 export type DbBatch = {
@@ -31,6 +32,7 @@ export type CatalogProduct = {
   costPrice: number | null
   description: string | null
   isActive: boolean
+  resources: { label: string; url: string }[]
   batches: DbBatch[]
   totalStock: number
   velocity7d: number[]   // 7 daily unit totals, oldest→newest (sparkline)
@@ -47,6 +49,7 @@ export function dbProductToDisplay(product: DbProduct, batches: DbBatch[]): Cata
     costPrice: product.cost_price ?? null,
     description: product.description,
     isActive: product.is_active,
+    resources: product.resources,
     batches,
     totalStock: batches.reduce((sum, b) => sum + b.stock, 0),
     velocity7d: [0, 0, 0, 0, 0, 0, 0],

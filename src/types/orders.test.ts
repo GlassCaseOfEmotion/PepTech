@@ -5,9 +5,9 @@ import type { DbOrderRow } from './orders'
 const BASE_ORDER: DbOrderRow = {
   id: 'o1', ref_number: 'A-2247', customer_id: 'c1',
   conversation_id: null, status: 'awaiting',
-  payment_asset: 'USDT', payment_amount: 189,
+  payment_asset: 'USDT', payment_amount: 189, currency: 'USD', exchange_rate: null,
   payment_address: null, tx_hash: null,
-  shipping_address: null, carrier: null, tracking_number: null,
+  shipping_address: null, carrier: null, tracking_number: null, tracking_url: null,
   notes: null, created_at: new Date(Date.now() - 8 * 60000).toISOString(),
   updated_at: new Date().toISOString(),
   customers: {
