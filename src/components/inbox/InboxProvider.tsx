@@ -10,7 +10,7 @@ import {
 
 const CONV_SELECT = `
   id, status, unread_count, last_message_at, last_message_snippet,
-  channel_type, channel_identifier, is_pinned,
+  channel_type, channel_identifier, is_pinned, window_expires_at,
   customers (
     id, display_name, trust_score, ltv,
     customer_tags (tag),
@@ -233,8 +233,9 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
     if (!activeId) return
     setIsSending(true)
     try {
-      await fetch('/api/send', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const sendRes = await fetch('/api/send', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conversationId: activeId, templateId, templateVariables: variables }) })
+      if (!sendRes.ok) throw new Error(`Template send failed: ${sendRes.status}`)
       await fetchMessages(activeId)
     } finally { setIsSending(false) }
   }, [activeId, fetchMessages])
