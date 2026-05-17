@@ -238,7 +238,7 @@
 .pt-cat-stat .val.is-zero  { color: var(--pt-danger); }
 .pt-cat-stat-sub { font-size: 10.5px; color: var(--pt-fg-4); }
 
-.pt-cat-section { margin-top: 0; }
+.pt-cat-section { margin-top: 0; overflow: visible; }
 
 /* Batches table */
 .pt-cat-batches { width: 100%; border-collapse: collapse; }
