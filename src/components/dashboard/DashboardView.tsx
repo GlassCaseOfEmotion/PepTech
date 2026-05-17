@@ -797,7 +797,7 @@ export function DashboardView({ threads: initialThreads, stockProducts, stats, r
         <div className="pt-dash-card-inbox pt-span-2"><InboxCard threads={threads} connectedChannels={connectedChannels} /></div>
         <PaymentsCard orders={stats.pendingOrders} baseCurrency={baseCurrency} />
         <RevenueCard daily90d={stats.revenue90dDaily} baseCurrency={baseCurrency} />
-        <ReordersCard reorders={reorderSignals} />
+        <div className="pt-dash-card-reorder"><ReordersCard reorders={reorderSignals} /></div>
         <div className="pt-dash-card-stock"><StockCard products={stockProducts} velocity7dByProduct={stats.velocity7dByProduct} /></div>
         <div className="pt-dash-card-shipments"><ShipmentsCard shipments={shipments} /></div>
       </div>
