@@ -247,6 +247,10 @@ function InboxCard({ threads, connectedChannels }: { threads: InboxThread[]; con
                   }
                   title="No conversations"
                   body="Messages will appear here when customers reach out."
+                  action={{
+                    label: 'Compose a message →',
+                    onClick: () => window.dispatchEvent(new CustomEvent('pt:compose:open')),
+                  }}
                 />
               )}
             </div>
@@ -356,7 +360,7 @@ function RevenueCard({ daily90d, baseCurrency }: { daily90d: { d: string; v: num
 function ReordersCard({ reorders }: { reorders: ReorderSignal[] }) {
   return (
     <DashCard title="Reorder signals" subtitle="Protocol-driven · dosing schedule"
-      action={<button className="pt-link">Configure →</button>}>
+      action={<Link href="/catalog" className="pt-link" style={{ fontSize: 11 }}>Configure →</Link>}>
       {reorders.length === 0 && (
         <div className="pt-empty-box">
           <EmptyState
@@ -430,7 +434,8 @@ function StockCard({ products, velocity7dByProduct }: { products: CatalogProduct
                       </svg>
                     }
                     title="No products in catalog"
-                    body="Complete the onboarding to seed your catalog."
+                    body="Seed your catalog during onboarding, or add products manually."
+                    action={{ label: 'Go to catalog →', href: '/catalog' }}
                   />
                 </div>
               </td>
