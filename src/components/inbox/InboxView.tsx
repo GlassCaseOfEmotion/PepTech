@@ -454,7 +454,7 @@ function Composer({ thread, onSend, isSending, initialText, showTemplates, onSho
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null)
   const [showProductPicker, setShowProductPicker] = useState(false)
-  const [pendingCoaPath, setPendingCoaPath] = useState<string | null>(null)
+  const [pendingAttachment, setPendingAttachment] = useState<{ storagePath: string; label: string; bucket: 'coa' | 'product-media' } | null>(null)
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -516,44 +516,48 @@ function Composer({ thread, onSend, isSending, initialText, showTemplates, onSho
     }
   }, [pendingInvoicePath, pendingInvoiceName, activeId, clearPendingInvoice, draft, send])
 
-  const sendCoa = useCallback(async () => {
-    if (!pendingCoaPath || !activeId) return
+  const sendAttachment = useCallback(async () => {
+    if (!pendingAttachment || !activeId) return
     setIsUploading(true)
     try {
       const res = await fetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId: activeId, storagePath: pendingCoaPath }),
+        body: JSON.stringify({
+          conversationId: activeId,
+          storagePath: pendingAttachment.storagePath,
+          bucket: pendingAttachment.bucket,
+        }),
       })
       if (!res.ok) {
-        console.error('COA send failed:', res.status)
+        console.error('Attachment send failed:', res.status)
         return
       }
-      setPendingCoaPath(null)
+      setPendingAttachment(null)
     } finally {
       setIsUploading(false)
     }
-  }, [pendingCoaPath, activeId])
+  }, [pendingAttachment, activeId])
 
-  const sendTextThenCoa = useCallback(async () => {
+  const sendTextThenAttachment = useCallback(async () => {
     if (draft.trim()) {
       const res = await fetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conversationId: activeId, content: draft }),
       })
-      if (!res.ok) return   // abort COA if text failed
+      if (!res.ok) return
       setDraft('')
     }
-    await sendCoa()
-  }, [draft, activeId, sendCoa])
+    await sendAttachment()
+  }, [draft, activeId, sendAttachment])
 
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
       if (pendingFile) void sendPhoto()
       else if (pendingInvoicePath) void sendInvoice()
-      else if (pendingCoaPath) void sendTextThenCoa()
+      else if (pendingAttachment) void sendTextThenAttachment()
       else send()
     }
   }
@@ -615,14 +619,14 @@ function Composer({ thread, onSend, isSending, initialText, showTemplates, onSho
           {isUploading && <span className="pt-composer-photo-status">Sending…</span>}
         </div>
       )}
-      {pendingCoaPath && (
+      {pendingAttachment && (
         <div className="pt-composer-photo-preview">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Icons.doc size={16} />
-            <span style={{ fontSize: 12, fontWeight: 500 }}>COA PDF</span>
+            <span style={{ fontSize: 12, fontWeight: 500 }}>{pendingAttachment.label}</span>
           </div>
           {!isUploading && (
-            <button className="pt-composer-photo-clear" onClick={() => setPendingCoaPath(null)} title="Remove">✕</button>
+            <button className="pt-composer-photo-clear" onClick={() => setPendingAttachment(null)} title="Remove">✕</button>
           )}
           {isUploading && <span className="pt-composer-photo-status">Sending…</span>}
         </div>
@@ -633,8 +637,8 @@ function Composer({ thread, onSend, isSending, initialText, showTemplates, onSho
             setDraft(d => d ? `${d}\n\n${text}` : text)
             setShowProductPicker(false)
           }}
-          onAttachCoa={(storagePath) => {
-            setPendingCoaPath(storagePath)
+          onAttachFile={(storagePath, label, bucket) => {
+            setPendingAttachment({ storagePath, label, bucket })
             setShowProductPicker(false)
           }}
           onClose={() => setShowProductPicker(false)}
@@ -681,8 +685,8 @@ function Composer({ thread, onSend, isSending, initialText, showTemplates, onSho
             <span className="pt-composer-hint">⌘↵ to send</span>
             <button
               className={`pt-btn pt-btn-primary ${(isSending || isUploading) ? 'is-sending' : ''}`}
-              onClick={() => { if (pendingFile) void sendPhoto(); else if (pendingInvoicePath) void sendInvoice(); else if (pendingCoaPath) void sendTextThenCoa(); else send() }}
-              disabled={pendingFile ? isUploading : pendingInvoicePath ? isUploading : pendingCoaPath ? isUploading : (!draft.trim() || isSending)}
+              onClick={() => { if (pendingFile) void sendPhoto(); else if (pendingInvoicePath) void sendInvoice(); else if (pendingAttachment) void sendTextThenAttachment(); else send() }}
+              disabled={pendingFile ? isUploading : pendingInvoicePath ? isUploading : pendingAttachment ? isUploading : (!draft.trim() || isSending)}
             >
               <Icons.send size={12} /> Send
             </button>

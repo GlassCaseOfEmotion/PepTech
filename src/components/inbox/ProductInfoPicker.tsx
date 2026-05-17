@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { formatProductInfo } from '@/lib/product-info'
 import type { ProductInfoIncludes } from '@/lib/product-info'
 import type { ProductProtocol } from '@/types/protocols'
+import type { ProductMediaItem } from '@/types/catalog'
 
 type Resource = { label: string; url: string }
 type PickerProduct = {
@@ -16,6 +17,7 @@ type PickerProduct = {
   resources: Resource[]
   protocol: ProductProtocol | null
   coa_path: string | null
+  media: ProductMediaItem[]
 }
 
 const FAMILY_COLORS: Record<string, string> = {
@@ -32,11 +34,11 @@ function familyColor(family: string): string {
 
 export function ProductInfoPicker({
   onInsert,
-  onAttachCoa,
+  onAttachFile,
   onClose,
 }: {
   onInsert: (text: string) => void
-  onAttachCoa: (storagePath: string) => void
+  onAttachFile: (storagePath: string, label: string, bucket: 'coa' | 'product-media') => void
   onClose: () => void
 }) {
   const supabase = useMemo(() => createClient(), [])
@@ -48,6 +50,8 @@ export function ProductInfoPicker({
     protocol: true,
     resources: true,
   })
+  const [selectedMedia, setSelectedMedia] = useState<ProductMediaItem | null>(null)
+  const [mediaThumbnails, setMediaThumbnails] = useState<Record<string, string>>({})
 
   useEffect(() => {
     supabase
@@ -55,7 +59,8 @@ export function ProductInfoPicker({
       .select(`
         id, name, sku, product_family, description, resources,
         product_protocols(id, tenant_id, product_id, vial_strength, reconstitution_ml, draw_volume_ml, frequency, timing, cycle_length_weeks, storage, notes, created_at, updated_at),
-        batches(coa_path)
+        batches(coa_path),
+        product_media(id, label, type, storage_path, sort_order)
       `)
       .eq('is_active', true)
       .order('name')
@@ -77,6 +82,9 @@ export function ProductInfoPicker({
               Array.isArray(p.batches)
                 ? ((p.batches as Record<string, unknown>[]).find(b => b.coa_path)?.coa_path as string | null) ?? null
                 : null,
+            media: Array.isArray(p.product_media)
+              ? (p.product_media as ProductMediaItem[]).filter(m => m.storage_path)
+              : [],
           }))
         )
       })
@@ -88,6 +96,29 @@ export function ProductInfoPicker({
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
+  useEffect(() => {
+    if (!selected || selected.media.length === 0) return
+    setMediaThumbnails(current => {
+      const images = selected.media.filter(m => m.type === 'image' && !current[m.id])
+      if (images.length === 0) return current
+      void Promise.all(
+        images.map(async m => {
+          const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(m.storage_path)}`)
+          if (!res.ok) return null
+          const { url } = await res.json() as { url: string }
+          return { id: m.id, url }
+        })
+      ).then(results => {
+        const updates: Record<string, string> = {}
+        for (const r of results) { if (r) updates[r.id] = r.url }
+        if (Object.keys(updates).length > 0) {
+          setMediaThumbnails(prev => ({ ...prev, ...updates }))
+        }
+      })
+      return current
+    })
+  }, [selected])
+
   const filtered = products.filter(
     p =>
       p.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -98,6 +129,7 @@ export function ProductInfoPicker({
 
   function selectProduct(p: PickerProduct) {
     setSelected(p)
+    setSelectedMedia(null)
     setInclude({ description: !!p.description, protocol: !!p.protocol, resources: p.resources.length > 0 })
   }
 
@@ -109,7 +141,14 @@ export function ProductInfoPicker({
 
   function handleAttachCoa() {
     if (selected?.coa_path) {
-      onAttachCoa(selected.coa_path)
+      onAttachFile(selected.coa_path, 'COA PDF', 'coa')
+      onClose()
+    }
+  }
+
+  function handleAttachMedia() {
+    if (selectedMedia) {
+      onAttachFile(selectedMedia.storage_path, selectedMedia.label, 'product-media')
       onClose()
     }
   }
@@ -236,7 +275,43 @@ export function ProductInfoPicker({
                       <span className="pt-pip-toggle-check">{include.resources ? '✓' : '+'}</span>
                     </button>
                   )}
+                  {selected.media.length > 0 && (
+                    <button
+                      className={`pt-pip-toggle${selectedMedia ? ' is-on' : ''}`}
+                      onClick={() => setSelectedMedia(selectedMedia ? null : selected.media[0])}
+                    >
+                      <span className="pt-pip-toggle-icon">◈</span>
+                      <div className="pt-pip-toggle-info">
+                        <div className="pt-pip-toggle-name">Media</div>
+                        <div className="pt-pip-toggle-hint">
+                          {selected.media.length} item{selected.media.length !== 1 ? 's' : ''}
+                          {selectedMedia ? ` · ${selectedMedia.label} selected` : ' · tap to pick one'}
+                        </div>
+                      </div>
+                      <span className="pt-pip-toggle-check">{selectedMedia ? '✓' : '+'}</span>
+                    </button>
+                  )}
                 </div>
+
+              {selected.media.length > 0 && (
+                <div className="pt-pip-media-grid">
+                  {selected.media.map(m => (
+                    <button
+                      key={m.id}
+                      className={`pt-pip-media-tile${selectedMedia?.id === m.id ? ' is-selected' : ''}`}
+                      onClick={() => setSelectedMedia(prev => prev?.id === m.id ? null : m)}
+                      title={m.label}
+                    >
+                      {m.type === 'image' && mediaThumbnails[m.id] ? (
+                        <img src={mediaThumbnails[m.id]} alt={m.label} className="pt-pip-media-img" />
+                      ) : (
+                        <div className="pt-pip-media-video"><span style={{ fontSize: 14 }}>▶</span></div>
+                      )}
+                      <div className="pt-pip-media-label">{m.label}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
 
                 {/* Preview bubble */}
                 {preview && (
@@ -251,12 +326,18 @@ export function ProductInfoPicker({
                 {/* Actions */}
                 <div className="pt-pip-actions">
                   {selected.coa_path && (
-                    <button className="pt-btn pt-btn-ghost" onClick={handleAttachCoa}>
+                    <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11 }} onClick={handleAttachCoa}>
                       Attach COA PDF
+                    </button>
+                  )}
+                  {selectedMedia && (
+                    <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11 }} onClick={handleAttachMedia}>
+                      Attach {selectedMedia.label} →
                     </button>
                   )}
                   <button
                     className="pt-btn pt-btn-primary"
+                    style={{ fontSize: 11 }}
                     onClick={handleInsert}
                     disabled={!preview}
                   >

@@ -1070,3 +1070,42 @@ html.pt-ai-expanded .pt-inbox-ai-msgs { flex: 1; max-height: none; }
   border-top: 0.5px solid var(--pt-line-soft);
   flex-shrink: 0;
 }
+
+/* ── ProductInfoPicker media grid ────────────────────────────────────────── */
+.pt-pip-media-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 0 20px 6px;
+}
+.pt-pip-media-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--pt-radius-sm);
+  overflow: hidden;
+  outline: 2.5px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color 0.12s;
+}
+.pt-pip-media-tile.is-selected { outline-color: var(--pt-accent); }
+.pt-pip-media-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--pt-radius-sm); display: block; }
+.pt-pip-media-video {
+  aspect-ratio: 4/3;
+  background: oklch(from var(--pt-fg) l c h / 0.08);
+  border-radius: var(--pt-radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--pt-fg-3);
+}
+.pt-pip-media-label {
+  font-size: 10px;
+  color: var(--pt-fg-4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
