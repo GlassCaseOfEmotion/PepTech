@@ -520,11 +520,15 @@ function Composer({ thread, onSend, isSending, initialText, showTemplates, onSho
     if (!pendingCoaPath || !activeId) return
     setIsUploading(true)
     try {
-      await fetch('/api/send', {
+      const res = await fetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conversationId: activeId, storagePath: pendingCoaPath }),
       })
+      if (!res.ok) {
+        console.error('COA send failed:', res.status)
+        return
+      }
       setPendingCoaPath(null)
     } finally {
       setIsUploading(false)
@@ -532,9 +536,17 @@ function Composer({ thread, onSend, isSending, initialText, showTemplates, onSho
   }, [pendingCoaPath, activeId])
 
   const sendTextThenCoa = useCallback(async () => {
-    if (draft.trim()) send()
+    if (draft.trim()) {
+      const res = await fetch('/api/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: activeId, content: draft }),
+      })
+      if (!res.ok) return   // abort COA if text failed
+      setDraft('')
+    }
     await sendCoa()
-  }, [draft, send, sendCoa])
+  }, [draft, activeId, sendCoa])
 
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {

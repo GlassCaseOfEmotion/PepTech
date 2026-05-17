@@ -43,11 +43,15 @@ export function ProductSendModal({
   useEffect(() => {
     if (query.length < 1) { setConversations([]); return }
     const q = query.toLowerCase()
+    // Fetches up to 50 recent conversations ordered by recency, then filters client-side.
+    // PostgREST does not support ilike on joined columns, so server-side text search on
+    // the joined customers.display_name is not available via the REST API.
     supabase
       .from('conversations')
-      .select('id, channel_type, customers(display_name)')
+      .select('id, channel_type, last_message_at, customers(display_name)')
       .not('status', 'eq', 'resolved')
-      .limit(8)
+      .order('last_message_at', { ascending: false })
+      .limit(50)
       .then(({ data }) => {
         if (!data) return
         const results = (data as Record<string, unknown>[])

@@ -15,7 +15,7 @@ export function formatProductInfo(
   if (include.protocol && protocol) {
     const doses = Math.floor(protocol.reconstitution_ml / protocol.draw_volume_ml)
     const lines: string[] = []
-    if (protocol.vial_strength) lines.push(`Vial strength: ${protocol.vial_strength}mg`)
+    if (protocol.vial_strength) lines.push(`Vial strength: ${protocol.vial_strength}`)
     lines.push(
       `Reconstitution: Add ${protocol.reconstitution_ml}mL bacteriostatic water per vial`,
       `Draw volume: ${protocol.draw_volume_ml}mL per injection (${doses} doses/vial)`,
