@@ -1,14 +1,15 @@
-export type Frequency = 'once_daily' | 'twice_daily' | 'eod' | '3x_weekly' | 'weekly'
+export type Frequency = 'once_daily' | 'twice_daily' | 'eod' | '3x_weekly' | '5_on_2_off' | 'weekly'
 
 export const FREQUENCY_LABELS: Record<Frequency, string> = {
   once_daily:  'Once daily',
   twice_daily: 'Twice daily',
   eod:         'Every other day',
   '3x_weekly': '3× weekly',
+  '5_on_2_off': '5 days on, 2 days off',
   weekly:      'Weekly',
 }
 
-export const FREQUENCY_OPTIONS: Frequency[] = ['once_daily', 'twice_daily', 'eod', '3x_weekly', 'weekly']
+export const FREQUENCY_OPTIONS: Frequency[] = ['once_daily', 'twice_daily', 'eod', '3x_weekly', '5_on_2_off', 'weekly']
 
 export interface ProductProtocol {
   id: string
@@ -75,6 +76,7 @@ export function frequencyToDaily(freq: Frequency): number {
     case 'twice_daily': return 2
     case 'eod':         return 0.5
     case '3x_weekly':   return 3 / 7
+    case '5_on_2_off':  return 5 / 7
     case 'weekly':      return 1 / 7
   }
 }
