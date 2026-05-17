@@ -14,6 +14,7 @@ import type { DashboardStats, PendingOrder, PackingOrder, ActivityItem } from '@
 import { initials } from '@/types/inbox'
 import { PAYMENT_BADGE } from '@/types/payments'
 import { OnboardingChecklist } from './OnboardingChecklist'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 const ACTIVE_STATUSES = new Set(['new', 'needs_reply', 'in_progress', 'snoozed'])
 
@@ -217,7 +218,21 @@ function InboxCard({ threads }: { threads: InboxThread[] }) {
           )
         })}
         {shown.length === 0 && (
-          <li className="pt-thread" style={{ opacity: 0.5, fontSize: 13 }}>No conversations</li>
+          <li>
+            <div className="pt-empty-box">
+              <EmptyState
+                size="sm"
+                icon={
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="6" width="22" height="16" rx="2.5"/>
+                    <path d="M3 11l11 7 11-7" strokeWidth="1"/>
+                  </svg>
+                }
+                title="No conversations"
+                body="Messages will appear here when customers reach out."
+              />
+            </div>
+          </li>
         )}
       </ul>
     </DashCard>
@@ -239,7 +254,20 @@ function PaymentsCard({ orders, baseCurrency }: { orders: PendingOrder[]; baseCu
       action={<Link href="/orders" className="pt-link">View all →</Link>}>
       <ul className="pt-pay-list">
         {orders.length === 0 && (
-          <li className="pt-pay" style={{ opacity: 0.5, fontSize: 12 }}>No pending payments</li>
+          <li>
+            <div className="pt-empty-box">
+              <EmptyState
+                size="sm"
+                icon={
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+                    <circle cx="14" cy="14" r="10"/>
+                    <path d="M14 9v10M11 11.5h4a2 2 0 0 1 0 4h-3a2 2 0 0 0 0 4h4.5"/>
+                  </svg>
+                }
+                title="No pending payments"
+              />
+            </div>
+          </li>
         )}
         {orders.map(o => {
           const badge = PAYMENT_BADGE[o.asset] ?? { label: o.asset, key: 'other' }
@@ -311,11 +339,23 @@ function ReordersCard({ reorders }: { reorders: ReorderSignal[] }) {
   return (
     <DashCard title="Reorder signals" subtitle="Protocol-driven · dosing schedule"
       action={<button className="pt-link">Configure →</button>}>
-      {reorders.length === 0 ? (
-        <div style={{ padding: '24px 16px', textAlign: 'center', fontSize: 12, color: 'var(--pt-fg-4)' }}>
-          No reorders due — all customers are well-stocked
+      {reorders.length === 0 && (
+        <div className="pt-empty-box">
+          <EmptyState
+            size="sm"
+            icon={
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 14a9 9 0 0 1 16-5.7"/>
+                <path d="M23 14a9 9 0 0 1-16 5.7"/>
+                <path d="M21 8.3l.8-4-3 1.5"/>
+                <path d="M7 19.7l-.8 4 3-1.5"/>
+              </svg>
+            }
+            title="All customers stocked"
+            body="Reorder signals appear when supply is running low."
+          />
         </div>
-      ) : null}
+      )}
       <ul className="pt-reorder-list">
         {reorders.map((r, i) => (
           <Link key={i} href={`/customers/${r.customerId}`} style={{ textDecoration: 'none', color: 'inherit', display: 'contents' }}>
@@ -357,6 +397,27 @@ function StockCard({ products, velocity7dByProduct }: { products: CatalogProduct
           <tr><th>Product</th><th className="r">On-hand</th><th className="r">7d Δ</th></tr>
         </thead>
         <tbody>
+          {products.length === 0 && (
+            <tr>
+              <td colSpan={5}>
+                <div className="pt-empty-box" style={{ margin: '4px' }}>
+                  <EmptyState
+                    size="sm"
+                    icon={
+                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+                        <rect x="10" y="5" width="8" height="18" rx="4"/>
+                        <line x1="10" y1="12" x2="18" y2="12" strokeWidth="0.9" opacity="0.45"/>
+                        <rect x="19.5" y="9" width="5.5" height="14" rx="2.75" opacity="0.45"/>
+                        <rect x="3" y="11" width="5.5" height="12" rx="2.75" opacity="0.35"/>
+                      </svg>
+                    }
+                    title="No products in catalog"
+                    body="Complete the onboarding to seed your catalog."
+                  />
+                </div>
+              </td>
+            </tr>
+          )}
           {products.map(p => {
             const isOut = p.totalStock === 0
             const isLow = !isOut && p.totalStock < 15
@@ -452,7 +513,20 @@ function ShipmentsCard({ shipments }: { shipments: ShipmentRow[] }) {
           )
         })}
         {shipments.length === 0 && (
-          <li className="pt-ship" style={{ fontSize: 12, color: 'var(--pt-fg-4)' }}>No active shipments</li>
+          <li>
+            <div className="pt-empty-box">
+              <EmptyState
+                size="sm"
+                icon={
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 9l10-5 10 5v11L14 25 4 20V9z"/>
+                    <path d="M4 9l10 6 10-6M14 15v10"/>
+                  </svg>
+                }
+                title="No active shipments"
+              />
+            </div>
+          </li>
         )}
       </ul>
     </DashCard>
@@ -502,9 +576,21 @@ export function DashboardRightRail({
         <div className="pt-right-hd"><span>Today</span></div>
         <ul className="pt-agenda">
           {agendaItems.length === 0 && (
-            <li className="pt-agenda-i" style={{ opacity: 0.5, fontSize: 12 }}>
-              <i className="pt-agenda-bullet" />
-              <div><div className="pt-agenda-t">All caught up</div></div>
+            <li>
+              <EmptyState
+                size="sm"
+                icon={
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+                    <circle cx="12" cy="12" r="4"/>
+                    <line x1="12" y1="3" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21"/>
+                    <line x1="3" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21" y2="12"/>
+                    <line x1="5.6" y1="5.6" x2="7" y2="7"/><line x1="17" y1="17" x2="18.4" y2="18.4"/>
+                    <line x1="18.4" y1="5.6" x2="17" y2="7"/><line x1="7" y1="17" x2="5.6" y2="18.4"/>
+                  </svg>
+                }
+                title="All caught up"
+                body="Enjoy the quiet."
+              />
             </li>
           )}
           {agendaItems.slice(0, 6).map((item, i) => (
@@ -558,9 +644,22 @@ export function DashboardRightRail({
         <div className="pt-right-hd"><span>Activity</span></div>
         <ul className="pt-agenda">
           {activityItems.length === 0 && (
-            <li className="pt-agenda-i" style={{ opacity: 0.5, fontSize: 12 }}>
-              <i className="pt-agenda-bullet" />
-              <div><div className="pt-agenda-t">No recent activity</div></div>
+            <li>
+              <EmptyState
+                size="sm"
+                icon={
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+                    <line x1="9" y1="4" x2="9" y2="20" strokeWidth="0.8" opacity="0.3"/>
+                    <circle cx="9" cy="8" r="2" fill="currentColor" stroke="none"/>
+                    <line x1="13" y1="8" x2="20" y2="8"/>
+                    <circle cx="9" cy="14" r="1.5" fill="currentColor" stroke="none" opacity="0.35"/>
+                    <line x1="13" y1="14" x2="18" y2="14" opacity="0.35"/>
+                    <circle cx="9" cy="19" r="1.2" fill="currentColor" stroke="none" opacity="0.18"/>
+                    <line x1="13" y1="19" x2="17" y2="19" opacity="0.18"/>
+                  </svg>
+                }
+                title="No recent activity"
+              />
             </li>
           )}
           {activityItems.map(item => (

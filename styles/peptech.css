@@ -1844,3 +1844,53 @@ kbd {
   font-family: inherit;
 }
 .ob-cl-tour-btn:hover { color: var(--pt-accent); }
+
+/* ─── Empty states ──────────────────────────────────────────────────────── */
+.pt-empty {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+}
+.pt-empty-sm { gap: 7px;  padding: 18px 14px; }
+.pt-empty-md { gap: 12px; padding: 32px 24px; }
+.pt-empty-lg { gap: 18px; padding: 72px 32px; }
+
+.pt-empty-icon {
+  color: var(--pt-fg-4);
+  display: flex; align-items: center; justify-content: center;
+}
+.pt-empty-sm .pt-empty-icon { opacity: 0.55; }
+.pt-empty-md .pt-empty-icon { opacity: 0.65; }
+.pt-empty-lg .pt-empty-icon { opacity: 0.7; }
+
+.pt-empty-text { display: flex; flex-direction: column; gap: 4px; }
+
+.pt-empty-title { font-weight: 500; color: var(--pt-fg-2); }
+.pt-empty-sm .pt-empty-title { font-size: 12px; }
+.pt-empty-md .pt-empty-title { font-size: 13.5px; }
+.pt-empty-lg .pt-empty-title { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; color: var(--pt-fg); }
+
+.pt-empty-body { color: var(--pt-fg-4); line-height: 1.55; }
+.pt-empty-sm .pt-empty-body { font-size: 11px; }
+.pt-empty-md .pt-empty-body { font-size: 12.5px; }
+.pt-empty-lg .pt-empty-body { font-size: 13.5px; max-width: 380px; }
+
+.pt-empty-action { margin-top: 4px; }
+.pt-empty-sm .pt-empty-action { font-size: 11.5px; padding: 6px 12px; }
+
+/* Dashed box wrapper — used for dashboard card empties */
+.pt-empty-box {
+  border: 1.5px dashed var(--pt-line);
+  border-radius: var(--pt-radius);
+  background: oklch(from var(--pt-fg) l c h / 0.02);
+  animation: pt-empty-in 0.35s ease both;
+}
+@keyframes pt-empty-in {
+  from { opacity: 0; transform: scale(0.98); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Full-page empty state wrapper */
+.pt-empty-page {
+  display: flex; align-items: center; justify-content: center;
+  flex: 1; min-height: 420px; width: 100%;
+  animation: pt-empty-in 0.4s ease both;
+}
