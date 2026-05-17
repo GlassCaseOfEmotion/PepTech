@@ -19,3 +19,7 @@ ALTER TABLE public.whatsapp_templates ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "tenant_whatsapp_templates" ON public.whatsapp_templates
   USING  (tenant_id = auth_tenant_id())
   WITH CHECK (tenant_id = auth_tenant_id());
+
+CREATE TRIGGER set_updated_at_whatsapp_templates
+  BEFORE UPDATE ON public.whatsapp_templates
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
