@@ -189,7 +189,7 @@ export async function executeAction(
 export async function runAutomationsForEvent(
   supabase: SupabaseClient<Database>,
   tenantId: string,
-  triggerType: 'new_thread' | 'order_state',
+  triggerType: 'new_thread' | 'order_state' | 'schedule' | 'protocol_progress',
   context: Context,
 ): Promise<void> {
   const { data: automations } = await supabase
