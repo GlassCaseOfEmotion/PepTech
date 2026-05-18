@@ -57,6 +57,7 @@ export function ProductInfoPicker({
   const [libraryQuery, setLibraryQuery] = useState('')
   const [libraryTypeFilter, setLibraryTypeFilter] = useState<'all' | 'image' | 'video' | 'pdf'>('all')
   const [libraryLoaded, setLibraryLoaded] = useState(false)
+  const [libraryThumbnails, setLibraryThumbnails] = useState<Record<string, string>>({})
 
   useEffect(() => {
     supabase
@@ -135,8 +136,25 @@ export function ProductInfoPicker({
       .not('storage_path', 'is', null)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
-        if (data) setLibraryItems(data as { id: string; label: string; type: string; storage_path: string }[])
+        if (!data) { setLibraryLoaded(true); return }
+        const items = data as { id: string; label: string; type: string; storage_path: string }[]
+        setLibraryItems(items)
         setLibraryLoaded(true)
+        // Fetch thumbnails for image items
+        const images = items.filter(m => m.type === 'image')
+        if (images.length === 0) return
+        void Promise.all(
+          images.map(async m => {
+            const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(m.storage_path)}&width=200`)
+            if (!res.ok) return null
+            const { url } = await res.json() as { url: string }
+            return { id: m.id, url }
+          })
+        ).then(results => {
+          const updates: Record<string, string> = {}
+          for (const r of results) { if (r) updates[r.id] = r.url }
+          if (Object.keys(updates).length > 0) setLibraryThumbnails(updates)
+        })
       })
   }, [activeTab, libraryLoaded, supabase])
 
@@ -414,7 +432,9 @@ export function ProductInfoPicker({
                       }}
                     >
                       <div className="pt-pip-lib-tile-icon">
-                        {m.type === 'image' ? '🖼' : m.type === 'video' ? '▶' : '📄'}
+                        {m.type === 'image' && libraryThumbnails[m.id] ? (
+                          <img src={libraryThumbnails[m.id]} alt={m.label} className="pt-pip-lib-thumb" loading="lazy" />
+                        ) : m.type === 'image' ? '🖼' : m.type === 'video' ? '▶' : '📄'}
                       </div>
                       <div className="pt-pip-lib-tile-label">{m.label}</div>
                     </button>
