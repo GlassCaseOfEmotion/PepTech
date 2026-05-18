@@ -35,9 +35,7 @@ export default async function CatalogPage() {
       .gte('created_at', thirtyDaysAgo),
     supabase
       .from('media_product_tags')
-      .select('product_id, media_items!inner(id, label, type, storage_path, sort_order)')
-      .not('media_items.storage_path', 'is', null)
-      .order('media_items.sort_order', { ascending: true }),
+      .select('product_id, media_items!inner(id, label, type, storage_path, sort_order)'),
   ])
 
   const now = Date.now()
@@ -65,17 +63,21 @@ export default async function CatalogPage() {
   }, {})
 
   // Sign all image thumbnails server-side in parallel — no client round trips needed.
-  const imageMediaItems = ((allMedia ?? []) as {
+  // Filter out rows where storage_path is null (upload not yet confirmed) and sort by sort_order.
+  const allMediaRows = ((allMedia ?? []) as {
     product_id: string
-    media_items: { type: string; storage_path: string }
-  }[]).filter(row => row.media_items.type === 'image')
+    media_items: { id: string; label: string; type: string; storage_path: string | null; sort_order: number }
+  }[]).filter(row => row.media_items.storage_path)
+    .sort((a, b) => a.media_items.sort_order - b.media_items.sort_order)
+
+  const imageMediaItems = allMediaRows.filter(row => row.media_items.type === 'image')
   const thumbnailUrlMap: Record<string, string> = {}
   if (imageMediaItems.length > 0) {
     const signed = await Promise.all(
       imageMediaItems.map(row =>
         supabase.storage.from('product-media')
-          .createSignedUrl(row.media_items.storage_path, 3600, { transform: { width: 400, quality: 80, resize: 'contain' } })
-          .then(({ data }) => data ? { path: row.media_items.storage_path, url: data.signedUrl } : null)
+          .createSignedUrl(row.media_items.storage_path!, 3600, { transform: { width: 400, quality: 80, resize: 'contain' } })
+          .then(({ data }) => data ? { path: row.media_items.storage_path!, url: data.signedUrl } : null)
       )
     )
     for (const item of signed) {
@@ -83,19 +85,16 @@ export default async function CatalogPage() {
     }
   }
 
-  const mediaByProduct = ((allMedia ?? []) as {
-    product_id: string
-    media_items: { id: string; label: string; type: string; storage_path: string; sort_order: number }
-  }[]).reduce<Record<string, ProductMediaItem[]>>((acc, row) => {
+  const mediaByProduct = allMediaRows.reduce<Record<string, ProductMediaItem[]>>((acc, row) => {
     const m = row.media_items
     if (!acc[row.product_id]) acc[row.product_id] = []
     acc[row.product_id].push({
       id: m.id,
       label: m.label,
       type: m.type as 'image' | 'video' | 'pdf',
-      storage_path: m.storage_path,
+      storage_path: m.storage_path!,
       sort_order: m.sort_order,
-      thumbnailUrl: thumbnailUrlMap[m.storage_path],
+      thumbnailUrl: thumbnailUrlMap[m.storage_path!],
     })
     return acc
   }, {})
