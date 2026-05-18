@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createMediaItem, saveMediaItemPath } from '@/app/media/actions'
 import { MediaItemModal } from '@/components/media/MediaItemModal'
-import type { MediaItem, MediaItemType } from '@/types/media'
+import type { MediaItem } from '@/types/media'
 
 type FilterType = 'all' | 'image' | 'video' | 'pdf' | 'untagged'
 
@@ -23,19 +23,16 @@ export function MediaLibraryView({
   items: MediaItem[]
   products: { id: string; name: string }[]
 }) {
-  // Pre-select product filter from URL param (e.g. /media?product={id} from catalog link)
   const searchParams = useSearchParams()
 
   const [items, setItems] = useState<MediaItem[]>(initialItems)
   const [typeFilter, setTypeFilter] = useState<FilterType>('all')
   const [productFilter, setProductFilter] = useState<string>(searchParams.get('product') ?? 'all')
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null)
+  const [isNewUpload, setIsNewUpload] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
-  const [uploadMenuOpen, setUploadMenuOpen] = useState(false)
-  const imageInputRef = useRef<HTMLInputElement>(null)
-  const videoInputRef = useRef<HTMLInputElement>(null)
-  const pdfInputRef = useRef<HTMLInputElement>(null)
+  const uploadInputRef = useRef<HTMLInputElement>(null)
 
   const filtered = items.filter(item => {
     if (typeFilter === 'untagged') return item.productTags.length === 0
@@ -44,10 +41,12 @@ export function MediaLibraryView({
     return true
   })
 
-  async function handleUpload(file: File, type: 'image' | 'video' | 'pdf') {
+  async function handleUpload(file: File) {
+    const type: 'image' | 'video' | 'pdf' = file.type.startsWith('image/') ? 'image'
+      : file.type.startsWith('video/') ? 'video'
+      : 'pdf'
     const label = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
     const ext = file.name.split('.').pop() ?? (type === 'image' ? 'jpg' : type === 'video' ? 'mp4' : 'pdf')
-    setUploadMenuOpen(false)
     setUploading(true)
     setUploadError('')
     try {
@@ -74,14 +73,16 @@ export function MediaLibraryView({
         thumbnailUrl: type === 'image' ? URL.createObjectURL(file) : undefined,
       }
       setItems(prev => [newItem, ...prev])
+      setIsNewUpload(true)
+      setSelectedItem(newItem)
     } finally {
       setUploading(false)
     }
   }
 
-  function onFilePick(e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video' | 'pdf') {
+  function onFilePick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (file) void handleUpload(file, type)
+    if (file) void handleUpload(file)
     e.target.value = ''
   }
 
@@ -93,6 +94,11 @@ export function MediaLibraryView({
   function handleItemDeleted(id: string) {
     setItems(prev => prev.filter(i => i.id !== id))
     setSelectedItem(null)
+  }
+
+  function handleModalClose() {
+    setSelectedItem(null)
+    setIsNewUpload(false)
   }
 
   return (
@@ -121,25 +127,20 @@ export function MediaLibraryView({
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
-          <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={e => onFilePick(e, 'image')} />
-          <input ref={videoInputRef} type="file" accept="video/mp4,video/quicktime,video/webm" style={{ display: 'none' }} onChange={e => onFilePick(e, 'video')} />
-          <input ref={pdfInputRef}   type="file" accept="application/pdf"                     style={{ display: 'none' }} onChange={e => onFilePick(e, 'pdf')}   />
-          <div style={{ position: 'relative' }}>
-            <button
-              className="pt-btn pt-btn-primary"
-              disabled={uploading}
-              onClick={() => !uploading && setUploadMenuOpen(o => !o)}
-            >
-              {uploading ? 'Uploading…' : '↑ Upload'}
-            </button>
-            {uploadMenuOpen && (
-              <div className="pt-media-lib-upload-menu" style={{ display: 'block' }}>
-                <button onClick={() => { imageInputRef.current?.click(); setUploadMenuOpen(false) }}>Image</button>
-                <button onClick={() => { videoInputRef.current?.click(); setUploadMenuOpen(false) }}>Video</button>
-                <button onClick={() => { pdfInputRef.current?.click(); setUploadMenuOpen(false) }}>PDF</button>
-              </div>
-            )}
-          </div>
+          <input
+            ref={uploadInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm,application/pdf"
+            style={{ display: 'none' }}
+            onChange={onFilePick}
+          />
+          <button
+            className="pt-btn pt-btn-primary"
+            disabled={uploading}
+            onClick={() => !uploading && uploadInputRef.current?.click()}
+          >
+            {uploading ? 'Uploading…' : '↑ Upload'}
+          </button>
         </div>
       </div>
 
@@ -161,7 +162,7 @@ export function MediaLibraryView({
             <div key={item.id} className="pt-media-tile">
               <button
                 className="pt-media-tile-thumb"
-                onClick={() => setSelectedItem(item)}
+                onClick={() => { setIsNewUpload(false); setSelectedItem(item) }}
                 title={item.label}
               >
                 {item.type === 'image' && item.thumbnailUrl ? (
@@ -197,9 +198,10 @@ export function MediaLibraryView({
         <MediaItemModal
           item={selectedItem}
           products={products}
-          onClose={() => setSelectedItem(null)}
+          onClose={handleModalClose}
           onUpdated={handleItemUpdated}
           onDeleted={handleItemDeleted}
+          isNewUpload={isNewUpload}
         />
       )}
     </div>
