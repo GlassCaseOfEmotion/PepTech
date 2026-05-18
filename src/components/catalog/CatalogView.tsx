@@ -12,6 +12,7 @@ import { FREQUENCY_LABELS, FREQUENCY_OPTIONS } from '@/types/protocols'
 import type { ProductProtocol, Frequency } from '@/types/protocols'
 import { createClient } from '@/lib/supabase/client'
 import { ProductSendModal } from '@/components/catalog/ProductSendModal'
+import { stockFlag, LOW_THRESHOLD, BAR_MAX } from '@/lib/catalog-utils'
 
 // ── Velocity sparkline — area fill matching original design ─────────────────
 function MiniSparkline({ data, width = 44, height = 16 }: { data: number[]; width?: number; height?: number }) {
@@ -876,17 +877,6 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
       )}
     </aside>
   )
-}
-
-const LOW_THRESHOLD = 25
-const CRITICAL_THRESHOLD = 10
-const BAR_MAX = 200
-
-function stockFlag(stock: number): 'oos' | 'critical' | 'low' | undefined {
-  if (stock === 0) return 'oos'
-  if (stock <= CRITICAL_THRESHOLD) return 'critical'
-  if (stock <= LOW_THRESHOLD) return 'low'
-  return undefined
 }
 
 const FAMILY_DISPLAY: Record<string, string> = {
