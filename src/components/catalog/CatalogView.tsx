@@ -4,17 +4,18 @@ import { useState, useTransition, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { formatAmountCompact, formatAmount } from '@/lib/currency'
-import { createProduct, upsertProtocol, updateProduct, createProductMedia, saveProductMediaPath, deleteProductMedia } from '@/app/catalog/actions'
-import type { CatalogProduct, ProductMediaItem } from '@/types/catalog'
+import { formatAmountCompact } from '@/lib/currency'
+import { createProduct, updateProduct } from '@/app/catalog/actions'
+import type { CatalogProduct } from '@/types/catalog'
 import { grossMargin } from '@/types/catalog'
-import { FREQUENCY_LABELS, FREQUENCY_OPTIONS } from '@/types/protocols'
-import type { ProductProtocol, Frequency } from '@/types/protocols'
+import type { ProductProtocol } from '@/types/protocols'
 import { ProductSendModal } from '@/components/catalog/ProductSendModal'
 import { stockFlag, LOW_THRESHOLD, BAR_MAX } from '@/lib/catalog-utils'
 import { CatalogDetailOverview } from '@/components/catalog/CatalogDetailOverview'
+import { CatalogDetailProtocol } from '@/components/catalog/CatalogDetailProtocol'
+import { CatalogDetailMedia } from '@/components/catalog/CatalogDetailMedia'
+import { CatalogDetailInsights } from '@/components/catalog/CatalogDetailInsights'
 import { MiniSparkline } from '@/components/catalog/MiniSparkline'
-import { createClient } from '@/lib/supabase/client'
 
 // ── Add product form ─────────────────────────────────────────────────────────
 function AddProductForm({ onDone, knownFamilies, baseCurrency }: { onDone: () => void; knownFamilies: string[]; baseCurrency: string }) {
@@ -168,179 +169,6 @@ function AddProductForm({ onDone, knownFamilies, baseCurrency }: { onDone: () =>
   )
 }
 
-// ── Product media section ────────────────────────────────────────────────────
-function ProductMediaSection({ productId, media: initialMedia }: { productId: string; media: ProductMediaItem[] }) {
-  const [items, setItems] = useState<ProductMediaItem[]>(initialMedia)
-  const [pendingFile, setPendingFile] = useState<{ file: File; type: 'image' | 'video' } | null>(null)
-  const [labelInput, setLabelInput] = useState('')
-  const [uploading, setUploading] = useState(false)
-  const [uploadError, setUploadError] = useState('')
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
-  const imageInputRef = useRef<HTMLInputElement>(null)
-  const videoInputRef = useRef<HTMLInputElement>(null)
-  const [thumbnailUrls, setThumbnailUrls] = useState<Record<string, string>>({})
-
-  useEffect(() => {
-    setThumbnailUrls(current => {
-      const images = items.filter(m => m.type === 'image' && !current[m.id])
-      if (images.length === 0) return current
-      void Promise.all(
-        images.map(async m => {
-          const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(m.storage_path)}`)
-          if (!res.ok) return null
-          const { url } = await res.json() as { url: string }
-          return { id: m.id, url }
-        })
-      ).then(results => {
-        const updates: Record<string, string> = {}
-        for (const r of results) { if (r) updates[r.id] = r.url }
-        if (Object.keys(updates).length > 0) {
-          setThumbnailUrls(prev => ({ ...prev, ...updates }))
-        }
-      })
-      return current
-    })
-  }, [items])
-
-  function onFilePick(e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const baseName = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
-    setLabelInput(baseName)
-    setPendingFile({ file, type })
-    e.target.value = ''
-  }
-
-  async function upload() {
-    if (!pendingFile || !labelInput.trim()) return
-    setUploading(true)
-    setUploadError('')
-    try {
-      const ext = pendingFile.file.name.split('.').pop() ?? (pendingFile.type === 'image' ? 'jpg' : 'mp4')
-      const result = await createProductMedia(productId, labelInput.trim(), pendingFile.type, ext)
-      if ('error' in result) { setUploadError(result.error); return }
-      const putRes = await fetch(result.uploadUrl, {
-        method: 'PUT',
-        body: pendingFile.file,
-        headers: { 'Content-Type': pendingFile.file.type },
-      })
-      if (!putRes.ok) {
-        setUploadError('Upload failed — please try again')
-        void deleteProductMedia(result.id, result.storagePath)
-        return
-      }
-      const saveResult = await saveProductMediaPath(result.id, result.storagePath)
-      if ('error' in saveResult) {
-        setUploadError(saveResult.error)
-        setPendingFile(null)
-        setLabelInput('')
-        return
-      }
-      const newItem: ProductMediaItem = {
-        id: result.id,
-        label: labelInput.trim(),
-        type: pendingFile.type,
-        storage_path: result.storagePath,
-        sort_order: items.length,
-      }
-      setItems(prev => [...prev, newItem])
-      setPendingFile(null)
-      setLabelInput('')
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  async function openItem(item: ProductMediaItem) {
-    const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(item.storage_path)}`)
-    if (!res.ok) return
-    const { url } = await res.json() as { url: string }
-    window.open(url, '_blank', 'noopener')
-  }
-
-  async function confirmDelete(item: ProductMediaItem) {
-    const result = await deleteProductMedia(item.id, item.storage_path)
-    if ('error' in result) return
-    setItems(prev => prev.filter(m => m.id !== item.id))
-    setThumbnailUrls(prev => { const n = { ...prev }; delete n[item.id]; return n })
-    setConfirmDeleteId(null)
-  }
-
-  return (
-    <section className="pt-card pt-cat-section">
-      <header className="pt-card-hd">
-        <div>
-          <h3>Media</h3>
-          <p>{items.length} item{items.length !== 1 ? 's' : ''}</p>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={e => onFilePick(e, 'image')} />
-          <input ref={videoInputRef} type="file" accept="video/mp4,video/quicktime,video/webm" style={{ display: 'none' }} onChange={e => onFilePick(e, 'video')} />
-          <button className="pt-link" onClick={() => imageInputRef.current?.click()}>+ Image</button>
-          <button className="pt-link" onClick={() => videoInputRef.current?.click()}>+ Video</button>
-        </div>
-      </header>
-
-      {pendingFile && (
-        <div className="pt-media-upload-row">
-          <div className="pt-media-upload-icon">{pendingFile.type === 'image' ? '🖼' : '▶'}</div>
-          <div className="pt-media-upload-info">
-            <div style={{ fontSize: 11, color: 'var(--pt-fg-4)', marginBottom: 4 }}>{pendingFile.file.name}</div>
-            <input
-              className="pt-input"
-              style={{ fontSize: 12, padding: '4px 8px', height: 'auto' }}
-              placeholder="Label…"
-              value={labelInput}
-              onChange={e => setLabelInput(e.target.value)}
-              autoFocus
-            />
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button className="pt-btn pt-btn-primary" style={{ fontSize: 11 }} onClick={() => void upload()} disabled={uploading || !labelInput.trim()}>
-              {uploading ? 'Uploading…' : 'Upload'}
-            </button>
-            <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11 }} onClick={() => { setPendingFile(null); setLabelInput(''); setUploadError('') }}>Cancel</button>
-          </div>
-          {uploadError && <div className="pt-media-upload-error">{uploadError}</div>}
-        </div>
-      )}
-
-      {items.length === 0 && !pendingFile ? (
-        <div className="pt-media-empty">
-          <div className="pt-media-empty-icon">◈</div>
-          <div style={{ fontSize: 12, color: 'var(--pt-fg-4)' }}>No media yet — upload an image or video</div>
-        </div>
-      ) : (
-        <div className="pt-media-grid">
-          {items.map(item => (
-            <div key={item.id} className="pt-media-tile">
-              <button className="pt-media-tile-thumb" onClick={() => void openItem(item)} title={`Open ${item.label}`}>
-                {item.type === 'image' && thumbnailUrls[item.id] ? (
-                  <img src={thumbnailUrls[item.id]} alt={item.label} className="pt-media-thumb-img" />
-                ) : (
-                  <div className="pt-media-thumb-video">
-                    <span className="pt-media-play-icon">▶</span>
-                  </div>
-                )}
-              </button>
-              <div className="pt-media-tile-label">{item.label}</div>
-              {confirmDeleteId === item.id ? (
-                <div className="pt-media-tile-confirm">
-                  <span style={{ fontSize: 10, color: 'var(--pt-fg-3)' }}>Delete?</span>
-                  <button className="pt-link" style={{ fontSize: 10, color: 'var(--pt-danger, oklch(0.55 0.22 25))' }} onClick={() => void confirmDelete(item)}>Yes</button>
-                  <button className="pt-link" style={{ fontSize: 10 }} onClick={() => setConfirmDeleteId(null)}>No</button>
-                </div>
-              ) : (
-                <button className="pt-media-tile-del" onClick={() => setConfirmDeleteId(item.id)} title="Delete">✕</button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
-  )
-}
-
 // ── Product detail panel ─────────────────────────────────────────────────────
 function CatalogDetail({ product, products, protocol, baseCurrency }: {
   product: CatalogProduct
@@ -348,10 +176,6 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
   protocol: ProductProtocol | null
   baseCurrency: string
 }) {
-  const supabase = useMemo(() => createClient(), [])
-  const [coProducts, setCoProducts] = useState<{ product: CatalogProduct; count: number }[]>([])
-  const [coLoading, setCoLoading] = useState(true)
-
   const [showReorder, setShowReorder] = useState(false)
   const [showSendModal, setShowSendModal] = useState(false)
   const [reorderCopied, setReorderCopied] = useState(false)
@@ -382,48 +206,6 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
   useEffect(() => {
     setActiveTab('overview')
   }, [product.id])
-
-  useEffect(() => {
-    let cancelled = false
-    setCoLoading(true)
-    setCoProducts([])
-    async function load() {
-      const { data: orderRows } = await supabase
-        .from('order_items')
-        .select('order_id')
-        .eq('product_id', product.id)
-      if (cancelled || !orderRows || orderRows.length === 0) {
-        if (!cancelled) setCoLoading(false)
-        return
-      }
-      const orderIds = [...new Set(orderRows.map(r => r.order_id))]
-      const { data: coRows } = await supabase
-        .from('order_items')
-        .select('product_id')
-        .in('order_id', orderIds)
-        .neq('product_id', product.id)
-      if (cancelled || !coRows) {
-        if (!cancelled) setCoLoading(false)
-        return
-      }
-      const freq: Record<string, number> = {}
-      for (const row of coRows) {
-        freq[row.product_id] = (freq[row.product_id] ?? 0) + 1
-      }
-      const sorted = Object.entries(freq)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 5)
-      const result = sorted
-        .map(([id, count]) => {
-          const p = products.find(p => p.id === id)
-          return p ? { product: p, count } : null
-        })
-        .filter((x): x is { product: CatalogProduct; count: number } => x !== null)
-      if (!cancelled) { setCoProducts(result); setCoLoading(false) }
-    }
-    void load()
-    return () => { cancelled = true }
-  }, [product.id, supabase, products])
 
   function switchTab(tab: Tab) {
     setActiveTab(tab)
@@ -567,44 +349,13 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
           <CatalogDetailOverview product={product} baseCurrency={baseCurrency} />
         )}
         {activeTab === 'protocol' && (
-          <ProtocolSection productId={product.id} protocol={protocol} />
+          <CatalogDetailProtocol productId={product.id} protocol={protocol} />
         )}
         {activeTab === 'media' && (
-          <ProductMediaSection productId={product.id} media={product.media} />
+          <CatalogDetailMedia productId={product.id} media={product.media} />
         )}
-        {activeTab === 'insights' && !coLoading && (
-          <section className="pt-card pt-cat-section">
-            <header className="pt-card-hd">
-              <div>
-                <h3>Frequently ordered together</h3>
-                <p>Based on order history</p>
-              </div>
-            </header>
-            {coProducts.length === 0 ? (
-              <div style={{ padding: '14px 14px 16px', color: 'var(--pt-fg-4)', fontSize: 12 }}>
-                No data yet — will populate as orders come in.
-              </div>
-            ) : (
-              <div className="pt-cat-affinity-body">
-                {coProducts.map(({ product: p, count }) => {
-                  const pFlag = stockFlag(p.totalStock)
-                  return (
-                    <div key={p.id} className="pt-cat-aff">
-                      <span className="pt-cat-cat-pill" data-cat={p.productFamily}>{p.productFamily}</span>
-                      <div>
-                        <div className="pt-cat-aff-name">{p.name}</div>
-                        <div className="pt-cat-aff-sub mono">{p.sku} · {formatAmount(p.unitPrice, baseCurrency)}</div>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
-                        <div className={`pt-cat-aff-stock mono ${pFlag ? 'is-low' : ''}`}>{p.totalStock}</div>
-                        <div style={{ fontSize: 10, color: 'var(--pt-fg-4)' }}>{count}×</div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </section>
+        {activeTab === 'insights' && (
+          <CatalogDetailInsights product={product} products={products} baseCurrency={baseCurrency} />
         )}
       </div>
 
@@ -659,170 +410,6 @@ function displayFamily(f: string) { return FAMILY_DISPLAY[f] ?? f }
 
 function flagOrder(f: ReturnType<typeof stockFlag>) {
   return f === 'oos' ? 0 : f === 'critical' ? 1 : f === 'low' ? 2 : 3
-}
-
-// ── Protocol section ─────────────────────────────────────────────────────────
-function ProtocolSection({ productId, protocol }: { productId: string; protocol: ProductProtocol | null }) {
-  const [editing, setEditing] = useState(false)
-  const [error, setError] = useState('')
-  const [pending, startTransition] = useTransition()
-  const [form, setForm] = useState({
-    vialStrength: protocol?.vial_strength ?? '',
-    reconstitutionMl: protocol?.reconstitution_ml?.toString() ?? '',
-    drawVolumeMl: protocol?.draw_volume_ml?.toString() ?? '',
-    frequency: (protocol?.frequency ?? 'once_daily') as Frequency,
-    timing: protocol?.timing ?? '',
-    cycleLengthWeeks: protocol?.cycle_length_weeks?.toString() ?? '',
-    storage: protocol?.storage ?? '',
-    notes: protocol?.notes ?? '',
-  })
-
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-    setForm(f => ({ ...f, [k]: e.target.value }))
-
-  const recon = parseFloat(form.reconstitutionMl)
-  const draw = parseFloat(form.drawVolumeMl)
-  const dosesPerVial = !isNaN(recon) && !isNaN(draw) && draw > 0 ? Math.round(recon / draw) : null
-
-  const startEdit = () => {
-    setForm({
-      vialStrength: protocol?.vial_strength ?? '',
-      reconstitutionMl: protocol?.reconstitution_ml?.toString() ?? '',
-      drawVolumeMl: protocol?.draw_volume_ml?.toString() ?? '',
-      frequency: (protocol?.frequency ?? 'once_daily') as Frequency,
-      timing: protocol?.timing ?? '',
-      cycleLengthWeeks: protocol?.cycle_length_weeks?.toString() ?? '',
-      storage: protocol?.storage ?? '',
-      notes: protocol?.notes ?? '',
-    })
-    setError('')
-    setEditing(true)
-  }
-
-  const save = () => {
-    setError('')
-    const reconstitutionMl = parseFloat(form.reconstitutionMl)
-    const drawVolumeMl = parseFloat(form.drawVolumeMl)
-    if (isNaN(reconstitutionMl) || reconstitutionMl <= 0) { setError('Reconstitution volume is required'); return }
-    if (isNaN(drawVolumeMl) || drawVolumeMl <= 0) { setError('Draw volume is required'); return }
-    startTransition(async () => {
-      const result = await upsertProtocol({
-        productId,
-        vialStrength: form.vialStrength || undefined,
-        reconstitutionMl,
-        drawVolumeMl,
-        frequency: form.frequency,
-        timing: form.timing || undefined,
-        cycleLengthWeeks: form.cycleLengthWeeks ? parseInt(form.cycleLengthWeeks) : null,
-        storage: form.storage || undefined,
-        notes: form.notes || undefined,
-      })
-      if ('error' in result) { setError(result.error); return }
-      setEditing(false)
-    })
-  }
-
-  return (
-    <section className="pt-card pt-cat-section">
-      <header className="pt-card-hd">
-        <div>
-          <h3>Protocol</h3>
-          <p>Dosage &amp; usage instructions</p>
-        </div>
-        {!editing && (
-          <button className="pt-link" onClick={startEdit}>
-            {protocol ? 'Edit' : '+ Add protocol'}
-          </button>
-        )}
-      </header>
-      <div className="pt-card-body" style={{ padding: editing ? '12px 14px' : 0 }}>
-        {!protocol && !editing && (
-          <EmptyState
-            size="sm"
-            icon={
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
-                <circle cx="12" cy="12" r="9"/>
-                <line x1="12" y1="8" x2="12" y2="13"/>
-                <circle cx="12" cy="16" r="0.8" fill="currentColor" stroke="none"/>
-              </svg>
-            }
-            title="No protocol configured"
-            body="Add a protocol to enable automatic reorder signals."
-          />
-        )}
-        {protocol && !editing && (
-          <dl className="pt-cat-proto-dl">
-            {protocol.vial_strength && <><dt>Vial strength</dt><dd className="mono">{protocol.vial_strength}</dd></>}
-            <dt>Reconstitution</dt><dd className="mono">{protocol.reconstitution_ml} mL</dd>
-            <dt>Draw volume</dt>
-            <dd className="mono">
-              {protocol.draw_volume_ml} mL
-              <span className="pt-cat-proto-derived"> → {Math.round(protocol.reconstitution_ml / protocol.draw_volume_ml)} doses/vial</span>
-            </dd>
-            <dt>Frequency</dt><dd>{FREQUENCY_LABELS[protocol.frequency as Frequency] ?? protocol.frequency}</dd>
-            {protocol.timing && <><dt>Timing</dt><dd style={{ color: 'var(--pt-fg-3)' }}>{protocol.timing}</dd></>}
-            {protocol.cycle_length_weeks && <><dt>Cycle</dt><dd style={{ color: 'var(--pt-fg-3)' }}>{protocol.cycle_length_weeks} weeks</dd></>}
-            {protocol.storage && <><dt>Storage</dt><dd style={{ color: 'var(--pt-fg-3)' }}>{protocol.storage}</dd></>}
-            {protocol.notes && <><dt>Notes</dt><dd style={{ color: 'var(--pt-fg-3)' }}>{protocol.notes}</dd></>}
-          </dl>
-        )}
-        {editing && (
-          <div className="pt-cat-proto-form">
-            <div className="pt-cat-proto-grid">
-              <div>
-                <label className="pt-sku-lbl">Vial strength</label>
-                <input className="pt-input" placeholder="e.g. 5mg" value={form.vialStrength} onChange={set('vialStrength')} />
-              </div>
-              <div>
-                <label className="pt-sku-lbl">Frequency <span style={{ color: 'var(--pt-danger)' }}>*</span></label>
-                <select className="pt-input" value={form.frequency} onChange={set('frequency')}>
-                  {FREQUENCY_OPTIONS.map(f => <option key={f} value={f}>{FREQUENCY_LABELS[f]}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="pt-sku-lbl">Reconstitution volume (mL) <span style={{ color: 'var(--pt-danger)' }}>*</span></label>
-                <input className="pt-input" type="number" step="0.1" min="0" placeholder="e.g. 2.0" value={form.reconstitutionMl} onChange={set('reconstitutionMl')} />
-              </div>
-              <div>
-                <label className="pt-sku-lbl">Draw volume per injection (mL) <span style={{ color: 'var(--pt-danger)' }}>*</span></label>
-                <div style={{ position: 'relative' }}>
-                  <input className="pt-input" type="number" step="0.01" min="0" placeholder="e.g. 0.1" value={form.drawVolumeMl} onChange={set('drawVolumeMl')} />
-                  {dosesPerVial !== null && (
-                    <span className="pt-cat-proto-derived" style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-                      → {dosesPerVial} doses/vial
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label className="pt-sku-lbl">Timing</label>
-                <input className="pt-input" placeholder="e.g. nightly, empty stomach" value={form.timing} onChange={set('timing')} />
-              </div>
-              <div>
-                <label className="pt-sku-lbl">Cycle length (weeks)</label>
-                <input className="pt-input" type="number" min="1" placeholder="e.g. 12" value={form.cycleLengthWeeks} onChange={set('cycleLengthWeeks')} />
-              </div>
-              <div>
-                <label className="pt-sku-lbl">Storage</label>
-                <input className="pt-input" placeholder="e.g. refrigerate after reconstituting" value={form.storage} onChange={set('storage')} />
-              </div>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label className="pt-sku-lbl">Usage notes</label>
-                <textarea className="pt-input" rows={2} placeholder="Needle type, preloading tips, etc." value={form.notes} onChange={set('notes')} style={{ resize: 'vertical' }} />
-              </div>
-            </div>
-            {error && <div className="pt-cat-form-err" style={{ marginTop: 8 }}>{error}</div>}
-            <div className="pt-cat-form-actions">
-              <button className="pt-btn pt-btn-ghost" onClick={() => setEditing(false)} disabled={pending}>Cancel</button>
-              <button className="pt-btn pt-btn-primary" onClick={save} disabled={pending}>
-                {pending ? 'Saving…' : 'Save protocol'}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </section>
-  )
 }
 
 // ── Main catalog view ────────────────────────────────────────────────────────
