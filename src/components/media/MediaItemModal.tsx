@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { deleteMediaItem, updateMediaItemLabel, tagMediaItemToProduct, untagMediaItemFromProduct } from '@/app/media/actions'
 import type { MediaItem } from '@/types/media'
 
+const TYPE_LABEL: Record<string, string> = { image: 'Image', video: 'Video', pdf: 'PDF' }
+
 export function MediaItemModal({
   item,
   products,
@@ -36,13 +38,10 @@ export function MediaItemModal({
 
   const prevItemIdRef = useRef(item.id)
 
-  // When item.id changes: preserve taggedIds on pending→real transition, reset otherwise
   useEffect(() => {
     const prevId = prevItemIdRef.current
     prevItemIdRef.current = item.id
-
-    if (prevId === '__pending__') return // Upload just completed — keep user's checkbox selections
-
+    if (prevId === '__pending__') return
     setLabel(item.label)
     setTaggedIds(new Set(item.productTags.map(t => t.productId)))
     setConfirmDelete(false)
@@ -75,18 +74,13 @@ export function MediaItemModal({
   async function handleSave() {
     setSaving(true)
     setError('')
-
-    // Save label if changed
     if (label.trim() && label.trim() !== item.label) {
       const result = await updateMediaItemLabel(item.id, label.trim())
       if ('error' in result) { setSaving(false); setError(result.error); return }
     }
-
-    // Diff tag changes
     const originalIds = new Set(item.productTags.map(t => t.productId))
     const toAdd = products.filter(p => taggedIds.has(p.id) && !originalIds.has(p.id))
     const toRemove = item.productTags.filter(t => !taggedIds.has(t.productId))
-
     if (toAdd.length > 0 || toRemove.length > 0) {
       const results = await Promise.all([
         ...toAdd.map(p => tagMediaItemToProduct(item.id, p.id)),
@@ -103,7 +97,6 @@ export function MediaItemModal({
       ]
       onUpdated({ ...item, label: label.trim() || item.label, productTags: finalTags })
     }
-
     onClose()
   }
 
@@ -119,6 +112,12 @@ export function MediaItemModal({
     const { url } = await res.json() as { url: string }
     window.open(url, '_blank', 'noopener')
   }
+
+  // Products tagged to this item but no longer in the active products list
+  const activeProductIds = new Set(products.map(p => p.id))
+  const orphanedTags = item.productTags.filter(t => !activeProductIds.has(t.productId))
+
+  const selectedCount = taggedIds.size
 
   return (
     <div className="pt-lightbox" onClick={isUploading ? undefined : onClose}>
@@ -150,65 +149,88 @@ export function MediaItemModal({
           )}
         </div>
 
-        {/* Details */}
+        {/* Right panel */}
         <div className="pt-media-lib-modal-body">
-          {isNewUpload && (
-            <div className={`pt-media-lib-modal-banner${isError ? ' is-error' : ''}`}>
-              {isUploading
-                ? 'Uploading — select products while you wait'
-                : isError
-                ? (uploadError || 'Upload failed — please try again')
-                : 'Uploaded — assign to products below'}
+
+          {/* Panel header — type badge + close */}
+          <div className="pt-media-lib-panel-header">
+            <span className="pt-media-lib-type-badge">{TYPE_LABEL[item.type] ?? item.type}</span>
+            {!isUploading && (
+              <button className="pt-media-lib-panel-close" onClick={onClose} aria-label="Close">✕</button>
+            )}
+          </div>
+
+          {/* Scrollable body */}
+          <div className="pt-media-lib-panel-body">
+            {isNewUpload && (
+              <div className={`pt-media-lib-modal-banner${isError ? ' is-error' : ''}`}>
+                {isUploading
+                  ? 'Uploading — select products while you wait'
+                  : isError
+                  ? (uploadError || 'Upload failed — please try again')
+                  : 'Uploaded — assign to products below'}
+              </div>
+            )}
+
+            <div className="pt-media-lib-field">
+              <label className="pt-media-lib-field-label">Name</label>
+              <input
+                className="pt-input"
+                value={label}
+                onChange={e => setLabel(e.target.value)}
+                disabled={isPending}
+                style={{ fontSize: 13 }}
+              />
             </div>
-          )}
 
-          <div className="pt-media-lib-modal-label">Name</div>
-          <input
-            className="pt-input"
-            value={label}
-            onChange={e => setLabel(e.target.value)}
-            style={{ marginBottom: 16 }}
-            disabled={isPending}
-          />
-
-          <div className="pt-media-lib-modal-label">Assign to products</div>
-          {products.length === 0 ? (
-            <div style={{ fontSize: 12, color: 'var(--pt-fg-4)', padding: '4px 0' }}>No products yet</div>
-          ) : (
-            <div className="pt-media-lib-product-list">
-              {products.map(p => (
-                <label key={p.id} className="pt-media-lib-product-row">
-                  <input
-                    type="checkbox"
-                    checked={taggedIds.has(p.id)}
-                    onChange={() => toggleProduct(p.id)}
-                  />
-                  <span>{p.name}</span>
-                </label>
-              ))}
+            <div className="pt-media-lib-field">
+              <div className="pt-media-lib-field-header">
+                <label className="pt-media-lib-field-label">Products</label>
+                {selectedCount > 0 && (
+                  <span className="pt-media-lib-selected-badge">{selectedCount} selected</span>
+                )}
+              </div>
+              {products.length === 0 && orphanedTags.length === 0 ? (
+                <div style={{ fontSize: 12, color: 'var(--pt-fg-4)' }}>No products yet</div>
+              ) : (
+                <div className="pt-media-lib-product-list">
+                  {products.map(p => (
+                    <label key={p.id} className="pt-media-lib-product-row">
+                      <input type="checkbox" checked={taggedIds.has(p.id)} onChange={() => toggleProduct(p.id)} />
+                      <span>{p.name}</span>
+                    </label>
+                  ))}
+                  {orphanedTags.map(t => (
+                    <label key={t.productId} className="pt-media-lib-product-row is-inactive">
+                      <input type="checkbox" checked={taggedIds.has(t.productId)} onChange={() => toggleProduct(t.productId)} />
+                      <span>{t.productName} <em>(inactive)</em></span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
 
-          {error && <div style={{ fontSize: 11, color: 'var(--pt-danger)', marginTop: 8 }}>{error}</div>}
+            {error && <div style={{ fontSize: 11, color: 'var(--pt-danger)' }}>{error}</div>}
+          </div>
 
+          {/* Actions */}
           <div className="pt-media-lib-modal-actions">
             {confirmDelete ? (
-              <>
-                <span style={{ fontSize: 11, color: 'var(--pt-fg-3)' }}>Delete permanently?</span>
-                <button className="pt-link" style={{ fontSize: 11, color: 'var(--pt-danger)' }} onClick={() => void handleDelete()}>Yes, delete</button>
-                <button className="pt-link" style={{ fontSize: 11 }} onClick={() => setConfirmDelete(false)}>Cancel</button>
-              </>
+              <div className="pt-media-lib-delete-confirm">
+                <span>Delete permanently?</span>
+                <button className="pt-link" style={{ color: 'var(--pt-danger)' }} onClick={() => void handleDelete()}>Yes, delete</button>
+                <button className="pt-link" onClick={() => setConfirmDelete(false)}>Cancel</button>
+              </div>
             ) : (
               <>
                 {!isPending && (
-                  <>
-                    <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11 }} onClick={() => setConfirmDelete(true)}>Delete</button>
-                    <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11 }} onClick={() => void handleOpen()}>Open ↗</button>
-                  </>
+                  <div className="pt-media-lib-actions-left">
+                    <button className="pt-media-lib-action-danger" onClick={() => setConfirmDelete(true)}>Delete</button>
+                    <button className="pt-media-lib-action-ghost" onClick={() => void handleOpen()}>Open ↗</button>
+                  </div>
                 )}
                 <button
-                  className="pt-btn pt-btn-primary"
-                  style={{ fontSize: 11, marginLeft: 'auto' }}
+                  className="pt-btn pt-btn-primary pt-media-lib-save-btn"
                   disabled={isUploading || saving}
                   onClick={() => void handleSave()}
                 >
@@ -217,9 +239,8 @@ export function MediaItemModal({
               </>
             )}
           </div>
-        </div>
 
-        {!isUploading && <button className="pt-lightbox-close" onClick={onClose}>✕</button>}
+        </div>
       </div>
     </div>
   )
