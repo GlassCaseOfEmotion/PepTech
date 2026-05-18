@@ -41,8 +41,8 @@ export async function evaluateCondition(
       .from('customers')
       .select('trust_score')
       .eq('id', customerId)
-      .single()
-    if (!data) return true
+      .maybeSingle()
+    if (!data) return false // customer not found — skip, don't fire
     return compare(data.trust_score, cond.operator, cond.value as number)
   }
 
@@ -51,29 +51,22 @@ export async function evaluateCondition(
       .from('customers')
       .select('ltv')
       .eq('id', customerId)
-      .single()
-    if (!data) return true
+      .maybeSingle()
+    if (!data) return false // customer not found — skip
     return compare(data.ltv, cond.operator, cond.value as number)
   }
 
   if (cond.type === 'last_message_hours') {
+    // Use conversations.last_message_at — avoids a second round-trip to messages table
     const { data: conv } = await supabase
       .from('conversations')
-      .select('id')
+      .select('last_message_at')
       .eq('customer_id', customerId)
       .order('last_message_at', { ascending: false })
       .limit(1)
       .maybeSingle()
-    if (!conv) return true
-    const { data: msg } = await supabase
-      .from('messages')
-      .select('sent_at')
-      .eq('conversation_id', conv.id)
-      .order('sent_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    if (!msg) return true
-    const hoursAgo = (Date.now() - new Date(msg.sent_at).getTime()) / (1000 * 60 * 60)
+    if (!conv?.last_message_at) return true // no messages yet — allow through
+    const hoursAgo = (Date.now() - new Date(conv.last_message_at).getTime()) / (1000 * 60 * 60)
     return compare(hoursAgo, cond.operator, cond.value as number)
   }
 
@@ -84,7 +77,6 @@ export async function evaluateCondition(
       .eq('customer_id', customerId)
       .eq('status', 'delivered')
     const isNew = (count ?? 0) === 0
-    // operator 'eq' with boolean value
     return isNew === (cond.value as boolean)
   }
 
@@ -109,7 +101,7 @@ export async function executeAction(
     const reviewRequired = params.review_required !== false // default true
 
     if (reviewRequired) {
-      // Return queued state — caller inserts the run row
+      // Return queued state — caller inserts the run row with action_payload for operator review
       return {
         state: 'queued',
         action_summary: 'DM queued for review',
@@ -117,28 +109,30 @@ export async function executeAction(
       }
     }
 
-    // review_required: false — send directly via DB insert (mirrors /api/send logic)
+    // review_required: false — write message to DB only (v1: no channel dispatch)
+    // TODO: extract channel dispatch from /api/send into a shared utility for true delivery
     if (!conversationId) {
       return { state: 'err', action_summary: 'No conversationId for send_dm', action_payload: null }
     }
 
     const { data: conv } = await supabase
       .from('conversations')
-      .select('id, tenant_id, channel_type, channel_identifier, customer_id')
+      .select('id, tenant_id')
       .eq('id', conversationId)
-      .single()
+      .maybeSingle()
 
     if (!conv) {
       return { state: 'err', action_summary: 'Conversation not found', action_payload: null }
     }
 
-    await supabase.from('messages').insert({
+    const { error: msgErr } = await supabase.from('messages').insert({
       tenant_id: conv.tenant_id,
       conversation_id: conv.id,
       direction: 'outbound',
       content: message,
       status: 'sent',
     })
+    if (msgErr) return { state: 'err', action_summary: msgErr.message, action_payload: null }
 
     await supabase
       .from('conversations')
@@ -169,8 +163,9 @@ export async function executeAction(
       return { state: 'skip', action_summary: 'No customerId for score_adjust', action_payload: null }
     }
 
-    // Atomic clamp via Supabase RPC to avoid read-modify-write race
-    await supabase.rpc('adjust_trust_score', { p_customer_id: customerId, p_delta: delta })
+    // Atomic clamp via RPC to avoid read-modify-write race
+    const { error } = await supabase.rpc('adjust_trust_score', { p_customer_id: customerId, p_delta: delta })
+    if (error) return { state: 'err', action_summary: error.message, action_payload: null }
 
     return {
       state: 'ok',
@@ -188,7 +183,7 @@ export async function executeAction(
 }
 
 // ---------------------------------------------------------------------------
-// Main entry point
+// Main entry point — MUST be called with createServiceClient() (no user session)
 // ---------------------------------------------------------------------------
 
 export async function runAutomationsForEvent(
@@ -197,7 +192,6 @@ export async function runAutomationsForEvent(
   triggerType: 'new_thread' | 'order_state',
   context: Context,
 ): Promise<void> {
-  // 1. Fetch active automations for this tenant + trigger type
   const { data: automations } = await supabase
     .from('automations')
     .select('*')
@@ -207,7 +201,6 @@ export async function runAutomationsForEvent(
 
   if (!automations?.length) return
 
-  // 2. Filter order_state automations by to_status
   const candidates = triggerType === 'order_state'
     ? automations.filter(a => {
         const tp = a.trigger_params as Record<string, unknown>
@@ -216,11 +209,9 @@ export async function runAutomationsForEvent(
     : automations
 
   for (const rawAuto of candidates) {
-    // Cast DB row to typed Automation
     const automation = rawAuto as unknown as Automation
 
     try {
-      // 3. Evaluate all conditions (all must pass)
       const conditions = (automation.conditions ?? []) as Condition[]
       const condResults = await Promise.all(
         conditions.map(c => evaluateCondition(c, context, supabase))
@@ -228,7 +219,6 @@ export async function runAutomationsForEvent(
       const conditionsPassed = condResults.every(Boolean)
 
       if (!conditionsPassed) {
-        // Insert skip run
         await supabase.from('automation_runs').insert({
           automation_id: automation.id,
           tenant_id: tenantId,
@@ -241,10 +231,8 @@ export async function runAutomationsForEvent(
         continue
       }
 
-      // 4. Execute action
       const result = await executeAction(automation, context, supabase)
 
-      // 5. Insert run row
       await supabase.from('automation_runs').insert({
         automation_id: automation.id,
         tenant_id: tenantId,
@@ -256,7 +244,6 @@ export async function runAutomationsForEvent(
         action_payload: result.action_payload as any,
       })
     } catch (err) {
-      // 6. On error: insert err run and continue — never throw
       console.error(`[automations] Error running automation ${automation.id}:`, err)
       try {
         await supabase.from('automation_runs').insert({
@@ -268,7 +255,7 @@ export async function runAutomationsForEvent(
           action_summary: err instanceof Error ? err.message : String(err),
           action_payload: null,
         })
-      } catch { /* swallow insert errors too */ }
+      } catch { /* swallow insert errors — never throw to caller */ }
     }
   }
 }
