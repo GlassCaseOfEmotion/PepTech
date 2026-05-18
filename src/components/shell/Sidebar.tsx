@@ -51,8 +51,9 @@ const NAV_PRIMARY = [
 ]
 
 const NAV_SECONDARY = [
-  { label: 'Vault',    href: '/vault',             icon: Icons.vault, badge: null },
-  { label: 'Settings', href: '/settings/channels', icon: Icons.gear,  badge: null },
+  { label: 'Vault',    href: '/vault',             icon: Icons.vault,  badge: null },
+  { label: 'Media',    href: '/media',             icon: Icons.photo,  badge: null },
+  { label: 'Settings', href: '/settings/channels', icon: Icons.gear,   badge: null },
 ]
 
 const CH_ICONS: Record<string, React.FC<{ size?: number }>> = { wa: Icons.wa, tg: Icons.tg, em: Icons.em }

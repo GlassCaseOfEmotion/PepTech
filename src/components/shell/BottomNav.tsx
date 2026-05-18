@@ -21,6 +21,7 @@ const MORE_ITEMS = [
   { label: 'Broadcasts',  href: '/broadcasts',         icon: Icons.send  },
   { label: 'Automations', href: '/automations',        icon: Icons.zap   },
   { label: 'Vault',       href: '/vault',              icon: Icons.vault },
+  { label: 'Media',       href: '/media',              icon: Icons.photo },
   { label: 'Settings',    href: '/settings/channels',  icon: Icons.gear  },
 ]
 
