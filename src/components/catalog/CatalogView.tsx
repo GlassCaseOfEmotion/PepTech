@@ -170,11 +170,12 @@ function AddProductForm({ onDone, knownFamilies, baseCurrency }: { onDone: () =>
 }
 
 // ── Product detail panel ─────────────────────────────────────────────────────
-function CatalogDetail({ product, products, protocol, baseCurrency }: {
+function CatalogDetail({ product, products, protocol, baseCurrency, coProductIds }: {
   product: CatalogProduct
   products: CatalogProduct[]
   protocol: ProductProtocol | null
   baseCurrency: string
+  coProductIds: { productId: string; count: number }[]
 }) {
   const [showReorder, setShowReorder] = useState(false)
   const [showSendModal, setShowSendModal] = useState(false)
@@ -359,7 +360,7 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
           <CatalogDetailMedia productId={product.id} media={product.media} />
         )}
         {activeTab === 'insights' && (
-          <CatalogDetailInsights product={product} products={products} baseCurrency={baseCurrency} />
+          <CatalogDetailInsights products={products} baseCurrency={baseCurrency} coProductIds={coProductIds} />
         )}
       </div>
 
@@ -417,7 +418,7 @@ function flagOrder(f: ReturnType<typeof stockFlag>) {
 }
 
 // ── Main catalog view ────────────────────────────────────────────────────────
-export function CatalogView({ products, protocols, baseCurrency }: { products: CatalogProduct[]; protocols: ProductProtocol[]; baseCurrency: string }) {
+export function CatalogView({ products, protocols, baseCurrency, coProductsByProductId }: { products: CatalogProduct[]; protocols: ProductProtocol[]; baseCurrency: string; coProductsByProductId: Record<string, { productId: string; count: number }[]> }) {
   const searchParams = useSearchParams()
   const highlightId = searchParams.get('product') ?? ''
   const [selectedId, setSelectedId] = useState(highlightId || (products[0]?.id ?? ''))
@@ -642,7 +643,7 @@ export function CatalogView({ products, protocols, baseCurrency }: { products: C
             )}
           </ul>
         </div>
-        {selected && <CatalogDetail product={selected} products={products} protocol={protocolByProduct[selected.id] ?? null} baseCurrency={baseCurrency} />}
+        {selected && <CatalogDetail product={selected} products={products} protocol={protocolByProduct[selected.id] ?? null} baseCurrency={baseCurrency} coProductIds={coProductsByProductId[selected.id] ?? []} />}
       </div>
     </div>
   )
