@@ -498,6 +498,84 @@ export type Database = {
           },
         ]
       }
+      media_items: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          sort_order: number
+          storage_path: string | null
+          tenant_id: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          sort_order?: number
+          storage_path?: string | null
+          tenant_id: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          storage_path?: string | null
+          tenant_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_product_tags: {
+        Row: {
+          media_item_id: string
+          product_id: string
+          tenant_id: string
+        }
+        Insert: {
+          media_item_id: string
+          product_id: string
+          tenant_id: string
+        }
+        Update: {
+          media_item_id?: string
+          product_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_product_tags_media_item_id_fkey"
+            columns: ["media_item_id"]
+            isOneToOne: false
+            referencedRelation: "media_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_product_tags_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_product_tags_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -886,54 +964,6 @@ export type Database = {
           },
         ]
       }
-      product_media: {
-        Row: {
-          created_at: string
-          id: string
-          label: string
-          product_id: string
-          sort_order: number
-          storage_path: string | null
-          tenant_id: string
-          type: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          label: string
-          product_id: string
-          sort_order?: number
-          storage_path?: string | null
-          tenant_id: string
-          type: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          label?: string
-          product_id?: string
-          sort_order?: number
-          storage_path?: string | null
-          tenant_id?: string
-          type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "product_media_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "product_media_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       products: {
         Row: {
           cost_price: number | null
@@ -943,7 +973,7 @@ export type Database = {
           is_active: boolean
           name: string
           product_family: string
-          resources: { label: string; url: string }[]
+          resources: Json
           sku: string
           tenant_id: string
           unit_price: number
@@ -956,7 +986,7 @@ export type Database = {
           is_active?: boolean
           name: string
           product_family: string
-          resources?: { label: string; url: string }[]
+          resources?: Json
           sku: string
           tenant_id: string
           unit_price: number
@@ -969,7 +999,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           product_family?: string
-          resources?: { label: string; url: string }[]
+          resources?: Json
           sku?: string
           tenant_id?: string
           unit_price?: number
@@ -1261,7 +1291,7 @@ export type Database = {
           status: string
           tenant_id: string
           updated_at: string
-          variables: { key: string; label: string }[]
+          variables: Json
         }
         Insert: {
           body: string
@@ -1272,7 +1302,7 @@ export type Database = {
           status?: string
           tenant_id: string
           updated_at?: string
-          variables?: { key: string; label: string }[]
+          variables?: Json
         }
         Update: {
           body?: string
@@ -1283,7 +1313,7 @@ export type Database = {
           status?: string
           tenant_id?: string
           updated_at?: string
-          variables?: { key: string; label: string }[]
+          variables?: Json
         }
         Relationships: [
           {
