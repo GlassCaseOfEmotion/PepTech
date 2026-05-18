@@ -178,6 +178,7 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
           ) : lightbox.type === 'image' ? (
             <img src={lightbox.url} alt="Full size" className="pt-lightbox-img" onClick={e => e.stopPropagation()} />
           ) : (
+            // TODO (Task 8): add PDF lightbox — pdf currently falls through to video branch, but no pdf upload exists yet
             <video src={lightbox.url} className="pt-lightbox-img" controls autoPlay onClick={e => e.stopPropagation()} />
           )}
           <button className="pt-lightbox-close" onClick={() => setLightbox(null)}>✕</button>

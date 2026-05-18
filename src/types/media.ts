@@ -1,5 +1,7 @@
 export type MediaItemType = 'image' | 'video' | 'pdf'
 
+// Display-layer type (camelCase) — analogous to CatalogProduct vs DbProduct.
+// Consumed by /media page, MediaLibraryView, and MediaItemModal.
 export type MediaItem = {
   id: string
   label: string
