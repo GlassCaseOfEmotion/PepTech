@@ -275,6 +275,8 @@
   gap: 8px;
   overflow-y: auto;
   flex: 1;
+  align-items: start;
+  align-content: start;
 }
 .pt-pip-lib-tile {
   display: flex;
