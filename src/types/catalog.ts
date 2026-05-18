@@ -1,7 +1,7 @@
 export type ProductMediaItem = {
   id: string
   label: string
-  type: 'image' | 'video'
+  type: 'image' | 'video' | 'pdf'
   storage_path: string
   sort_order: number
   thumbnailUrl?: string

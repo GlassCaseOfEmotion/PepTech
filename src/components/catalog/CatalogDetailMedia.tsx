@@ -11,7 +11,7 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
-  const [lightbox, setLightbox] = useState<{ url: string | null; type: 'image' | 'video'; loading: boolean } | null>(null)
+  const [lightbox, setLightbox] = useState<{ url: string | null; type: 'image' | 'video' | 'pdf'; loading: boolean } | null>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
 
