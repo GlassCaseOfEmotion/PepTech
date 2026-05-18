@@ -64,6 +64,23 @@ export default async function CatalogPage() {
     return acc
   }, {})
 
+  // Sign all image thumbnails server-side in parallel — no client round trips needed.
+  const imageMediaItems = ((allMedia ?? []) as { type: string; storage_path: string }[])
+    .filter(m => m.type === 'image')
+  const thumbnailUrlMap: Record<string, string> = {}
+  if (imageMediaItems.length > 0) {
+    const signed = await Promise.all(
+      imageMediaItems.map(m =>
+        supabase.storage.from('product-media')
+          .createSignedUrl(m.storage_path, 3600, { transform: { width: 400, quality: 80, resize: 'contain' } })
+          .then(({ data }) => data ? { path: m.storage_path, url: data.signedUrl } : null)
+      )
+    )
+    for (const item of signed) {
+      if (item) thumbnailUrlMap[item.path] = item.url
+    }
+  }
+
   const mediaByProduct = ((allMedia ?? []) as (ProductMediaItem & { product_id: string })[])
     .reduce<Record<string, ProductMediaItem[]>>((acc, m) => {
       if (!acc[m.product_id]) acc[m.product_id] = []
@@ -73,6 +90,7 @@ export default async function CatalogPage() {
         type: m.type as 'image' | 'video',
         storage_path: m.storage_path,
         sort_order: m.sort_order,
+        thumbnailUrl: thumbnailUrlMap[m.storage_path],
       })
       return acc
     }, {})

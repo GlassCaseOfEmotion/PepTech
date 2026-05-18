@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { createProductMedia, saveProductMediaPath, deleteProductMedia } from '@/app/catalog/actions'
 import type { ProductMediaItem } from '@/types/catalog'
 
@@ -13,29 +13,6 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
-  const [thumbnailUrls, setThumbnailUrls] = useState<Record<string, string>>({})
-
-  useEffect(() => {
-    setThumbnailUrls(current => {
-      const images = items.filter(m => m.type === 'image' && !current[m.id])
-      if (images.length === 0) return current
-      void Promise.all(
-        images.map(async m => {
-          const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(m.storage_path)}&width=400`)
-          if (!res.ok) return null
-          const { url } = await res.json() as { url: string }
-          return { id: m.id, url }
-        })
-      ).then(results => {
-        const updates: Record<string, string> = {}
-        for (const r of results) { if (r) updates[r.id] = r.url }
-        if (Object.keys(updates).length > 0) {
-          setThumbnailUrls(prev => ({ ...prev, ...updates }))
-        }
-      })
-      return current
-    })
-  }, [items])
 
   function onFilePick(e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') {
     const file = e.target.files?.[0]
@@ -71,12 +48,21 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
         setLabelInput('')
         return
       }
+      let thumbnailUrl: string | undefined
+      if (pendingFile.type === 'image') {
+        const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(result.storagePath)}&width=400`)
+        if (res.ok) {
+          const { url } = await res.json() as { url: string }
+          thumbnailUrl = url
+        }
+      }
       const newItem: ProductMediaItem = {
         id: result.id,
         label: labelInput.trim(),
         type: pendingFile.type,
         storage_path: result.storagePath,
         sort_order: items.length,
+        thumbnailUrl,
       }
       setItems(prev => [...prev, newItem])
       setPendingFile(null)
@@ -97,7 +83,6 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
     const result = await deleteProductMedia(item.id, item.storage_path)
     if ('error' in result) return
     setItems(prev => prev.filter(m => m.id !== item.id))
-    setThumbnailUrls(prev => { const n = { ...prev }; delete n[item.id]; return n })
     setConfirmDeleteId(null)
   }
 
@@ -150,8 +135,8 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
           {items.map(item => (
             <div key={item.id} className="pt-media-tile">
               <button className="pt-media-tile-thumb" onClick={() => void openItem(item)} title={`Open ${item.label}`}>
-                {item.type === 'image' && thumbnailUrls[item.id] ? (
-                  <img src={thumbnailUrls[item.id]} alt={item.label} className="pt-media-thumb-img" loading="lazy" />
+                {item.type === 'image' && item.thumbnailUrl ? (
+                  <img src={item.thumbnailUrl} alt={item.label} className="pt-media-thumb-img" loading="lazy" />
                 ) : (
                   <div className="pt-media-thumb-video">
                     <span className="pt-media-play-icon">▶</span>

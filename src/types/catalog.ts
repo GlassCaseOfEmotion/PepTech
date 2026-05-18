@@ -4,6 +4,7 @@ export type ProductMediaItem = {
   type: 'image' | 'video'
   storage_path: string
   sort_order: number
+  thumbnailUrl?: string
 }
 
 export type DbProduct = {
