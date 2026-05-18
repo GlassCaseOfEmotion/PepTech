@@ -52,6 +52,11 @@ export function ProductInfoPicker({
   })
   const [selectedMedia, setSelectedMedia] = useState<ProductMediaItem | null>(null)
   const [mediaThumbnails, setMediaThumbnails] = useState<Record<string, string>>({})
+  const [activeTab, setActiveTab] = useState<'product' | 'library'>('product')
+  const [libraryItems, setLibraryItems] = useState<{ id: string; label: string; type: string; storage_path: string }[]>([])
+  const [libraryQuery, setLibraryQuery] = useState('')
+  const [libraryTypeFilter, setLibraryTypeFilter] = useState<'all' | 'image' | 'video' | 'pdf'>('all')
+  const [libraryLoaded, setLibraryLoaded] = useState(false)
 
   useEffect(() => {
     supabase
@@ -60,7 +65,7 @@ export function ProductInfoPicker({
         id, name, sku, product_family, description, resources,
         product_protocols(id, tenant_id, product_id, vial_strength, reconstitution_ml, draw_volume_ml, frequency, timing, cycle_length_weeks, storage, notes, created_at, updated_at),
         batches(coa_path),
-        product_media(id, label, type, storage_path, sort_order)
+        media_product_tags(media_items(id, label, type, storage_path, sort_order))
       `)
       .eq('is_active', true)
       .order('name')
@@ -82,8 +87,9 @@ export function ProductInfoPicker({
               Array.isArray(p.batches)
                 ? ((p.batches as Record<string, unknown>[]).find(b => b.coa_path)?.coa_path as string | null) ?? null
                 : null,
-            media: Array.isArray(p.product_media)
-              ? (p.product_media as ProductMediaItem[])
+            media: Array.isArray(p.media_product_tags)
+              ? (p.media_product_tags as { media_items: ProductMediaItem }[])
+                  .map(t => t.media_items)
                   .filter(m => m.storage_path)
                   .sort((a, b) => a.sort_order - b.sort_order)
               : [],
@@ -120,6 +126,19 @@ export function ProductInfoPicker({
       return current
     })
   }, [selected])
+
+  useEffect(() => {
+    if (activeTab !== 'library' || libraryLoaded) return
+    supabase
+      .from('media_items')
+      .select('id, label, type, storage_path')
+      .not('storage_path', 'is', null)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (data) setLibraryItems(data as { id: string; label: string; type: string; storage_path: string }[])
+        setLibraryLoaded(true)
+      })
+  }, [activeTab, libraryLoaded, supabase])
 
   const filtered = products.filter(
     p =>
@@ -159,10 +178,26 @@ export function ProductInfoPicker({
             <span className="pt-pip-hd-icon">⬡</span>
             Product Info
           </div>
+          <div className="pt-pip-tabs">
+            <button
+              className={`pt-pip-tab${activeTab === 'product' ? ' is-on' : ''}`}
+              onClick={() => setActiveTab('product')}
+            >
+              Product
+            </button>
+            <button
+              className={`pt-pip-tab${activeTab === 'library' ? ' is-on' : ''}`}
+              onClick={() => setActiveTab('library')}
+            >
+              Browse library
+            </button>
+          </div>
           <button className="pt-pip-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
         <div className="pt-pip-body">
+          {activeTab === 'product' ? (
+            <>
           {/* Left: search + product list */}
           <div className="pt-pip-sidebar">
             <div className="pt-pip-search-wrap">
@@ -342,6 +377,51 @@ export function ProductInfoPicker({
               </>
             )}
           </div>
+            </>
+          ) : (
+            <div className="pt-pip-library">
+              <div style={{ display: 'flex', gap: 6, padding: '0 0 10px', flexWrap: 'wrap' }}>
+                <input
+                  className="pt-pip-search"
+                  placeholder="Search…"
+                  value={libraryQuery}
+                  onChange={e => setLibraryQuery(e.target.value)}
+                  autoFocus
+                />
+                {(['all', 'image', 'video', 'pdf'] as const).map(t => (
+                  <button
+                    key={t}
+                    className={`pt-media-lib-pill${libraryTypeFilter === t ? ' is-on' : ''}`}
+                    onClick={() => setLibraryTypeFilter(t)}
+                  >
+                    {t === 'all' ? 'All' : t === 'image' ? 'Images' : t === 'video' ? 'Videos' : 'PDFs'}
+                  </button>
+                ))}
+              </div>
+              <div className="pt-pip-lib-grid">
+                {libraryItems
+                  .filter(m =>
+                    (libraryTypeFilter === 'all' || m.type === libraryTypeFilter) &&
+                    m.label.toLowerCase().includes(libraryQuery.toLowerCase())
+                  )
+                  .map(m => (
+                    <button
+                      key={m.id}
+                      className="pt-pip-lib-tile"
+                      onClick={() => {
+                        onAttachFile(m.storage_path, m.label, 'product-media')
+                        onClose()
+                      }}
+                    >
+                      <div className="pt-pip-lib-tile-icon">
+                        {m.type === 'image' ? '🖼' : m.type === 'video' ? '▶' : '📄'}
+                      </div>
+                      <div className="pt-pip-lib-tile-label">{m.label}</div>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
