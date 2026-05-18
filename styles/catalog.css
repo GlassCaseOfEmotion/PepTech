@@ -733,3 +733,37 @@ textarea.pt-input { height: auto; padding: 7px 10px; }
 .pt-media-upload-icon { font-size: 20px; flex-shrink: 0; }
 .pt-media-upload-info { flex: 1; min-width: 160px; }
 .pt-media-upload-error { width: 100%; font-size: 11px; color: var(--pt-danger, oklch(0.55 0.22 25)); }
+
+/* ── Catalog detail tab bar ──────────────────────────────────────────────── */
+.pt-cat-tabs {
+  display: flex;
+  border-bottom: 0.5px solid var(--pt-line);
+  padding: 0 16px;
+  flex-shrink: 0;
+  background: var(--pt-bg-side);
+}
+.pt-cat-tab {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--pt-fg-3);
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -0.5px;
+  transition: color 0.12s;
+  white-space: nowrap;
+}
+.pt-cat-tab:hover { color: var(--pt-fg); }
+.pt-cat-tab.is-active {
+  color: var(--pt-accent-fg);
+  border-bottom-color: var(--pt-accent);
+  font-weight: 600;
+}
+.pt-cat-detail-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}

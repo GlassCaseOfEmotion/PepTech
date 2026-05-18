@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition, useMemo, useEffect, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatAmount, formatAmountCompact } from '@/lib/currency'
@@ -522,6 +522,29 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
   })
   const [editError, setEditError] = useState('')
   const [editSaving, setEditSaving] = useState(false)
+
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const VALID_TABS = ['overview', 'protocol', 'media', 'insights'] as const
+  type Tab = typeof VALID_TABS[number]
+
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const t = searchParams.get('tab') as Tab | null
+    return t && (VALID_TABS as readonly string[]).includes(t) ? t : 'overview'
+  })
+
+  // Reset to overview when product changes
+  useEffect(() => {
+    setActiveTab('overview')
+  }, [product.id])
+
+  function switchTab(tab: Tab) {
+    setActiveTab(tab)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('tab', tab)
+    router.replace(`/catalog?${params.toString()}`)
+  }
+
   const knownFamilies = products.map(p => p.productFamily).filter((f, i, a) => a.indexOf(f) === i).sort()
 
   const saveEdit = async () => {
@@ -690,6 +713,19 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
           </div>
         </header>
       )}
+
+      {/* Tab bar */}
+      <div className="pt-cat-tabs">
+        {(['overview', 'protocol', 'media', 'insights'] as const).map(tab => (
+          <button
+            key={tab}
+            className={`pt-cat-tab${activeTab === tab ? ' is-active' : ''}`}
+            onClick={() => switchTab(tab)}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
+      </div>
 
       {flag && (
         <div className={`pt-cat-note ${flag === 'oos' ? 'pt-cat-note-critical' : 'pt-cat-note-low'}`}>
