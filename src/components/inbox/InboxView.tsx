@@ -725,7 +725,7 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
   initialPrefill?: string
   baseCurrency: string
 }) {
-  const { snooze, markDone, reopen } = useInbox()
+  const { snooze, markDone, reopen, messagesLoading } = useInbox()
   const [showSnooze, setShowSnooze] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [sheetExpanded, setSheetExpanded] = useState(false)
@@ -821,17 +821,24 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
         </div>
       </div>
 
-      <div
-        ref={scrollRef}
-        className="pt-ix-stream"
-        onScroll={() => {
-          if (!scrollRef.current) return
-          const { scrollTop, scrollHeight, clientHeight } = scrollRef.current
-          isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 100
-        }}
-      >
-        {messages.map(m => <Bubble key={m.id} m={m} onImageClick={setLightboxUrl} onOpenWaPicker={() => setShowWaPicker(true)} />)}
-      </div>
+      {messagesLoading && messages.length === 0 ? (
+        <div className="pt-ix-stream-loading">
+          <div className="pt-lightbox-spinner" />
+        </div>
+      ) : (
+        <div
+          key={thread.id}
+          ref={scrollRef}
+          className="pt-ix-stream"
+          onScroll={() => {
+            if (!scrollRef.current) return
+            const { scrollTop, scrollHeight, clientHeight } = scrollRef.current
+            isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 100
+          }}
+        >
+          {messages.map(m => <Bubble key={m.id} m={m} onImageClick={setLightboxUrl} onOpenWaPicker={() => setShowWaPicker(true)} />)}
+        </div>
+      )}
 
       {windowStatus === 'active' && (
         <div className="pt-ix-window-banner is-active">

@@ -30,6 +30,7 @@ type InboxCtx = {
   quickReplies: DbQuickReply[]
   templates: DbTemplate[]
   isSending: boolean
+  messagesLoading: boolean
   resolvedCount: number
   activeThread: InboxThread | null
   sendMessage: (text: string) => Promise<void>
@@ -82,6 +83,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
   const notesCacheRef = useRef<Record<string, DbNote[]>>({})
   const [notes, setNotes] = useState<DbNote[]>([])
   const [isSending, setIsSending] = useState(false)
+  const [messagesLoading, setMessagesLoading] = useState(false)
   const [tenantId, setTenantId] = useState<string | null>(null)
   const [pendingInvoicePath, setPendingInvoicePath] = useState(initialInvoicePath ?? null)
   const [pendingInvoiceName, setPendingInvoiceName] = useState(initialInvoiceName ?? null)
@@ -141,7 +143,10 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
       return msg
     }))
     messageCacheRef.current[conversationId] = withUrls
-    if (activeIdRef.current === conversationId) setMessages(withUrls)
+    if (activeIdRef.current === conversationId) {
+      setMessages(withUrls)
+      setMessagesLoading(false)
+    }
   }, [supabase])
 
   // ── Fetch notes for a customer ─────────────────────────────────────────────
@@ -187,7 +192,9 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
     activeIdRef.current = id
     setActiveIdRaw(id)
     // Show cached messages/notes immediately — no empty flash
-    setMessages(messageCacheRef.current[id] ?? [])
+    const cached = messageCacheRef.current[id]
+    setMessages(cached ?? [])
+    setMessagesLoading(!cached)
     const thread = threads.find(t => t.id === id)
     if (thread?.customerId) {
       setNotes(notesCacheRef.current[thread.customerId] ?? [])
@@ -313,6 +320,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
   useEffect(() => {
     if (activeId) {
       activeIdRef.current = activeId
+      setMessagesLoading(true)
       fetchMessages(activeId)
       const thread = threads.find(t => t.id === activeId)
       if (thread?.customerId) fetchNotes(thread.customerId)
@@ -441,7 +449,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
   return (
     <InboxContext.Provider value={{
       threads, activeId, setActiveId, filter, setFilter,
-      messages, notes, quickReplies, templates, isSending, resolvedCount, activeThread, sendMessage, sendTemplate, addNote, snooze, markDone, reopen, togglePin,
+      messages, notes, quickReplies, templates, isSending, messagesLoading, resolvedCount, activeThread, sendMessage, sendTemplate, addNote, snooze, markDone, reopen, togglePin,
       pendingInvoicePath, pendingInvoiceName, clearPendingInvoice,
     }}>
       {children}

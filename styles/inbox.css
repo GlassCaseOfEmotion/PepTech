@@ -145,10 +145,15 @@ html.pt-ai-expanded .pt-inbox-ai-msgs { flex: 1; max-height: none; }
 .pt-ix-conv-actions { display: flex; align-items: center; gap: 6px; }
 .pt-btn-sm { height: 26px; padding: 0 10px; font-size: 11.5px; }
 
+.pt-ix-stream-loading {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+}
 .pt-ix-stream {
   flex: 1; min-height: 0; overflow-y: auto;
   padding: 22px 22px 8px;
   display: flex; flex-direction: column; gap: 4px;
+  animation: pt-stream-in 0.2s ease;
 }
 .pt-ix-day {
   align-self: center;
@@ -473,6 +478,7 @@ html.pt-ai-expanded .pt-inbox-ai-msgs { flex: 1; max-height: none; }
   animation: pt-lb-in 0.15s ease;
 }
 @keyframes pt-lb-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes pt-stream-in { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: translateY(0) } }
 .pt-lightbox-img {
   max-width: 90%; max-height: 90%;
   border-radius: 8px;
