@@ -11,16 +11,16 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
+  const [lightbox, setLightbox] = useState<{ url: string; type: 'image' | 'video' } | null>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (!lightboxUrl) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setLightboxUrl(null) }
+    if (!lightbox) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setLightbox(null) }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [lightboxUrl])
+  }, [lightbox])
 
   function onFilePick(e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') {
     const file = e.target.files?.[0]
@@ -84,11 +84,7 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
     const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(item.storage_path)}`)
     if (!res.ok) return
     const { url } = await res.json() as { url: string }
-    if (item.type === 'image') {
-      setLightboxUrl(url)
-    } else {
-      window.open(url, '_blank', 'noopener')
-    }
+    setLightbox({ url, type: item.type })
   }
 
   async function confirmDelete(item: ProductMediaItem) {
@@ -169,10 +165,14 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
           ))}
         </div>
       )}
-      {lightboxUrl && (
-        <div className="pt-lightbox" onClick={() => setLightboxUrl(null)}>
-          <img src={lightboxUrl} alt="Full size" className="pt-lightbox-img" onClick={e => e.stopPropagation()} />
-          <button className="pt-lightbox-close" onClick={() => setLightboxUrl(null)}>✕</button>
+      {lightbox && (
+        <div className="pt-lightbox" onClick={() => setLightbox(null)}>
+          {lightbox.type === 'image' ? (
+            <img src={lightbox.url} alt="Full size" className="pt-lightbox-img" onClick={e => e.stopPropagation()} />
+          ) : (
+            <video src={lightbox.url} className="pt-lightbox-img" controls autoPlay onClick={e => e.stopPropagation()} />
+          )}
+          <button className="pt-lightbox-close" onClick={() => setLightbox(null)}>✕</button>
         </div>
       )}
     </section>
