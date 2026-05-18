@@ -233,6 +233,13 @@ div:has(> .pt-media-lib-upload-menu):hover .pt-media-lib-upload-menu {
   color: var(--pt-fg);
   border-bottom-color: var(--pt-accent);
 }
+.pt-pip-lib-toolbar {
+  display: flex;
+  gap: 6px;
+  padding: 0 0 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
 .pt-pip-library {
   flex: 1;
   display: flex;

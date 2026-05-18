@@ -380,7 +380,7 @@ export function ProductInfoPicker({
             </>
           ) : (
             <div className="pt-pip-library">
-              <div style={{ display: 'flex', gap: 6, padding: '0 0 10px', flexWrap: 'wrap' }}>
+              <div className="pt-pip-lib-toolbar">
                 <input
                   className="pt-pip-search"
                   placeholder="Search…"
