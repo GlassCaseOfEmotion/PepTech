@@ -41,11 +41,15 @@ export async function createMediaItem(
     }
 
     if (productId) {
-      await supabase.from('media_product_tags').insert({
+      const { error: tagErr } = await supabase.from('media_product_tags').insert({
         media_item_id: row.id,
         product_id: productId,
         tenant_id: tenantId,
       })
+      if (tagErr) {
+        await supabase.from('media_items').delete().eq('id', row.id)
+        return { error: `Failed to tag product: ${tagErr.message}` }
+      }
     }
 
     return { id: row.id, uploadUrl: uploadData.signedUrl, storagePath }
@@ -125,6 +129,10 @@ export async function tagMediaItemToProduct(
 ): Promise<{ success: true } | { error: string }> {
   try {
     const { supabase, tenantId } = await getTenantId()
+    // Verify both the media item and product belong to this tenant
+    const { data: item } = await supabase
+      .from('media_items').select('id').eq('id', mediaItemId).eq('tenant_id', tenantId).single()
+    if (!item) return { error: 'Media item not found' }
     const { error } = await supabase.from('media_product_tags').insert({
       media_item_id: mediaItemId,
       product_id: productId,
