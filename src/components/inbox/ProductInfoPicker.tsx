@@ -105,7 +105,7 @@ export function ProductInfoPicker({
       if (images.length === 0) return current
       void Promise.all(
         images.map(async m => {
-          const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(m.storage_path)}`)
+          const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(m.storage_path)}&width=200`)
           if (!res.ok) return null
           const { url } = await res.json() as { url: string }
           return { id: m.id, url }
@@ -299,7 +299,7 @@ export function ProductInfoPicker({
                       title={m.label}
                     >
                       {m.type === 'image' && mediaThumbnails[m.id] ? (
-                        <img src={mediaThumbnails[m.id]} alt={m.label} className="pt-pip-media-img" />
+                        <img src={mediaThumbnails[m.id]} alt={m.label} className="pt-pip-media-img" loading="lazy" />
                       ) : (
                         <div className="pt-pip-media-video"><span style={{ fontSize: 14 }}>▶</span></div>
                       )}

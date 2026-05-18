@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+type ImageTransform = { width?: number; height?: number; quality?: number }
+
 export async function uploadToStorage(
   supabase: SupabaseClient,
   buffer: Buffer,
@@ -17,10 +19,11 @@ export async function generateSignedUrl(
   supabase: SupabaseClient,
   path: string,
   expiresIn = 3600,
+  transform?: ImageTransform,
 ): Promise<string> {
   const { data, error } = await supabase.storage
     .from('media')
-    .createSignedUrl(path, expiresIn)
+    .createSignedUrl(path, expiresIn, transform ? { transform } : undefined)
   if (error || !data) throw new Error(`Failed to generate signed URL: ${error?.message}`)
   return data.signedUrl
 }
@@ -30,10 +33,11 @@ export async function generateSignedUrlFromBucket(
   bucket: string,
   path: string,
   expiresIn = 3600,
+  transform?: ImageTransform,
 ): Promise<string> {
   const { data, error } = await supabase.storage
     .from(bucket)
-    .createSignedUrl(path, expiresIn)
+    .createSignedUrl(path, expiresIn, transform ? { transform } : undefined)
   if (error || !data) throw new Error(`Failed to generate signed URL: ${error?.message}`)
   return data.signedUrl
 }

@@ -10,6 +10,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const bucket = searchParams.get('bucket')
   const path = searchParams.get('path')
+  const widthParam = searchParams.get('width')
 
   if (!bucket || !ALLOWED_BUCKETS.has(bucket)) {
     return NextResponse.json({ error: 'Invalid bucket' }, { status: 400 })
@@ -24,7 +25,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, 3600)
+  const width = widthParam ? parseInt(widthParam, 10) : undefined
+  const transform = width && !isNaN(width) ? { width, quality: 80 } : undefined
+
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(path, 3600, transform ? { transform } : undefined)
   if (error || !data) return NextResponse.json({ error: 'Could not generate URL' }, { status: 500 })
 
   return NextResponse.json({ url: data.signedUrl })

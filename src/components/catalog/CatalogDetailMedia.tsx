@@ -21,7 +21,7 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
       if (images.length === 0) return current
       void Promise.all(
         images.map(async m => {
-          const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(m.storage_path)}`)
+          const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(m.storage_path)}&width=400`)
           if (!res.ok) return null
           const { url } = await res.json() as { url: string }
           return { id: m.id, url }
@@ -151,7 +151,7 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
             <div key={item.id} className="pt-media-tile">
               <button className="pt-media-tile-thumb" onClick={() => void openItem(item)} title={`Open ${item.label}`}>
                 {item.type === 'image' && thumbnailUrls[item.id] ? (
-                  <img src={thumbnailUrls[item.id]} alt={item.label} className="pt-media-thumb-img" />
+                  <img src={thumbnailUrls[item.id]} alt={item.label} className="pt-media-thumb-img" loading="lazy" />
                 ) : (
                   <div className="pt-media-thumb-video">
                     <span className="pt-media-play-icon">▶</span>

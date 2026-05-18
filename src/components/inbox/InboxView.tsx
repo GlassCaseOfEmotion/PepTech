@@ -364,7 +364,7 @@ function Bubble({ m, onImageClick, onOpenWaPicker }: { m: InboxMessage; onImageC
       <div className={`pt-bubble pt-bubble-${m.from} pt-bubble-photo`}>
         {url ? (
           <button className="pt-bubble-img-link" onClick={() => onImageClick?.(url)} style={{ border: 'none', padding: 0, background: 'none', cursor: 'zoom-in' }}>
-            <img src={url} alt="Photo" className="pt-bubble-img" />
+            <img src={url} alt="Photo" className="pt-bubble-img" loading="lazy" />
           </button>
         ) : (
           <div className="pt-bubble-img-placeholder">📷</div>
