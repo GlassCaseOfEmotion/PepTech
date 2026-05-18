@@ -11,7 +11,7 @@ import { stockFlag, LOW_THRESHOLD, BAR_MAX } from '@/lib/catalog-utils'
 import { MiniSparkline } from '@/components/catalog/MiniSparkline'
 
 // ── COA PDF opener ───────────────────────────────────────────────────────────
-export async function openCoa(coaPath: string) {
+async function openCoa(coaPath: string) {
   const res = await fetch(`/api/catalog/coa-url?path=${encodeURIComponent(coaPath)}`)
   if (!res.ok) return
   const { url } = await res.json() as { url: string }

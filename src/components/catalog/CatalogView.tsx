@@ -205,6 +205,10 @@ function CatalogDetail({ product, products, protocol, baseCurrency }: {
   // Reset to overview when product changes
   useEffect(() => {
     setActiveTab('overview')
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('tab', 'overview')
+    router.replace(`/catalog?${params.toString()}`)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.id])
 
   function switchTab(tab: Tab) {

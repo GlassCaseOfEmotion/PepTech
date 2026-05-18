@@ -180,7 +180,7 @@
 
 /* Detail panel */
 .pt-cat-detail {
-  overflow-y: auto;
+  overflow: hidden;
   min-height: 0;
   padding: 18px 20px 24px;
   display: flex; flex-direction: column; gap: 14px;
