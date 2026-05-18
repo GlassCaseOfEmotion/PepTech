@@ -12,9 +12,7 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
   const [uploadError, setUploadError] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [lightbox, setLightbox] = useState<{ url: string | null; type: 'image' | 'video' | 'pdf'; loading: boolean } | null>(null)
-  const imageInputRef = useRef<HTMLInputElement>(null)
-  const videoInputRef = useRef<HTMLInputElement>(null)
-  const pdfInputRef = useRef<HTMLInputElement>(null)
+  const uploadInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!lightbox) return
@@ -23,9 +21,12 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
     return () => document.removeEventListener('keydown', handler)
   }, [lightbox])
 
-  function onFilePick(e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video' | 'pdf') {
+  function onFilePick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    const type: 'image' | 'video' | 'pdf' = file.type.startsWith('image/') ? 'image'
+      : file.type.startsWith('video/') ? 'video'
+      : 'pdf'
     const baseName = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
     setLabelInput(baseName)
     setPendingFile({ file, type })
@@ -117,15 +118,8 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
           <p>{items.length} item{items.length !== 1 ? 's' : ''}</p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <a href={`/media?product=${productId}`} className="pt-link" style={{ fontSize: 11 }}>
-            Manage in library →
-          </a>
-          <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={e => onFilePick(e, 'image')} />
-          <input ref={videoInputRef} type="file" accept="video/mp4,video/quicktime,video/webm" style={{ display: 'none' }} onChange={e => onFilePick(e, 'video')} />
-          <input ref={pdfInputRef} type="file" accept="application/pdf" style={{ display: 'none' }} onChange={e => onFilePick(e, 'pdf')} />
-          <button className="pt-link" onClick={() => imageInputRef.current?.click()}>+ Image</button>
-          <button className="pt-link" onClick={() => videoInputRef.current?.click()}>+ Video</button>
-          <button className="pt-link" onClick={() => pdfInputRef.current?.click()}>+ PDF</button>
+          <input ref={uploadInputRef} type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm,application/pdf" style={{ display: 'none' }} onChange={onFilePick} />
+          <button className="pt-link" onClick={() => uploadInputRef.current?.click()}>+ Upload</button>
         </div>
       </header>
 
@@ -189,6 +183,12 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
           ))}
         </div>
       )}
+      <div style={{ paddingTop: 8 }}>
+        <a href={`/media?product=${productId}`} className="pt-link" style={{ fontSize: 11, color: 'var(--pt-fg-4)' }}>
+          Manage in library →
+        </a>
+      </div>
+
       {lightbox && (
         <div className="pt-lightbox" onClick={() => setLightbox(null)}>
           {lightbox.url === null || (lightbox.type === 'video' && lightbox.loading) ? (
