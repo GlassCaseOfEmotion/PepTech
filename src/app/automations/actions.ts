@@ -174,6 +174,7 @@ export async function dismissQueuedRun(runId: string): Promise<{ success: true }
       .update({ state: 'skip' })
       .eq('id', runId)
       .eq('tenant_id', tenantId)
+      .eq('state', 'queued')
     if (error) return { error: error.message }
     revalidatePath('/automations')
     return { success: true }
