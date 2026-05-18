@@ -733,6 +733,8 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
   const { status: windowStatus, timeLeft } = useWindowStatus(thread.windowExpiresAt, thread.channel)
   const snoozeRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const isNearBottomRef = useRef(true)
+  const prevMsgCountRef = useRef(0)
 
   useEffect(() => {
     if (!lightboxUrl) return
@@ -753,9 +755,26 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
   }, [showSnooze])
   const ChIcon = CH_ICONS[thread.channel]
 
+  // On thread switch: always scroll to bottom after DOM updates
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-  }, [thread.id, messages.length])
+    prevMsgCountRef.current = 0
+    isNearBottomRef.current = true
+    requestAnimationFrame(() => {
+      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    })
+  }, [thread.id])
+
+  // On new message: only scroll if already near the bottom
+  useEffect(() => {
+    if (messages.length <= prevMsgCountRef.current) {
+      prevMsgCountRef.current = messages.length
+      return
+    }
+    prevMsgCountRef.current = messages.length
+    if (isNearBottomRef.current && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [messages.length])
 
   return (
     <div className={`pt-ix-conv pt-ix-${thread.channel}`}>
@@ -802,7 +821,15 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
         </div>
       </div>
 
-      <div ref={scrollRef} className="pt-ix-stream">
+      <div
+        ref={scrollRef}
+        className="pt-ix-stream"
+        onScroll={() => {
+          if (!scrollRef.current) return
+          const { scrollTop, scrollHeight, clientHeight } = scrollRef.current
+          isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 100
+        }}
+      >
         {messages.map(m => <Bubble key={m.id} m={m} onImageClick={setLightboxUrl} onOpenWaPicker={() => setShowWaPicker(true)} />)}
       </div>
 

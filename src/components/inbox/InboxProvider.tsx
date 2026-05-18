@@ -77,6 +77,9 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
   const [messages, setMessages] = useState<InboxMessage[]>([])
   const [resolvedCount, setResolvedCount] = useState(initialResolvedCount)
   const signedUrlsRef = useRef<Set<string>>(new Set())
+  const activeIdRef = useRef(activeId)
+  const messageCacheRef = useRef<Record<string, InboxMessage[]>>({})
+  const notesCacheRef = useRef<Record<string, DbNote[]>>({})
   const [notes, setNotes] = useState<DbNote[]>([])
   const [isSending, setIsSending] = useState(false)
   const [tenantId, setTenantId] = useState<string | null>(null)
@@ -137,7 +140,8 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
       }
       return msg
     }))
-    setMessages(withUrls)
+    messageCacheRef.current[conversationId] = withUrls
+    if (activeIdRef.current === conversationId) setMessages(withUrls)
   }, [supabase])
 
   // ── Fetch notes for a customer ─────────────────────────────────────────────
@@ -148,7 +152,9 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
       .eq('customer_id', customerId)
       .order('created_at', { ascending: false })
       .limit(10)
-    setNotes((data ?? []) as DbNote[])
+    const result = (data ?? []) as DbNote[]
+    notesCacheRef.current[customerId] = result
+    setNotes(result)
   }, [supabase])
 
   // ── Load resolved conversations on demand ──────────────────────────────────
@@ -178,12 +184,16 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
 
   // ── Select a conversation ──────────────────────────────────────────────────
   const setActiveId = useCallback((id: string) => {
+    activeIdRef.current = id
     setActiveIdRaw(id)
-    setMessages([])
-    setNotes([])
-    fetchMessages(id)
+    // Show cached messages/notes immediately — no empty flash
+    setMessages(messageCacheRef.current[id] ?? [])
     const thread = threads.find(t => t.id === id)
-    if (thread?.customerId) fetchNotes(thread.customerId)
+    if (thread?.customerId) {
+      setNotes(notesCacheRef.current[thread.customerId] ?? [])
+      fetchNotes(thread.customerId)
+    }
+    fetchMessages(id)
     setThreads(prev => prev.map(t => t.id === id ? { ...t, unread: 0 } : t))
     void supabase.from('conversations').update({ unread_count: 0 }).eq('id', id).then()
   }, [threads, fetchMessages, fetchNotes, supabase])
@@ -302,6 +312,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
   // ── Load initial messages on mount ─────────────────────────────────────────
   useEffect(() => {
     if (activeId) {
+      activeIdRef.current = activeId
       fetchMessages(activeId)
       const thread = threads.find(t => t.id === activeId)
       if (thread?.customerId) fetchNotes(thread.customerId)
@@ -322,11 +333,15 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
         const newMsg = dbMessageToInboxMessage(raw)
         setMessages(prev => {
           if (prev.some(m => m.id === newMsg.id)) return prev
+          let next: InboxMessage[]
           if (newMsg.from === 'me') {
             const optIdx = prev.findIndex(m => m.optimistic && m.text === newMsg.text)
-            if (optIdx >= 0) return prev.map((m, i) => i === optIdx ? newMsg : m)
+            next = optIdx >= 0 ? prev.map((m, i) => i === optIdx ? newMsg : m) : [...prev, newMsg]
+          } else {
+            next = [...prev, newMsg]
           }
-          return [...prev, newMsg]
+          messageCacheRef.current[activeId] = next
+          return next
         })
         // GlobalNotifications may not fire when InboxProvider has a filtered
         // subscription on the same table — handle chime + notification here for inbound
@@ -407,9 +422,17 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
       supabase.storage.from(photoBucket).createSignedUrl(msg.metadata!.storagePath as string, 3600, { transform: { width: 1200, quality: 80 } })
         .then(({ data }) => {
           if (!data?.signedUrl) return
-          setMessages(prev => prev.map(m =>
-            m.id === msg.id ? { ...m, metadata: { ...m.metadata, mediaUrl: data.signedUrl } } : m
-          ))
+          const url = data.signedUrl
+          const applyUrl = (msgs: InboxMessage[]) =>
+            msgs.map(m => m.id === msg.id ? { ...m, metadata: { ...m.metadata, mediaUrl: url } } : m)
+          setMessages(prev => {
+            const next = applyUrl(prev)
+            const cacheKey = activeIdRef.current
+            if (messageCacheRef.current[cacheKey]) {
+              messageCacheRef.current[cacheKey] = applyUrl(messageCacheRef.current[cacheKey])
+            }
+            return next
+          })
         })
         .catch(() => { /* keep placeholder */ })
     })
