@@ -86,6 +86,7 @@ export type MessageMetadata = {
   state?: 'pending' | 'confirmed' | 'failed'
   // photo
   storagePath?: string
+  bucket?: string     // storage bucket — 'media' (default), 'coa', or 'product-media'
   mediaUrl?: string   // signed URL, populated client-side — not stored in DB
   // invoice
   invoicePath?: string

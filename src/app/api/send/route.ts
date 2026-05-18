@@ -129,7 +129,7 @@ export async function POST(request: Request) {
       content: storagePath ? '[Photo]' : effectiveContent,
       status: 'sent',
       external_id: twilioSid ?? null,
-      metadata: storagePath ? { kind: 'photo', storagePath } : null,
+      metadata: storagePath ? { kind: 'photo', storagePath, bucket } : null,
     })
     .select('id')
     .single()

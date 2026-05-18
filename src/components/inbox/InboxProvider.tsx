@@ -129,8 +129,9 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
     mapped.forEach(m => { if (m.kind === 'photo') signedUrlsRef.current.add(m.id) })
     const withUrls = await Promise.all(mapped.map(async msg => {
       if (msg.kind === 'photo' && msg.metadata?.storagePath) {
+        const photoBucket = (msg.metadata.bucket as string | undefined) ?? 'media'
         const { data: urlData } = await supabase.storage
-          .from('media')
+          .from(photoBucket)
           .createSignedUrl(msg.metadata.storagePath as string, 3600)
         return { ...msg, metadata: { ...msg.metadata, mediaUrl: urlData?.signedUrl } }
       }
@@ -402,7 +403,8 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
     if (unsigned.length === 0) return
     unsigned.forEach(msg => {
       signedUrlsRef.current.add(msg.id)
-      supabase.storage.from('media').createSignedUrl(msg.metadata!.storagePath as string, 3600)
+      const photoBucket = (msg.metadata!.bucket as string | undefined) ?? 'media'
+      supabase.storage.from(photoBucket).createSignedUrl(msg.metadata!.storagePath as string, 3600)
         .then(({ data }) => {
           if (!data?.signedUrl) return
           setMessages(prev => prev.map(m =>
