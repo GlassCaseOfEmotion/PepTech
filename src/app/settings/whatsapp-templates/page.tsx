@@ -28,7 +28,7 @@ export default async function WhatsAppTemplatesPage() {
         </div>
       </section>
 
-      <WaTemplatesForm templates={templates ?? []} />
+      <WaTemplatesForm templates={(templates ?? []) as unknown as Parameters<typeof WaTemplatesForm>[0]['templates']} />
     </div>
   )
 }
