@@ -48,6 +48,33 @@
   color: var(--pt-fg);
 }
 
+/* Product filter select */
+.pt-select {
+  height: 30px;
+  padding: 0 28px 0 10px;
+  border-radius: 20px;
+  border: 0.5px solid var(--pt-line);
+  background: transparent;
+  color: var(--pt-fg-3);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color 0.1s, color 0.1s;
+}
+.pt-select:hover {
+  border-color: oklch(from var(--pt-fg) l c h / 0.3);
+  color: var(--pt-fg);
+}
+.pt-select:focus {
+  border-color: var(--pt-accent);
+  color: var(--pt-fg);
+}
+
 /* Upload dropdown */
 .pt-media-lib-upload-menu {
   display: none;
