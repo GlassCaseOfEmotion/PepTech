@@ -32,6 +32,7 @@ export function MediaLibraryView({
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
+  const [uploadMenuOpen, setUploadMenuOpen] = useState(false)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
   const pdfInputRef = useRef<HTMLInputElement>(null)
@@ -46,6 +47,7 @@ export function MediaLibraryView({
   async function handleUpload(file: File, type: 'image' | 'video' | 'pdf') {
     const label = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
     const ext = file.name.split('.').pop() ?? (type === 'image' ? 'jpg' : type === 'video' ? 'mp4' : 'pdf')
+    setUploadMenuOpen(false)
     setUploading(true)
     setUploadError('')
     try {
@@ -123,14 +125,18 @@ export function MediaLibraryView({
           <input ref={videoInputRef} type="file" accept="video/mp4,video/quicktime,video/webm" style={{ display: 'none' }} onChange={e => onFilePick(e, 'video')} />
           <input ref={pdfInputRef}   type="file" accept="application/pdf"                     style={{ display: 'none' }} onChange={e => onFilePick(e, 'pdf')}   />
           <div style={{ position: 'relative' }}>
-            <button className="pt-btn pt-btn-primary" disabled={uploading}>
+            <button
+              className="pt-btn pt-btn-primary"
+              disabled={uploading}
+              onClick={() => !uploading && setUploadMenuOpen(o => !o)}
+            >
               {uploading ? 'Uploading…' : '↑ Upload'}
             </button>
-            {!uploading && (
-              <div className="pt-media-lib-upload-menu">
-                <button onClick={() => imageInputRef.current?.click()}>Image</button>
-                <button onClick={() => videoInputRef.current?.click()}>Video</button>
-                <button onClick={() => pdfInputRef.current?.click()}>PDF</button>
+            {uploadMenuOpen && (
+              <div className="pt-media-lib-upload-menu" style={{ display: 'block' }}>
+                <button onClick={() => { imageInputRef.current?.click(); setUploadMenuOpen(false) }}>Image</button>
+                <button onClick={() => { videoInputRef.current?.click(); setUploadMenuOpen(false) }}>Video</button>
+                <button onClick={() => { pdfInputRef.current?.click(); setUploadMenuOpen(false) }}>PDF</button>
               </div>
             )}
           </div>

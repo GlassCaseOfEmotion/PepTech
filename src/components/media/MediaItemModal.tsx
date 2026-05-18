@@ -18,6 +18,7 @@ export function MediaItemModal({
   onDeleted: (id: string) => void
 }) {
   const [label, setLabel] = useState(item.label)
+  const [fullSizeUrl, setFullSizeUrl] = useState<string | null>(item.thumbnailUrl ?? null)
   const [tagQuery, setTagQuery] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -29,6 +30,14 @@ export function MediaItemModal({
     setTagQuery('')
     setConfirmDelete(false)
   }, [item.id, item.label])
+
+  useEffect(() => {
+    setFullSizeUrl(item.thumbnailUrl ?? null)
+    if (item.type !== 'image') return
+    void fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(item.storagePath)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { url: string } | null) => { if (data?.url) setFullSizeUrl(data.url) })
+  }, [item.id, item.type, item.storagePath, item.thumbnailUrl])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -82,8 +91,8 @@ export function MediaItemModal({
       <div className="pt-media-lib-modal" onClick={e => e.stopPropagation()}>
         {/* Preview */}
         <div className="pt-media-lib-modal-preview">
-          {item.type === 'image' && item.thumbnailUrl ? (
-            <img src={item.thumbnailUrl} alt={item.label} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 6 }} />
+          {item.type === 'image' && fullSizeUrl ? (
+            <img src={fullSizeUrl} alt={item.label} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 6 }} />
           ) : item.type === 'video' ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, color: 'var(--pt-fg-4)' }}>
               <span style={{ fontSize: 40 }}>▶</span>

@@ -76,11 +76,6 @@
 .pt-media-lib-upload-menu button:hover {
   background: oklch(from var(--pt-fg) l c h / 0.06);
 }
-/* Show menu on parent hover */
-div:has(> .pt-media-lib-upload-menu):hover .pt-media-lib-upload-menu {
-  display: block;
-}
-
 /* Grid */
 .pt-media-lib-grid {
   display: grid;

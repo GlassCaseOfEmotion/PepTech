@@ -82,6 +82,14 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
   }
 
   async function openItem(item: ProductMediaItem) {
+    if (item.type === 'pdf') {
+      // PDFs open in a new tab — lightbox can't render them
+      const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(item.storage_path)}`)
+      if (!res.ok) return
+      const { url } = await res.json() as { url: string }
+      window.open(url, '_blank', 'noopener')
+      return
+    }
     // Show lightbox immediately — images use the thumbnail as placeholder, videos show a spinner
     setLightbox({
       url: item.type === 'image' ? (item.thumbnailUrl ?? null) : null,
@@ -188,7 +196,6 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
           ) : lightbox.type === 'image' ? (
             <img src={lightbox.url} alt="Full size" className="pt-lightbox-img" onClick={e => e.stopPropagation()} />
           ) : (
-            // TODO (Task 8): add PDF lightbox — pdf currently falls through to video branch, but no pdf upload exists yet
             <video src={lightbox.url} className="pt-lightbox-img" controls autoPlay onClick={e => e.stopPropagation()} />
           )}
           <button className="pt-lightbox-close" onClick={() => setLightbox(null)}>✕</button>
