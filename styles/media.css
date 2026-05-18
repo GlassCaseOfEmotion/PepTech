@@ -1,0 +1,275 @@
+/* ── Media Library ──────────────────────────────────────────────────────────── */
+
+.pt-media-lib {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Filter bar */
+.pt-media-lib-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pt-media-lib-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pt-media-lib-pills {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.pt-media-lib-pill {
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 0.5px solid var(--pt-line);
+  background: transparent;
+  color: var(--pt-fg-3);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+.pt-media-lib-pill.is-on {
+  background: var(--pt-accent);
+  color: #fff;
+  border-color: var(--pt-accent);
+}
+.pt-media-lib-pill:hover:not(.is-on) {
+  background: oklch(from var(--pt-fg) l c h / 0.06);
+  color: var(--pt-fg);
+}
+
+/* Upload dropdown */
+.pt-media-lib-upload-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line);
+  border-radius: var(--pt-radius-sm);
+  box-shadow: 0 4px 16px oklch(0 0 0 / 0.15);
+  z-index: 20;
+  min-width: 100px;
+  overflow: hidden;
+}
+.pt-media-lib-upload-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  text-align: left;
+  font-size: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--pt-fg);
+}
+.pt-media-lib-upload-menu button:hover {
+  background: oklch(from var(--pt-fg) l c h / 0.06);
+}
+/* Show menu on parent hover */
+div:has(> .pt-media-lib-upload-menu):hover .pt-media-lib-upload-menu {
+  display: block;
+}
+
+/* Grid */
+.pt-media-lib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+/* PDF tile */
+.pt-media-thumb-pdf {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  background: oklch(from var(--pt-fg) l c h / 0.04);
+}
+.pt-media-pdf-icon {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--pt-fg-3);
+  font-family: monospace;
+}
+
+/* Tag hint below tile */
+.pt-media-lib-tag-hint {
+  font-size: 10px;
+  color: var(--pt-fg-4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Item modal */
+.pt-media-lib-modal {
+  display: flex;
+  gap: 0;
+  background: var(--pt-surface);
+  border-radius: 10px;
+  box-shadow: 0 24px 64px oklch(0 0 0 / 0.5);
+  overflow: hidden;
+  max-width: 780px;
+  width: 90vw;
+  position: relative;
+}
+.pt-media-lib-modal-preview {
+  flex: 1;
+  min-width: 0;
+  background: oklch(from var(--pt-bg) l c h / 0.5);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  min-height: 280px;
+}
+.pt-media-lib-modal-body {
+  width: 240px;
+  flex-shrink: 0;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-left: 0.5px solid var(--pt-line);
+}
+.pt-media-lib-modal-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--pt-fg-4);
+  margin-bottom: 6px;
+}
+.pt-media-lib-modal-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 16px;
+  flex-wrap: wrap;
+}
+
+/* Product tags */
+.pt-media-lib-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 24px;
+}
+.pt-media-lib-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: oklch(from var(--pt-fg) l c h / 0.08);
+  border-radius: 12px;
+  padding: 2px 8px 2px 10px;
+  font-size: 11px;
+  color: var(--pt-fg-2);
+}
+.pt-media-lib-tag button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--pt-fg-4);
+  font-size: 10px;
+  line-height: 1;
+  padding: 0;
+}
+.pt-media-lib-tag button:hover { color: var(--pt-fg); }
+
+/* Tag typeahead dropdown */
+.pt-media-lib-tag-dd {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0; right: 0;
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line);
+  border-radius: var(--pt-radius-sm);
+  box-shadow: 0 4px 16px oklch(0 0 0 / 0.12);
+  z-index: 30;
+  overflow: hidden;
+}
+.pt-media-lib-tag-dd button {
+  display: block;
+  width: 100%;
+  padding: 7px 12px;
+  text-align: left;
+  font-size: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--pt-fg);
+}
+.pt-media-lib-tag-dd button:hover {
+  background: oklch(from var(--pt-fg) l c h / 0.06);
+}
+
+/* ── ProductInfoPicker library tab ─────────────────────────────────────────── */
+.pt-pip-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 0.5px solid var(--pt-line);
+  margin: 0 -1px;
+}
+.pt-pip-tab {
+  padding: 6px 14px;
+  font-size: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--pt-fg-3);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.1s;
+}
+.pt-pip-tab.is-on {
+  color: var(--pt-fg);
+  border-bottom-color: var(--pt-accent);
+}
+.pt-pip-library {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  overflow: hidden;
+}
+.pt-pip-lib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+.pt-pip-lib-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  border-radius: var(--pt-radius-sm);
+  border: 0.5px solid var(--pt-line);
+  background: none;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  text-align: center;
+}
+.pt-pip-lib-tile:hover {
+  background: oklch(from var(--pt-fg) l c h / 0.05);
+  border-color: oklch(from var(--pt-fg) l c h / 0.2);
+}
+.pt-pip-lib-tile-icon { font-size: 22px; line-height: 1; }
+.pt-pip-lib-tile-label {
+  font-size: 10px;
+  color: var(--pt-fg-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}

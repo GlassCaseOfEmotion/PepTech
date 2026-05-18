@@ -11,6 +11,7 @@ import '../../styles/vault.css'
 import '../../styles/order-detail.css'
 import '../../styles/agent.css'
 import '../../styles/admin.css'
+import '../../styles/media.css'
 
 export const metadata: Metadata = {
   title: 'Peptech',
