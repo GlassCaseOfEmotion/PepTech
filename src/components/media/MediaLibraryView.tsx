@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createMediaItem, saveMediaItemPath } from '@/app/media/actions'
 import { MediaItemModal } from '@/components/media/MediaItemModal'
-import type { MediaItem } from '@/types/media'
+import type { MediaItem, MediaItemType } from '@/types/media'
 
 type FilterType = 'all' | 'image' | 'video' | 'pdf' | 'untagged'
 
@@ -30,7 +30,7 @@ export function MediaLibraryView({
   const [productFilter, setProductFilter] = useState<string>(searchParams.get('product') ?? 'all')
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null)
   const [isNewUpload, setIsNewUpload] = useState(false)
-  const [uploading, setUploading] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState<'uploading' | 'done' | 'error'>('done')
   const [uploadError, setUploadError] = useState('')
   const uploadInputRef = useRef<HTMLInputElement>(null)
 
@@ -42,27 +42,48 @@ export function MediaLibraryView({
   })
 
   async function handleUpload(file: File) {
-    const type: 'image' | 'video' | 'pdf' = file.type.startsWith('image/') ? 'image'
+    const type: MediaItemType = file.type.startsWith('image/') ? 'image'
       : file.type.startsWith('video/') ? 'video'
       : 'pdf'
     const label = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
     const ext = file.name.split('.').pop() ?? (type === 'image' ? 'jpg' : type === 'video' ? 'mp4' : 'pdf')
-    setUploading(true)
+
+    // Open modal immediately with a placeholder — user can start selecting products now
+    const placeholder: MediaItem = {
+      id: '__pending__',
+      label,
+      type,
+      storagePath: '',
+      sortOrder: items.length,
+      createdAt: new Date().toISOString(),
+      productTags: [],
+      thumbnailUrl: type === 'image' ? URL.createObjectURL(file) : undefined,
+    }
+    setIsNewUpload(true)
+    setUploadStatus('uploading')
     setUploadError('')
+    setSelectedItem(placeholder)
+
     try {
       const result = await createMediaItem(label, type, ext)
-      if ('error' in result) { setUploadError(result.error); return }
+      if ('error' in result) {
+        setUploadStatus('error')
+        setUploadError(result.error)
+        return
+      }
       const putRes = await fetch(result.uploadUrl, {
         method: 'PUT',
         body: file,
         headers: { 'Content-Type': file.type },
       })
       if (!putRes.ok) {
+        setUploadStatus('error')
         setUploadError('Upload failed — please try again')
         return
       }
       await saveMediaItemPath(result.id, result.storagePath)
-      const newItem: MediaItem = {
+
+      const realItem: MediaItem = {
         id: result.id,
         label,
         type,
@@ -70,13 +91,14 @@ export function MediaLibraryView({
         sortOrder: items.length,
         createdAt: new Date().toISOString(),
         productTags: [],
-        thumbnailUrl: type === 'image' ? URL.createObjectURL(file) : undefined,
+        thumbnailUrl: placeholder.thumbnailUrl,
       }
-      setItems(prev => [newItem, ...prev])
-      setIsNewUpload(true)
-      setSelectedItem(newItem)
-    } finally {
-      setUploading(false)
+      setItems(prev => [realItem, ...prev])
+      setSelectedItem(realItem) // triggers modal to apply any pending tag selections
+      setUploadStatus('done')
+    } catch {
+      setUploadStatus('error')
+      setUploadError('Upload failed — please try again')
     }
   }
 
@@ -87,6 +109,7 @@ export function MediaLibraryView({
   }
 
   function handleItemUpdated(updated: MediaItem) {
+    if (updated.id === '__pending__') return
     setItems(prev => prev.map(i => i.id === updated.id ? updated : i))
     setSelectedItem(updated)
   }
@@ -99,6 +122,7 @@ export function MediaLibraryView({
   function handleModalClose() {
     setSelectedItem(null)
     setIsNewUpload(false)
+    setUploadStatus('done')
   }
 
   return (
@@ -136,17 +160,13 @@ export function MediaLibraryView({
           />
           <button
             className="pt-btn pt-btn-primary"
-            disabled={uploading}
-            onClick={() => !uploading && uploadInputRef.current?.click()}
+            disabled={uploadStatus === 'uploading'}
+            onClick={() => uploadStatus !== 'uploading' && uploadInputRef.current?.click()}
           >
-            {uploading ? 'Uploading…' : '↑ Upload'}
+            ↑ Upload
           </button>
         </div>
       </div>
-
-      {uploadError && (
-        <div style={{ padding: '8px 0', fontSize: 12, color: 'var(--pt-danger)' }}>{uploadError}</div>
-      )}
 
       {/* Grid */}
       {filtered.length === 0 ? (
@@ -162,7 +182,7 @@ export function MediaLibraryView({
             <div key={item.id} className="pt-media-tile">
               <button
                 className="pt-media-tile-thumb"
-                onClick={() => { setIsNewUpload(false); setSelectedItem(item) }}
+                onClick={() => { setIsNewUpload(false); setUploadStatus('done'); setSelectedItem(item) }}
                 title={item.label}
               >
                 {item.type === 'image' && item.thumbnailUrl ? (
@@ -202,6 +222,8 @@ export function MediaLibraryView({
           onUpdated={handleItemUpdated}
           onDeleted={handleItemDeleted}
           isNewUpload={isNewUpload}
+          uploadStatus={uploadStatus}
+          uploadError={uploadError}
         />
       )}
     </div>

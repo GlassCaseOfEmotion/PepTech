@@ -144,6 +144,7 @@
   max-width: 780px;
   width: 90vw;
   position: relative;
+  position: relative;
 }
 .pt-media-lib-modal-preview {
   flex: 1;
@@ -233,6 +234,42 @@
   background: oklch(from var(--pt-fg) l c h / 0.06);
 }
 
+/* Upload progress bar — runs across the very top of the modal */
+.pt-media-lib-upload-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: oklch(from var(--pt-accent) l c h / 0.15);
+  overflow: hidden;
+  z-index: 2;
+  border-radius: 10px 10px 0 0;
+}
+.pt-media-lib-upload-bar-fill {
+  height: 100%;
+  width: 40%;
+  background: var(--pt-accent);
+  border-radius: 2px;
+  animation: pt-upload-slide 1.4s ease-in-out infinite;
+}
+@keyframes pt-upload-slide {
+  0%   { transform: translateX(-150%); }
+  100% { transform: translateX(350%); }
+}
+
+/* Uploading overlay on preview */
+.pt-media-lib-uploading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 12px;
+  background: oklch(from var(--pt-bg) l c h / 0.5);
+  font-size: 11px;
+  color: var(--pt-fg-3);
+  border-radius: 6px;
+}
+
 /* Post-upload banner */
 .pt-media-lib-modal-banner {
   font-size: 11px;
@@ -241,6 +278,10 @@
   border-radius: var(--pt-radius-sm);
   padding: 6px 10px;
   margin-bottom: 14px;
+}
+.pt-media-lib-modal-banner.is-error {
+  color: var(--pt-danger);
+  background: oklch(from var(--pt-danger) l c h / 0.08);
 }
 
 /* Product checkbox list */
