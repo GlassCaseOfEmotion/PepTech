@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
+import { createServiceClient } from '@/lib/supabase/server'
+import { runAutomationsForEvent } from '@/lib/automations/engine'
 
 export interface InboundMessageParams {
   tenantId: string
@@ -88,6 +90,11 @@ export async function processInboundMessage(
     if (convErr || !newConv) throw new Error(`Failed to create conversation: ${convErr?.message}`)
     conversationId = newConv.id
     currentStatus = 'new'
+
+    void runAutomationsForEvent(createServiceClient(), tenantId, 'new_thread', {
+      conversationId: newConv.id,
+      customerId,
+    }).catch(console.error)
   }
 
   // 3. Insert message — idempotent: catch duplicate external_id (23505) and skip

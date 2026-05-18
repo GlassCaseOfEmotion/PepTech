@@ -1,8 +1,9 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { buildAssignments } from './utils'
+import { runAutomationsForEvent } from '@/lib/automations/engine'
 
 async function getTenantId() {
   const supabase = await createClient()
@@ -143,7 +144,7 @@ export async function updateOrderStatus(orderId: string, status: string): Promis
 
     // Enforce valid transition server-side — client guards are not enough
     const { data: current, error: fetchError } = await supabase
-      .from('orders').select('status').eq('id', orderId).eq('tenant_id', tenantId).single()
+      .from('orders').select('status, customer_id').eq('id', orderId).eq('tenant_id', tenantId).single()
     if (fetchError || !current) return { error: 'Order not found' }
     if (ALLOWED_FROM[current.status] !== status) {
       return { error: `Cannot move from ${current.status} to ${status}` }
@@ -161,6 +162,12 @@ export async function updateOrderStatus(orderId: string, status: string): Promis
     })
     revalidatePath('/orders')
     revalidatePath(`/orders/${orderId}`)
+    void runAutomationsForEvent(createServiceClient(), tenantId, 'order_state', {
+      orderId,
+      customerId: current.customer_id,
+      toStatus: status,
+      fromStatus: current.status,
+    }).catch(console.error)
     return { success: true }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }
@@ -173,7 +180,7 @@ export async function packOrder(orderId: string): Promise<{ success: true } | { 
 
     const { data: order, error: fetchError } = await supabase
       .from('orders')
-      .select('status, order_items(id, product_id, qty, products(name))')
+      .select('status, customer_id, order_items(id, product_id, qty, products(name))')
       .eq('id', orderId)
       .eq('tenant_id', tenantId)
       .single()
@@ -222,6 +229,12 @@ export async function packOrder(orderId: string): Promise<{ success: true } | { 
 
     revalidatePath('/orders')
     revalidatePath(`/orders/${orderId}`)
+    void runAutomationsForEvent(createServiceClient(), tenantId, 'order_state', {
+      orderId,
+      customerId: order.customer_id,
+      toStatus: 'packing',
+      fromStatus: 'confirming',
+    }).catch(console.error)
     return { success: true }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }
@@ -270,7 +283,7 @@ export async function shipOrder(
       .eq('id', orderId)
       .eq('tenant_id', tenantId)
       .eq('status', 'packing')
-      .select('id')
+      .select('id, customer_id')
 
     if (updateError) return { error: updateError.message }
     if (!updated || updated.length === 0) return { error: 'Order not found or not in packing status' }
@@ -286,6 +299,12 @@ export async function shipOrder(
     revalidatePath('/orders')
     revalidatePath(`/orders/${orderId}`)
     revalidatePath('/')
+    void runAutomationsForEvent(createServiceClient(), tenantId, 'order_state', {
+      orderId,
+      customerId: updated[0].customer_id,
+      toStatus: 'shipped',
+      fromStatus: 'packing',
+    }).catch(console.error)
     return { success: true }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }
@@ -315,7 +334,7 @@ export async function confirmPayment(
 
     const { data: current, error: fetchError } = await supabase
       .from('orders')
-      .select('status, payment_asset')
+      .select('status, payment_asset, customer_id')
       .eq('id', orderId)
       .eq('tenant_id', tenantId)
       .single()
@@ -343,6 +362,12 @@ export async function confirmPayment(
 
     revalidatePath('/orders')
     revalidatePath(`/orders/${orderId}`)
+    void runAutomationsForEvent(createServiceClient(), tenantId, 'order_state', {
+      orderId,
+      customerId: current.customer_id,
+      toStatus: 'confirming',
+      fromStatus: current.status,
+    }).catch(console.error)
     return { success: true }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }
