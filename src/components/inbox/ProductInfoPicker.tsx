@@ -112,10 +112,9 @@ export function ProductInfoPicker({
       if (images.length === 0) return current
       void Promise.all(
         images.map(async m => {
-          const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(m.storage_path)}&width=200`)
-          if (!res.ok) return null
-          const { url } = await res.json() as { url: string }
-          return { id: m.id, url }
+          const { data } = await supabase.storage.from('product-media')
+            .createSignedUrl(m.storage_path, 3600, { transform: { width: 200, quality: 80, resize: 'contain' } })
+          return data ? { id: m.id, url: data.signedUrl } : null
         })
       ).then(results => {
         const updates: Record<string, string> = {}
@@ -126,7 +125,7 @@ export function ProductInfoPicker({
       })
       return current
     })
-  }, [selected])
+  }, [selected, supabase])
 
   useEffect(() => {
     if (activeTab !== 'library' || libraryLoaded) return
@@ -145,10 +144,9 @@ export function ProductInfoPicker({
         if (images.length === 0) return
         void Promise.all(
           images.map(async m => {
-            const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(m.storage_path)}&width=200`)
-            if (!res.ok) return null
-            const { url } = await res.json() as { url: string }
-            return { id: m.id, url }
+            const { data } = await supabase.storage.from('product-media')
+              .createSignedUrl(m.storage_path, 3600, { transform: { width: 200, quality: 80, resize: 'contain' } })
+            return data ? { id: m.id, url: data.signedUrl } : null
           })
         ).then(results => {
           const updates: Record<string, string> = {}
