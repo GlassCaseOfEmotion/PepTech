@@ -582,10 +582,10 @@ kbd {
 .pt-dash-card-inbox .pt-thread-list,
 .pt-dash-card-payments .pt-pay-list,
 .pt-dash-card-shipments .pt-ship-list { flex: 1; display: flex; flex-direction: column; }
-/* li:only-child = the sole li rendered when list is empty; doesn't affect normal rows */
-.pt-dash-card-inbox .pt-thread-list > li:only-child,
-.pt-dash-card-payments .pt-pay-list > li:only-child,
-.pt-dash-card-shipments .pt-ship-list > li:only-child { flex: 1; display: flex; }
+/* li:only-child:has(.pt-empty-box) = the sole li when list is empty; :has() prevents this firing on a single real row */
+.pt-dash-card-inbox .pt-thread-list > li:only-child:has(.pt-empty-box),
+.pt-dash-card-payments .pt-pay-list > li:only-child:has(.pt-empty-box),
+.pt-dash-card-shipments .pt-ship-list > li:only-child:has(.pt-empty-box) { flex: 1; display: flex; }
 .pt-dash-card-inbox .pt-thread-list > li:only-child > .pt-empty-box,
 .pt-dash-card-payments .pt-pay-list > li:only-child > .pt-empty-box,
 .pt-dash-card-shipments .pt-ship-list > li:only-child > .pt-empty-box { flex: 1; display: flex; align-items: center; justify-content: center; }
