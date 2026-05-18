@@ -57,25 +57,23 @@ export async function evaluateCondition(
   }
 
   if (cond.type === 'last_message_hours') {
-    const { data } = await supabase
+    const { data: conv } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('customer_id', customerId)
+      .order('last_message_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (!conv) return true
+    const { data: msg } = await supabase
       .from('messages')
       .select('sent_at')
-      .eq('tenant_id', (await supabase.from('customers').select('tenant_id').eq('id', customerId).single()).data?.tenant_id ?? '')
-      .eq('conversation_id',
-        (await supabase
-          .from('conversations')
-          .select('id')
-          .eq('customer_id', customerId)
-          .order('last_message_at', { ascending: false })
-          .limit(1)
-          .single()
-        ).data?.id ?? ''
-      )
+      .eq('conversation_id', conv.id)
       .order('sent_at', { ascending: false })
       .limit(1)
-      .single()
-    if (!data) return true
-    const hoursAgo = (Date.now() - new Date(data.sent_at).getTime()) / (1000 * 60 * 60)
+      .maybeSingle()
+    if (!msg) return true
+    const hoursAgo = (Date.now() - new Date(msg.sent_at).getTime()) / (1000 * 60 * 60)
     return compare(hoursAgo, cond.operator, cond.value as number)
   }
 
@@ -171,20 +169,8 @@ export async function executeAction(
       return { state: 'skip', action_summary: 'No customerId for score_adjust', action_payload: null }
     }
 
-    // Clamp trust_score between 0 and 100
-    const { data: customer } = await supabase
-      .from('customers')
-      .select('trust_score')
-      .eq('id', customerId)
-      .single()
-
-    if (customer) {
-      const newScore = Math.min(100, Math.max(0, customer.trust_score + delta))
-      await supabase
-        .from('customers')
-        .update({ trust_score: newScore })
-        .eq('id', customerId)
-    }
+    // Atomic clamp via Supabase RPC to avoid read-modify-write race
+    await supabase.rpc('adjust_trust_score', { p_customer_id: customerId, p_delta: delta })
 
     return {
       state: 'ok',

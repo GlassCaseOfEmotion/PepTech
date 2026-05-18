@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       agent_messages: {
@@ -167,6 +142,13 @@ export type Database = {
             referencedRelation: "automations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "automation_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       automations: {
@@ -215,7 +197,15 @@ export type Database = {
           trigger_type?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "automations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       batches: {
         Row: {
@@ -1435,6 +1425,10 @@ export type Database = {
       }
     }
     Functions: {
+      adjust_trust_score: {
+        Args: { p_customer_id: string; p_delta: number }
+        Returns: undefined
+      }
       auth_tenant_id: { Args: never; Returns: string }
       compute_customer_trust: {
         Args: { p_customer_id: string }
@@ -1454,6 +1448,10 @@ export type Database = {
       next_order_ref: { Args: { p_tenant_id: string }; Returns: string }
       pack_order: {
         Args: { p_assignments: Json; p_order_id: string; p_tenant_id: string }
+        Returns: undefined
+      }
+      seed_default_automations: {
+        Args: { p_tenant_id: string }
         Returns: undefined
       }
       unsnooze_expired: { Args: never; Returns: undefined }
@@ -1585,9 +1583,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },
