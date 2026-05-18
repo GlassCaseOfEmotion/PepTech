@@ -57,6 +57,12 @@ export async function createTenant(formData: FormData) {
     role: 'owner', display_name: name, email,
   })
 
+  try {
+    await svc.rpc('seed_default_automations', { p_tenant_id: tenant.id })
+  } catch (err) {
+    console.error('seed_default_automations failed for tenant', tenant.id, err)
+  }
+
   revalidatePath('/admin')
   redirect(`/admin/tenants/${tenant.id}`)
 }

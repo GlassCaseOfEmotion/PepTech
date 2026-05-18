@@ -57,7 +57,14 @@ export async function signupAction(formData: FormData) {
     return redirect('/signup?error=Could+not+create+user+record')
   }
 
-  // 4. Sign in immediately so the session cookie is set before redirect
+  // 4. Seed default automation templates (non-blocking — failure must not prevent signup)
+  try {
+    await service.rpc('seed_default_automations', { p_tenant_id: tenant.id })
+  } catch (err) {
+    console.error('seed_default_automations failed for tenant', tenant.id, err)
+  }
+
+  // 5. Sign in immediately so the session cookie is set before redirect
   const supabase = await createClient()
   await supabase.auth.signInWithPassword({ email, password })
 
