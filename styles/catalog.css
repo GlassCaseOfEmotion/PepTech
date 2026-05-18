@@ -216,6 +216,7 @@
 .pt-cat-stat-grid {
   display: grid; grid-template-columns: repeat(2, 1fr);
   gap: 10px;
+  margin-bottom: 12px;
 }
 .pt-cat-stat {
   background: var(--pt-surface);
