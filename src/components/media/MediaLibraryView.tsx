@@ -71,7 +71,7 @@ export function MediaLibraryView({
         sortOrder: items.length,
         createdAt: new Date().toISOString(),
         productTags: [],
-        thumbnailUrl: undefined,
+        thumbnailUrl: type === 'image' ? URL.createObjectURL(file) : undefined,
       }
       setItems(prev => [newItem, ...prev])
     } finally {
