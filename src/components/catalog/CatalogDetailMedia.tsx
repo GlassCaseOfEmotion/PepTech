@@ -6,7 +6,7 @@ import type { ProductMediaItem } from '@/types/catalog'
 
 function ProductMediaSection({ productId, media: initialMedia }: { productId: string; media: ProductMediaItem[] }) {
   const [items, setItems] = useState<ProductMediaItem[]>(initialMedia)
-  const [pendingFile, setPendingFile] = useState<{ file: File; type: 'image' | 'video' } | null>(null)
+  const [pendingFile, setPendingFile] = useState<{ file: File; type: 'image' | 'video' | 'pdf' } | null>(null)
   const [labelInput, setLabelInput] = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
@@ -14,6 +14,7 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
   const [lightbox, setLightbox] = useState<{ url: string | null; type: 'image' | 'video' | 'pdf'; loading: boolean } | null>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
+  const pdfInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!lightbox) return
@@ -22,7 +23,7 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
     return () => document.removeEventListener('keydown', handler)
   }, [lightbox])
 
-  function onFilePick(e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') {
+  function onFilePick(e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video' | 'pdf') {
     const file = e.target.files?.[0]
     if (!file) return
     const baseName = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
@@ -36,7 +37,7 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
     setUploading(true)
     setUploadError('')
     try {
-      const ext = pendingFile.file.name.split('.').pop() ?? (pendingFile.type === 'image' ? 'jpg' : 'mp4')
+      const ext = pendingFile.file.name.split('.').pop() ?? (pendingFile.type === 'image' ? 'jpg' : pendingFile.type === 'video' ? 'mp4' : 'pdf')
       const result = await createProductMedia(productId, labelInput.trim(), pendingFile.type, ext)
       if ('error' in result) { setUploadError(result.error); return }
       const putRes = await fetch(result.uploadUrl, {
@@ -94,7 +95,7 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
   }
 
   async function confirmDelete(item: ProductMediaItem) {
-    const result = await deleteProductMedia(item.id, item.storage_path)
+    const result = await deleteProductMedia(item.id, productId)
     if ('error' in result) return
     setItems(prev => prev.filter(m => m.id !== item.id))
     setConfirmDeleteId(null)
@@ -107,11 +108,16 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
           <h3>Media</h3>
           <p>{items.length} item{items.length !== 1 ? 's' : ''}</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <a href={`/media?product=${productId}`} className="pt-link" style={{ fontSize: 11 }}>
+            Manage in library →
+          </a>
           <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={e => onFilePick(e, 'image')} />
           <input ref={videoInputRef} type="file" accept="video/mp4,video/quicktime,video/webm" style={{ display: 'none' }} onChange={e => onFilePick(e, 'video')} />
+          <input ref={pdfInputRef} type="file" accept="application/pdf" style={{ display: 'none' }} onChange={e => onFilePick(e, 'pdf')} />
           <button className="pt-link" onClick={() => imageInputRef.current?.click()}>+ Image</button>
           <button className="pt-link" onClick={() => videoInputRef.current?.click()}>+ Video</button>
+          <button className="pt-link" onClick={() => pdfInputRef.current?.click()}>+ PDF</button>
         </div>
       </header>
 
@@ -151,9 +157,13 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
               <button className="pt-media-tile-thumb" onClick={() => void openItem(item)} title={`Open ${item.label}`}>
                 {item.type === 'image' && item.thumbnailUrl ? (
                   <img src={item.thumbnailUrl} alt={item.label} className="pt-media-thumb-img" loading="lazy" />
-                ) : (
+                ) : item.type === 'video' ? (
                   <div className="pt-media-thumb-video">
                     <span className="pt-media-play-icon">▶</span>
+                  </div>
+                ) : (
+                  <div className="pt-media-thumb-pdf">
+                    <span className="pt-media-pdf-icon">PDF</span>
                   </div>
                 )}
               </button>

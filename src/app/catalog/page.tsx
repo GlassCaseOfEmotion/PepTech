@@ -34,10 +34,10 @@ export default async function CatalogPage() {
       .in('status', ['packing', 'shipped', 'delivered'])
       .gte('created_at', thirtyDaysAgo),
     supabase
-      .from('product_media')
-      .select('id, product_id, label, type, storage_path, sort_order')
-      .not('storage_path', 'is', null)
-      .order('sort_order', { ascending: true }),
+      .from('media_product_tags')
+      .select('product_id, media_items!inner(id, label, type, storage_path, sort_order)')
+      .not('media_items.storage_path', 'is', null)
+      .order('media_items.sort_order', { ascending: true }),
   ])
 
   const now = Date.now()
@@ -65,15 +65,17 @@ export default async function CatalogPage() {
   }, {})
 
   // Sign all image thumbnails server-side in parallel — no client round trips needed.
-  const imageMediaItems = ((allMedia ?? []) as { type: string; storage_path: string }[])
-    .filter(m => m.type === 'image')
+  const imageMediaItems = ((allMedia ?? []) as {
+    product_id: string
+    media_items: { type: string; storage_path: string }
+  }[]).filter(row => row.media_items.type === 'image')
   const thumbnailUrlMap: Record<string, string> = {}
   if (imageMediaItems.length > 0) {
     const signed = await Promise.all(
-      imageMediaItems.map(m =>
+      imageMediaItems.map(row =>
         supabase.storage.from('product-media')
-          .createSignedUrl(m.storage_path, 3600, { transform: { width: 400, quality: 80, resize: 'contain' } })
-          .then(({ data }) => data ? { path: m.storage_path, url: data.signedUrl } : null)
+          .createSignedUrl(row.media_items.storage_path, 3600, { transform: { width: 400, quality: 80, resize: 'contain' } })
+          .then(({ data }) => data ? { path: row.media_items.storage_path, url: data.signedUrl } : null)
       )
     )
     for (const item of signed) {
@@ -81,19 +83,22 @@ export default async function CatalogPage() {
     }
   }
 
-  const mediaByProduct = ((allMedia ?? []) as (ProductMediaItem & { product_id: string })[])
-    .reduce<Record<string, ProductMediaItem[]>>((acc, m) => {
-      if (!acc[m.product_id]) acc[m.product_id] = []
-      acc[m.product_id].push({
-        id: m.id,
-        label: m.label,
-        type: m.type as 'image' | 'video',
-        storage_path: m.storage_path,
-        sort_order: m.sort_order,
-        thumbnailUrl: thumbnailUrlMap[m.storage_path],
-      })
-      return acc
-    }, {})
+  const mediaByProduct = ((allMedia ?? []) as {
+    product_id: string
+    media_items: { id: string; label: string; type: string; storage_path: string; sort_order: number }
+  }[]).reduce<Record<string, ProductMediaItem[]>>((acc, row) => {
+    const m = row.media_items
+    if (!acc[row.product_id]) acc[row.product_id] = []
+    acc[row.product_id].push({
+      id: m.id,
+      label: m.label,
+      type: m.type as 'image' | 'video' | 'pdf',
+      storage_path: m.storage_path,
+      sort_order: m.sort_order,
+      thumbnailUrl: thumbnailUrlMap[m.storage_path],
+    })
+    return acc
+  }, {})
 
   const catalogProducts = ((products ?? []) as DbProduct[]).map(p => ({
     ...dbProductToDisplay(p, batchesByProduct[p.id] ?? [], mediaByProduct[p.id] ?? []),
