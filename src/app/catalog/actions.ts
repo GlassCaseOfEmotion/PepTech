@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { FREQUENCY_OPTIONS } from '@/types/protocols'
 import type { Frequency } from '@/types/protocols'
+import { createMediaItem, saveMediaItemPath, untagMediaItemFromProduct } from '@/app/media/actions'
 
 async function getTenantId() {
   const supabase = await createClient()
@@ -209,7 +210,6 @@ export async function createProductMedia(
   type: 'image' | 'video' | 'pdf',
   ext: string,
 ): Promise<{ id: string; uploadUrl: string; storagePath: string } | { error: string }> {
-  const { createMediaItem } = await import('@/app/media/actions')
   return createMediaItem(label, type, ext, productId)
 }
 
@@ -217,7 +217,6 @@ export async function saveProductMediaPath(
   id: string,
   storagePath: string,
 ): Promise<{ success: true } | { error: string }> {
-  const { saveMediaItemPath } = await import('@/app/media/actions')
   return saveMediaItemPath(id, storagePath)
 }
 
@@ -225,6 +224,5 @@ export async function deleteProductMedia(
   mediaItemId: string,
   productId: string,
 ): Promise<{ success: true } | { error: string }> {
-  const { untagMediaItemFromProduct } = await import('@/app/media/actions')
   return untagMediaItemFromProduct(mediaItemId, productId)
 }
