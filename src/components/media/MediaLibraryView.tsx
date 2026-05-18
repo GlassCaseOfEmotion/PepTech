@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createMediaItem, saveMediaItemPath } from '@/app/media/actions'
 import { MediaItemModal } from '@/components/media/MediaItemModal'
 import type { MediaItem, MediaItemType } from '@/types/media'
@@ -23,9 +24,7 @@ export function MediaLibraryView({
   products: { id: string; name: string }[]
 }) {
   // Pre-select product filter from URL param (e.g. /media?product={id} from catalog link)
-  const searchParams = typeof window !== 'undefined'
-    ? new URLSearchParams(window.location.search)
-    : new URLSearchParams()
+  const searchParams = useSearchParams()
 
   const [items, setItems] = useState<MediaItem[]>(initialItems)
   const [typeFilter, setTypeFilter] = useState<FilterType>('all')
@@ -164,6 +163,10 @@ export function MediaLibraryView({
                 ) : item.type === 'video' ? (
                   <div className="pt-media-thumb-video">
                     <span className="pt-media-play-icon">▶</span>
+                  </div>
+                ) : item.type === 'image' ? (
+                  <div className="pt-media-thumb-video" style={{ color: 'var(--pt-fg-4)' }}>
+                    <span style={{ fontSize: 20 }}>🖼</span>
                   </div>
                 ) : (
                   <div className="pt-media-thumb-pdf">

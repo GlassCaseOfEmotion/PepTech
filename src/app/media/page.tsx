@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient, getServerUser } from '@/lib/supabase/server'
 import { Shell } from '@/components/shell/Shell'
@@ -57,10 +58,12 @@ export default async function MediaPage() {
 
   return (
     <Shell section="Media">
-      <MediaLibraryView
-        items={items}
-        products={(products ?? []) as { id: string; name: string }[]}
-      />
+      <Suspense fallback={null}>
+        <MediaLibraryView
+          items={items}
+          products={(products ?? []) as { id: string; name: string }[]}
+        />
+      </Suspense>
     </Shell>
   )
 }
