@@ -9,8 +9,7 @@ import {
   dismissQueuedRun,
 } from '@/app/automations/actions'
 
-// TODO Task 7: replace with real AutomationModal
-const AutomationModal = null as unknown as React.ComponentType<{ mode: 'create' | 'edit'; automation?: Automation; onClose: () => void }>
+import AutomationModal from './AutomationModal'
 
 type Props = { automations: AutomationWithRuns[] }
 
@@ -281,7 +280,7 @@ export default function AutomationsView({ automations }: Props) {
         )}
       </div>
 
-      {showModal && AutomationModal && (
+      {showModal && (
         <AutomationModal
           mode={showModal.mode}
           automation={showModal.mode === 'edit' ? showModal.automation : undefined}
