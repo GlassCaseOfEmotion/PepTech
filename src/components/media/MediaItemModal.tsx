@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { deleteMediaItem, updateMediaItemLabel, tagMediaItemToProduct, untagMediaItemFromProduct } from '@/app/media/actions'
+import { deleteMediaItem, updateMediaItemLabel, setMediaItemTags } from '@/app/media/actions'
 import type { MediaItem } from '@/types/media'
 
 const TYPE_LABEL: Record<string, string> = { image: 'Image', video: 'Video', pdf: 'PDF' }
@@ -78,25 +78,13 @@ export function MediaItemModal({
       const result = await updateMediaItemLabel(item.id, label.trim())
       if ('error' in result) { setSaving(false); setError(result.error); return }
     }
-    const originalIds = new Set(item.productTags.map(t => t.productId))
-    const toAdd = products.filter(p => taggedIds.has(p.id) && !originalIds.has(p.id))
-    const toRemove = item.productTags.filter(t => !taggedIds.has(t.productId))
-    if (toAdd.length > 0 || toRemove.length > 0) {
-      const results = await Promise.all([
-        ...toAdd.map(p => tagMediaItemToProduct(item.id, p.id)),
-        ...toRemove.map(t => untagMediaItemFromProduct(item.id, t.productId)),
-      ])
-      if (results.some(r => 'error' in r)) {
-        setSaving(false)
-        setError('Some changes failed to save — please try again')
-        return
-      }
-      const finalTags = [
-        ...item.productTags.filter(t => taggedIds.has(t.productId)),
-        ...toAdd.map(p => ({ productId: p.id, productName: p.name })),
-      ]
-      onUpdated({ ...item, label: label.trim() || item.label, productTags: finalTags })
-    }
+    const tagResult = await setMediaItemTags(item.id, [...taggedIds])
+    if ('error' in tagResult) { setSaving(false); setError(tagResult.error); return }
+    const finalTags = [
+      ...products.filter(p => taggedIds.has(p.id)).map(p => ({ productId: p.id, productName: p.name })),
+      ...item.productTags.filter(t => taggedIds.has(t.productId) && !products.some(p => p.id === t.productId)),
+    ]
+    onUpdated({ ...item, label: label.trim() || item.label, productTags: finalTags })
     onClose()
   }
 

@@ -123,6 +123,33 @@ export async function updateMediaItemLabel(
   }
 }
 
+export async function setMediaItemTags(
+  mediaItemId: string,
+  productIds: string[],
+): Promise<{ success: true } | { error: string }> {
+  try {
+    const { supabase, tenantId } = await getTenantId()
+    const { data: item } = await supabase
+      .from('media_items').select('id').eq('id', mediaItemId).eq('tenant_id', tenantId).single()
+    if (!item) return { error: 'Media item not found' }
+    const { error: delErr } = await supabase
+      .from('media_product_tags').delete()
+      .eq('media_item_id', mediaItemId).eq('tenant_id', tenantId)
+    if (delErr) return { error: delErr.message }
+    if (productIds.length > 0) {
+      const { error: insErr } = await supabase.from('media_product_tags').insert(
+        productIds.map(productId => ({ media_item_id: mediaItemId, product_id: productId, tenant_id: tenantId }))
+      )
+      if (insErr) return { error: insErr.message }
+    }
+    revalidatePath('/media')
+    revalidatePath('/catalog')
+    return { success: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
 export async function tagMediaItemToProduct(
   mediaItemId: string,
   productId: string,
