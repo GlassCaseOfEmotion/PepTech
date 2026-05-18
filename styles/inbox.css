@@ -1109,3 +1109,25 @@ html.pt-ai-expanded .pt-inbox-ai-msgs { flex: 1; max-height: none; }
   text-overflow: ellipsis;
   text-align: center;
 }
+
+/* ── Product info toolbar button + quick bar entry ───────────────────────── */
+.pt-iconbtn-product {
+  color: var(--pt-accent-fg);
+  background: var(--pt-accent-soft);
+}
+.pt-iconbtn-product:hover { background: oklch(from var(--pt-accent) l c h / 0.22); color: var(--pt-accent-fg); }
+
+.pt-quicks-sep {
+  width: 0.5px;
+  height: 14px;
+  background: var(--pt-line);
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+.pt-quick-product {
+  background: var(--pt-accent-soft);
+  color: var(--pt-accent-fg);
+  border-color: transparent;
+  font-weight: 500;
+}
+.pt-quick-product:hover { background: oklch(from var(--pt-accent) l c h / 0.22); }

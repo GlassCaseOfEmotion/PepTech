@@ -584,6 +584,10 @@ function Composer({ thread, onSend, isSending, initialText, showTemplates, onSho
         {quickReplies.length > 5 && (
           <button className="pt-quick pt-quick-more">+{quickReplies.length - 5} more</button>
         )}
+        <span className="pt-quicks-sep" />
+        <button className="pt-quick pt-quick-product" onClick={() => setShowProductPicker(true)}>
+          ⬡ Product info
+        </button>
       </div>
       {pendingPreviewUrl && (
         <div className="pt-composer-photo-preview">
@@ -672,7 +676,7 @@ function Composer({ thread, onSend, isSending, initialText, showTemplates, onSho
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21 12-8.5 8.5a5 5 0 0 1-7-7L14 5a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-2.8-2.8L15 8.5"/></svg>
               </button>
             </>
-            <button className="pt-iconbtn" title="Drop COA" onClick={() => setShowProductPicker(true)}><Icons.flask size={14} /></button>
+            <button className="pt-iconbtn pt-iconbtn-product" title="Insert product info" onClick={() => setShowProductPicker(true)}><Icons.flask size={14} /></button>
             <button className="pt-iconbtn" title="Send wallet"><Icons.vault size={14} /></button>
             <span className="pt-composer-sep" />
             <button
