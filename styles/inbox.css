@@ -489,6 +489,13 @@ html.pt-ai-expanded .pt-inbox-ai-msgs { flex: 1; max-height: none; }
   transition: background 0.12s;
 }
 .pt-lightbox-close:hover { background: oklch(from var(--pt-fg) l c h / 0.2); }
+.pt-lightbox-spinner {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 3px solid oklch(from var(--pt-fg) l c h / 0.15);
+  border-top-color: var(--pt-fg);
+  animation: pt-lb-spin 0.7s linear infinite;
+}
+@keyframes pt-lb-spin { to { transform: rotate(360deg) } }
 
 /* ── Photo bubble ─────────────────────────────────────────────────────────── */
 .pt-bubble-photo { padding: 4px 4px 0; }

@@ -11,7 +11,7 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
-  const [lightbox, setLightbox] = useState<{ url: string; type: 'image' | 'video' } | null>(null)
+  const [lightbox, setLightbox] = useState<{ url: string | null; type: 'image' | 'video'; loading: boolean } | null>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
 
@@ -81,10 +81,16 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
   }
 
   async function openItem(item: ProductMediaItem) {
+    // Show lightbox immediately — images use the thumbnail as placeholder, videos show a spinner
+    setLightbox({
+      url: item.type === 'image' ? (item.thumbnailUrl ?? null) : null,
+      type: item.type,
+      loading: true,
+    })
     const res = await fetch(`/api/catalog/file-url?bucket=product-media&path=${encodeURIComponent(item.storage_path)}`)
-    if (!res.ok) return
+    if (!res.ok) { setLightbox(prev => prev ? { ...prev, loading: false } : null); return }
     const { url } = await res.json() as { url: string }
-    setLightbox({ url, type: item.type })
+    setLightbox({ url, type: item.type, loading: false })
   }
 
   async function confirmDelete(item: ProductMediaItem) {
@@ -167,7 +173,9 @@ function ProductMediaSection({ productId, media: initialMedia }: { productId: st
       )}
       {lightbox && (
         <div className="pt-lightbox" onClick={() => setLightbox(null)}>
-          {lightbox.type === 'image' ? (
+          {lightbox.url === null || (lightbox.type === 'video' && lightbox.loading) ? (
+            <div className="pt-lightbox-spinner" onClick={e => e.stopPropagation()} />
+          ) : lightbox.type === 'image' ? (
             <img src={lightbox.url} alt="Full size" className="pt-lightbox-img" onClick={e => e.stopPropagation()} />
           ) : (
             <video src={lightbox.url} className="pt-lightbox-img" controls autoPlay onClick={e => e.stopPropagation()} />
