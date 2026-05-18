@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   }
 
   const width = widthParam ? parseInt(widthParam, 10) : undefined
-  const transform = width && !isNaN(width) ? { width, quality: 80 } : undefined
+  const transform = width && !isNaN(width) ? { width, quality: 80, resize: 'contain' as const } : undefined
 
   const { data, error } = await supabase.storage
     .from(bucket)

@@ -132,7 +132,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
         const photoBucket = (msg.metadata.bucket as string | undefined) ?? 'media'
         const { data: urlData } = await supabase.storage
           .from(photoBucket)
-          .createSignedUrl(msg.metadata.storagePath as string, 3600, { transform: { width: 1200, quality: 80 } })
+          .createSignedUrl(msg.metadata.storagePath as string, 3600, { transform: { width: 1200, quality: 80, resize: 'contain' } })
         return { ...msg, metadata: { ...msg.metadata, mediaUrl: urlData?.signedUrl } }
       }
       return msg

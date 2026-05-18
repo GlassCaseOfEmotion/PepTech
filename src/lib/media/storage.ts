@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-type ImageTransform = { width?: number; height?: number; quality?: number }
+type ImageTransform = { width?: number; height?: number; quality?: number; resize?: 'cover' | 'contain' | 'fill' }
 
 export async function uploadToStorage(
   supabase: SupabaseClient,
