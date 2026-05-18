@@ -125,6 +125,98 @@ export type Database = {
           },
         ]
       }
+      automation_runs: {
+        Row: {
+          action_payload: Json | null
+          action_summary: string | null
+          automation_id: string
+          context_label: string | null
+          context_ref: string | null
+          created_at: string
+          id: string
+          state: string
+          tenant_id: string
+        }
+        Insert: {
+          action_payload?: Json | null
+          action_summary?: string | null
+          automation_id: string
+          context_label?: string | null
+          context_ref?: string | null
+          created_at?: string
+          id?: string
+          state: string
+          tenant_id: string
+        }
+        Update: {
+          action_payload?: Json | null
+          action_summary?: string | null
+          automation_id?: string
+          context_label?: string | null
+          context_ref?: string | null
+          created_at?: string
+          id?: string
+          state?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_runs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automations: {
+        Row: {
+          action_params: Json
+          action_type: string
+          conditions: Json
+          created_at: string
+          icon: string
+          id: string
+          name: string
+          sort_order: number
+          state: string
+          tenant_id: string
+          trigger_params: Json
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          action_params?: Json
+          action_type: string
+          conditions?: Json
+          created_at?: string
+          icon?: string
+          id?: string
+          name: string
+          sort_order?: number
+          state?: string
+          tenant_id: string
+          trigger_params?: Json
+          trigger_type: string
+          updated_at?: string
+        }
+        Update: {
+          action_params?: Json
+          action_type?: string
+          conditions?: Json
+          created_at?: string
+          icon?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          state?: string
+          tenant_id?: string
+          trigger_params?: Json
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       batches: {
         Row: {
           batch_number: string
