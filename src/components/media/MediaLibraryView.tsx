@@ -111,7 +111,7 @@ export function MediaLibraryView({
   function handleItemUpdated(updated: MediaItem) {
     if (updated.id === '__pending__') return
     setItems(prev => prev.map(i => i.id === updated.id ? updated : i))
-    setSelectedItem(prev => prev !== null ? updated : null)
+    setSelectedItem(updated)
   }
 
   function handleItemDeleted(id: string) {

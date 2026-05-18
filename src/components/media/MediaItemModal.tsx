@@ -34,51 +34,21 @@ export function MediaItemModal({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  // Collects tag selections made while upload is in progress (item.id === '__pending__')
-  const pendingTagsRef = useRef<Map<string, string>>(new Map())
   const prevItemIdRef = useRef(item.id)
-  const itemRef = useRef(item)
-  itemRef.current = item
-  const onUpdatedRef = useRef(onUpdated)
-  onUpdatedRef.current = onUpdated
 
-  // When item.id transitions from __pending__ to real, apply queued tags
+  // When item.id changes: preserve taggedIds on pending→real transition, reset otherwise
   useEffect(() => {
     const prevId = prevItemIdRef.current
     prevItemIdRef.current = item.id
 
-    if (prevId === '__pending__' && item.id !== '__pending__') {
-      // Upload just completed — apply any tags the user selected during upload
-      if (pendingTagsRef.current.size > 0) {
-        const toApply = new Map(pendingTagsRef.current)
-        pendingTagsRef.current = new Map()
-        const snapshot = itemRef.current
-        void Promise.all(
-          [...toApply.keys()].map(productId => tagMediaItemToProduct(snapshot.id, productId))
-        ).then(results => {
-          const succeeded = [...toApply.entries()].filter((_, i) => !('error' in results[i]))
-          if (succeeded.length > 0) {
-            onUpdatedRef.current({
-              ...snapshot,
-              productTags: [
-                ...snapshot.productTags,
-                ...succeeded.map(([productId, productName]) => ({ productId, productName })),
-              ],
-            })
-          }
-        })
-      }
-      return // Keep taggedIds as-is — user's selections remain visible
-    }
+    if (prevId === '__pending__') return // Upload just completed — keep user's checkbox selections
 
-    // Normal item open or switch — reset to item's current state
     setLabel(item.label)
     setTaggedIds(new Set(item.productTags.map(t => t.productId)))
     setConfirmDelete(false)
     setError('')
   }, [item.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch full-size URL for images (skip while pending — we already have the object URL)
   useEffect(() => {
     setFullSizeUrl(item.thumbnailUrl ?? null)
     if (isPending || item.type !== 'image') return
@@ -93,57 +63,48 @@ export function MediaItemModal({
     return () => document.removeEventListener('keydown', handler)
   }, [onClose, isUploading])
 
-  async function handleLabelBlur() {
-    if (isPending || label.trim() === item.label || !label.trim()) return
-    setSaving(true)
-    const result = await updateMediaItemLabel(item.id, label.trim())
-    setSaving(false)
-    if ('error' in result) { setError(result.error); return }
-    onUpdated({ ...item, label: label.trim() })
-  }
-
-  function toggleProduct(productId: string, productName: string) {
-    const isTagged = taggedIds.has(productId)
-
-    // Optimistic UI — always instant
+  function toggleProduct(productId: string) {
     setTaggedIds(prev => {
       const next = new Set(prev)
-      if (isTagged) next.delete(productId)
+      if (next.has(productId)) next.delete(productId)
       else next.add(productId)
       return next
     })
+  }
 
-    if (isPending) {
-      // Queue for after upload completes
-      if (isTagged) pendingTagsRef.current.delete(productId)
-      else pendingTagsRef.current.set(productId, productName)
-      return
+  async function handleSave() {
+    setSaving(true)
+    setError('')
+
+    // Save label if changed
+    if (label.trim() && label.trim() !== item.label) {
+      const result = await updateMediaItemLabel(item.id, label.trim())
+      if ('error' in result) { setSaving(false); setError(result.error); return }
     }
 
-    // Real item — fire API in background, revert on error
-    void (async () => {
-      const result = isTagged
-        ? await untagMediaItemFromProduct(item.id, productId)
-        : await tagMediaItemToProduct(item.id, productId)
+    // Diff tag changes
+    const originalIds = new Set(item.productTags.map(t => t.productId))
+    const toAdd = products.filter(p => taggedIds.has(p.id) && !originalIds.has(p.id))
+    const toRemove = item.productTags.filter(t => !taggedIds.has(t.productId))
 
-      if ('error' in result) {
-        setError(result.error)
-        setTaggedIds(prev => {
-          const next = new Set(prev)
-          if (isTagged) next.add(productId)
-          else next.delete(productId)
-          return next
-        })
+    if (toAdd.length > 0 || toRemove.length > 0) {
+      const results = await Promise.all([
+        ...toAdd.map(p => tagMediaItemToProduct(item.id, p.id)),
+        ...toRemove.map(t => untagMediaItemFromProduct(item.id, t.productId)),
+      ])
+      if (results.some(r => 'error' in r)) {
+        setSaving(false)
+        setError('Some changes failed to save — please try again')
         return
       }
+      const finalTags = [
+        ...item.productTags.filter(t => taggedIds.has(t.productId)),
+        ...toAdd.map(p => ({ productId: p.id, productName: p.name })),
+      ]
+      onUpdated({ ...item, label: label.trim() || item.label, productTags: finalTags })
+    }
 
-      onUpdated({
-        ...item,
-        productTags: isTagged
-          ? item.productTags.filter(t => t.productId !== productId)
-          : [...item.productTags, { productId, productName }],
-      })
-    })()
+    onClose()
   }
 
   async function handleDelete() {
@@ -163,7 +124,6 @@ export function MediaItemModal({
     <div className="pt-lightbox" onClick={isUploading ? undefined : onClose}>
       <div className="pt-media-lib-modal" onClick={e => e.stopPropagation()}>
 
-        {/* Indeterminate progress bar across top of modal */}
         {isUploading && (
           <div className="pt-media-lib-upload-bar">
             <div className="pt-media-lib-upload-bar-fill" />
@@ -207,9 +167,8 @@ export function MediaItemModal({
             className="pt-input"
             value={label}
             onChange={e => setLabel(e.target.value)}
-            onBlur={() => void handleLabelBlur()}
             style={{ marginBottom: 16 }}
-            disabled={saving || isPending}
+            disabled={isPending}
           />
 
           <div className="pt-media-lib-modal-label">Assign to products</div>
@@ -222,7 +181,7 @@ export function MediaItemModal({
                   <input
                     type="checkbox"
                     checked={taggedIds.has(p.id)}
-                    onChange={() => toggleProduct(p.id, p.name)}
+                    onChange={() => toggleProduct(p.id)}
                   />
                   <span>{p.name}</span>
                 </label>
@@ -250,10 +209,10 @@ export function MediaItemModal({
                 <button
                   className="pt-btn pt-btn-primary"
                   style={{ fontSize: 11, marginLeft: 'auto' }}
-                  disabled={isUploading}
-                  onClick={isUploading ? undefined : onClose}
+                  disabled={isUploading || saving}
+                  onClick={() => void handleSave()}
                 >
-                  {isUploading ? 'Uploading…' : 'Save'}
+                  {saving ? 'Saving…' : isUploading ? 'Uploading…' : 'Save'}
                 </button>
               </>
             )}
