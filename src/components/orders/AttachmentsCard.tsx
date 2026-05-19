@@ -70,6 +70,7 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
       setUploading(false)
+      setUploadProgress(0)
       if (inputRef.current) inputRef.current.value = ''
       return
     }
@@ -100,6 +101,7 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
 
   async function handleSend(attachment: OrderAttachment) {
     if (!conversationId) return
+    setError('')
     const res = await fetch('/api/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
