@@ -191,6 +191,8 @@ export async function packOrder(orderId: string): Promise<{ success: true } | { 
 
     // FIFO: for each item, find the oldest non-expired batch with sufficient stock
     const batchMap = new Map<string, string | null>()
+    const reasonMap = new Map<string, string>()
+    const now = new Date().toISOString()
     for (const item of items) {
       const { data: batch } = await supabase
         .from('batches')
@@ -198,17 +200,46 @@ export async function packOrder(orderId: string): Promise<{ success: true } | { 
         .eq('product_id', item.product_id)
         .eq('tenant_id', tenantId)
         .gte('stock', item.qty)
-        .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
+        .or('expires_at.is.null,expires_at.gt.' + now)
         .order('expires_at', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle()
       batchMap.set(item.id, batch?.id ?? null)
+
+      if (!batch) {
+        // Determine why: expired batch with enough stock, low stock, or no batch at all
+        const { data: expiredBatch } = await supabase
+          .from('batches')
+          .select('expires_at')
+          .eq('product_id', item.product_id)
+          .eq('tenant_id', tenantId)
+          .gte('stock', item.qty)
+          .limit(1)
+          .maybeSingle()
+        if (expiredBatch?.expires_at) {
+          const expDate = new Date(expiredBatch.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          reasonMap.set(item.id, `batch expired ${expDate}`)
+        } else {
+          const { data: anyBatch } = await supabase
+            .from('batches')
+            .select('stock')
+            .eq('product_id', item.product_id)
+            .eq('tenant_id', tenantId)
+            .order('stock', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          reasonMap.set(item.id, anyBatch
+            ? `only ${anyBatch.stock} in stock, need ${item.qty}`
+            : 'no batch configured')
+        }
+      }
     }
 
     const result = buildAssignments(
       items.map(i => ({ id: i.id, productName: i.products?.name ?? i.product_id, qty: i.qty })),
       batchMap,
+      reasonMap,
     )
     if ('error' in result) return result
 

@@ -103,7 +103,7 @@ describe('POST /api/invoices/send', () => {
 
   it('dispatches via WhatsApp and records message', async () => {
     vi.mocked(getServerUser).mockResolvedValue({ id: 'user-1' } as never)
-    vi.mocked(sendWhatsAppMedia).mockResolvedValue(undefined)
+    vi.mocked(sendWhatsAppMedia).mockResolvedValue('sid-123')
     const supabase = makeSupabase()
     let callCount = 0
     vi.mocked(supabase.from).mockImplementation(() => ({

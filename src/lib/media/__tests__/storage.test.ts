@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest'
 import { uploadToStorage, generateSignedUrl } from '../storage'
 
 function makeSupabase(
-  uploadResult = { error: null },
-  signedUrlResult = { data: { signedUrl: 'https://sb.co/signed-url' }, error: null },
+  uploadResult: { error: { message: string } | null } = { error: null },
+  signedUrlResult: { data: { signedUrl: string } | null; error: { message: string } | null } = { data: { signedUrl: 'https://sb.co/signed-url' }, error: null },
 ) {
   const bucket = {
     upload: vi.fn().mockResolvedValue(uploadResult),

@@ -15,8 +15,8 @@ const BASE_ORDER: DbOrderRow = {
     customer_channels: [{ channel_type: 'whatsapp', display_handle: '+1 ••• 4421', is_primary: true }],
   },
   order_items: [
-    { id: 'i1', qty: 3, unit_price_snapshot: 38, products: { sku: 'BPC-157', name: 'BPC-157 5mg' }, batches: null },
-    { id: 'i2', qty: 1, unit_price_snapshot: 75, products: { sku: 'GHK-Cu', name: 'GHK-Cu 50mg' }, batches: null },
+    { id: 'i1', qty: 3, unit_price_snapshot: 38, products: { id: 'p1', sku: 'BPC-157', name: 'BPC-157 5mg' }, batches: null },
+    { id: 'i2', qty: 1, unit_price_snapshot: 75, products: { id: 'p2', sku: 'GHK-Cu', name: 'GHK-Cu 50mg' }, batches: null },
   ],
 }
 
