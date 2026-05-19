@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { OrderAttachment } from '@/types/orders'
 import {
   createOrderAttachmentUpload,
@@ -10,17 +10,14 @@ import {
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
-function fileIcon(mimeType: string) {
-  if (mimeType.startsWith('video/')) return '🎥'
-  return '📄'
-}
-
 function fmtSize(bytes: number | null) {
   if (!bytes) return ''
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
+
+type Lightbox = { url: string | null; type: 'image' | 'video'; loading: boolean }
 
 type Props = {
   orderId: string
@@ -40,7 +37,44 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
   const [uploadName, setUploadName] = useState('')
   const [error, setError] = useState('')
   const [sentId, setSentId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [lightbox, setLightbox] = useState<Lightbox | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Close lightbox on Escape
+  useEffect(() => {
+    if (!lightbox) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setLightbox(null) }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [lightbox])
+
+  async function openAttachment(a: OrderAttachment) {
+    const isImage = a.mime_type.startsWith('image/')
+    const isVideo = a.mime_type.startsWith('video/')
+
+    if (!isImage && !isVideo) {
+      // PDFs open in a new tab
+      const url = signedUrls[a.id]
+      if (url) window.open(url, '_blank', 'noopener')
+      return
+    }
+
+    // Show lightbox immediately with thumbnail placeholder
+    setLightbox({ url: isImage ? (thumbnailUrls[a.id] ?? null) : null, type: isImage ? 'image' : 'video', loading: true })
+
+    // Fetch full-size URL
+    const existing = signedUrls[a.id]
+    if (existing) {
+      setLightbox({ url: existing, type: isImage ? 'image' : 'video', loading: false })
+      return
+    }
+    const res = await fetch(`/api/attachments/signed-url?path=${encodeURIComponent(a.storage_path)}`)
+    if (!res.ok) { setLightbox(prev => prev ? { ...prev, loading: false } : null); return }
+    const { url } = await res.json() as { url: string }
+    setSignedUrls(prev => ({ ...prev, [a.id]: url }))
+    setLightbox({ url, type: isImage ? 'image' : 'video', loading: false })
+  }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -55,7 +89,6 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
     const result = await createOrderAttachmentUpload(orderId, file.name, file.type)
     if ('error' in result) { setError(result.error); setUploading(false); return }
 
-    // Upload directly to Supabase storage with XHR for progress
     try {
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest()
@@ -76,39 +109,38 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
       return
     }
 
-    const confirm = await confirmOrderAttachment(orderId, result.storagePath, file.name, file.type, file.size)
-    if ('error' in confirm) { setError(confirm.error); setUploading(false); return }
+    const confirmed = await confirmOrderAttachment(orderId, result.storagePath, file.name, file.type, file.size)
+    if ('error' in confirmed) { setError(confirmed.error); setUploading(false); return }
 
-    // Fetch full URL + thumbnail (images only) for the new attachment
-    const isImage = confirm.data.mime_type.startsWith('image/')
+    const isImage = confirmed.data.mime_type.startsWith('image/')
     const [signedRes, thumbRes] = await Promise.all([
       fetch(`/api/attachments/signed-url?path=${encodeURIComponent(result.storagePath)}`),
       isImage
-        ? fetch(`/api/attachments/signed-url?path=${encodeURIComponent(result.storagePath)}&width=80`)
+        ? fetch(`/api/attachments/signed-url?path=${encodeURIComponent(result.storagePath)}&width=300`)
         : Promise.resolve(null),
     ])
     if (signedRes.ok) {
-      const signedData = await signedRes.json() as { url?: string }
-      if (signedData.url) setSignedUrls(prev => ({ ...prev, [confirm.data.id]: signedData.url! }))
+      const { url } = await signedRes.json() as { url?: string }
+      if (url) setSignedUrls(prev => ({ ...prev, [confirmed.data.id]: url }))
     }
     if (thumbRes?.ok) {
-      const thumbData = await thumbRes.json() as { url?: string }
-      if (thumbData.url) setThumbnailUrls(prev => ({ ...prev, [confirm.data.id]: thumbData.url! }))
+      const { url } = await thumbRes.json() as { url?: string }
+      if (url) setThumbnailUrls(prev => ({ ...prev, [confirmed.data.id]: url }))
     }
 
-    setAttachments(prev => [confirm.data, ...prev])
+    setAttachments(prev => [confirmed.data, ...prev])
     setUploading(false)
     setUploadName('')
     if (inputRef.current) inputRef.current.value = ''
   }
 
   async function handleDelete(attachment: OrderAttachment) {
-    if (!confirm(`Delete "${attachment.file_name}"?`)) return
     const result = await deleteOrderAttachment(attachment.id)
     if ('error' in result) { setError(result.error); return }
     setAttachments(prev => prev.filter(a => a.id !== attachment.id))
     setSignedUrls(prev => { const next = { ...prev }; delete next[attachment.id]; return next })
     setThumbnailUrls(prev => { const next = { ...prev }; delete next[attachment.id]; return next })
+    setConfirmDeleteId(null)
   }
 
   async function handleSend(attachment: OrderAttachment) {
@@ -126,8 +158,6 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
       setError('Send failed')
     }
   }
-
-  const hasContent = invoice || attachments.length > 0 || uploading
 
   return (
     <section className="pt-card">
@@ -148,76 +178,109 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
           onChange={handleFileChange}
         />
       </header>
+
       <div className="pt-card-body" style={{ padding: 0 }}>
-        {error && (
-          <div style={{ padding: '6px 14px', fontSize: 11, color: 'var(--pt-danger)' }}>{error}</div>
+        {error && <div style={{ padding: '6px 14px', fontSize: 11, color: 'var(--pt-danger)' }}>{error}</div>}
+
+        {/* Invoice — pinned list row */}
+        {invoice && (
+          <div className="pt-od-attach-row pt-od-attach-invoice">
+            <span className="pt-od-attach-icon">📄</span>
+            <span className="pt-od-attach-name">Invoice #{invoice.invoice_number}</span>
+            <div className="pt-od-attach-actions">
+              <a href={invoice.signedUrl} target="_blank" rel="noopener noreferrer" className="pt-od-attach-btn" title="Download invoice">↓</a>
+            </div>
+          </div>
         )}
-        {!hasContent && (
+
+        {/* Upload progress */}
+        {uploading && (
+          <div className="pt-od-attach-progress" style={{ padding: '8px 14px' }}>
+            <div style={{ fontSize: 11, color: 'var(--pt-fg-3)' }}>Uploading {uploadName}…</div>
+            <div className="pt-od-attach-progress-bar">
+              <div className="pt-od-attach-progress-fill" style={{ width: `${uploadProgress}%` }} />
+            </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!invoice && !uploading && attachments.length === 0 && (
           <div className="pt-od-attach-empty">No attachments yet</div>
         )}
-        <ul className="pt-od-attach-list">
-          {invoice && (
-            <li className="pt-od-attach-row pt-od-attach-invoice">
-              <span className="pt-od-attach-icon">📄</span>
-              <span className="pt-od-attach-name">Invoice #{invoice.invoice_number}</span>
-              <div className="pt-od-attach-actions">
-                <a
-                  href={invoice.signedUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="pt-od-attach-btn"
-                  title="Download invoice"
-                >↓</a>
-              </div>
-            </li>
-          )}
-          {uploading && (
-            <li className="pt-od-attach-progress">
-              <div style={{ fontSize: 11, color: 'var(--pt-fg-3)' }}>Uploading {uploadName}…</div>
-              <div className="pt-od-attach-progress-bar">
-                <div className="pt-od-attach-progress-fill" style={{ width: `${uploadProgress}%` }} />
-              </div>
-            </li>
-          )}
-          {attachments.map(a => (
-            <li key={a.id} className="pt-od-attach-row">
-              <span className="pt-od-attach-icon">
-                {a.mime_type.startsWith('image/') && thumbnailUrls[a.id]
-                  ? <img src={thumbnailUrls[a.id]} alt={a.file_name} className="pt-od-attach-thumb" loading="lazy" />
-                  : fileIcon(a.mime_type)
-                }
-              </span>
-              <span className="pt-od-attach-name">{a.file_name}</span>
-              <span className="pt-od-attach-size">{fmtSize(a.file_size)}</span>
-              <div className="pt-od-attach-actions">
-                {signedUrls[a.id] && (
-                  <a
-                    href={signedUrls[a.id]}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="pt-od-attach-btn"
-                    title="Open file"
-                  >↗</a>
-                )}
-                {conversationId && (
+
+        {/* File grid */}
+        {attachments.length > 0 && (
+          <div className="pt-media-grid" style={{ padding: '10px 14px' }}>
+            {attachments.map(a => {
+              const isImage = a.mime_type.startsWith('image/')
+              const isVideo = a.mime_type.startsWith('video/')
+              return (
+                <div key={a.id} className="pt-media-tile">
                   <button
-                    className="pt-od-attach-btn"
-                    title="Send to customer"
-                    onClick={() => handleSend(a)}
+                    className="pt-media-tile-thumb"
+                    onClick={() => void openAttachment(a)}
+                    title={a.file_name}
                   >
-                    {sentId === a.id ? '✓' : '→'}
+                    {isImage && thumbnailUrls[a.id] ? (
+                      <img src={thumbnailUrls[a.id]} alt={a.file_name} className="pt-media-thumb-img" loading="lazy" />
+                    ) : isVideo ? (
+                      <div className="pt-media-thumb-video">
+                        <span className="pt-media-play-icon">▶</span>
+                      </div>
+                    ) : (
+                      <div className="pt-media-thumb-pdf">
+                        <span className="pt-media-pdf-icon">PDF</span>
+                      </div>
+                    )}
                   </button>
-                )}
-                <button
-                  className="pt-od-attach-btn is-danger"
-                  title="Delete"
-                  onClick={() => handleDelete(a)}
-                >✕</button>
-              </div>
-            </li>
-          ))}
-        </ul>
+                  <div className="pt-media-tile-label" title={a.file_name}>
+                    {a.file_name}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--pt-fg-4)', textAlign: 'center', marginTop: 1 }}>
+                    {fmtSize(a.file_size)}
+                  </div>
+                  {/* Actions row: send + delete */}
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginTop: 3 }}>
+                    {conversationId && (
+                      <button
+                        className="pt-od-attach-btn"
+                        title="Send to customer"
+                        style={{ opacity: 1 }}
+                        onClick={() => handleSend(a)}
+                      >
+                        {sentId === a.id ? '✓' : '→'}
+                      </button>
+                    )}
+                    {confirmDeleteId === a.id ? (
+                      <>
+                        <span style={{ fontSize: 10, color: 'var(--pt-fg-3)', alignSelf: 'center' }}>Delete?</span>
+                        <button className="pt-link" style={{ fontSize: 10, color: 'var(--pt-danger)' }} onClick={() => void handleDelete(a)}>Yes</button>
+                        <button className="pt-link" style={{ fontSize: 10 }} onClick={() => setConfirmDeleteId(null)}>No</button>
+                      </>
+                    ) : (
+                      <button className="pt-media-tile-del" onClick={() => setConfirmDeleteId(a.id)} title="Delete" style={{ opacity: 1, position: 'static', transform: 'none' }}>✕</button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div className="pt-lightbox" onClick={() => setLightbox(null)}>
+          {lightbox.url === null || (lightbox.type === 'video' && lightbox.loading) ? (
+            <div className="pt-lightbox-spinner" onClick={e => e.stopPropagation()} />
+          ) : lightbox.type === 'image' ? (
+            <img src={lightbox.url} alt="Full size" className="pt-lightbox-img" onClick={e => e.stopPropagation()} />
+          ) : (
+            <video src={lightbox.url} className="pt-lightbox-img" controls autoPlay onClick={e => e.stopPropagation()} />
+          )}
+          <button className="pt-lightbox-close" onClick={() => setLightbox(null)}>✕</button>
+        </div>
+      )}
     </section>
   )
 }
