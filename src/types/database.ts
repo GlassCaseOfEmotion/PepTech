@@ -1295,6 +1295,7 @@ export type Database = {
           business_type: string | null
           created_at: string
           id: string
+          intended_channels: string[]
           is_active: boolean
           logo_path: string | null
           name: string
@@ -1308,6 +1309,7 @@ export type Database = {
           business_type?: string | null
           created_at?: string
           id?: string
+          intended_channels?: string[]
           is_active?: boolean
           logo_path?: string | null
           name: string
@@ -1321,6 +1323,7 @@ export type Database = {
           business_type?: string | null
           created_at?: string
           id?: string
+          intended_channels?: string[]
           is_active?: boolean
           logo_path?: string | null
           name?: string

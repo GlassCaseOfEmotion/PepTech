@@ -100,6 +100,22 @@ export async function seedCatalog(
   return { count: inserted?.length ?? rows.length }
 }
 
+const VALID_CHANNELS = new Set(['whatsapp', 'telegram', 'email'])
+
+export async function saveChannelIntent(
+  channels: string[]
+): Promise<{ error?: string }> {
+  const valid = channels.filter(c => VALID_CHANNELS.has(c))
+  const c = await ctx()
+  if (!c) return { error: 'Unauthorized' }
+  const { error } = await c.supabase
+    .from('tenants')
+    .update({ intended_channels: valid })
+    .eq('id', c.tenantId)
+  if (error) return { error: error.message }
+  return {}
+}
+
 export async function completeOnboarding(): Promise<void> {
   const c = await ctx()
   if (!c) redirect('/login')
