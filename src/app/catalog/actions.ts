@@ -104,6 +104,7 @@ export async function upsertProtocol(data: {
   productId: string
   vialStrength?: string
   reconstitutionMl: number
+  reconstitutionSolvent?: string
   drawVolumeMl: number
   frequency: string
   timing?: string
@@ -124,6 +125,7 @@ export async function upsertProtocol(data: {
       product_id: data.productId,
       vial_strength: data.vialStrength?.trim() || null,
       reconstitution_ml: data.reconstitutionMl,
+      reconstitution_solvent: data.reconstitutionSolvent?.trim() || 'bacteriostatic water',
       draw_volume_ml: data.drawVolumeMl,
       frequency: data.frequency,
       timing: data.timing?.trim() || null,

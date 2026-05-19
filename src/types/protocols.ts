@@ -17,6 +17,7 @@ export interface ProductProtocol {
   product_id: string
   vial_strength: string | null
   reconstitution_ml: number
+  reconstitution_solvent: string
   draw_volume_ml: number
   frequency: Frequency
   timing: string | null

@@ -17,7 +17,7 @@ export function formatProductInfo(
     const lines: string[] = []
     if (protocol.vial_strength) lines.push(`Vial strength: ${protocol.vial_strength}`)
     lines.push(
-      `Reconstitution: Add ${protocol.reconstitution_ml}mL bacteriostatic water per vial`,
+      `Reconstitution: Add ${protocol.reconstitution_ml}mL ${protocol.reconstitution_solvent} per vial`,
       `Draw volume: ${protocol.draw_volume_ml}mL per injection (${doses} doses/vial)`,
       `Frequency: ${FREQUENCY_LABELS[protocol.frequency as Frequency] ?? protocol.frequency}`,
     )

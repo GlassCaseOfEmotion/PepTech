@@ -13,6 +13,7 @@ function ProtocolSection({ productId, protocol }: { productId: string; protocol:
   const [form, setForm] = useState({
     vialStrength: protocol?.vial_strength ?? '',
     reconstitutionMl: protocol?.reconstitution_ml?.toString() ?? '',
+    reconstitutionSolvent: protocol?.reconstitution_solvent ?? 'bacteriostatic water',
     drawVolumeMl: protocol?.draw_volume_ml?.toString() ?? '',
     frequency: (protocol?.frequency ?? 'once_daily') as Frequency,
     timing: protocol?.timing ?? '',
@@ -32,6 +33,7 @@ function ProtocolSection({ productId, protocol }: { productId: string; protocol:
     setForm({
       vialStrength: protocol?.vial_strength ?? '',
       reconstitutionMl: protocol?.reconstitution_ml?.toString() ?? '',
+      reconstitutionSolvent: protocol?.reconstitution_solvent ?? 'bacteriostatic water',
       drawVolumeMl: protocol?.draw_volume_ml?.toString() ?? '',
       frequency: (protocol?.frequency ?? 'once_daily') as Frequency,
       timing: protocol?.timing ?? '',
@@ -54,6 +56,7 @@ function ProtocolSection({ productId, protocol }: { productId: string; protocol:
         productId,
         vialStrength: form.vialStrength || undefined,
         reconstitutionMl,
+        reconstitutionSolvent: form.reconstitutionSolvent || 'bacteriostatic water',
         drawVolumeMl,
         frequency: form.frequency,
         timing: form.timing || undefined,
@@ -97,7 +100,7 @@ function ProtocolSection({ productId, protocol }: { productId: string; protocol:
         {protocol && !editing && (
           <dl className="pt-cat-proto-dl">
             {protocol.vial_strength && <><dt>Vial strength</dt><dd className="mono">{protocol.vial_strength}</dd></>}
-            <dt>Reconstitution</dt><dd>Add {protocol.reconstitution_ml} mL bacteriostatic water per vial</dd>
+            <dt>Reconstitution</dt><dd>Add {protocol.reconstitution_ml} mL {protocol.reconstitution_solvent} per vial</dd>
             <dt>Draw volume</dt>
             <dd className="mono">
               {protocol.draw_volume_ml} mL per injection
@@ -126,6 +129,22 @@ function ProtocolSection({ productId, protocol }: { productId: string; protocol:
               <div>
                 <label className="pt-sku-lbl">Reconstitution volume (mL) <span style={{ color: 'var(--pt-danger)' }}>*</span></label>
                 <input className="pt-input" type="number" step="0.1" min="0" placeholder="e.g. 2.0" value={form.reconstitutionMl} onChange={set('reconstitutionMl')} />
+              </div>
+              <div>
+                <label className="pt-sku-lbl">Reconstitution solvent</label>
+                <input
+                  className="pt-input"
+                  placeholder="e.g. bacteriostatic water"
+                  value={form.reconstitutionSolvent}
+                  onChange={set('reconstitutionSolvent')}
+                  list="solvent-suggestions"
+                />
+                <datalist id="solvent-suggestions">
+                  <option value="bacteriostatic water" />
+                  <option value="saline" />
+                  <option value="sterile water" />
+                  <option value="sterile saline" />
+                </datalist>
               </div>
               <div>
                 <label className="pt-sku-lbl">Draw volume per injection (mL) <span style={{ color: 'var(--pt-danger)' }}>*</span></label>

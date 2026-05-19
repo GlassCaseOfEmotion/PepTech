@@ -14,6 +14,7 @@ const PROTOCOL: ProductProtocol = {
   id: 'p1', tenant_id: 't1', product_id: 'pr1',
   vial_strength: '5mg',
   reconstitution_ml: 2,
+  reconstitution_solvent: 'bacteriostatic water',
   draw_volume_ml: 0.1,
   frequency: 'once_daily',
   timing: 'Morning',

@@ -996,6 +996,7 @@ export type Database = {
           notes: string | null
           product_id: string
           reconstitution_ml: number
+          reconstitution_solvent: string
           storage: string | null
           tenant_id: string
           timing: string | null
@@ -1011,6 +1012,7 @@ export type Database = {
           notes?: string | null
           product_id: string
           reconstitution_ml: number
+          reconstitution_solvent?: string
           storage?: string | null
           tenant_id: string
           timing?: string | null
@@ -1026,6 +1028,7 @@ export type Database = {
           notes?: string | null
           product_id?: string
           reconstitution_ml?: number
+          reconstitution_solvent?: string
           storage?: string | null
           tenant_id?: string
           timing?: string | null

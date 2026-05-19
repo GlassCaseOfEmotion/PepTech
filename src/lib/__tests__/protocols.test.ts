@@ -6,6 +6,7 @@ const baseProtocol: ProductProtocol = {
   id: 'p1', tenant_id: 't1', product_id: 'prod1',
   vial_strength: '5mg',
   reconstitution_ml: 2,
+  reconstitution_solvent: 'bacteriostatic water',
   draw_volume_ml: 0.1,
   frequency: 'once_daily',
   timing: null, cycle_length_weeks: null, storage: null, notes: null,
