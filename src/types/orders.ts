@@ -39,7 +39,7 @@ export type DbOrderRow = {
     id: string
     qty: number
     unit_price_snapshot: number
-    products: { sku: string; name: string } | null
+    products: { id: string; sku: string; name: string } | null
     batches: { batch_number: string; coa_path: string | null } | null
   }[]
 }
