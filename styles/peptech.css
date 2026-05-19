@@ -1693,6 +1693,124 @@ kbd {
 .ob-cat-sku  { font-family: var(--pt-mono); font-size: 10.5px; color: var(--pt-fg-4); }
 .ob-cat-name { color: var(--pt-fg-2); }
 
+/* ── Peptide picker (Step 3 — interactive card grid) ─────────────────────── */
+.ob-step-wide { max-width: 520px; }
+
+.ob-peptide-grid {
+  display: flex; flex-direction: column; gap: 0;
+  max-height: 380px; overflow-y: auto;
+  margin-bottom: 2px; padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pt-line) transparent;
+}
+
+.ob-fam-section { margin-bottom: 6px; }
+
+.ob-fam-hd {
+  display: flex; align-items: center; gap: 7px;
+  padding: 10px 0 5px;
+  font-family: var(--pt-mono); font-size: 9.5px;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--pt-fg-4);
+  position: sticky; top: 0; z-index: 1;
+  background: var(--pt-bg);
+}
+.ob-fam-accent {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+.ob-fam-tally {
+  margin-left: auto; font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  color: var(--pt-fg-4);
+}
+
+.ob-peptide-cards {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+}
+
+.ob-peptide-card {
+  position: relative;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 9px 11px 8px;
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line);
+  border-left: 3px solid transparent;
+  border-radius: 8px;
+  cursor: pointer; text-align: left;
+  transition: border-color 130ms, background 130ms, transform 120ms, box-shadow 130ms;
+  overflow: hidden;
+}
+.ob-peptide-card:hover {
+  border-color: var(--pt-line-soft);
+  border-left-color: oklch(from var(--fam-color, #888) l c h / 0.6);
+  transform: translateY(-1px);
+}
+.ob-peptide-card.sel {
+  border-left-color: var(--fam-color, var(--pt-accent));
+  background: oklch(from var(--pt-surface) calc(l + 0.02) c h);
+  box-shadow: 0 0 0 1px oklch(from var(--fam-color, var(--pt-accent)) l c h / 0.15);
+}
+
+.ob-peptide-check {
+  position: absolute; top: 8px; right: 8px;
+  width: 15px; height: 15px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--pt-line);
+  color: transparent;
+  transition: background 150ms, border-color 150ms, color 150ms;
+  flex-shrink: 0;
+}
+.ob-peptide-card.sel .ob-peptide-check {
+  border-color: var(--fam-color, var(--pt-accent));
+  background: var(--fam-color, var(--pt-accent));
+  color: #fff;
+}
+
+.ob-peptide-name {
+  font-size: 11.5px; font-weight: 500; color: var(--pt-fg);
+  padding-right: 20px; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.ob-peptide-sku {
+  font-family: var(--pt-mono); font-size: 9px; color: var(--pt-fg-4);
+}
+.ob-peptide-desc {
+  font-size: 10px; color: var(--pt-fg-3); line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; margin-top: 3px;
+}
+.ob-peptide-dose {
+  display: flex; align-items: center; gap: 5px;
+  margin-top: 4px; font-family: var(--pt-mono); font-size: 9px;
+  color: var(--pt-fg-4);
+}
+.ob-peptide-dose-dot {
+  width: 3px; height: 3px; border-radius: 50%;
+  background: var(--fam-color, var(--pt-fg-4)); opacity: 0.7;
+  flex-shrink: 0;
+}
+
+/* Selection bar */
+.ob-peptide-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0 8px;
+  border-top: 0.5px solid var(--pt-line);
+  margin-top: 4px;
+}
+.ob-peptide-count {
+  font-size: 12px; color: var(--pt-fg-3);
+}
+.ob-peptide-count strong {
+  color: var(--pt-fg); font-variant-numeric: tabular-nums;
+}
+.ob-sel-all {
+  font-size: 11px; color: var(--pt-fg-4);
+  text-decoration: underline; text-underline-offset: 2px;
+  cursor: pointer; background: none; border: none; padding: 0;
+  transition: color 120ms;
+}
+.ob-sel-all:hover { color: var(--pt-fg-2); }
+
 /* Channel list */
 .ob-ch-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 20px; }
 .ob-ch-row {

@@ -2,7 +2,16 @@
 
 import { useState, useTransition } from 'react'
 import { saveBusinessType, saveCurrency, seedCatalog, completeOnboarding } from './actions'
-import { CATALOG_PRESETS, type BusinessType } from '@/lib/catalog-presets'
+import { CATALOG_PRESETS, type BusinessType, type PresetProduct } from '@/lib/catalog-presets'
+
+const FAMILY_COLORS: Record<string, string> = {
+  'GLP-1':    '#5b9bd5',
+  'HEALING':  '#5db87a',
+  'GH':       '#d4902e',
+  'COSMETIC': '#d47aaa',
+  'NEURO':    '#9b7dd4',
+  'MITO':     '#5dbdb8',
+}
 
 const BIZ_TYPES: Array<{ id: BusinessType; label: string; desc: string; color: string }> = [
   { id: 'peptides',   label: 'Peptides',           desc: 'GLP-1s, healing, GH, cosmetic & mitochondrial peptides', color: '#5b9bd5' },
@@ -57,14 +66,26 @@ export function OnboardingWizard({
   const [err, setErr] = useState('')
   const [completing, setCompleting] = useState(false)
   const [pending, start] = useTransition()
+  const [selectedSkus, setSelectedSkus] = useState<Set<string>>(
+    () => new Set((initialBusinessType ? CATALOG_PRESETS[initialBusinessType as BusinessType] : []).map(p => p.sku))
+  )
 
   const chapter = CHAPTER[step] ?? CHAPTER[1]
   const presets = btype ? CATALOG_PRESETS[btype] : []
   const families = [...new Set(presets.map(p => p.product_family))]
   const firstName = displayName?.split(' ')[0] ?? ''
 
+  function toggleSku(sku: string) {
+    setSelectedSkus(prev => {
+      const next = new Set(prev)
+      if (next.has(sku)) next.delete(sku); else next.add(sku)
+      return next
+    })
+  }
+
   function handleType(t: BusinessType) {
     setBtype(t); setErr('')
+    setSelectedSkus(new Set(CATALOG_PRESETS[t].map(p => p.sku)))
     start(async () => {
       const r = await saveBusinessType(t)
       if (r.error) { setErr(r.error); return }
@@ -84,7 +105,7 @@ export function OnboardingWizard({
   function handleSeed() {
     if (!btype) return; setErr('')
     start(async () => {
-      const r = await seedCatalog(btype)
+      const r = await seedCatalog(btype, [...selectedSkus])
       if (r.error) { setErr(r.error); return }
       setSeeded(r.count ?? 0)
       setStep(4)
@@ -256,8 +277,84 @@ export function OnboardingWizard({
           </div>
         )}
 
-        {/* Step 3: Catalog */}
-        {!completing && step === 3 && btype && (
+        {/* Step 3: Peptide selector */}
+        {!completing && step === 3 && btype === 'peptides' && (
+          <div className="ob-step ob-step-wide" key="catalog-peptides">
+            <div className="ob-step-hd">
+              <h2 className="ob-step-title">Pick your peptides</h2>
+              <p className="ob-step-sub">
+                Choose which products to start with. Each comes pre-loaded with a research-backed dosing protocol you can edit anytime.
+              </p>
+            </div>
+
+            <div className="ob-peptide-grid">
+              {families.map(fam => {
+                const famPresets = presets.filter(p => p.product_family === fam)
+                const famColor = FAMILY_COLORS[fam] ?? '#888'
+                const famSelCount = famPresets.filter(p => selectedSkus.has(p.sku)).length
+                return (
+                  <div key={fam} className="ob-fam-section">
+                    <div className="ob-fam-hd">
+                      <span className="ob-fam-accent" style={{ background: famColor }} />
+                      {fam}
+                      <span className="ob-fam-tally">{famSelCount}/{famPresets.length}</span>
+                    </div>
+                    <div className="ob-peptide-cards">
+                      {famPresets.map(p => {
+                        const sel = selectedSkus.has(p.sku)
+                        const proto = (p as PresetProduct).protocol
+                        return (
+                          <button
+                            key={p.sku}
+                            className={`ob-peptide-card${sel ? ' sel' : ''}`}
+                            style={{ '--fam-color': famColor } as React.CSSProperties}
+                            onClick={() => toggleSku(p.sku)}
+                            title={p.description ?? p.name}
+                          >
+                            <div className="ob-peptide-check">{sel && <Check />}</div>
+                            <div className="ob-peptide-name">{p.name}</div>
+                            <div className="ob-peptide-sku">{p.sku}</div>
+                            {p.description && <div className="ob-peptide-desc">{p.description}</div>}
+                            {proto && (
+                              <div className="ob-peptide-dose">
+                                <span className="ob-peptide-dose-dot" />
+                                {proto.dose_display} · {proto.cycle_length_weeks}w
+                              </div>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="ob-peptide-bar">
+              <span className="ob-peptide-count">
+                <strong>{selectedSkus.size}</strong> of {presets.length} selected
+              </span>
+              <button className="ob-sel-all" onClick={() =>
+                setSelectedSkus(selectedSkus.size === presets.length
+                  ? new Set()
+                  : new Set(presets.map(p => p.sku)))
+              }>
+                {selectedSkus.size === presets.length ? 'Deselect all' : 'Select all'}
+              </button>
+            </div>
+
+            <div className="ob-foot">
+              <button className="ob-btn ob-btn-ghost" onClick={() => setStep(2)}>← Back</button>
+              <button className="ob-btn ob-btn-primary" onClick={handleSeed} disabled={pending || selectedSkus.size === 0}>
+                {pending ? 'Adding products…' : `Add ${selectedSkus.size} product${selectedSkus.size !== 1 ? 's' : ''} →`}
+              </button>
+            </div>
+            {err && <p className="ob-err">{err}</p>}
+          </div>
+        )}
+
+        {/* Step 3: Non-peptide catalog (simple list) */}
+        {!completing && step === 3 && btype && btype !== 'peptides' && (
           <div className="ob-step" key="catalog">
             <div className="ob-step-hd">
               <h2 className="ob-step-title">Your starter catalog</h2>
