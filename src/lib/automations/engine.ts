@@ -231,6 +231,46 @@ export async function runAutomationsForEvent(
         continue
       }
 
+      // Check for delay
+      const delayDays = typeof automation.trigger_params.delay_days === 'number'
+        ? automation.trigger_params.delay_days
+        : 0
+
+      if (delayDays > 0) {
+        const contextRef = context.customerId ?? context.orderId ?? null
+        // Deduplication: skip if a scheduled run already exists for this automation + context
+        const { data: existing } = await supabase
+          .from('automation_runs')
+          .select('id')
+          .eq('automation_id', automation.id)
+          .eq('tenant_id', tenantId)
+          .eq('state', 'scheduled')
+          .eq('context_ref', contextRef ?? '')
+          .maybeSingle()
+
+        if (!existing) {
+          const fireAt = new Date(Date.now() + delayDays * 24 * 60 * 60 * 1000).toISOString()
+          await supabase.from('automation_runs').insert({
+            automation_id: automation.id,
+            tenant_id: tenantId,
+            state: 'scheduled',
+            context_ref: contextRef,
+            context_label: `fires ${new Date(fireAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+            action_summary: `Scheduled: ${automation.action_type} in ${delayDays}d`,
+            action_payload: {
+              _deferred: true,
+              context: {
+                customerId: context.customerId ?? null,
+                orderId: context.orderId ?? null,
+                conversationId: context.conversationId ?? null,
+              },
+            },
+            fire_at: fireAt,
+          })
+        }
+        continue  // skip executeAction — will fire later
+      }
+
       const result = await executeAction(automation, context, supabase)
 
       await supabase.from('automation_runs').insert({
