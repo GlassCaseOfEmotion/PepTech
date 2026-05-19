@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef, Fragment } from 'react'
+import { useState, useTransition, useRef, useEffect, Fragment } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
@@ -12,6 +12,7 @@ import type { DbOrderRow, DbOrderEvent, OrderStatus, OrderAttachment } from '@/t
 import { SendInvoiceModal } from './SendInvoiceModal'
 import { AttachmentsCard } from './AttachmentsCard'
 import { ShipOrderModal } from './ShipOrderModal'
+import { EditOrderModal } from './EditOrderModal'
 import { formatAmount } from '@/lib/currency'
 
 const CH_MAP: Record<string, 'wa' | 'tg' | 'em'> = { whatsapp: 'wa', telegram: 'tg', email: 'em' }
@@ -75,6 +76,19 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
   const [txHash, setTxHash] = useState('')
   const [confirmError, setConfirmError] = useState('')
   const [showShipModal, setShowShipModal] = useState(false)
+  const [showMoreMenu, setShowMoreMenu] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const moreMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setShowMoreMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   const primaryChannel = order.customers?.customer_channels?.find(c => c.is_primary)
     ?? order.customers?.customer_channels?.[0]
@@ -193,7 +207,18 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
               )}
             </div>
           )}
-          <button className="pt-btn pt-btn-ghost"><Icons.more size={14} /></button>
+          <div ref={moreMenuRef} style={{ position: 'relative' }}>
+            <button className="pt-btn pt-btn-ghost" onClick={() => setShowMoreMenu(v => !v)}>
+              <Icons.more size={14} />
+            </button>
+            {showMoreMenu && (
+              <div className="pt-od-more-menu">
+                <button onClick={() => { setShowMoreMenu(false); setShowEditModal(true) }}>
+                  Edit order
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       {showInvoiceModal && (
@@ -574,6 +599,14 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
           )}
         </aside>
       </div>
+      {showEditModal && (
+        <EditOrderModal
+          order={order}
+          paymentConfigs={paymentConfigs}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={() => { setShowEditModal(false); router.refresh() }}
+        />
+      )}
     </div>
   )
 }
