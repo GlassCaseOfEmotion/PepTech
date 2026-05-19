@@ -61,6 +61,14 @@ export async function confirmOrderAttachment(
       return { error: 'Invalid storage path' }
     }
 
+    const { data: order } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('id', orderId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+    if (!order) return { error: 'Order not found' }
+
     const { data, error } = await supabase
       .from('order_attachments')
       .insert({ tenant_id: tenantId, order_id: orderId, storage_path: storagePath, file_name: fileName, mime_type: mimeType, file_size: fileSize })
