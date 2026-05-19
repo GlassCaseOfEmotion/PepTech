@@ -32,6 +32,7 @@ function CycleRow({ cycle, customerId }: { cycle: ActiveCycle; customerId: strin
   const [pending, startTransition] = useTransition()
 
   const pct = Math.max(0, Math.min(100, cycle.pctRemaining * 100))
+  const daysLeft = Math.max(0, Math.round(cycle.daysRemaining))
 
   const saveOverride = () => {
     setError('')
@@ -53,29 +54,27 @@ function CycleRow({ cycle, customerId }: { cycle: ActiveCycle; customerId: strin
 
   return (
     <li className="pt-cu-cycle-row">
-      <div className="pt-cu-cycle-top">
-        <span className="pt-cu-cycle-name">{cycle.productName}</span>
-        <span className="pt-cu-cycle-badge">
-          {cycle.effectiveDrawMl}ml · {FREQUENCY_LABELS[cycle.effectiveFrequency]}
-          {cycle.hasOverride && <span className="pt-cu-cycle-custom"> ★ custom</span>}
+      <div className="pt-cu-cycle-inner">
+        <span className="pt-cu-cycle-name">
+          {cycle.productName}
+          {cycle.hasOverride && <span className="pt-cu-cycle-custom"> ★</span>}
         </span>
-        <DaysLabel cycle={cycle} />
-        <button
-          className="pt-cu-cycle-edit"
-          title="Customise dose for this customer"
-          onClick={() => setShowOverride(v => !v)}
-        >
-          ✎
-        </button>
-      </div>
-      <div className="pt-cu-cycle-bar">
-        <div className={`pt-cu-cycle-fill is-${cycle.status}`} style={{ width: `${pct}%` }} />
-      </div>
-      <div className="pt-cu-cycle-meta">
-        <span>Ordered {fmtDate(cycle.orderDate)} · {cycle.unitsOrdered} vial{cycle.unitsOrdered !== 1 ? 's' : ''} · {Math.round(cycle.totalDays)} day supply</span>
-        {cycle.status === 'low' && <span className="pt-cu-cycle-warn">⚠ Running low · reorder soon</span>}
-        {cycle.status === 'critical' && <span className="pt-cu-cycle-warn is-critical">● Likely needs reorder</span>}
-        {cycle.status === 'ok' && <span style={{ color: 'var(--pt-fg-4)' }}>Est. end {fmtDate(cycle.estimatedEndDate)}</span>}
+        <div className="pt-cu-cycle-bar">
+          <div className={`pt-cu-cycle-fill is-${cycle.status}`} style={{ width: `${pct}%` }} />
+        </div>
+        <div className="pt-cu-cycle-data">
+          <span className={`pt-cu-cycle-days is-${cycle.status}`}>
+            {cycle.status === 'critical' ? 'Elapsed' : `${daysLeft}d left`}
+          </span>
+          <span className="pt-cu-cycle-range">
+            {fmtDate(cycle.orderDate)}→{fmtDate(cycle.estimatedEndDate)}
+          </span>
+          <button
+            className="pt-cu-cycle-edit"
+            title="Customise dose for this customer"
+            onClick={() => setShowOverride(v => !v)}
+          >✎</button>
+        </div>
       </div>
       {showOverride && (
         <div className="pt-cu-cycle-override">
