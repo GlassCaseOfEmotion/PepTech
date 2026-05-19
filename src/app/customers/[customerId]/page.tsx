@@ -422,13 +422,13 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
             }
             activity={
               <section className="pt-card">
-                <header className="pt-card-hd"><div><h3>Activity</h3><p>{activity.length} events</p></div></header>
+                <header className="pt-card-hd"><div><h3>Activity</h3><p>Recent events</p></div></header>
                 <div className="pt-card-body" style={{ padding: 0 }}>
                   {activity.length === 0 ? (
                     <div style={{ padding: '12px 14px', fontSize: 12, color: 'var(--pt-fg-4)' }}>No activity yet</div>
                   ) : (
                     <ul className="pt-cu-act">
-                      {activity.map(a => {
+                      {activity.slice(0, 5).map(a => {
                         const bullet = actBullet(a)
                         return (
                           <li key={a.id}>
