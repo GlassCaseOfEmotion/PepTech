@@ -78,15 +78,18 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
     if (signed) invoice = { ...invoiceRow, signedUrl: signed.signedUrl }
   }
 
-  // Generate signed URLs for all attachments (media bucket, 1 hour TTL)
+  // Generate signed URLs for all attachments in one round-trip
   const attachments = (attachmentsRaw ?? []) as OrderAttachment[]
   const attachmentSignedUrls: Record<string, string> = {}
-  await Promise.all(
-    attachments.map(async a => {
-      const { data } = await supabase.storage.from('media').createSignedUrl(a.storage_path, 3600)
-      if (data) attachmentSignedUrls[a.id] = data.signedUrl
+  if (attachments.length > 0) {
+    const { data: signedList } = await supabase.storage.from('media').createSignedUrls(
+      attachments.map(a => a.storage_path),
+      3600,
+    )
+    signedList?.forEach((item, i) => {
+      if (item.signedUrl) attachmentSignedUrls[attachments[i].id] = item.signedUrl
     })
-  )
+  }
 
   // Fetch last 3 messages from linked conversation if present
   let chatExcerpt: { id: string; direction: string; content: string; sent_at: string }[] = []
