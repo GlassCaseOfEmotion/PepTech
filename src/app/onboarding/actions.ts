@@ -97,6 +97,17 @@ export async function seedCatalog(
     }
   }
 
+  // Seed a starter batch (10 units) for every product — non-fatal if it fails
+  if (inserted && inserted.length > 0) {
+    const batchRows = inserted.map(p => ({
+      tenant_id: c.tenantId,
+      product_id: p.id,
+      batch_number: 'SEED-001',
+      stock: 10,
+    }))
+    await c.supabase.from('batches').insert(batchRows).then(() => {})
+  }
+
   return { count: inserted?.length ?? rows.length }
 }
 
