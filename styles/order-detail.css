@@ -427,3 +427,48 @@
   border-radius: var(--pt-radius);
   box-shadow: 0 1px 4px oklch(from var(--pt-warn) l c h / 0.08);
 }
+
+/* ─── Attachments card ─────────────────────────────────────────────────── */
+.pt-od-attach-list { list-style: none; margin: 0; padding: 0; }
+.pt-od-attach-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px;
+  border-top: 0.5px solid var(--pt-line-soft);
+  font-size: 12px;
+}
+.pt-od-attach-row:first-child { border-top: 0; }
+.pt-od-attach-invoice { background: oklch(from var(--pt-fg) l c h / 0.02); }
+.pt-od-attach-icon { flex-shrink: 0; color: var(--pt-fg-4); display: flex; }
+.pt-od-attach-name {
+  flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-weight: 500;
+}
+.pt-od-attach-size { font-size: 11px; color: var(--pt-fg-4); white-space: nowrap; }
+.pt-od-attach-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.pt-od-attach-btn {
+  width: 24px; height: 24px; border-radius: 4px;
+  border: 0; background: transparent; cursor: pointer;
+  color: var(--pt-fg-4); font-size: 13px;
+  display: grid; place-items: center;
+  transition: background 0.1s, color 0.1s;
+}
+.pt-od-attach-btn:hover { background: oklch(from var(--pt-fg) l c h / 0.07); color: var(--pt-fg); }
+.pt-od-attach-btn.is-danger:hover { background: oklch(from var(--pt-danger) l c h / 0.1); color: var(--pt-danger); }
+.pt-od-attach-progress {
+  padding: 8px 14px;
+  border-top: 0.5px solid var(--pt-line-soft);
+}
+.pt-od-attach-progress-bar {
+  height: 3px; border-radius: 999px;
+  background: oklch(from var(--pt-fg) l c h / 0.08);
+  margin-top: 5px; overflow: hidden;
+}
+.pt-od-attach-progress-fill {
+  height: 100%; border-radius: 999px;
+  background: var(--pt-accent);
+  transition: width 0.1s linear;
+}
+.pt-od-attach-empty {
+  padding: 12px 14px; font-size: 12px; color: var(--pt-fg-4);
+}
