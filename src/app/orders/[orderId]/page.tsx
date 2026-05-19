@@ -40,11 +40,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
 
   const orderRow = order as unknown as DbOrderRow
 
-  // Parallel: customer stats + invoice + attachments
+  // Parallel: customer stats + invoice + attachments + customer's latest conversation
   const [
     { count: customerOrderCount, data: latestOrders },
     { data: invoiceRow },
     { data: attachmentsRaw },
+    { data: customerConv },
   ] = await Promise.all([
     supabase
       .from('orders')
@@ -62,7 +63,17 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
       .select('*')
       .eq('order_id', orderId)
       .order('created_at', { ascending: false }),
+    supabase
+      .from('conversations')
+      .select('id')
+      .eq('customer_id', orderRow.customer_id)
+      .order('last_message_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
+
+  // Prefer the order's direct conversation link; fall back to customer's most recent conversation
+  const sendConversationId = orderRow.conversation_id ?? customerConv?.id ?? null
 
   const customerStats = {
     orderCount: customerOrderCount ?? 0,
@@ -124,6 +135,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
         attachments={attachments}
         attachmentSignedUrls={attachmentSignedUrls}
         attachmentThumbnailUrls={attachmentThumbnailUrls}
+        sendConversationId={sendConversationId}
       />
     </Shell>
   )
