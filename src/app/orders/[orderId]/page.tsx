@@ -88,7 +88,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
       supabase.storage.from('media').createSignedUrls(attachments.map(a => a.storage_path), 3600),
       ...imageAttachments.map(a =>
         supabase.storage.from('media').createSignedUrl(a.storage_path, 3600, {
-          transform: { width: 80, height: 80, quality: 80, resize: 'cover' },
+          transform: { width: 300, height: 300, quality: 85, resize: 'cover' },
         })
       ),
     ])
