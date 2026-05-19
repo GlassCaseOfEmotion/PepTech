@@ -8,6 +8,7 @@ import {
   approveAndSendQueuedRun,
   dismissQueuedRun,
 } from '@/app/automations/actions'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 import AutomationModal from './AutomationModal'
 
@@ -124,6 +125,51 @@ export default function AutomationsView({ automations }: Props) {
         </div>
       </div>
 
+      {items.length === 0 ? (
+        <div className="pt-empty-page">
+          <EmptyState
+            size="lg"
+            icon={
+              <svg width="130" height="88" viewBox="0 0 130 88" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                {/* WHEN box */}
+                <rect x="4" y="28" width="32" height="22" rx="4" strokeWidth="1.1"/>
+                <text x="20" y="38.5" textAnchor="middle" fontSize="5.5" fill="currentColor" stroke="none" opacity="0.5" fontFamily="inherit" letterSpacing="0.05em">WHEN</text>
+                <text x="20" y="46" textAnchor="middle" fontSize="4.8" fill="currentColor" stroke="none" opacity="0.85" fontFamily="inherit">New thread</text>
+                {/* Arrow 1 */}
+                <line x1="36" y1="39" x2="46" y2="39" strokeWidth="0.9" opacity="0.5"/>
+                <polyline points="44,36.5 46.5,39 44,41.5" strokeWidth="0.9" opacity="0.5" fill="none"/>
+                {/* IF box */}
+                <rect x="47" y="28" width="32" height="22" rx="4" strokeWidth="1.1"/>
+                <text x="63" y="38.5" textAnchor="middle" fontSize="5.5" fill="currentColor" stroke="none" opacity="0.5" fontFamily="inherit" letterSpacing="0.05em">IF</text>
+                <text x="63" y="46" textAnchor="middle" fontSize="4.8" fill="currentColor" stroke="none" opacity="0.85" fontFamily="inherit">Trust ≥ 50</text>
+                {/* Arrow 2 */}
+                <line x1="79" y1="39" x2="89" y2="39" strokeWidth="0.9" opacity="0.5"/>
+                <polyline points="87,36.5 89.5,39 87,41.5" strokeWidth="0.9" opacity="0.5" fill="none"/>
+                {/* THEN box */}
+                <rect x="90" y="28" width="36" height="22" rx="4" strokeWidth="1.1"/>
+                <text x="108" y="38.5" textAnchor="middle" fontSize="5.5" fill="currentColor" stroke="none" opacity="0.5" fontFamily="inherit" letterSpacing="0.05em">THEN</text>
+                <text x="108" y="46" textAnchor="middle" fontSize="4.8" fill="currentColor" stroke="none" opacity="0.85" fontFamily="inherit">Send DM</text>
+                {/* Second row — dimmed, offset */}
+                <rect x="14" y="60" width="30" height="18" rx="3.5" strokeWidth="0.8" opacity="0.22"/>
+                <line x1="44" y1="69" x2="52" y2="69" strokeWidth="0.8" opacity="0.18"/>
+                <polyline points="50.5,67 52.5,69 50.5,71" strokeWidth="0.8" opacity="0.18" fill="none"/>
+                <rect x="53" y="60" width="30" height="18" rx="3.5" strokeWidth="0.8" opacity="0.22"/>
+                <line x1="83" y1="69" x2="91" y2="69" strokeWidth="0.8" opacity="0.18"/>
+                <polyline points="89.5,67 91.5,69 89.5,71" strokeWidth="0.8" opacity="0.18" fill="none"/>
+                <rect x="92" y="60" width="30" height="18" rx="3.5" strokeWidth="0.8" opacity="0.22"/>
+                {/* Plus badge on first box — suggests creating */}
+                <circle cx="4" cy="28" r="5.5" fill="currentColor" opacity="0.08" stroke="none"/>
+                <circle cx="4" cy="28" r="5.5" strokeWidth="0.8" opacity="0.3"/>
+                <line x1="4" y1="25.5" x2="4" y2="30.5" strokeWidth="1" opacity="0.5"/>
+                <line x1="1.5" y1="28" x2="6.5" y2="28" strokeWidth="1" opacity="0.5"/>
+              </svg>
+            }
+            title="No automations yet"
+            body="Build your first WHEN → IF → THEN workflow. Automations can send DMs, adjust trust scores, alert you, and more — all hands-free."
+            action={{ label: 'Create first automation', onClick: () => setShowModal({ mode: 'create' }) }}
+          />
+        </div>
+      ) : (
       <div className="pt-au-body">
         <section className="pt-card pt-au-list-card">
           <div className="pt-card-body pt-au-list-body">
@@ -279,6 +325,7 @@ export default function AutomationsView({ automations }: Props) {
           </section>
         )}
       </div>
+      )}
 
       {showModal && (
         <AutomationModal
