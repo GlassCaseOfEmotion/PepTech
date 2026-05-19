@@ -10,21 +10,20 @@ import {
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
+type SendState = 'idle' | 'confirming' | 'sending' | 'sent'
+type Lightbox = { url: string | null; type: 'image' | 'video'; loading: boolean }
+
 function DocTile({ label, accent }: { label: string; accent: string }) {
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${accent}0d` }}>
       <svg width="52" height="64" viewBox="0 0 52 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* Page body */}
         <rect x="2" y="2" width="40" height="52" rx="3" fill="white" stroke={`${accent}30`} strokeWidth="1.5" />
-        {/* Folded corner */}
         <path d="M30 2 L42 14 L30 14 Z" fill={`${accent}18`} />
         <path d="M30 2 L42 14" stroke={`${accent}50`} strokeWidth="1.5" strokeLinecap="round" />
-        {/* Content lines */}
         <rect x="8" y="22" width="24" height="2" rx="1" fill={`${accent}30`} />
         <rect x="8" y="28" width="28" height="2" rx="1" fill={`${accent}20`} />
         <rect x="8" y="34" width="20" height="2" rx="1" fill={`${accent}20`} />
         <rect x="8" y="40" width="26" height="2" rx="1" fill={`${accent}20`} />
-        {/* Label badge */}
         <rect x="0" y="46" width="52" height="18" rx="3" fill={accent} />
         <text x="26" y="59" textAnchor="middle" fill="white" fontSize="8.5" fontWeight="600" fontFamily="monospace" letterSpacing="0.08em">
           {label}
@@ -34,18 +33,17 @@ function DocTile({ label, accent }: { label: string; accent: string }) {
   )
 }
 
-type Lightbox = { url: string | null; type: 'image' | 'video'; loading: boolean }
-
 type Props = {
   orderId: string
   conversationId: string | null
+  customerName: string
   invoice: { id: string; invoice_number: string; pdf_path: string; signedUrl: string } | null
   initialAttachments: OrderAttachment[]
   attachmentSignedUrls: Record<string, string>
   attachmentThumbnailUrls: Record<string, string>
 }
 
-export function AttachmentsCard({ orderId, conversationId, invoice, initialAttachments, attachmentSignedUrls, attachmentThumbnailUrls }: Props) {
+export function AttachmentsCard({ orderId, conversationId, customerName, invoice, initialAttachments, attachmentSignedUrls, attachmentThumbnailUrls }: Props) {
   const [attachments, setAttachments] = useState<OrderAttachment[]>(initialAttachments)
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>(attachmentSignedUrls)
   const [thumbnailUrls, setThumbnailUrls] = useState<Record<string, string>>(attachmentThumbnailUrls)
@@ -53,8 +51,8 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadName, setUploadName] = useState('')
   const [error, setError] = useState('')
-  const [sentId, setSentId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [sendStates, setSendStates] = useState<Record<string, SendState>>({})
   const [lightbox, setLightbox] = useState<Lightbox | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -65,23 +63,43 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
     return () => document.removeEventListener('keydown', handler)
   }, [lightbox])
 
+  function getSendState(id: string): SendState {
+    return sendStates[id] ?? 'idle'
+  }
+
+  function setSendState(id: string, state: SendState) {
+    setSendStates(prev => ({ ...prev, [id]: state }))
+  }
+
+  async function doSend(attachment: OrderAttachment) {
+    if (!conversationId) return
+    setSendState(attachment.id, 'sending')
+    setError('')
+    const res = await fetch('/api/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversationId, storagePath: attachment.storage_path, bucket: 'media' }),
+    })
+    if (res.ok) {
+      setSendState(attachment.id, 'sent')
+      setTimeout(() => setSendState(attachment.id, 'idle'), 2200)
+    } else {
+      setSendState(attachment.id, 'idle')
+      setError('Send failed — please try again')
+    }
+  }
+
   async function openAttachment(a: OrderAttachment) {
     const isImage = a.mime_type.startsWith('image/')
     const isVideo = a.mime_type.startsWith('video/')
-
     if (!isImage && !isVideo) {
       const url = signedUrls[a.id]
       if (url) window.open(url, '_blank', 'noopener')
       return
     }
-
     setLightbox({ url: isImage ? (thumbnailUrls[a.id] ?? null) : null, type: isImage ? 'image' : 'video', loading: true })
-
     const existing = signedUrls[a.id]
-    if (existing) {
-      setLightbox({ url: existing, type: isImage ? 'image' : 'video', loading: false })
-      return
-    }
+    if (existing) { setLightbox({ url: existing, type: isImage ? 'image' : 'video', loading: false }); return }
     const res = await fetch(`/api/attachments/signed-url?path=${encodeURIComponent(a.storage_path)}`)
     if (!res.ok) { setLightbox(prev => prev ? { ...prev, loading: false } : null); return }
     const { url } = await res.json() as { url: string }
@@ -156,22 +174,6 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
     setConfirmDeleteId(null)
   }
 
-  async function handleSend(attachment: OrderAttachment) {
-    if (!conversationId) return
-    setError('')
-    const res = await fetch('/api/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ conversationId, storagePath: attachment.storage_path, bucket: 'media' }),
-    })
-    if (res.ok) {
-      setSentId(attachment.id)
-      setTimeout(() => setSentId(null), 2000)
-    } else {
-      setError('Send failed')
-    }
-  }
-
   const hasItems = invoice || attachments.length > 0
 
   return (
@@ -206,13 +208,7 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
             {/* Invoice tile */}
             {invoice && (
               <div className="pt-media-tile">
-                <a
-                  href={invoice.signedUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="pt-media-tile-thumb"
-                  title={`Invoice #${invoice.invoice_number}`}
-                >
+                <a href={invoice.signedUrl} target="_blank" rel="noopener noreferrer" className="pt-media-tile-thumb" title={`Invoice #${invoice.invoice_number}`}>
                   <DocTile label={`#${invoice.invoice_number}`} accent="#3b6ef0" />
                 </a>
               </div>
@@ -222,9 +218,17 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
             {attachments.map(a => {
               const isImage = a.mime_type.startsWith('image/')
               const isVideo = a.mime_type.startsWith('video/')
+              const sendState = getSendState(a.id)
+
               return (
                 <div key={a.id} className="pt-media-tile">
-                  <button className="pt-media-tile-thumb" onClick={() => void openAttachment(a)} title={a.file_name}>
+                  {/* Thumb */}
+                  <button
+                    className="pt-media-tile-thumb"
+                    onClick={() => sendState === 'idle' ? void openAttachment(a) : undefined}
+                    title={a.file_name}
+                    style={{ cursor: sendState !== 'idle' ? 'default' : 'pointer' }}
+                  >
                     {isImage && thumbnailUrls[a.id] ? (
                       <img src={thumbnailUrls[a.id]} alt={a.file_name} className="pt-media-thumb-img" loading="lazy" />
                     ) : isVideo ? (
@@ -236,22 +240,64 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
                     )}
                   </button>
 
-                  {/* Send overlay — top-left, only with linked conversation */}
-                  {conversationId && (
-                    <button className="pt-od-tile-send" title="Send to customer" onClick={() => handleSend(a)}>
-                      {sentId === a.id ? '✓' : '→'}
+                  {/* Send flow — only when conversation exists */}
+                  {conversationId && sendState === 'idle' && (
+                    <button
+                      className="pt-od-send-bar"
+                      onClick={() => setSendState(a.id, 'confirming')}
+                    >
+                      Send to {customerName}
                     </button>
                   )}
 
-                  {/* Delete overlay — top-right */}
-                  {confirmDeleteId === a.id ? (
-                    <div className="pt-media-tile-confirm">
-                      <span style={{ fontSize: 10, color: 'var(--pt-fg-3)' }}>Delete?</span>
-                      <button className="pt-link" style={{ fontSize: 10, color: 'var(--pt-danger)' }} onClick={() => void handleDelete(a)}>Yes</button>
-                      <button className="pt-link" style={{ fontSize: 10 }} onClick={() => setConfirmDeleteId(null)}>No</button>
+                  {conversationId && sendState === 'confirming' && (
+                    <div className="pt-od-send-overlay">
+                      <div className="pt-od-send-overlay-inner">
+                        <div className="pt-od-send-to">Send to</div>
+                        <div className="pt-od-send-name">{customerName}</div>
+                        <div className="pt-od-send-btns">
+                          <button className="pt-od-send-confirm-btn" onClick={() => void doSend(a)}>
+                            Send
+                          </button>
+                          <button className="pt-od-send-cancel-btn" onClick={() => setSendState(a.id, 'idle')}>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  ) : (
-                    <button className="pt-media-tile-del" onClick={() => setConfirmDeleteId(a.id)} title="Delete">✕</button>
+                  )}
+
+                  {conversationId && sendState === 'sending' && (
+                    <div className="pt-od-send-overlay">
+                      <div className="pt-od-send-overlay-inner">
+                        <div className="pt-od-send-to" style={{ marginBottom: 10 }}>Sending…</div>
+                        <div className="pt-od-send-progressbar">
+                          <div className="pt-od-send-progressbar-fill" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {conversationId && sendState === 'sent' && (
+                    <div className="pt-od-send-overlay">
+                      <div className="pt-od-send-overlay-inner">
+                        <div className="pt-od-send-check">✓</div>
+                        <div className="pt-od-send-to" style={{ marginTop: 6 }}>Sent</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Delete — hidden during send flow */}
+                  {sendState === 'idle' && (
+                    confirmDeleteId === a.id ? (
+                      <div className="pt-media-tile-confirm">
+                        <span style={{ fontSize: 10, color: 'var(--pt-fg-3)' }}>Delete?</span>
+                        <button className="pt-link" style={{ fontSize: 10, color: 'var(--pt-danger)' }} onClick={() => void handleDelete(a)}>Yes</button>
+                        <button className="pt-link" style={{ fontSize: 10 }} onClick={() => setConfirmDeleteId(null)}>No</button>
+                      </div>
+                    ) : (
+                      <button className="pt-media-tile-del" onClick={() => setConfirmDeleteId(a.id)} title="Delete">✕</button>
+                    )
                   )}
                 </div>
               )

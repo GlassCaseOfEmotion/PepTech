@@ -478,20 +478,134 @@
   display: block;
 }
 
-/* Send overlay on attachment tile */
-.pt-od-tile-send {
+/* ── Send bar — gradient veil at bottom of tile, reveals on hover ────── */
+.pt-od-send-bar {
   position: absolute;
-  top: 4px; left: 4px;
-  background: var(--pt-surface);
-  border: 0.5px solid var(--pt-line);
-  border-radius: 4px;
-  width: 18px; height: 18px;
-  font-size: 10px;
+  bottom: 0; left: 0; right: 0;
+  padding: 22px 10px 9px;
+  background: linear-gradient(to top, rgba(0,0,0,0.68) 0%, transparent 100%);
+  color: white;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  text-align: center;
+  border: 0;
   cursor: pointer;
-  color: var(--pt-fg-4);
-  display: flex; align-items: center; justify-content: center;
+  border-radius: 0 0 var(--pt-radius-sm, 6px) var(--pt-radius-sm, 6px);
+  width: 100%;
   opacity: 0;
-  transition: opacity 0.1s, color 0.1s;
+  transform: translateY(3px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
-.pt-media-tile:hover .pt-od-tile-send { opacity: 1; }
-.pt-od-tile-send:hover { color: var(--pt-fg); }
+.pt-media-tile:hover .pt-od-send-bar {
+  opacity: 1;
+  transform: translateY(0);
+}
+.pt-od-send-bar:hover { background: linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 100%); }
+
+/* ── Send overlay (confirm / sending / sent) ────────────────────────── */
+.pt-od-send-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 14, 0.62);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: var(--pt-radius-sm, 6px);
+  animation: pt-od-overlay-in 0.16s ease;
+}
+@keyframes pt-od-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.pt-od-send-overlay-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  text-align: center;
+}
+.pt-od-send-to {
+  font-size: 10px;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.pt-od-send-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pt-od-send-btns {
+  display: flex;
+  gap: 5px;
+  margin-top: 2px;
+}
+.pt-od-send-confirm-btn {
+  background: white;
+  color: #0a0a0e;
+  border: 0;
+  border-radius: 5px;
+  padding: 5px 13px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, transform 0.1s;
+}
+.pt-od-send-confirm-btn:hover { background: #f0f0f4; transform: scale(1.02); }
+.pt-od-send-confirm-btn:active { transform: scale(0.98); }
+.pt-od-send-cancel-btn {
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.75);
+  border: 0.5px solid rgba(255,255,255,0.22);
+  border-radius: 5px;
+  padding: 5px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.pt-od-send-cancel-btn:hover { background: rgba(255,255,255,0.2); }
+
+/* Progress bar during send */
+.pt-od-send-progressbar {
+  width: 64px;
+  height: 2px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.pt-od-send-progressbar-fill {
+  height: 100%;
+  width: 0%;
+  background: white;
+  border-radius: 999px;
+  animation: pt-od-progress-sweep 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes pt-od-progress-sweep {
+  0%   { width: 0%; }
+  55%  { width: 70%; }
+  90%  { width: 92%; }
+  100% { width: 100%; }
+}
+
+/* Success checkmark */
+.pt-od-send-check {
+  width: 30px; height: 30px;
+  background: #22c55e;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: white;
+  font-size: 15px;
+  animation: pt-od-check-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes pt-od-check-pop {
+  from { transform: scale(0.4); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}

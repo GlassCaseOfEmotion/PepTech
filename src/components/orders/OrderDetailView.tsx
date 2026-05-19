@@ -52,6 +52,7 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
   attachmentSignedUrls: Record<string, string>
   attachmentThumbnailUrls: Record<string, string>
   sendConversationId: string | null
+  customerName?: string
 }) {
   const [status, setStatus] = useState(order.status)
   const [notes, setNotes] = useState(order.notes ?? '')
@@ -504,6 +505,7 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
           <AttachmentsCard
             orderId={order.id}
             conversationId={sendConversationId}
+            customerName={order.customers?.display_name ?? 'customer'}
             invoice={invoice}
             initialAttachments={attachments}
             attachmentSignedUrls={attachmentSignedUrls}
