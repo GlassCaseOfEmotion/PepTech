@@ -252,10 +252,12 @@
 .pt-cu-pay-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
 
 /* Activity */
-.pt-cu-act { list-style: none; margin: 0; padding: 12px 14px; display: flex; flex-direction: column; gap: 7px; }
-.pt-cu-act li { display: flex; align-items: flex-start; gap: 9px; font-size: 12px; }
-.pt-cu-act-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pt-fg-4); margin-top: 6px; flex-shrink: 0; }
+.pt-cu-act { list-style: none; margin: 0; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.pt-cu-act li { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.pt-cu-act-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pt-fg-4); flex-shrink: 0; }
 .pt-cu-act li b { font-weight: 500; }
+.pt-cu-act-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pt-cu-act-time { font-size: 11px; color: var(--pt-fg-4); white-space: nowrap; flex-shrink: 0; font-family: var(--pt-mono); }
 
 /* Supply dot (customer list) */
 .pt-cu-supply { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }

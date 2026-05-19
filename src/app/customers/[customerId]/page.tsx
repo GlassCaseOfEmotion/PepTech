@@ -24,6 +24,20 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+function fmtActivityDate(iso: string) {
+  const date = new Date(iso)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60_000)
+  if (diffMins < 60) return `${Math.max(1, diffMins)}m ago`
+  const isToday = date.toDateString() === now.toDateString()
+  if (isToday) return `today ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
+  const diffDays = Math.floor(diffMs / 86_400_000)
+  if (diffDays < 7) return `${diffDays}d ago`
+  const sameYear = date.getFullYear() === now.getFullYear()
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(!sameYear && { year: 'numeric' }) })
+}
+
 const PAY_BADGE: Record<string, { label: string; key: string }> = {
   usdt_trc20:       { label: 'USDT',  key: 'usdt'  },
   btc:              { label: 'BTC',   key: 'btc'   },
@@ -433,10 +447,8 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                         return (
                           <li key={a.id}>
                             <i className={`pt-cu-act-dot${bullet ? ` pt-bul-${bullet}` : ''}`} />
-                            <div>
-                              <b>{a.label}</b>{actDetail(a, baseCurrency)}
-                              <div className="pt-act-time">{fmtDate(a.created_at)}</div>
-                            </div>
+                            <span className="pt-cu-act-text"><b>{a.label}</b>{actDetail(a, baseCurrency)}</span>
+                            <span className="pt-cu-act-time">{fmtActivityDate(a.created_at)}</span>
                           </li>
                         )
                       })}
