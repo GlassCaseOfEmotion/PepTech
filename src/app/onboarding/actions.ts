@@ -37,21 +37,67 @@ export async function saveCurrency(currency: string): Promise<{ error?: string }
   return {}
 }
 
-export async function seedCatalog(type: string): Promise<{ count?: number; error?: string }> {
+export async function seedCatalog(
+  type: string,
+  selectedSkus?: string[],
+): Promise<{ count?: number; error?: string }> {
   if (!VALID_TYPES.has(type)) return { error: 'Invalid type' }
   const c = await ctx()
   if (!c) return { error: 'Unauthorized' }
 
   // Idempotency: skip if products already exist
-  const { count } = await c.supabase.from('products').select('id', { count: 'exact', head: true })
+  const { count } = await c.supabase.from('products')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', c.tenantId)
   if ((count ?? 0) > 0) return { count: count! }
 
-  const rows = CATALOG_PRESETS[type as BusinessType].map(p => ({
-    ...p, tenant_id: c.tenantId,
+  const allPresets = CATALOG_PRESETS[type as BusinessType]
+  const chosen = selectedSkus && selectedSkus.length > 0
+    ? allPresets.filter(p => selectedSkus.includes(p.sku))
+    : allPresets
+
+  if (chosen.length === 0) return { error: 'Select at least one product' }
+
+  const rows = chosen.map(p => ({
+    name: p.name, sku: p.sku,
+    product_family: p.product_family,
+    unit_price: p.unit_price,
+    description: p.description,
+    tenant_id: c.tenantId,
   }))
-  const { error } = await c.supabase.from('products').insert(rows)
+
+  const { data: inserted, error } = await c.supabase
+    .from('products').insert(rows).select('id, sku')
   if (error) return { error: error.message }
-  return { count: rows.length }
+
+  // Seed protocols for peptides that have protocol data
+  if (type === 'peptides' && inserted && inserted.length > 0) {
+    const protocolRows = inserted
+      .map(p => {
+        const preset = chosen.find(sp => sp.sku === p.sku)
+        const proto = preset?.protocol
+        if (!proto) return null
+        return {
+          tenant_id: c.tenantId,
+          product_id: p.id,
+          vial_strength: proto.vial_strength,
+          reconstitution_ml: proto.reconstitution_ml,
+          draw_volume_ml: proto.draw_volume_ml,
+          frequency: proto.frequency,
+          timing: proto.timing ?? null,
+          cycle_length_weeks: proto.cycle_length_weeks,
+          notes: proto.notes ?? null,
+        }
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null)
+
+    if (protocolRows.length > 0) {
+      // Non-fatal if protocol seeding fails — products are already created
+      await c.supabase.from('product_protocols').insert(protocolRows).then(() => {})
+    }
+  }
+
+  return { count: inserted?.length ?? rows.length }
 }
 
 export async function completeOnboarding(): Promise<void> {
