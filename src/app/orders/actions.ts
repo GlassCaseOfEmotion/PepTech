@@ -404,3 +404,142 @@ export async function confirmPayment(
     return { error: e instanceof Error ? e.message : 'Unknown error' }
   }
 }
+
+export async function updateOrder(
+  orderId: string,
+  data: {
+    paymentAsset?: string
+    paymentAmount?: number
+    paymentAddress?: string | null
+    shippingAddress?: { ln1: string; ln2?: string; city: string; state: string; zip: string } | null
+    items?: { productId: string; qty: number; unitPriceSnapshot: number }[]
+  }
+): Promise<{ success: true } | { error: string }> {
+  try {
+    const { supabase, tenantId } = await getTenantId()
+
+    const { data: current, error: fetchError } = await supabase
+      .from('orders')
+      .select('status, payment_asset, payment_amount, payment_address, shipping_address, currency')
+      .eq('id', orderId)
+      .eq('tenant_id', tenantId)
+      .single()
+    if (fetchError || !current) return { error: 'Order not found' }
+
+    // Status gates
+    if (
+      (data.items !== undefined || data.paymentAsset !== undefined || data.paymentAmount !== undefined || data.paymentAddress !== undefined) &&
+      (['packing', 'shipped', 'delivered'] as string[]).includes(current.status)
+    ) {
+      return { error: 'Cannot edit items or payment after packing has begun' }
+    }
+    if (
+      data.shippingAddress !== undefined &&
+      (['shipped', 'delivered'] as string[]).includes(current.status)
+    ) {
+      return { error: 'Cannot edit shipping after the order has been shipped' }
+    }
+
+    // Build order update object
+    const orderUpdate: Record<string, unknown> = {}
+    if (data.paymentAsset !== undefined) orderUpdate.payment_asset = data.paymentAsset
+    if (data.paymentAmount !== undefined) {
+      orderUpdate.payment_amount = data.paymentAmount
+      orderUpdate.payment_amount_base = data.paymentAmount
+    }
+    if (data.paymentAddress !== undefined) orderUpdate.payment_address = data.paymentAddress
+    if (data.shippingAddress !== undefined) orderUpdate.shipping_address = data.shippingAddress
+
+    // Exchange rate refresh
+    if (data.paymentAsset !== undefined || data.paymentAmount !== undefined) {
+      const effectiveAsset = data.paymentAsset ?? current.payment_asset
+      const FIAT_ASSETS = new Set(['cash', 'bank_transfer', 'customer_chooses'])
+      const isCrypto = !FIAT_ASSETS.has(effectiveAsset)
+      if (isCrypto && current.currency !== 'USD') {
+        const TTL_MS = 60 * 60 * 1000
+        const { data: cached } = await supabase
+          .from('exchange_rates')
+          .select('rate, fetched_at')
+          .eq('from_currency', effectiveAsset)
+          .eq('to_currency', current.currency)
+          .single()
+
+        let exchangeRate: number | null = null
+        if (cached && Date.now() - new Date(cached.fetched_at).getTime() < TTL_MS) {
+          exchangeRate = Number(cached.rate)
+        } else {
+          try {
+            const { fetchAssetToBaseRate } = await import('@/lib/currency')
+            exchangeRate = await fetchAssetToBaseRate(effectiveAsset, current.currency)
+            await supabase.from('exchange_rates').upsert(
+              { from_currency: effectiveAsset, to_currency: current.currency, rate: exchangeRate, fetched_at: new Date().toISOString() },
+              { onConflict: 'from_currency,to_currency' }
+            )
+          } catch {
+            // Non-fatal: order updated without exchange_rate
+          }
+        }
+        if (exchangeRate !== null) orderUpdate.exchange_rate = exchangeRate
+      }
+    }
+
+    // Items replacement
+    if (data.items !== undefined) {
+      const { error: deleteError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', orderId)
+        .eq('tenant_id', tenantId)
+      if (deleteError) return { error: deleteError.message }
+
+      const { error: insertError } = await supabase.from('order_items').insert(
+        data.items.map(it => ({
+          tenant_id: tenantId,
+          order_id: orderId,
+          product_id: it.productId,
+          qty: it.qty,
+          unit_price_snapshot: it.unitPriceSnapshot,
+        }))
+      )
+      if (insertError) return { error: insertError.message }
+    }
+
+    // Status revert
+    if (data.items !== undefined && current.status === 'confirming') {
+      orderUpdate.status = 'awaiting'
+    }
+
+    // Apply order update
+    if (Object.keys(orderUpdate).length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update(orderUpdate as any)
+        .eq('id', orderId)
+        .eq('tenant_id', tenantId)
+      if (updateError) return { error: updateError.message }
+    }
+
+    // Compute change summary
+    const parts: string[] = []
+    if (data.items !== undefined) parts.push('items updated')
+    if (data.paymentAsset !== undefined || data.paymentAmount !== undefined) parts.push('payment updated')
+    if (data.shippingAddress !== undefined) parts.push('shipping address updated')
+    if (orderUpdate.status === 'awaiting') parts.push('reverted to awaiting')
+    const note = parts.join(' · ') || null
+
+    await supabase.from('order_events').insert({
+      tenant_id: tenantId,
+      order_id: orderId,
+      actor: 'operator',
+      action: 'Order edited',
+      note,
+    })
+
+    revalidatePath('/orders')
+    revalidatePath(`/orders/${orderId}`)
+    return { success: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
