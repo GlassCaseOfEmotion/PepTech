@@ -477,3 +477,21 @@
   object-fit: cover; border-radius: 3px;
   display: block;
 }
+
+/* Send overlay on attachment tile */
+.pt-od-tile-send {
+  position: absolute;
+  top: 4px; left: 4px;
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line);
+  border-radius: 4px;
+  width: 18px; height: 18px;
+  font-size: 10px;
+  cursor: pointer;
+  color: var(--pt-fg-4);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transition: opacity 0.1s, color 0.1s;
+}
+.pt-media-tile:hover .pt-od-tile-send { opacity: 1; }
+.pt-od-tile-send:hover { color: var(--pt-fg); }

@@ -10,13 +10,6 @@ import {
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
-function fmtSize(bytes: number | null) {
-  if (!bytes) return ''
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
 type Lightbox = { url: string | null; type: 'image' | 'video'; loading: boolean }
 
 type Props = {
@@ -41,7 +34,6 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
   const [lightbox, setLightbox] = useState<Lightbox | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Close lightbox on Escape
   useEffect(() => {
     if (!lightbox) return
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setLightbox(null) }
@@ -54,16 +46,13 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
     const isVideo = a.mime_type.startsWith('video/')
 
     if (!isImage && !isVideo) {
-      // PDFs open in a new tab
       const url = signedUrls[a.id]
       if (url) window.open(url, '_blank', 'noopener')
       return
     }
 
-    // Show lightbox immediately with thumbnail placeholder
     setLightbox({ url: isImage ? (thumbnailUrls[a.id] ?? null) : null, type: isImage ? 'image' : 'video', loading: true })
 
-    // Fetch full-size URL
     const existing = signedUrls[a.id]
     if (existing) {
       setLightbox({ url: existing, type: isImage ? 'image' : 'video', loading: false })
@@ -159,68 +148,64 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
     }
   }
 
+  const hasItems = invoice || attachments.length > 0
+
   return (
     <section className="pt-card">
       <header className="pt-card-hd">
         <div><h3>Attachments</h3></div>
-        <button
-          className="pt-btn pt-btn-ghost pt-btn-xs"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-        >
+        <button className="pt-btn pt-btn-ghost pt-btn-xs" onClick={() => inputRef.current?.click()} disabled={uploading}>
           + Add
         </button>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*,video/*,application/pdf"
-          style={{ display: 'none' }}
-          onChange={handleFileChange}
-        />
+        <input ref={inputRef} type="file" accept="image/*,video/*,application/pdf" style={{ display: 'none' }} onChange={handleFileChange} />
       </header>
 
       <div className="pt-card-body" style={{ padding: 0 }}>
         {error && <div style={{ padding: '6px 14px', fontSize: 11, color: 'var(--pt-danger)' }}>{error}</div>}
 
-        {/* Invoice — pinned list row */}
-        {invoice && (
-          <div className="pt-od-attach-row pt-od-attach-invoice">
-            <span className="pt-od-attach-icon">📄</span>
-            <span className="pt-od-attach-name">Invoice #{invoice.invoice_number}</span>
-            <div className="pt-od-attach-actions">
-              <a href={invoice.signedUrl} target="_blank" rel="noopener noreferrer" className="pt-od-attach-btn" title="Download invoice">↓</a>
-            </div>
-          </div>
-        )}
-
-        {/* Upload progress */}
         {uploading && (
-          <div className="pt-od-attach-progress" style={{ padding: '8px 14px' }}>
-            <div style={{ fontSize: 11, color: 'var(--pt-fg-3)' }}>Uploading {uploadName}…</div>
+          <div style={{ padding: '8px 14px', borderTop: '0.5px solid var(--pt-line-soft)' }}>
+            <div style={{ fontSize: 11, color: 'var(--pt-fg-3)', marginBottom: 5 }}>Uploading {uploadName}…</div>
             <div className="pt-od-attach-progress-bar">
               <div className="pt-od-attach-progress-fill" style={{ width: `${uploadProgress}%` }} />
             </div>
           </div>
         )}
 
-        {/* Empty state */}
-        {!invoice && !uploading && attachments.length === 0 && (
+        {!hasItems && !uploading && (
           <div className="pt-od-attach-empty">No attachments yet</div>
         )}
 
-        {/* File grid */}
-        {attachments.length > 0 && (
-          <div className="pt-media-grid" style={{ padding: '10px 14px' }}>
+        {hasItems && (
+          <div className="pt-media-grid">
+
+            {/* Invoice tile */}
+            {invoice && (
+              <div className="pt-media-tile">
+                <a
+                  href={invoice.signedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="pt-media-tile-thumb"
+                  title={`Invoice #${invoice.invoice_number}`}
+                >
+                  <div className="pt-media-thumb-pdf">
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <span className="pt-media-pdf-icon">PDF</span>
+                      <span style={{ fontSize: 9, color: 'var(--pt-fg-4)', fontFamily: 'var(--pt-mono)' }}>#{invoice.invoice_number}</span>
+                    </div>
+                  </div>
+                </a>
+              </div>
+            )}
+
+            {/* Attachment tiles */}
             {attachments.map(a => {
               const isImage = a.mime_type.startsWith('image/')
               const isVideo = a.mime_type.startsWith('video/')
               return (
                 <div key={a.id} className="pt-media-tile">
-                  <button
-                    className="pt-media-tile-thumb"
-                    onClick={() => void openAttachment(a)}
-                    title={a.file_name}
-                  >
+                  <button className="pt-media-tile-thumb" onClick={() => void openAttachment(a)} title={a.file_name}>
                     {isImage && thumbnailUrls[a.id] ? (
                       <img src={thumbnailUrls[a.id]} alt={a.file_name} className="pt-media-thumb-img" loading="lazy" />
                     ) : isVideo ? (
@@ -233,34 +218,24 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
                       </div>
                     )}
                   </button>
-                  <div className="pt-media-tile-label" title={a.file_name}>
-                    {a.file_name}
-                  </div>
-                  <div style={{ fontSize: 10, color: 'var(--pt-fg-4)', textAlign: 'center', marginTop: 1 }}>
-                    {fmtSize(a.file_size)}
-                  </div>
-                  {/* Actions row: send + delete */}
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginTop: 3 }}>
-                    {conversationId && (
-                      <button
-                        className="pt-od-attach-btn"
-                        title="Send to customer"
-                        style={{ opacity: 1 }}
-                        onClick={() => handleSend(a)}
-                      >
-                        {sentId === a.id ? '✓' : '→'}
-                      </button>
-                    )}
-                    {confirmDeleteId === a.id ? (
-                      <>
-                        <span style={{ fontSize: 10, color: 'var(--pt-fg-3)', alignSelf: 'center' }}>Delete?</span>
-                        <button className="pt-link" style={{ fontSize: 10, color: 'var(--pt-danger)' }} onClick={() => void handleDelete(a)}>Yes</button>
-                        <button className="pt-link" style={{ fontSize: 10 }} onClick={() => setConfirmDeleteId(null)}>No</button>
-                      </>
-                    ) : (
-                      <button className="pt-media-tile-del" onClick={() => setConfirmDeleteId(a.id)} title="Delete" style={{ opacity: 1, position: 'static', transform: 'none' }}>✕</button>
-                    )}
-                  </div>
+
+                  {/* Send overlay — top-left, only with linked conversation */}
+                  {conversationId && (
+                    <button className="pt-od-tile-send" title="Send to customer" onClick={() => handleSend(a)}>
+                      {sentId === a.id ? '✓' : '→'}
+                    </button>
+                  )}
+
+                  {/* Delete overlay — top-right */}
+                  {confirmDeleteId === a.id ? (
+                    <div className="pt-media-tile-confirm">
+                      <span style={{ fontSize: 10, color: 'var(--pt-fg-3)' }}>Delete?</span>
+                      <button className="pt-link" style={{ fontSize: 10, color: 'var(--pt-danger)' }} onClick={() => void handleDelete(a)}>Yes</button>
+                      <button className="pt-link" style={{ fontSize: 10 }} onClick={() => setConfirmDeleteId(null)}>No</button>
+                    </div>
+                  ) : (
+                    <button className="pt-media-tile-del" onClick={() => setConfirmDeleteId(a.id)} title="Delete">✕</button>
+                  )}
                 </div>
               )
             })}
@@ -268,7 +243,6 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
         )}
       </div>
 
-      {/* Lightbox */}
       {lightbox && (
         <div className="pt-lightbox" onClick={() => setLightbox(null)}>
           {lightbox.url === null || (lightbox.type === 'video' && lightbox.loading) ? (
