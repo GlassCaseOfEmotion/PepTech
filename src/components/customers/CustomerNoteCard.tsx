@@ -53,9 +53,9 @@ export function CustomerNoteCard({ customerId, initialNotes }: { customerId: str
           + Add note
         </button>
       </header>
-      <div className="pt-card-body">
+      <div className="pt-card-body" style={{ padding: 0 }}>
         {adding && (
-          <div className="pt-note-form">
+          <div className="pt-note-form" style={{ padding: '10px 14px 2px' }}>
             <textarea
               className="pt-note-input"
               placeholder="Add an internal note…"
