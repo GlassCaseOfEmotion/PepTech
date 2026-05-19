@@ -440,22 +440,12 @@ export async function updateOrder(
       return { error: 'Cannot edit shipping after the order has been shipped' }
     }
 
-    // Build order update object
-    const orderUpdate: Record<string, unknown> = {}
-    if (data.paymentAsset !== undefined) orderUpdate.payment_asset = data.paymentAsset
-    if (data.paymentAmount !== undefined) {
-      orderUpdate.payment_amount = data.paymentAmount
-      orderUpdate.payment_amount_base = data.paymentAmount
-    }
-    if (data.paymentAddress !== undefined) orderUpdate.payment_address = data.paymentAddress
-    if (data.shippingAddress !== undefined) orderUpdate.shipping_address = data.shippingAddress
-
-    // Exchange rate refresh
+    // Resolve exchange rate if payment asset/amount is changing
+    let newExchangeRate: number | undefined
     if (data.paymentAsset !== undefined || data.paymentAmount !== undefined) {
       const effectiveAsset = data.paymentAsset ?? current.payment_asset
       const FIAT_ASSETS = new Set(['cash', 'bank_transfer', 'customer_chooses'])
-      const isCrypto = !FIAT_ASSETS.has(effectiveAsset)
-      if (isCrypto && current.currency !== 'USD') {
+      if (!FIAT_ASSETS.has(effectiveAsset) && current.currency !== 'USD') {
         const TTL_MS = 60 * 60 * 1000
         const { data: cached } = await supabase
           .from('exchange_rates')
@@ -463,23 +453,18 @@ export async function updateOrder(
           .eq('from_currency', effectiveAsset)
           .eq('to_currency', current.currency)
           .single()
-
-        let exchangeRate: number | null = null
         if (cached && Date.now() - new Date(cached.fetched_at).getTime() < TTL_MS) {
-          exchangeRate = Number(cached.rate)
+          newExchangeRate = Number(cached.rate)
         } else {
           try {
             const { fetchAssetToBaseRate } = await import('@/lib/currency')
-            exchangeRate = await fetchAssetToBaseRate(effectiveAsset, current.currency)
+            newExchangeRate = await fetchAssetToBaseRate(effectiveAsset, current.currency)
             await supabase.from('exchange_rates').upsert(
-              { from_currency: effectiveAsset, to_currency: current.currency, rate: exchangeRate, fetched_at: new Date().toISOString() },
+              { from_currency: effectiveAsset, to_currency: current.currency, rate: newExchangeRate, fetched_at: new Date().toISOString() },
               { onConflict: 'from_currency,to_currency' }
             )
-          } catch {
-            // Non-fatal: order updated without exchange_rate
-          }
+          } catch { /* Non-fatal */ }
         }
-        if (exchangeRate !== null) orderUpdate.exchange_rate = exchangeRate
       }
     }
 
@@ -504,19 +489,21 @@ export async function updateOrder(
       if (insertError) return { error: insertError.message }
     }
 
-    // Status revert
-    if (data.items !== undefined && current.status === 'confirming') {
-      orderUpdate.status = 'awaiting'
-    }
+    // Build typed order update and apply
+    const revertStatus = data.items !== undefined && current.status === 'confirming'
+    const hasOrderUpdate = data.paymentAsset !== undefined || data.paymentAmount !== undefined
+      || data.paymentAddress !== undefined || data.shippingAddress !== undefined
+      || newExchangeRate !== undefined || revertStatus
 
-    // Apply order update
-    if (Object.keys(orderUpdate).length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: updateError } = await supabase
-        .from('orders')
-        .update(orderUpdate as any)
-        .eq('id', orderId)
-        .eq('tenant_id', tenantId)
+    if (hasOrderUpdate) {
+      const { error: updateError } = await supabase.from('orders').update({
+        ...(data.paymentAsset !== undefined ? { payment_asset: data.paymentAsset } : {}),
+        ...(data.paymentAmount !== undefined ? { payment_amount: data.paymentAmount, payment_amount_base: data.paymentAmount } : {}),
+        ...(data.paymentAddress !== undefined ? { payment_address: data.paymentAddress } : {}),
+        ...(data.shippingAddress !== undefined ? { shipping_address: data.shippingAddress } : {}),
+        ...(newExchangeRate !== undefined ? { exchange_rate: newExchangeRate } : {}),
+        ...(revertStatus ? { status: 'awaiting' as const } : {}),
+      }).eq('id', orderId).eq('tenant_id', tenantId)
       if (updateError) return { error: updateError.message }
     }
 
@@ -525,7 +512,7 @@ export async function updateOrder(
     if (data.items !== undefined) parts.push('items updated')
     if (data.paymentAsset !== undefined || data.paymentAmount !== undefined) parts.push('payment updated')
     if (data.shippingAddress !== undefined) parts.push('shipping address updated')
-    if (orderUpdate.status === 'awaiting') parts.push('reverted to awaiting')
+    if (revertStatus) parts.push('reverted to awaiting')
     const note = parts.join(' · ') || null
 
     await supabase.from('order_events').insert({
