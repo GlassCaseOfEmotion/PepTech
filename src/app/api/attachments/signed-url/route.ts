@@ -15,7 +15,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { data, error } = await supabase.storage.from('media').createSignedUrl(path, 3600)
+  const widthParam = searchParams.get('width')
+  const width = widthParam ? parseInt(widthParam, 10) : undefined
+  const transform = width && !isNaN(width) ? { width, quality: 80, resize: 'cover' as const } : undefined
+
+  const { data, error } = await supabase.storage
+    .from('media')
+    .createSignedUrl(path, 3600, transform ? { transform } : undefined)
   if (error || !data) return NextResponse.json({ error: error?.message }, { status: 500 })
 
   return NextResponse.json({ url: data.signedUrl })

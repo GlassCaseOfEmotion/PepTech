@@ -11,7 +11,6 @@ import {
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
 function fileIcon(mimeType: string) {
-  if (mimeType.startsWith('image/')) return '🖼'
   if (mimeType.startsWith('video/')) return '🎥'
   return '📄'
 }
@@ -29,11 +28,13 @@ type Props = {
   invoice: { id: string; invoice_number: string; pdf_path: string; signedUrl: string } | null
   initialAttachments: OrderAttachment[]
   attachmentSignedUrls: Record<string, string>
+  attachmentThumbnailUrls: Record<string, string>
 }
 
-export function AttachmentsCard({ orderId, conversationId, invoice, initialAttachments, attachmentSignedUrls }: Props) {
+export function AttachmentsCard({ orderId, conversationId, invoice, initialAttachments, attachmentSignedUrls, attachmentThumbnailUrls }: Props) {
   const [attachments, setAttachments] = useState<OrderAttachment[]>(initialAttachments)
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>(attachmentSignedUrls)
+  const [thumbnailUrls, setThumbnailUrls] = useState<Record<string, string>>(attachmentThumbnailUrls)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadName, setUploadName] = useState('')
@@ -78,11 +79,21 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
     const confirm = await confirmOrderAttachment(orderId, result.storagePath, file.name, file.type, file.size)
     if ('error' in confirm) { setError(confirm.error); setUploading(false); return }
 
-    // Fetch a signed URL for the new attachment so it can be opened immediately
-    const signedRes = await fetch(`/api/attachments/signed-url?path=${encodeURIComponent(result.storagePath)}`)
+    // Fetch full URL + thumbnail (images only) for the new attachment
+    const isImage = confirm.data.mime_type.startsWith('image/')
+    const [signedRes, thumbRes] = await Promise.all([
+      fetch(`/api/attachments/signed-url?path=${encodeURIComponent(result.storagePath)}`),
+      isImage
+        ? fetch(`/api/attachments/signed-url?path=${encodeURIComponent(result.storagePath)}&width=80`)
+        : Promise.resolve(null),
+    ])
     if (signedRes.ok) {
       const signedData = await signedRes.json() as { url?: string }
       if (signedData.url) setSignedUrls(prev => ({ ...prev, [confirm.data.id]: signedData.url! }))
+    }
+    if (thumbRes?.ok) {
+      const thumbData = await thumbRes.json() as { url?: string }
+      if (thumbData.url) setThumbnailUrls(prev => ({ ...prev, [confirm.data.id]: thumbData.url! }))
     }
 
     setAttachments(prev => [confirm.data, ...prev])
@@ -97,6 +108,7 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
     if ('error' in result) { setError(result.error); return }
     setAttachments(prev => prev.filter(a => a.id !== attachment.id))
     setSignedUrls(prev => { const next = { ...prev }; delete next[attachment.id]; return next })
+    setThumbnailUrls(prev => { const next = { ...prev }; delete next[attachment.id]; return next })
   }
 
   async function handleSend(attachment: OrderAttachment) {
@@ -169,7 +181,12 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
           )}
           {attachments.map(a => (
             <li key={a.id} className="pt-od-attach-row">
-              <span className="pt-od-attach-icon">{fileIcon(a.mime_type)}</span>
+              <span className="pt-od-attach-icon">
+                {a.mime_type.startsWith('image/') && thumbnailUrls[a.id]
+                  ? <img src={thumbnailUrls[a.id]} alt={a.file_name} className="pt-od-attach-thumb" loading="lazy" />
+                  : fileIcon(a.mime_type)
+                }
+              </span>
               <span className="pt-od-attach-name">{a.file_name}</span>
               <span className="pt-od-attach-size">{fmtSize(a.file_size)}</span>
               <div className="pt-od-attach-actions">

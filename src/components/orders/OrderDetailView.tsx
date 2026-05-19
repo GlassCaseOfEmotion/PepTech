@@ -41,7 +41,7 @@ function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
-export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, customerStats, invoice, attachments, attachmentSignedUrls }: {
+export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, customerStats, invoice, attachments, attachmentSignedUrls, attachmentThumbnailUrls }: {
   order: DbOrderRow
   events: DbOrderEvent[]
   chatExcerpt: { id: string; direction: string; content: string; sent_at: string }[]
@@ -50,6 +50,7 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
   invoice: { id: string; invoice_number: string; pdf_path: string; signedUrl: string } | null
   attachments: OrderAttachment[]
   attachmentSignedUrls: Record<string, string>
+  attachmentThumbnailUrls: Record<string, string>
 }) {
   const [status, setStatus] = useState(order.status)
   const [notes, setNotes] = useState(order.notes ?? '')
@@ -505,6 +506,7 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
             invoice={invoice}
             initialAttachments={attachments}
             attachmentSignedUrls={attachmentSignedUrls}
+            attachmentThumbnailUrls={attachmentThumbnailUrls}
           />
 
           {/* Activity timeline */}

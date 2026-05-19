@@ -472,3 +472,8 @@
 .pt-od-attach-empty {
   padding: 12px 14px; font-size: 12px; color: var(--pt-fg-4);
 }
+.pt-od-attach-thumb {
+  width: 28px; height: 28px;
+  object-fit: cover; border-radius: 3px;
+  display: block;
+}

@@ -78,16 +78,25 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
     if (signed) invoice = { ...invoiceRow, signedUrl: signed.signedUrl }
   }
 
-  // Generate signed URLs for all attachments in one round-trip
+  // Generate full + thumbnail signed URLs for all attachments
   const attachments = (attachmentsRaw ?? []) as OrderAttachment[]
   const attachmentSignedUrls: Record<string, string> = {}
+  const attachmentThumbnailUrls: Record<string, string> = {}
   if (attachments.length > 0) {
-    const { data: signedList } = await supabase.storage.from('media').createSignedUrls(
-      attachments.map(a => a.storage_path),
-      3600,
-    )
+    const imageAttachments = attachments.filter(a => a.mime_type.startsWith('image/'))
+    const [{ data: signedList }, ...thumbResults] = await Promise.all([
+      supabase.storage.from('media').createSignedUrls(attachments.map(a => a.storage_path), 3600),
+      ...imageAttachments.map(a =>
+        supabase.storage.from('media').createSignedUrl(a.storage_path, 3600, {
+          transform: { width: 80, height: 80, quality: 80, resize: 'cover' },
+        })
+      ),
+    ])
     signedList?.forEach((item, i) => {
       if (item.signedUrl) attachmentSignedUrls[attachments[i].id] = item.signedUrl
+    })
+    thumbResults.forEach((res, i) => {
+      if (res.data?.signedUrl) attachmentThumbnailUrls[imageAttachments[i].id] = res.data.signedUrl
     })
   }
 
@@ -114,6 +123,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
         invoice={invoice}
         attachments={attachments}
         attachmentSignedUrls={attachmentSignedUrls}
+        attachmentThumbnailUrls={attachmentThumbnailUrls}
       />
     </Shell>
   )
