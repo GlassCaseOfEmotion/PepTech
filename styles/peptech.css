@@ -1571,7 +1571,31 @@ kbd {
   letter-spacing: -0.025em; line-height: 1.2;
   margin: 0 0 4px; color: var(--pt-fg);
 }
+.ob-greet-h {
+  font-size: 28px; font-weight: 700;
+  letter-spacing: -0.025em; line-height: 1.2;
+  margin: 0 0 4px; color: var(--pt-fg);
+}
 .ob-accent-name { color: var(--pt-accent); }
+
+/* Profile form (Step 0) */
+.ob-profile-form { margin: 20px 0 24px; display: flex; flex-direction: column; gap: 14px; }
+.ob-profile-label { font-size: 13px; font-weight: 500; color: var(--pt-fg-2); display: block; margin-bottom: 6px; }
+.ob-profile-input {
+  width: 100%; padding: 12px 14px;
+  background: var(--pt-surface);
+  border: 1px solid var(--pt-line);
+  border-radius: 10px;
+  font-size: 16px; font-weight: 500; color: var(--pt-fg);
+  outline: none; box-sizing: border-box;
+  transition: border-color 150ms;
+}
+.ob-profile-input:focus { border-color: var(--pt-accent); }
+.ob-profile-input::placeholder { color: var(--pt-fg-4); font-weight: 400; }
+.ob-tz-row { display: flex; flex-direction: column; gap: 5px; }
+.ob-tz-label { font-size: 11.5px; color: var(--pt-fg-3); }
+.ob-tz-select { width: 100%; font-size: 13px; }
+
 .ob-welcome-biz {
   font-size: 13px; color: var(--pt-fg-4);
   margin: 0 0 18px;

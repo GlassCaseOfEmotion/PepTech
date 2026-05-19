@@ -1,8 +1,34 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { saveBusinessType, saveCurrency, seedCatalog, completeOnboarding, saveChannelIntent } from './actions'
+import { useState, useTransition, useEffect } from 'react'
+import { saveBusinessType, saveCurrency, seedCatalog, completeOnboarding, saveChannelIntent, saveProfile } from './actions'
 import { CATALOG_PRESETS, type BusinessType, type PresetProduct } from '@/lib/catalog-presets'
+
+const TIMEZONES = [
+  { value: 'Pacific/Honolulu',    label: 'Hawaii (UTC−10)' },
+  { value: 'America/Anchorage',   label: 'Alaska (UTC−9)' },
+  { value: 'America/Los_Angeles', label: 'Pacific (UTC−8/−7)' },
+  { value: 'America/Denver',      label: 'Mountain (UTC−7/−6)' },
+  { value: 'America/Chicago',     label: 'Central (UTC−6/−5)' },
+  { value: 'America/New_York',    label: 'Eastern (UTC−5/−4)' },
+  { value: 'America/Sao_Paulo',   label: 'São Paulo (UTC−3)' },
+  { value: 'Europe/London',       label: 'London (UTC+0/+1)' },
+  { value: 'Europe/Amsterdam',    label: 'Amsterdam (UTC+1/+2)' },
+  { value: 'Europe/Lisbon',       label: 'Lisbon (UTC+0/+1)' },
+  { value: 'Europe/Istanbul',     label: 'Istanbul (UTC+3)' },
+  { value: 'Asia/Dubai',          label: 'Dubai (UTC+4)' },
+  { value: 'Asia/Karachi',        label: 'Karachi (UTC+5)' },
+  { value: 'Asia/Kolkata',        label: 'Mumbai / Delhi (UTC+5:30)' },
+  { value: 'Asia/Bangkok',        label: 'Bangkok (UTC+7)' },
+  { value: 'Asia/Singapore',      label: 'Singapore (UTC+8)' },
+  { value: 'Asia/Shanghai',       label: 'Beijing / Shanghai (UTC+8)' },
+  { value: 'Asia/Tokyo',          label: 'Tokyo (UTC+9)' },
+  { value: 'Australia/Sydney',    label: 'Sydney (UTC+10/+11)' },
+  { value: 'Pacific/Auckland',    label: 'Auckland (UTC+12/+13)' },
+  { value: 'UTC',                 label: 'UTC' },
+]
+
+const VALID_TZ_VALUES = new Set(TIMEZONES.map(t => t.value))
 
 const CHANNELS = [
   { id: 'whatsapp', label: 'WhatsApp Business', dot: '#25d366', hint: 'Most popular with customers' },
@@ -82,11 +108,23 @@ export function OnboardingWizard({
     () => new Set((initialBusinessType ? CATALOG_PRESETS[initialBusinessType as BusinessType] : []).map(p => p.sku))
   )
   const [intendedChannels, setIntendedChannels] = useState<Set<string>>(new Set(['whatsapp']))
+  const [profileName, setProfileName] = useState(displayName ?? '')
+  const [timezone, setTimezone] = useState(initialTimezone || 'UTC')
+
+  // Auto-detect browser timezone on first render if not already set
+  useEffect(() => {
+    if (!initialTimezone || initialTimezone === 'UTC') {
+      try {
+        const detected = Intl.DateTimeFormat().resolvedOptions().timeZone
+        if (VALID_TZ_VALUES.has(detected)) setTimezone(detected)
+      } catch { /* non-fatal */ }
+    }
+  }, [initialTimezone])
 
   const chapter = CHAPTER[step] ?? CHAPTER[1]
   const presets = btype ? CATALOG_PRESETS[btype] : []
   const families = [...new Set(presets.map(p => p.product_family))]
-  const firstName = displayName?.split(' ')[0] ?? ''
+  const firstName = (profileName || displayName)?.split(' ')[0] ?? ''
 
   function toggleSku(sku: string) {
     setSelectedSkus(prev => {
@@ -101,6 +139,16 @@ export function OnboardingWizard({
       const next = new Set(prev)
       if (next.has(id)) next.delete(id); else next.add(id)
       return next
+    })
+  }
+
+  function handleProfile() {
+    if (!profileName.trim()) return
+    setErr('')
+    start(async () => {
+      const r = await saveProfile(profileName.trim(), timezone)
+      if (r.error) { setErr(r.error); return }
+      setStep(1)
     })
   }
 
@@ -209,35 +257,51 @@ export function OnboardingWizard({
           </div>
         )}
 
-        {/* Step 0: Welcome */}
+        {/* Step 0: Profile — name + timezone */}
         {!completing && step === 0 && (
           <div className="ob-step" key="welcome">
             <p className="ob-eyebrow">Welcome to Peptech</p>
-            <h2 className="ob-welcome-h">
-              {firstName ? <>Hi, <span className="ob-accent-name">{firstName}!</span></> : 'Welcome!'}
+            <h2 className="ob-greet-h" key={firstName}>
+              {firstName
+                ? <>Hey, <span className="ob-accent-name">{firstName}!</span> 👋</>
+                : <>Hey there! 👋</>}
             </h2>
             <p className="ob-welcome-biz">{businessName}</p>
-            <p className="ob-welcome-body">
-              Let&apos;s get your store ready. We&apos;ll walk you through four quick steps — it takes about 2 minutes.
-            </p>
-            <div className="ob-preview-list">
-              {[
-                { n: 1, t: 'Choose your business type',  d: 'Tailor your catalog to what you sell' },
-                { n: 2, t: 'Set your base currency',     d: 'For orders, invoices and reporting' },
-                { n: 3, t: 'Seed your product catalog',  d: 'Start with sensible, curated defaults' },
-                { n: 4, t: 'Connect a messaging channel', d: 'Reach customers via WhatsApp, Telegram or email' },
-              ].map(item => (
-                <div key={item.n} className="ob-preview-item">
-                  <span className="ob-preview-n">{item.n}</span>
-                  <div>
-                    <div className="ob-preview-t">{item.t}</div>
-                    <div className="ob-preview-d">{item.d}</div>
-                  </div>
-                </div>
-              ))}
+
+            <div className="ob-profile-form">
+              <label className="ob-profile-label">How should we address you?</label>
+              <input
+                className="ob-profile-input"
+                type="text"
+                placeholder="Your first name"
+                value={profileName}
+                maxLength={80}
+                autoFocus
+                onChange={e => setProfileName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && profileName.trim()) handleProfile() }}
+              />
+              <div className="ob-tz-row">
+                <label className="ob-tz-label">Your timezone</label>
+                <select
+                  className="pt-input ob-tz-select"
+                  value={timezone}
+                  onChange={e => setTimezone(e.target.value)}
+                >
+                  {TIMEZONES.map(tz => (
+                    <option key={tz.value} value={tz.value}>{tz.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <button className="ob-btn ob-btn-primary ob-btn-full" onClick={() => setStep(1)}>
-              Let&apos;s begin →
+
+            {err && <p className="ob-err">{err}</p>}
+
+            <button
+              className="ob-btn ob-btn-primary ob-btn-full"
+              onClick={handleProfile}
+              disabled={pending || !profileName.trim()}
+            >
+              {pending ? 'Saving…' : "Let's begin →"}
             </button>
           </div>
         )}

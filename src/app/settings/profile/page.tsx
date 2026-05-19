@@ -7,11 +7,16 @@ export default async function ProfilePage() {
 
   const { data: userRow } = await supabase
     .from('users')
-    .select('display_name')
+    .select('display_name, tenant_id')
     .eq('id', user!.id)
     .single()
 
   const displayName = userRow?.display_name ?? user?.email?.split('@')[0] ?? 'User'
+
+  const { data: tenantRow } = userRow?.tenant_id
+    ? await supabase.from('tenants').select('timezone').eq('id', userRow.tenant_id).single()
+    : { data: null }
+  const timezone = tenantRow?.timezone ?? 'UTC'
 
   return (
     <div className="pt-st-section">
@@ -58,13 +63,14 @@ export default async function ProfilePage() {
           <div className="pt-st-field">
             <div className="pt-st-field-l"><label>Timezone</label></div>
             <div className="pt-st-field-r">
-              <select className="pt-st-input" defaultValue="UTC">
-                <option>UTC</option>
-                <option>Europe/London</option>
-                <option>Europe/Lisbon</option>
-                <option>America/New_York</option>
-                <option>America/Los_Angeles</option>
-                <option>Asia/Bangkok</option>
+              <select className="pt-st-input" defaultValue={timezone} disabled>
+                {[
+                  'Pacific/Honolulu','America/Anchorage','America/Los_Angeles','America/Denver',
+                  'America/Chicago','America/New_York','America/Sao_Paulo','Europe/London',
+                  'Europe/Amsterdam','Europe/Lisbon','Europe/Istanbul','Asia/Dubai',
+                  'Asia/Karachi','Asia/Kolkata','Asia/Bangkok','Asia/Singapore',
+                  'Asia/Shanghai','Asia/Tokyo','Australia/Sydney','Pacific/Auckland','UTC',
+                ].map(tz => <option key={tz} value={tz}>{tz}</option>)}
               </select>
             </div>
           </div>
