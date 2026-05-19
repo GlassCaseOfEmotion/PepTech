@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import type { OrderAttachment } from '@/types/orders'
 import {
   createOrderAttachmentUpload,
@@ -55,6 +56,7 @@ export function AttachmentsCard({ orderId, conversationId, customerName, invoice
   const [sendStates, setSendStates] = useState<Record<string, SendState>>({})
   const [lightbox, setLightbox] = useState<Lightbox | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
 
   useEffect(() => {
     if (!lightbox) return
@@ -82,7 +84,7 @@ export function AttachmentsCard({ orderId, conversationId, customerName, invoice
     })
     if (res.ok) {
       setSendState(attachment.id, 'sent')
-      setTimeout(() => setSendState(attachment.id, 'idle'), 2200)
+      setTimeout(() => setSendState(attachment.id, 'idle'), 4000)
     } else {
       setSendState(attachment.id, 'idle')
       setError('Send failed — please try again')
@@ -282,7 +284,13 @@ export function AttachmentsCard({ orderId, conversationId, customerName, invoice
                     <div className="pt-od-send-overlay">
                       <div className="pt-od-send-overlay-inner">
                         <div className="pt-od-send-check">✓</div>
-                        <div className="pt-od-send-to" style={{ marginTop: 6 }}>Sent</div>
+                        <div className="pt-od-send-to" style={{ marginTop: 4 }}>Sent</div>
+                        <button
+                          className="pt-od-send-goto"
+                          onClick={() => router.push(`/inbox?conversation=${conversationId}`)}
+                        >
+                          Go to chat →
+                        </button>
                       </div>
                     </div>
                   )}

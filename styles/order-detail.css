@@ -609,3 +609,20 @@
   from { transform: scale(0.4); opacity: 0; }
   to   { transform: scale(1);   opacity: 1; }
 }
+
+/* Go to chat button in sent state */
+.pt-od-send-goto {
+  margin-top: 2px;
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border: 0.5px solid rgba(255,255,255,0.3);
+  border-radius: 5px;
+  padding: 4px 10px;
+  font-size: 10.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, transform 0.1s;
+  letter-spacing: 0.01em;
+  animation: pt-od-overlay-in 0.3s 0.2s ease both;
+}
+.pt-od-send-goto:hover { background: rgba(255,255,255,0.26); transform: translateX(2px); }
