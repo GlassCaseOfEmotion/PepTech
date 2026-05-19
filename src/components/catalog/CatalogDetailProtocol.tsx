@@ -97,11 +97,11 @@ function ProtocolSection({ productId, protocol }: { productId: string; protocol:
         {protocol && !editing && (
           <dl className="pt-cat-proto-dl">
             {protocol.vial_strength && <><dt>Vial strength</dt><dd className="mono">{protocol.vial_strength}</dd></>}
-            <dt>Reconstitution</dt><dd className="mono">{protocol.reconstitution_ml} mL</dd>
+            <dt>Reconstitution</dt><dd>Add {protocol.reconstitution_ml} mL bacteriostatic water per vial</dd>
             <dt>Draw volume</dt>
             <dd className="mono">
-              {protocol.draw_volume_ml} mL
-              <span className="pt-cat-proto-derived"> → {Math.round(protocol.reconstitution_ml / protocol.draw_volume_ml)} doses/vial</span>
+              {protocol.draw_volume_ml} mL per injection
+              <span className="pt-cat-proto-derived"> · {Math.round(protocol.reconstitution_ml / protocol.draw_volume_ml)} doses/vial</span>
             </dd>
             <dt>Frequency</dt><dd>{FREQUENCY_LABELS[protocol.frequency as Frequency] ?? protocol.frequency}</dd>
             {protocol.timing && <><dt>Timing</dt><dd style={{ color: 'var(--pt-fg-3)' }}>{protocol.timing}</dd></>}

@@ -197,6 +197,12 @@
 .pt-cat-detail-hd .pt-cat-cat-pill { display: inline-block; }
 .pt-cat-detail-actions { display: flex; gap: 6px; }
 
+.pt-cat-description {
+  font-size: 13px; color: var(--pt-fg-3); line-height: 1.6;
+  margin: 0 0 16px; padding-bottom: 16px;
+  border-bottom: 0.5px solid var(--pt-line);
+}
+
 .pt-cat-note {
   display: flex; align-items: flex-start; gap: 8px;
   padding: 9px 12px;

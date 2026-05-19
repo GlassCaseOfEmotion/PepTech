@@ -164,6 +164,10 @@ export function CatalogDetailOverview({ product, baseCurrency }: {
 
   return (
     <>
+      {product.description && (
+        <p className="pt-cat-description">{product.description}</p>
+      )}
+
       {flag && (
         <div className={`pt-cat-note ${flag === 'oos' ? 'pt-cat-note-critical' : 'pt-cat-note-low'}`}>
           <i className="pt-cat-note-dot" />
