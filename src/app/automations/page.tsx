@@ -4,7 +4,7 @@ import { Shell } from '@/components/shell/Shell'
 import AutomationsView from '@/components/automations/AutomationsView'
 import { getAutomations } from './actions'
 
-// Automations page — WHEN→IF→THEN workflow builder
+// Automations page — WHEN→IF→THEN workflow builder (Pro)
 export default async function AutomationsPage() {
   const user = await getServerUser()
   if (!user) redirect('/login')
