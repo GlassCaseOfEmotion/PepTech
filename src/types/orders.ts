@@ -87,6 +87,17 @@ export type ShipmentRow = {
   deliveredAt: string | null
 }
 
+export type OrderAttachment = {
+  id: string
+  tenant_id: string
+  order_id: string
+  storage_path: string
+  file_name: string
+  mime_type: string
+  file_size: number | null
+  created_at: string
+}
+
 export function dbOrderToCard(o: DbOrderRow): OrderCard {
   const primaryChannel = o.customers?.customer_channels?.find(c => c.is_primary)
     ?? o.customers?.customer_channels?.[0]
