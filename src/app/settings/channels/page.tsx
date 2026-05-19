@@ -26,7 +26,17 @@ export default async function ChannelsPage() {
     .select('tenant_id')
     .single()
 
+  const { data: tenantRow } = await supabase
+    .from('tenants')
+    .select('intended_channels')
+    .eq('id', userRow?.tenant_id ?? '')
+    .single()
+
   const connected = Object.fromEntries((tenantChannels ?? []).map((c) => [c.channel_type, c]))
+
+  const intendedChannels: string[] = (tenantRow?.intended_channels ?? []) as string[]
+  const connectedTypes = new Set((tenantChannels ?? []).map((c: { channel_type: string }) => c.channel_type))
+  const pendingIntended = intendedChannels.filter(c => !connectedTypes.has(c))
 
   return (
     <div className="pt-st-section">
@@ -36,6 +46,24 @@ export default async function ChannelsPage() {
           <p>Inbound message channels — connect, configure, or rotate.</p>
         </div>
       </div>
+
+      {pendingIntended.length > 0 && (
+        <div className="ob-setup-nudge">
+          <div className="ob-setup-nudge-icon">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.4"/>
+              <line x1="8" y1="5" x2="8" y2="8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              <circle cx="8" cy="11" r="0.8" fill="currentColor"/>
+            </svg>
+          </div>
+          <div className="ob-setup-nudge-body">
+            <div className="ob-setup-nudge-title">Finish your setup</div>
+            <p className="ob-setup-nudge-sub">
+              You selected {pendingIntended.map(c => CHANNEL_META[c]?.label ?? c).join(' and ')} during onboarding — connect {pendingIntended.length === 1 ? 'it' : 'them'} below to start receiving messages.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Connected channels */}
       <section className="pt-card pt-st-card">
