@@ -18,7 +18,7 @@ const ORDER_SELECT = `
   ),
   order_items (
     id, qty, unit_price_snapshot,
-    products (sku, name),
+    products (id, sku, name),
     batches (batch_number, coa_path)
   )
 `

@@ -338,7 +338,11 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
                 <tbody>
                   {order.order_items.map(it => (
                     <tr key={it.id}>
-                      <td><span className="mono">{it.products?.sku ?? '—'}</span></td>
+                      <td>
+                        {it.products?.id
+                          ? <Link href={`/catalog?product=${it.products.id}`} className="pt-link mono">{it.products.sku}</Link>
+                          : <span className="mono">{it.products?.sku ?? '—'}</span>}
+                      </td>
                       <td>{it.products?.name ?? '—'}</td>
                       <td><span className="mono">{it.batches?.batch_number ?? '—'}</span></td>
                       <td>
