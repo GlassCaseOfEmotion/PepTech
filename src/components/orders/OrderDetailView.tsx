@@ -40,11 +40,12 @@ function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
-export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: {
+export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, customerStats }: {
   order: DbOrderRow
   events: DbOrderEvent[]
   chatExcerpt: { id: string; direction: string; content: string; sent_at: string }[]
   paymentConfigs: TenantPaymentConfig[]
+  customerStats?: { orderCount: number; lastOrderAt: string | null }
 }) {
   const [status, setStatus] = useState(order.status)
   const [notes, setNotes] = useState(order.notes ?? '')
@@ -484,6 +485,10 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs }: 
                 </div>
                 <div className="pt-od-cust-stats">
                   <div><span className="pt-od-stat-lbl">LTV</span><span className="mono">{formatAmount(order.customers.ltv, order.currency ?? 'USD')}</span></div>
+                  {customerStats && <>
+                    <div><span className="pt-od-stat-lbl">ORDERS</span><span className="mono">{customerStats.orderCount}</span></div>
+                    <div><span className="pt-od-stat-lbl">LAST</span><span className="mono">{customerStats.lastOrderAt ? `${Math.floor((Date.now() - new Date(customerStats.lastOrderAt).getTime()) / 86_400_000)}d` : '—'}</span></div>
+                  </>}
                 </div>
               </div>
             </section>

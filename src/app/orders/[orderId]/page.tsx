@@ -38,9 +38,21 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
 
   if (!order) notFound()
 
+  // Customer order stats (count + most recent order date)
+  const orderRow = order as unknown as DbOrderRow
+  const { count: customerOrderCount, data: latestOrders } = await supabase
+    .from('orders')
+    .select('created_at', { count: 'exact' })
+    .eq('customer_id', orderRow.customer_id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+  const customerStats = {
+    orderCount: customerOrderCount ?? 0,
+    lastOrderAt: latestOrders?.[0]?.created_at ?? null,
+  }
+
   // Fetch last 3 messages from linked conversation if present
   let chatExcerpt: { id: string; direction: string; content: string; sent_at: string }[] = []
-  const orderRow = order as unknown as DbOrderRow
   if (orderRow.conversation_id) {
     const { data: messages } = await supabase
       .from('messages')
@@ -58,6 +70,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
         events={(events ?? []) as DbOrderEvent[]}
         chatExcerpt={chatExcerpt}
         paymentConfigs={(paymentConfigs ?? []) as TenantPaymentConfig[]}
+        customerStats={customerStats}
       />
     </Shell>
   )
