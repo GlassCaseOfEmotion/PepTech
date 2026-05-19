@@ -447,8 +447,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                         return (
                           <li key={a.id}>
                             <i className={`pt-cu-act-dot${bullet ? ` pt-bul-${bullet}` : ''}`} />
-                            <span className="pt-cu-act-text"><b>{a.label}</b>{actDetail(a, baseCurrency)}</span>
-                            <span className="pt-cu-act-time">{fmtActivityDate(a.created_at)}</span>
+                            <span className="pt-cu-act-text"><b>{a.label}</b>{actDetail(a, baseCurrency)} · <span className="pt-cu-act-time">{fmtActivityDate(a.created_at)}</span></span>
                           </li>
                         )
                       })}
