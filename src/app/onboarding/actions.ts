@@ -116,6 +116,33 @@ export async function saveChannelIntent(
   return {}
 }
 
+const VALID_TIMEZONES = new Set([
+  'Pacific/Honolulu','America/Anchorage','America/Los_Angeles','America/Denver',
+  'America/Chicago','America/New_York','America/Sao_Paulo','Europe/London',
+  'Europe/Amsterdam','Europe/Lisbon','Europe/Istanbul','Asia/Dubai',
+  'Asia/Karachi','Asia/Kolkata','Asia/Bangkok','Asia/Singapore',
+  'Asia/Shanghai','Asia/Tokyo','Australia/Sydney','Pacific/Auckland','UTC',
+])
+
+export async function saveProfile(
+  displayName: string,
+  timezone: string,
+): Promise<{ error?: string }> {
+  const name = displayName.trim().slice(0, 80)
+  if (!name) return { error: 'Name is required' }
+  const tz = VALID_TIMEZONES.has(timezone) ? timezone : 'UTC'
+  const c = await ctx()
+  if (!c) return { error: 'Unauthorized' }
+  const [nameResult, tzResult] = await Promise.all([
+    c.supabase.from('users').update({ display_name: name }).eq('id', c.user.id),
+    c.supabase.from('tenants').update({ timezone: tz }).eq('id', c.tenantId),
+  ])
+  if (nameResult.error) return { error: nameResult.error.message }
+  if (tzResult.error) return { error: tzResult.error.message }
+  revalidatePath('/onboarding')
+  return {}
+}
+
 export async function completeOnboarding(): Promise<void> {
   const c = await ctx()
   if (!c) redirect('/login')

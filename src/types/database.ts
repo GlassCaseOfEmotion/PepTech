@@ -1302,6 +1302,7 @@ export type Database = {
           onboarded_at: string | null
           plan: string
           slug: string
+          timezone: string
           updated_at: string
         }
         Insert: {
@@ -1316,6 +1317,7 @@ export type Database = {
           onboarded_at?: string | null
           plan?: string
           slug: string
+          timezone?: string
           updated_at?: string
         }
         Update: {
@@ -1330,6 +1332,7 @@ export type Database = {
           onboarded_at?: string | null
           plan?: string
           slug?: string
+          timezone?: string
           updated_at?: string
         }
         Relationships: []

@@ -14,7 +14,7 @@ export default async function OnboardingPage() {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('business_type, base_currency, onboarded_at, name')
+    .select('business_type, base_currency, onboarded_at, name, timezone')
     .eq('id', userRow.tenant_id)
     .single()
 
@@ -36,6 +36,7 @@ export default async function OnboardingPage() {
       productCount={productCount ?? 0}
       businessName={tenant?.name ?? 'Your Business'}
       displayName={userRow?.display_name ?? ''}
+      initialTimezone={tenant?.timezone ?? 'UTC'}
     />
   )
 }

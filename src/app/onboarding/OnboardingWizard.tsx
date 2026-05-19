@@ -61,7 +61,7 @@ function Check() {
 }
 
 export function OnboardingWizard({
-  initialStep, initialBusinessType, initialCurrency, productCount, businessName, displayName,
+  initialStep, initialBusinessType, initialCurrency, productCount, businessName, displayName, initialTimezone,
 }: {
   initialStep: number
   initialBusinessType: string | null
@@ -69,6 +69,7 @@ export function OnboardingWizard({
   productCount: number
   businessName: string
   displayName: string
+  initialTimezone: string
 }) {
   const [step, setStep] = useState(initialStep)
   const [btype, setBtype] = useState<BusinessType | null>(initialBusinessType as BusinessType | null)
