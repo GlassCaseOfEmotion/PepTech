@@ -1,8 +1,19 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { saveBusinessType, saveCurrency, seedCatalog, completeOnboarding } from './actions'
+import { saveBusinessType, saveCurrency, seedCatalog, completeOnboarding, saveChannelIntent } from './actions'
 import { CATALOG_PRESETS, type BusinessType, type PresetProduct } from '@/lib/catalog-presets'
+
+const CHANNELS = [
+  { id: 'whatsapp', label: 'WhatsApp Business', dot: '#25d366', hint: 'Most popular with customers' },
+  { id: 'telegram', label: 'Telegram Bot',       dot: '#2aabee', hint: 'Fast & reliable' },
+  { id: 'email',    label: 'Email (IMAP/OAuth)',  dot: '#8b97a8', hint: 'Connect your business inbox' },
+]
+const COMING_SOON = [
+  { label: 'Instagram DMs', dot: '#e1306c' },
+  { label: 'Signal',        dot: '#3a76f0' },
+  { label: 'SMS',           dot: '#888' },
+]
 
 const FAMILY_COLORS: Record<string, string> = {
   'GLP-1':    '#5b9bd5',
@@ -69,6 +80,7 @@ export function OnboardingWizard({
   const [selectedSkus, setSelectedSkus] = useState<Set<string>>(
     () => new Set((initialBusinessType ? CATALOG_PRESETS[initialBusinessType as BusinessType] : []).map(p => p.sku))
   )
+  const [intendedChannels, setIntendedChannels] = useState<Set<string>>(new Set(['whatsapp']))
 
   const chapter = CHAPTER[step] ?? CHAPTER[1]
   const presets = btype ? CATALOG_PRESETS[btype] : []
@@ -79,6 +91,14 @@ export function OnboardingWizard({
     setSelectedSkus(prev => {
       const next = new Set(prev)
       if (next.has(sku)) next.delete(sku); else next.add(sku)
+      return next
+    })
+  }
+
+  function toggleChannel(id: string) {
+    setIntendedChannels(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
       return next
     })
   }
@@ -114,7 +134,10 @@ export function OnboardingWizard({
 
   function handleComplete() {
     setCompleting(true)
-    start(async () => { await completeOnboarding() })
+    start(async () => {
+      await saveChannelIntent([...intendedChannels]).catch(() => {})
+      await completeOnboarding()
+    })
   }
 
   return (
@@ -386,30 +409,46 @@ export function OnboardingWizard({
           </div>
         )}
 
-        {/* Step 4: Channels */}
+        {/* Step 4: Channel intent */}
         {!completing && step === 4 && (
           <div className="ob-step" key="channels">
             <div className="ob-step-hd">
-              <h2 className="ob-step-title">Connect a channel</h2>
+              <h2 className="ob-step-title">How will you reach customers?</h2>
               <p className="ob-step-sub">
-                Channels let customers reach you and let Peptech auto-send invoices, order updates, and payment requests.
+                Pick the channels you plan to use. You&apos;ll connect them in Settings — it takes about 2 minutes each.
               </p>
             </div>
-            <div className="ob-ch-list">
-              {[
-                { dot: '#25d366', name: 'WhatsApp Business', hint: 'Most popular · Set up in Settings → Channels' },
-                { dot: '#2aabee', name: 'Telegram Bot',       hint: 'Fast & reliable · Set up in Settings → Channels' },
-                { dot: '#8b97a8', name: 'Email (IMAP)',        hint: 'Connect your business inbox · Settings → Channels' },
-              ].map(ch => (
-                <div key={ch.name} className="ob-ch-row">
-                  <span className="ob-ch-dot" style={{ background: ch.dot }} />
-                  <div>
-                    <div className="ob-ch-name">{ch.name}</div>
-                    <div className="ob-ch-hint">{ch.hint}</div>
-                  </div>
+
+            <div className="ob-ch-chips">
+              {CHANNELS.map(ch => {
+                const sel = intendedChannels.has(ch.id)
+                return (
+                  <button
+                    key={ch.id}
+                    className={`ob-ch-chip${sel ? ' sel' : ''}`}
+                    onClick={() => toggleChannel(ch.id)}
+                  >
+                    <span className="ob-ch-chip-dot" style={{ background: ch.dot }} />
+                    <div className="ob-ch-chip-body">
+                      <div className="ob-ch-chip-name">{ch.label}</div>
+                      <div className="ob-ch-chip-hint">{ch.hint}</div>
+                    </div>
+                    <div className="ob-ch-chip-check">{sel && <Check />}</div>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="ob-ch-coming-list">
+              {COMING_SOON.map(ch => (
+                <div key={ch.label} className="ob-ch-coming">
+                  <span className="ob-ch-coming-dot" style={{ background: ch.dot }} />
+                  {ch.label}
+                  <span className="ob-ch-soon-badge">Soon</span>
                 </div>
               ))}
             </div>
+
             {seeded > 0 && (
               <div className="ob-toast">
                 <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
@@ -419,10 +458,11 @@ export function OnboardingWizard({
                 {seeded} products added to your catalog
               </div>
             )}
+
             <div className="ob-foot">
               <button className="ob-btn ob-btn-ghost" onClick={() => setStep(3)}>← Back</button>
               <button className="ob-btn ob-btn-primary" onClick={handleComplete} disabled={pending || completing}>
-                {pending ? 'Setting up…' : 'Go to dashboard →'}
+                {pending ? 'Setting up…' : 'Save & go to dashboard →'}
               </button>
             </div>
             {err && <p className="ob-err">{err}</p>}
