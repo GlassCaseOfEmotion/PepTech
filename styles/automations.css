@@ -231,6 +231,7 @@
   background: var(--pt-warn);
   animation: ptVtPulse 1.4s ease-in-out infinite;
 }
+.pt-au-run-bullet-scheduled { background: oklch(60% 0.15 250); }
 .pt-au-run-who { font-weight: 500; color: var(--pt-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pt-au-run-action {
   color: var(--pt-fg-3);
