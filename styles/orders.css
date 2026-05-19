@@ -256,3 +256,29 @@
   color: var(--pt-fg);
 }
 .pt-co-customer-option:hover { background: var(--pt-hover); }
+
+/* More menu dropdown */
+.pt-od-more-menu {
+  position: absolute; top: calc(100% + 4px); right: 0; z-index: 100;
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line);
+  border-radius: var(--pt-radius);
+  box-shadow: 0 4px 16px oklch(0 0 0 / 0.12);
+  min-width: 160px; overflow: hidden;
+}
+.pt-od-more-menu button {
+  display: block; width: 100%; text-align: left;
+  padding: 8px 14px; font-size: 13px; background: none; border: none;
+  cursor: pointer; color: var(--pt-fg);
+}
+.pt-od-more-menu button:hover { background: var(--pt-hover); }
+
+/* Locked-field notice */
+.pt-od-locked-notice {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 10px;
+  background: oklch(from var(--pt-fg) l c h / 0.04);
+  border: 0.5px solid var(--pt-line);
+  border-radius: var(--pt-radius-sm);
+  font-size: 11.5px; color: var(--pt-fg-3);
+}
