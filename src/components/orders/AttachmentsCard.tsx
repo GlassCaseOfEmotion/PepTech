@@ -10,6 +10,30 @@ import {
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
+function DocTile({ label, accent }: { label: string; accent: string }) {
+  return (
+    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${accent}0d` }}>
+      <svg width="52" height="64" viewBox="0 0 52 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Page body */}
+        <rect x="2" y="2" width="40" height="52" rx="3" fill="white" stroke={`${accent}30`} strokeWidth="1.5" />
+        {/* Folded corner */}
+        <path d="M30 2 L42 14 L30 14 Z" fill={`${accent}18`} />
+        <path d="M30 2 L42 14" stroke={`${accent}50`} strokeWidth="1.5" strokeLinecap="round" />
+        {/* Content lines */}
+        <rect x="8" y="22" width="24" height="2" rx="1" fill={`${accent}30`} />
+        <rect x="8" y="28" width="28" height="2" rx="1" fill={`${accent}20`} />
+        <rect x="8" y="34" width="20" height="2" rx="1" fill={`${accent}20`} />
+        <rect x="8" y="40" width="26" height="2" rx="1" fill={`${accent}20`} />
+        {/* Label badge */}
+        <rect x="0" y="46" width="52" height="18" rx="3" fill={accent} />
+        <text x="26" y="59" textAnchor="middle" fill="white" fontSize="8.5" fontWeight="600" fontFamily="monospace" letterSpacing="0.08em">
+          {label}
+        </text>
+      </svg>
+    </div>
+  )
+}
+
 type Lightbox = { url: string | null; type: 'image' | 'video'; loading: boolean }
 
 type Props = {
@@ -189,12 +213,7 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
                   className="pt-media-tile-thumb"
                   title={`Invoice #${invoice.invoice_number}`}
                 >
-                  <div className="pt-media-thumb-pdf">
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                      <span className="pt-media-pdf-icon">PDF</span>
-                      <span style={{ fontSize: 9, color: 'var(--pt-fg-4)', fontFamily: 'var(--pt-mono)' }}>#{invoice.invoice_number}</span>
-                    </div>
-                  </div>
+                  <DocTile label={`#${invoice.invoice_number}`} accent="#3b6ef0" />
                 </a>
               </div>
             )}
@@ -213,9 +232,7 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
                         <span className="pt-media-play-icon">▶</span>
                       </div>
                     ) : (
-                      <div className="pt-media-thumb-pdf">
-                        <span className="pt-media-pdf-icon">PDF</span>
-                      </div>
+                      <DocTile label="PDF" accent="#e05c3a" />
                     )}
                   </button>
 
