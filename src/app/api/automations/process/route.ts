@@ -315,6 +315,85 @@ async function processProtocolProgressAutomations(
 }
 
 // ---------------------------------------------------------------------------
+// Scheduled-run (deferred) handler
+// ---------------------------------------------------------------------------
+
+async function processScheduledRuns(
+  supabase: ReturnType<typeof createServiceClient>,
+): Promise<number> {
+  const now = new Date().toISOString()
+
+  const { data: dueRuns, error } = await supabase
+    .from('automation_runs')
+    .select('id, automation_id, tenant_id, action_payload, context_ref')
+    .eq('state', 'scheduled')
+    .lte('fire_at', now)
+    .limit(100)
+
+  if (error || !dueRuns || dueRuns.length === 0) return 0
+
+  let processed = 0
+  for (const run of dueRuns) {
+    try {
+      const { data: rawAuto } = await supabase
+        .from('automations')
+        .select('*')
+        .eq('id', run.automation_id)
+        .eq('tenant_id', run.tenant_id)
+        .single()
+
+      // If automation was deleted or disabled since scheduling, skip
+      if (!rawAuto || rawAuto.state !== 'on') {
+        await supabase.from('automation_runs')
+          .update({ state: 'skip', action_summary: 'Automation was disabled before fire time' })
+          .eq('id', run.id)
+        processed++
+        continue
+      }
+
+      const automation = rawAuto as unknown as Automation
+
+      // Re-evaluate conditions with the stored context
+      const storedPayload = run.action_payload as { context?: { customerId?: string | null; orderId?: string | null; conversationId?: string | null } } | null
+      const ctx = {
+        customerId: storedPayload?.context?.customerId ?? undefined,
+        orderId: storedPayload?.context?.orderId ?? undefined,
+        conversationId: storedPayload?.context?.conversationId ?? undefined,
+      }
+
+      const condResults = await Promise.all(
+        (automation.conditions as Condition[]).map(c => evaluateCondition(c, ctx, supabase)),
+      )
+      if (condResults.some(r => !r)) {
+        await supabase.from('automation_runs')
+          .update({ state: 'skip', action_summary: 'Conditions no longer met at fire time' })
+          .eq('id', run.id)
+        processed++
+        continue
+      }
+
+      // Execute the action
+      const result = await executeAction(automation, ctx, supabase)
+      await supabase.from('automation_runs')
+        .update({
+          state: result.state,
+          action_summary: result.action_summary,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ...(result.action_payload ? { action_payload: result.action_payload as any } : {}),
+        })
+        .eq('id', run.id)
+      processed++
+    } catch (e) {
+      await supabase.from('automation_runs')
+        .update({ state: 'err', action_summary: e instanceof Error ? e.message : 'Unknown error' })
+        .eq('id', run.id)
+      processed++
+    }
+  }
+  return processed
+}
+
+// ---------------------------------------------------------------------------
 // GET handler — called by Vercel Cron every hour
 // ---------------------------------------------------------------------------
 
@@ -325,12 +404,11 @@ export async function GET(request: Request): Promise<Response> {
 
   const supabase = createServiceClient()
 
-  const [scheduleCount, protocolCount] = await Promise.all([
+  const [scheduleCount, protocolCount, deferredCount] = await Promise.all([
     processScheduleAutomations(supabase),
     processProtocolProgressAutomations(supabase),
+    processScheduledRuns(supabase),
   ])
 
-  const processed = scheduleCount + protocolCount
-
-  return Response.json({ ok: true, processed })
+  return Response.json({ ok: true, processed: scheduleCount + protocolCount + deferredCount })
 }
