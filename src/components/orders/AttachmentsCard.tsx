@@ -34,6 +34,53 @@ function DocTile({ label, accent }: { label: string; accent: string }) {
   )
 }
 
+function SendOverlay({ state, customerName, conversationId, onConfirm, onSend, onCancel, onNavigate }: {
+  state: SendState
+  customerName: string
+  conversationId: string
+  onConfirm: () => void
+  onSend: () => void
+  onCancel: () => void
+  onNavigate: () => void
+}) {
+  if (state === 'idle') return (
+    <button className="pt-od-send-bar" onClick={onConfirm}>
+      Send to {customerName}
+    </button>
+  )
+  if (state === 'confirming') return (
+    <div className="pt-od-send-overlay">
+      <div className="pt-od-send-overlay-inner">
+        <div className="pt-od-send-to">Send to</div>
+        <div className="pt-od-send-name">{customerName}</div>
+        <div className="pt-od-send-btns">
+          <button className="pt-od-send-confirm-btn" onClick={onSend}>Send</button>
+          <button className="pt-od-send-cancel-btn" onClick={onCancel}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  )
+  if (state === 'sending') return (
+    <div className="pt-od-send-overlay">
+      <div className="pt-od-send-overlay-inner">
+        <div className="pt-od-send-to" style={{ marginBottom: 10 }}>Sending…</div>
+        <div className="pt-od-send-progressbar">
+          <div className="pt-od-send-progressbar-fill" />
+        </div>
+      </div>
+    </div>
+  )
+  return (
+    <div className="pt-od-send-overlay">
+      <div className="pt-od-send-overlay-inner">
+        <div className="pt-od-send-check">✓</div>
+        <div className="pt-od-send-to" style={{ marginTop: 4 }}>Sent</div>
+        <button className="pt-od-send-goto" onClick={onNavigate}>Go to chat →</button>
+      </div>
+    </div>
+  )
+}
+
 type Props = {
   orderId: string
   conversationId: string | null
@@ -54,6 +101,7 @@ export function AttachmentsCard({ orderId, conversationId, customerName, invoice
   const [error, setError] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [sendStates, setSendStates] = useState<Record<string, SendState>>({})
+  const [invoiceSendState, setInvoiceSendState] = useState<SendState>('idle')
   const [lightbox, setLightbox] = useState<Lightbox | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
@@ -73,22 +121,31 @@ export function AttachmentsCard({ orderId, conversationId, customerName, invoice
     setSendStates(prev => ({ ...prev, [id]: state }))
   }
 
-  async function doSend(attachment: OrderAttachment) {
+  async function doSend(storagePath: string, bucket: string, id: string, setFn: (s: SendState) => void) {
     if (!conversationId) return
-    setSendState(attachment.id, 'sending')
+    setFn('sending')
     setError('')
     const res = await fetch('/api/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ conversationId, storagePath: attachment.storage_path, bucket: 'media' }),
+      body: JSON.stringify({ conversationId, storagePath, bucket }),
     })
     if (res.ok) {
-      setSendState(attachment.id, 'sent')
-      setTimeout(() => setSendState(attachment.id, 'idle'), 4000)
+      setFn('sent')
+      setTimeout(() => setFn('idle'), 4000)
     } else {
-      setSendState(attachment.id, 'idle')
+      setFn('idle')
       setError('Send failed — please try again')
     }
+  }
+
+  function doSendAttachment(attachment: OrderAttachment) {
+    return doSend(attachment.storage_path, 'media', attachment.id, (s) => setSendState(attachment.id, s))
+  }
+
+  function doSendInvoice() {
+    if (!invoice) return
+    return doSend(invoice.pdf_path, 'invoices', 'invoice', setInvoiceSendState)
   }
 
   async function openAttachment(a: OrderAttachment) {
@@ -213,6 +270,15 @@ export function AttachmentsCard({ orderId, conversationId, customerName, invoice
                 <a href={invoice.signedUrl} target="_blank" rel="noopener noreferrer" className="pt-media-tile-thumb" title={`Invoice #${invoice.invoice_number}`}>
                   <DocTile label={`#${invoice.invoice_number}`} accent="#3b6ef0" />
                 </a>
+                {conversationId && <SendOverlay
+                  state={invoiceSendState}
+                  customerName={customerName}
+                  conversationId={conversationId}
+                  onConfirm={() => setInvoiceSendState('confirming')}
+                  onSend={() => void doSendInvoice()}
+                  onCancel={() => setInvoiceSendState('idle')}
+                  onNavigate={() => router.push(`/inbox?conversation=${conversationId}`)}
+                />}
               </div>
             )}
 
@@ -243,57 +309,15 @@ export function AttachmentsCard({ orderId, conversationId, customerName, invoice
                   </button>
 
                   {/* Send flow — only when conversation exists */}
-                  {conversationId && sendState === 'idle' && (
-                    <button
-                      className="pt-od-send-bar"
-                      onClick={() => setSendState(a.id, 'confirming')}
-                    >
-                      Send to {customerName}
-                    </button>
-                  )}
-
-                  {conversationId && sendState === 'confirming' && (
-                    <div className="pt-od-send-overlay">
-                      <div className="pt-od-send-overlay-inner">
-                        <div className="pt-od-send-to">Send to</div>
-                        <div className="pt-od-send-name">{customerName}</div>
-                        <div className="pt-od-send-btns">
-                          <button className="pt-od-send-confirm-btn" onClick={() => void doSend(a)}>
-                            Send
-                          </button>
-                          <button className="pt-od-send-cancel-btn" onClick={() => setSendState(a.id, 'idle')}>
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {conversationId && sendState === 'sending' && (
-                    <div className="pt-od-send-overlay">
-                      <div className="pt-od-send-overlay-inner">
-                        <div className="pt-od-send-to" style={{ marginBottom: 10 }}>Sending…</div>
-                        <div className="pt-od-send-progressbar">
-                          <div className="pt-od-send-progressbar-fill" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {conversationId && sendState === 'sent' && (
-                    <div className="pt-od-send-overlay">
-                      <div className="pt-od-send-overlay-inner">
-                        <div className="pt-od-send-check">✓</div>
-                        <div className="pt-od-send-to" style={{ marginTop: 4 }}>Sent</div>
-                        <button
-                          className="pt-od-send-goto"
-                          onClick={() => router.push(`/inbox?conversation=${conversationId}`)}
-                        >
-                          Go to chat →
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  {conversationId && <SendOverlay
+                    state={sendState}
+                    customerName={customerName}
+                    conversationId={conversationId}
+                    onConfirm={() => setSendState(a.id, 'confirming')}
+                    onSend={() => void doSendAttachment(a)}
+                    onCancel={() => setSendState(a.id, 'idle')}
+                    onNavigate={() => router.push(`/inbox?conversation=${conversationId}`)}
+                  />}
 
                   {/* Delete — hidden during send flow */}
                   {sendState === 'idle' && (

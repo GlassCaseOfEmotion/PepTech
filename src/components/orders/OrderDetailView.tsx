@@ -58,6 +58,14 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
   const [notes, setNotes] = useState(order.notes ?? '')
   const [notesError, setNotesError] = useState('')
   const [showInvoiceModal, setShowInvoiceModal] = useState(false)
+  const [currentInvoice, setCurrentInvoice] = useState(invoice)
+
+  async function handleInvoiceGenerated(pdfPath: string, invoiceNumber: string) {
+    const res = await fetch(`/api/invoices/preview?path=${encodeURIComponent(pdfPath)}`)
+    if (!res.ok) return
+    const { url } = await res.json() as { url: string }
+    setCurrentInvoice({ id: '', invoice_number: invoiceNumber, pdf_path: pdfPath, signedUrl: url })
+  }
   const [pending, startTransition] = useTransition()
   const savingRef = useRef(false)
   const router = useRouter()
@@ -189,7 +197,7 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
         </div>
       </div>
       {showInvoiceModal && (
-        <SendInvoiceModal order={order} onClose={() => setShowInvoiceModal(false)} />
+        <SendInvoiceModal order={order} onClose={() => setShowInvoiceModal(false)} onGenerated={handleInvoiceGenerated} />
       )}
       {showShipModal && (
         <ShipOrderModal
@@ -506,7 +514,7 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
             orderId={order.id}
             conversationId={sendConversationId}
             customerName={order.customers?.display_name ?? 'customer'}
-            invoice={invoice}
+            invoice={currentInvoice}
             initialAttachments={attachments}
             attachmentSignedUrls={attachmentSignedUrls}
             attachmentThumbnailUrls={attachmentThumbnailUrls}

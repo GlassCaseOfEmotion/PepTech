@@ -11,6 +11,7 @@ import { formatAmount } from '@/lib/currency'
 interface SendInvoiceModalProps {
   order: DbOrderRow
   onClose: () => void
+  onGenerated?: (pdfPath: string, invoiceNumber: string) => void
 }
 
 interface ExistingInvoice {
@@ -19,7 +20,7 @@ interface ExistingInvoice {
   created_at: string
 }
 
-export function SendInvoiceModal({ order, onClose }: SendInvoiceModalProps) {
+export function SendInvoiceModal({ order, onClose, onGenerated }: SendInvoiceModalProps) {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const [pending, startTransition] = useTransition()
@@ -66,6 +67,7 @@ export function SendInvoiceModal({ order, onClose }: SendInvoiceModalProps) {
         return
       }
       const { pdfPath } = await res.json() as { pdfPath: string }
+      onGenerated?.(pdfPath, invoiceNumber)
       if (isRegenerate) {
         setExisting({ invoice_number: invoiceNumber, pdf_path: pdfPath, created_at: new Date().toISOString() })
         return
