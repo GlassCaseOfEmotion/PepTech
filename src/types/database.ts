@@ -1407,6 +1407,54 @@ export type Database = {
           },
         ]
       }
+      order_attachments: {
+        Row: {
+          id: string
+          tenant_id: string
+          order_id: string
+          storage_path: string
+          file_name: string
+          mime_type: string
+          file_size: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          order_id: string
+          storage_path: string
+          file_name: string
+          mime_type: string
+          file_size?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          order_id?: string
+          storage_path?: string
+          file_name?: string
+          mime_type?: string
+          file_size?: number | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_attachments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       customer_activity: {
