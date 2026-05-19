@@ -16,8 +16,10 @@ export async function GET(request: Request) {
   }
 
   const widthParam = searchParams.get('width')
+  const heightParam = searchParams.get('height')
   const width = widthParam ? parseInt(widthParam, 10) : undefined
-  const transform = width && !isNaN(width) ? { width, quality: 80, resize: 'cover' as const } : undefined
+  const height = heightParam ? parseInt(heightParam, 10) : undefined
+  const transform = width && !isNaN(width) ? { width, ...(height && !isNaN(height) ? { height } : {}), quality: 80, resize: 'cover' as const } : undefined
 
   const { data, error } = await supabase.storage
     .from('media')

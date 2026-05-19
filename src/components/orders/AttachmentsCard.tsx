@@ -129,7 +129,7 @@ export function AttachmentsCard({ orderId, conversationId, invoice, initialAttac
     const [signedRes, thumbRes] = await Promise.all([
       fetch(`/api/attachments/signed-url?path=${encodeURIComponent(result.storagePath)}`),
       isImage
-        ? fetch(`/api/attachments/signed-url?path=${encodeURIComponent(result.storagePath)}&width=300`)
+        ? fetch(`/api/attachments/signed-url?path=${encodeURIComponent(result.storagePath)}&width=300&height=300`)
         : Promise.resolve(null),
     ])
     if (signedRes.ok) {
