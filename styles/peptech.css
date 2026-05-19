@@ -1824,6 +1824,49 @@ kbd {
 .ob-ch-name { font-size: 13.5px; font-weight: 600; color: var(--pt-fg); }
 .ob-ch-hint { font-size: 11px; color: var(--pt-fg-4); margin-top: 2px; }
 
+/* Channel intent chips (onboarding Step 4) */
+.ob-ch-chips { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.ob-ch-chip {
+  display: flex; align-items: center; gap: 13px;
+  padding: 13px 16px;
+  background: var(--pt-surface);
+  border: 1px solid var(--pt-line);
+  border-radius: 10px; cursor: pointer; text-align: left;
+  transition: border-color 140ms, background 140ms;
+}
+.ob-ch-chip:hover    { border-color: var(--pt-fg-3); }
+.ob-ch-chip.sel      { border-color: var(--pt-accent); background: var(--pt-accent-soft); }
+.ob-ch-chip-dot      { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.ob-ch-chip-body     { flex: 1; min-width: 0; }
+.ob-ch-chip-name     { font-size: 13.5px; font-weight: 500; color: var(--pt-fg); margin-bottom: 2px; }
+.ob-ch-chip-hint     { font-size: 11.5px; color: var(--pt-fg-4); }
+.ob-ch-chip-check {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--pt-accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; opacity: 0;
+  transition: opacity 150ms;
+}
+.ob-ch-chip.sel .ob-ch-chip-check { opacity: 1; }
+
+/* Coming soon channel pills */
+.ob-ch-coming-list { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 20px; }
+.ob-ch-coming {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 11px;
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line);
+  border-radius: 20px; opacity: 0.45;
+  font-size: 12px; color: var(--pt-fg-3);
+  user-select: none;
+}
+.ob-ch-coming-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.ob-ch-soon-badge {
+  font-family: var(--pt-mono); font-size: 8.5px;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--pt-fg-4); margin-left: 2px;
+}
+
 /* Toast */
 .ob-toast {
   display: flex; align-items: center; gap: 8px;
@@ -2131,3 +2174,16 @@ kbd {
 }
 .pt-settings-banner svg { color: var(--pt-warn); flex-shrink: 0; margin-top: 1px; }
 .pt-settings-banner p { margin: 0; }
+
+/* Channel setup nudge (Settings → Channels) */
+.ob-setup-nudge {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 16px; margin-bottom: 20px;
+  background: var(--pt-accent-soft);
+  border: 0.5px solid oklch(from var(--pt-accent) l c h / 0.4);
+  border-radius: var(--pt-radius);
+}
+.ob-setup-nudge-icon { flex-shrink: 0; margin-top: 1px; color: var(--pt-accent); }
+.ob-setup-nudge-body { flex: 1; font-size: 13px; }
+.ob-setup-nudge-title { font-weight: 600; color: var(--pt-fg); margin-bottom: 3px; }
+.ob-setup-nudge-sub   { color: var(--pt-fg-3); font-size: 12px; line-height: 1.5; margin: 0; }
