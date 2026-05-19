@@ -1,7 +1,7 @@
 export type TriggerType = 'protocol_progress' | 'schedule' | 'new_thread' | 'order_state'
 export type ActionType = 'send_dm' | 'operator_alert' | 'score_adjust' | 'operator_task'
 export type AutoState = 'on' | 'off' | 'paused'
-export type RunState = 'ok' | 'skip' | 'warn' | 'err' | 'queued'
+export type RunState = 'ok' | 'skip' | 'warn' | 'err' | 'queued' | 'scheduled'
 
 export type Condition = {
   type: 'trust_score' | 'ltv' | 'last_message_hours' | 'is_new_customer'

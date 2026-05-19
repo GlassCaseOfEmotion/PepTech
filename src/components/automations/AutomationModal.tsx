@@ -77,23 +77,85 @@ export default function AutomationModal({ mode, automation, onClose }: Props) {
       }
       case 'new_thread':
         return (
-          <p className="pt-au-modal-hint">When a new inbound thread opens</p>
+          <>
+            <p className="pt-au-modal-hint">When a new inbound thread opens</p>
+            <div style={{ marginTop: 10 }}>
+              <div className="pt-modal-label" style={{ marginBottom: 4 }}>
+                Delay <span style={{ color: 'var(--pt-fg-4)', fontWeight: 400 }}>(optional)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  className="pt-input"
+                  type="number"
+                  min="0"
+                  max="365"
+                  style={{ width: 72 }}
+                  placeholder="0"
+                  value={(triggerParams.delay_days as number | undefined) ?? ''}
+                  onChange={e => {
+                    const val = parseInt(e.target.value, 10)
+                    setTriggerParams(prev => ({
+                      ...prev,
+                      delay_days: isNaN(val) || val <= 0 ? undefined : val,
+                    }))
+                  }}
+                />
+                <span style={{ fontSize: 13, color: 'var(--pt-fg-3)' }}>days after trigger</span>
+              </div>
+              {(triggerParams.delay_days as number) > 0 && (
+                <p style={{ fontSize: 11.5, color: 'var(--pt-fg-4)', marginTop: 4, marginBottom: 0 }}>
+                  Action will fire {triggerParams.delay_days as number} day{(triggerParams.delay_days as number) !== 1 ? 's' : ''} after the event. Disable the automation before then to cancel it.
+                </p>
+              )}
+            </div>
+          </>
         )
       case 'order_state': {
         const status = (triggerParams.to_status as string | undefined) ?? 'shipped'
         return (
-          <div className="pt-au-modal-field">
-            <label className="pt-au-modal-field-label">Order moves to</label>
-            <select
-              className="pt-input"
-              value={status}
-              onChange={e => setTriggerParams({ to_status: e.target.value })}
-            >
-              {ORDER_STATUSES.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
+          <>
+            <div className="pt-au-modal-field">
+              <label className="pt-au-modal-field-label">Order moves to</label>
+              <select
+                className="pt-input"
+                value={status}
+                onChange={e => setTriggerParams(prev => ({ ...prev, to_status: e.target.value }))}
+              >
+                {ORDER_STATUSES.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <div className="pt-modal-label" style={{ marginBottom: 4 }}>
+                Delay <span style={{ color: 'var(--pt-fg-4)', fontWeight: 400 }}>(optional)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  className="pt-input"
+                  type="number"
+                  min="0"
+                  max="365"
+                  style={{ width: 72 }}
+                  placeholder="0"
+                  value={(triggerParams.delay_days as number | undefined) ?? ''}
+                  onChange={e => {
+                    const val = parseInt(e.target.value, 10)
+                    setTriggerParams(prev => ({
+                      ...prev,
+                      delay_days: isNaN(val) || val <= 0 ? undefined : val,
+                    }))
+                  }}
+                />
+                <span style={{ fontSize: 13, color: 'var(--pt-fg-3)' }}>days after trigger</span>
+              </div>
+              {(triggerParams.delay_days as number) > 0 && (
+                <p style={{ fontSize: 11.5, color: 'var(--pt-fg-4)', marginTop: 4, marginBottom: 0 }}>
+                  Action will fire {triggerParams.delay_days as number} day{(triggerParams.delay_days as number) !== 1 ? 's' : ''} after the event. Disable the automation before then to cancel it.
+                </p>
+              )}
+            </div>
+          </>
         )
       }
     }

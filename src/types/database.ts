@@ -108,6 +108,7 @@ export type Database = {
           context_label: string | null
           context_ref: string | null
           created_at: string
+          fire_at: string | null
           id: string
           state: string
           tenant_id: string
@@ -119,6 +120,7 @@ export type Database = {
           context_label?: string | null
           context_ref?: string | null
           created_at?: string
+          fire_at?: string | null
           id?: string
           state: string
           tenant_id: string
@@ -130,6 +132,7 @@ export type Database = {
           context_label?: string | null
           context_ref?: string | null
           created_at?: string
+          fire_at?: string | null
           id?: string
           state?: string
           tenant_id?: string
