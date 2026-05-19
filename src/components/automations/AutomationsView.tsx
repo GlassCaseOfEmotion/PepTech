@@ -263,7 +263,11 @@ export default function AutomationsView({ automations }: Props) {
                         <span className="pt-au-run-time mono">{formatRelativeTime(r.created_at)}</span>
                         <span className={`pt-au-run-bullet pt-au-run-bullet-${r.state}`} />
                         <span className="pt-au-run-who">{r.context_label ?? r.context_ref ?? '—'}</span>
-                        <span className="pt-au-run-action">{r.action_summary ?? r.state}</span>
+                        <span className="pt-au-run-action">
+                          {r.state === 'scheduled'
+                            ? (r.context_label ?? 'Scheduled')
+                            : (r.action_summary ?? r.state)}
+                        </span>
                       </li>
                     ))}
                   </ul>
