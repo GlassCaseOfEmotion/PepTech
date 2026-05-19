@@ -8,8 +8,9 @@ import { updateOrderStatus, saveOrderNotes, confirmPayment, packOrder } from '@/
 import { buildPaymentMessage } from '@/lib/payments'
 import { PAYMENT_LABELS, PAYMENT_BADGE } from '@/types/payments'
 import type { TenantPaymentConfig } from '@/types/payments'
-import type { DbOrderRow, DbOrderEvent, OrderStatus } from '@/types/orders'
+import type { DbOrderRow, DbOrderEvent, OrderStatus, OrderAttachment } from '@/types/orders'
 import { SendInvoiceModal } from './SendInvoiceModal'
+import { AttachmentsCard } from './AttachmentsCard'
 import { ShipOrderModal } from './ShipOrderModal'
 import { formatAmount } from '@/lib/currency'
 
@@ -40,12 +41,15 @@ function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
-export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, customerStats }: {
+export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, customerStats, invoice, attachments, attachmentSignedUrls }: {
   order: DbOrderRow
   events: DbOrderEvent[]
   chatExcerpt: { id: string; direction: string; content: string; sent_at: string }[]
   paymentConfigs: TenantPaymentConfig[]
   customerStats?: { orderCount: number; lastOrderAt: string | null }
+  invoice: { id: string; invoice_number: string; pdf_path: string; signedUrl: string } | null
+  attachments: OrderAttachment[]
+  attachmentSignedUrls: Record<string, string>
 }) {
   const [status, setStatus] = useState(order.status)
   const [notes, setNotes] = useState(order.notes ?? '')
@@ -493,6 +497,15 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
               </div>
             </section>
           )}
+
+          {/* Attachments */}
+          <AttachmentsCard
+            orderId={order.id}
+            conversationId={order.conversation_id ?? null}
+            invoice={invoice}
+            initialAttachments={attachments}
+            attachmentSignedUrls={attachmentSignedUrls}
+          />
 
           {/* Activity timeline */}
           <section className="pt-card">

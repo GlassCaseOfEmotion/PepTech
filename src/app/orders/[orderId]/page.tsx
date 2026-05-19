@@ -4,7 +4,7 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient, getServerUser } from '@/lib/supabase/server'
 import { Shell } from '@/components/shell/Shell'
 import { OrderDetailView } from '@/components/orders/OrderDetailView'
-import type { DbOrderRow, DbOrderEvent } from '@/types/orders'
+import type { DbOrderRow, DbOrderEvent, OrderAttachment } from '@/types/orders'
 import type { TenantPaymentConfig } from '@/types/payments'
 
 const ORDER_SELECT = `
@@ -38,18 +38,55 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
 
   if (!order) notFound()
 
-  // Customer order stats (count + most recent order date)
   const orderRow = order as unknown as DbOrderRow
-  const { count: customerOrderCount, data: latestOrders } = await supabase
-    .from('orders')
-    .select('created_at', { count: 'exact' })
-    .eq('customer_id', orderRow.customer_id)
-    .order('created_at', { ascending: false })
-    .limit(1)
+
+  // Parallel: customer stats + invoice + attachments
+  const [
+    { count: customerOrderCount, data: latestOrders },
+    { data: invoiceRow },
+    { data: attachmentsRaw },
+  ] = await Promise.all([
+    supabase
+      .from('orders')
+      .select('created_at', { count: 'exact' })
+      .eq('customer_id', orderRow.customer_id)
+      .order('created_at', { ascending: false })
+      .limit(1),
+    supabase
+      .from('invoices')
+      .select('id, invoice_number, pdf_path')
+      .eq('order_id', orderId)
+      .maybeSingle(),
+    supabase
+      .from('order_attachments')
+      .select('*')
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: false }),
+  ])
+
   const customerStats = {
     orderCount: customerOrderCount ?? 0,
     lastOrderAt: latestOrders?.[0]?.created_at ?? null,
   }
+
+  // Generate signed URL for invoice PDF (invoices bucket, 1 hour TTL)
+  let invoice: { id: string; invoice_number: string; pdf_path: string; signedUrl: string } | null = null
+  if (invoiceRow?.pdf_path) {
+    const { data: signed } = await supabase.storage
+      .from('invoices')
+      .createSignedUrl(invoiceRow.pdf_path, 3600)
+    if (signed) invoice = { ...invoiceRow, signedUrl: signed.signedUrl }
+  }
+
+  // Generate signed URLs for all attachments (media bucket, 1 hour TTL)
+  const attachments = (attachmentsRaw ?? []) as OrderAttachment[]
+  const attachmentSignedUrls: Record<string, string> = {}
+  await Promise.all(
+    attachments.map(async a => {
+      const { data } = await supabase.storage.from('media').createSignedUrl(a.storage_path, 3600)
+      if (data) attachmentSignedUrls[a.id] = data.signedUrl
+    })
+  )
 
   // Fetch last 3 messages from linked conversation if present
   let chatExcerpt: { id: string; direction: string; content: string; sent_at: string }[] = []
@@ -71,6 +108,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
         chatExcerpt={chatExcerpt}
         paymentConfigs={(paymentConfigs ?? []) as TenantPaymentConfig[]}
         customerStats={customerStats}
+        invoice={invoice}
+        attachments={attachments}
+        attachmentSignedUrls={attachmentSignedUrls}
       />
     </Shell>
   )
