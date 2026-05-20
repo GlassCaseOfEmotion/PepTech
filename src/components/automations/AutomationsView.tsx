@@ -177,6 +177,13 @@ export default function AutomationsView({ automations }: Props) {
     })))
   }
 
+  // All queued runs across every automation — derived from items so it stays in sync
+  const allQueued = items.flatMap(a =>
+    a.automation_runs
+      .filter(r => r.state === 'queued')
+      .map(r => toQueuedRun(r, a.name))
+  )
+
   const selRuns = sel?.automation_runs ?? []
   const queued = selRuns.filter(r => r.state === 'queued')
   const history = selRuns.filter(r => r.state !== 'queued').slice(0, 20)
@@ -204,6 +211,23 @@ export default function AutomationsView({ automations }: Props) {
           </button>
         </div>
       </div>
+
+      {/* ── Pending review banner ── */}
+      {allQueued.length > 0 && (
+        <div className="pt-au-pending-banner">
+          <div className="pt-au-pending-banner-hd">
+            <span className="pt-au-pending-banner-dot" />
+            <span className="pt-au-pending-banner-title">
+              {allQueued.length} message{allQueued.length > 1 ? 's' : ''} awaiting your review
+            </span>
+          </div>
+          <div className="pt-au-pending-banner-rows">
+            {allQueued.map(r => (
+              <PendingApprovalRow key={r.id} run={r} onRemove={handleRemoveRun} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {items.length === 0 ? (
         <div className="pt-empty-page">

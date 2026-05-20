@@ -11,6 +11,30 @@
 .pt-au-hd p { font-size: 12px; color: var(--pt-fg-3); margin: 2px 0 0; }
 .pt-au-hd-actions { display: flex; gap: 8px; }
 
+/* ── Pending review banner (full-width, above two-column layout) ── */
+.pt-au-pending-banner {
+  border-bottom: 0.5px solid oklch(from var(--pt-warn) l c h / 0.3);
+  background: oklch(from var(--pt-warn) l c h / 0.04);
+  padding: 14px 22px 18px;
+  flex-shrink: 0;
+}
+.pt-au-pending-banner-hd {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px;
+}
+.pt-au-pending-banner-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--pt-warn); flex-shrink: 0;
+  animation: ptVtPulse 1.4s ease-in-out infinite;
+}
+.pt-au-pending-banner-title {
+  font-size: 12px; font-weight: 700; color: var(--pt-warn);
+}
+.pt-au-pending-banner-rows {
+  display: flex; flex-direction: column;
+  max-height: 400px; overflow-y: auto;
+}
+
 .pt-au-body {
   flex: 1; min-height: 0;
   display: grid;
