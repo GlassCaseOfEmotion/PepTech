@@ -25,9 +25,9 @@ const CONDITION_TYPES: { value: Condition['type']; label: string }[] = [
   { value: 'cooldown_days',           label: "Don't re-fire within"     },
 ]
 const CONDITION_OPERATORS: { value: Extract<Condition, { operator: string }>['operator']; label: string }[] = [
-  { value: 'gte', label: '≥' },
-  { value: 'lte', label: '≤' },
-  { value: 'eq',  label: '=' },
+  { value: 'gte', label: 'is greater than or equal to' },
+  { value: 'lte', label: 'is less than or equal to'    },
+  { value: 'eq',  label: 'is equal to'                 },
 ]
 
 export default function AutomationModal({ mode, automation, onClose }: Props) {
