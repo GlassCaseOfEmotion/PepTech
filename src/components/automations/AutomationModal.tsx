@@ -15,7 +15,7 @@ const ICON_OPTIONS = ['send', 'bell', 'zap', 'star', 'clock', 'shield', 'tag', '
 const ORDER_STATUSES = ['awaiting', 'confirming', 'packing', 'shipped', 'delivered', 'disputed']
 
 const CONDITION_TYPES: Condition['type'][] = ['trust_score', 'ltv', 'last_message_hours', 'is_new_customer']
-const CONDITION_OPERATORS: { value: Condition['operator']; label: string }[] = [
+const CONDITION_OPERATORS: { value: Extract<Condition, { operator: string }>['operator']; label: string }[] = [
   { value: 'gte', label: '≥' },
   { value: 'lte', label: '≤' },
   { value: 'eq',  label: '=' },
@@ -179,7 +179,7 @@ export default function AutomationModal({ mode, automation, onClose }: Props) {
       if (patch.type !== undefined && patch.type !== c.type) {
         next.value = patch.type === 'is_new_customer' ? false : 0
       }
-      return next
+      return next as Condition
     }))
   }
 
@@ -391,8 +391,8 @@ export default function AutomationModal({ mode, automation, onClose }: Props) {
                     </select>
                     <select
                       className="pt-input pt-au-condition-op"
-                      value={c.operator}
-                      onChange={e => updateCondition(i, { operator: e.target.value as Condition['operator'] })}
+                      value={'operator' in c ? c.operator : 'gte'}
+                      onChange={e => updateCondition(i, { operator: e.target.value as Extract<Condition, { operator: string }>['operator'] })}
                     >
                       {CONDITION_OPERATORS.map(o => (
                         <option key={o.value} value={o.value}>{o.label}</option>

@@ -234,7 +234,7 @@ export default function AutomationsView({ automations }: Props) {
                         {sel.conditions.map((c, i) => (
                           <li key={i} className="is-ok">
                             <Icons.check size={11} />
-                            <span>{c.type} {c.operator} {String(c.value)}</span>
+                            <span>{c.type}{'operator' in c ? ` ${c.operator}` : ''} {String(c.value)}</span>
                           </li>
                         ))}
                       </ul>

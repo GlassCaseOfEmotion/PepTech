@@ -3,17 +3,23 @@ export type ActionType = 'send_dm' | 'operator_alert' | 'score_adjust' | 'operat
 export type AutoState = 'on' | 'off' | 'paused'
 export type RunState = 'ok' | 'skip' | 'warn' | 'err' | 'queued' | 'scheduled'
 
-export type Condition = {
-  type: 'trust_score' | 'ltv' | 'last_message_hours' | 'is_new_customer'
-  operator: 'gte' | 'lte' | 'eq'
-  value: number | boolean
-}
+export type Condition =
+  // Existing
+  | { type: 'trust_score';             operator: 'gte' | 'lte' | 'eq'; value: number }
+  | { type: 'ltv';                     operator: 'gte' | 'lte' | 'eq'; value: number }
+  | { type: 'last_message_hours';      operator: 'gte' | 'lte' | 'eq'; value: number }
+  | { type: 'is_new_customer';         operator: 'eq';                  value: boolean }
+  // New
+  | { type: 'protocol_days_remaining'; operator: 'gte' | 'lte' | 'eq'; value: number }
+  | { type: 'days_since_last_order';   operator: 'gte' | 'lte' | 'eq'; value: number }
+  | { type: 'has_tag';                 operator: 'eq';                  value: string  }
+  | { type: 'cooldown_days';           value: number }
 
 export type TriggerParams =
-  | { days_before_end: number }           // protocol_progress
-  | { cron: string }                       // schedule
-  | Record<string, never>                  // new_thread
-  | { to_status: string }                  // order_state
+  | { days_before_end: number }                        // protocol_progress
+  | { cron: string; scope?: 'tenant' | 'customers' }   // schedule
+  | Record<string, never>                               // new_thread
+  | { to_status: string }                              // order_state
 
 export type ActionParams =
   | { message: string; review_required: boolean }  // send_dm
