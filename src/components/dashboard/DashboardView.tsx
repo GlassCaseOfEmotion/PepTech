@@ -14,8 +14,8 @@ import type { DashboardStats, PendingOrder, PackingOrder, ActivityItem } from '@
 import { initials } from '@/types/inbox'
 import { PAYMENT_BADGE } from '@/types/payments'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { approveAndSendQueuedRun, dismissQueuedRun } from '@/app/automations/actions'
 import type { QueuedRun } from '@/types/automations'
+import { PendingApprovalRow } from '@/components/shared/PendingApprovalRow'
 
 const ACTIVE_STATUSES = new Set(['new', 'needs_reply', 'in_progress', 'snoozed'])
 
@@ -600,16 +600,6 @@ export function DashboardRightRail({
 
   const [pending, setPending] = useState<QueuedRun[]>(queuedRuns)
 
-  async function approve(id: string) {
-    setPending(p => p.filter(r => r.id !== id))
-    await approveAndSendQueuedRun(id)
-  }
-
-  async function dismiss(id: string) {
-    setPending(p => p.filter(r => r.id !== id))
-    await dismissQueuedRun(id)
-  }
-
   return (
     <aside className="pt-right">
       {pending.length > 0 && (
@@ -620,22 +610,7 @@ export function DashboardRightRail({
           </div>
           <div className="pt-pending-list">
             {pending.slice(0, 5).map(r => (
-              <div key={r.id} className="pt-pending-row">
-                <div className="pt-pending-meta">
-                  <span className="pt-pending-auto">{r.automationName}</span>
-                  <span className="pt-pending-sep">·</span>
-                  <span className="pt-pending-customer">{r.contextLabel ?? '—'}</span>
-                </div>
-                <div className="pt-pending-msg">{r.message}</div>
-                <div className="pt-pending-actions">
-                  <button className="pt-btn pt-btn-primary" style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => approve(r.id)}>
-                    Approve &amp; Send
-                  </button>
-                  <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => dismiss(r.id)}>
-                    Dismiss
-                  </button>
-                </div>
-              </div>
+              <PendingApprovalRow key={r.id} run={r} onRemove={id => setPending(p => p.filter(r => r.id !== id))} />
             ))}
             {pending.length > 5 && (
               <a href="/automations" className="pt-link" style={{ fontSize: 11, padding: '4px 0', display: 'block' }}>

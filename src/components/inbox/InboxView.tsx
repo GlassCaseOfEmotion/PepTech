@@ -12,8 +12,8 @@ import { TemplatePicker } from './TemplatePicker'
 import { WaTemplatePicker } from './WaTemplatePicker'
 import { ProductInfoPicker } from './ProductInfoPicker'
 import type { DbConversation, DbQuickReply, DbTemplate, InboxThread, InboxMessage } from '@/types/inbox'
-import { approveAndSendQueuedRun, dismissQueuedRun } from '@/app/automations/actions'
 import type { QueuedRun } from '@/types/automations'
+import { PendingApprovalRow } from '@/components/shared/PendingApprovalRow'
 import { initials } from '@/types/inbox'
 import { createClient } from '@/lib/supabase/client'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -147,16 +147,6 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChann
 
   const [pending, setPending] = useState<QueuedRun[]>(queuedRuns)
 
-  async function approve(id: string) {
-    setPending(p => p.filter(r => r.id !== id))
-    await approveAndSendQueuedRun(id)
-  }
-
-  async function dismiss(id: string) {
-    setPending(p => p.filter(r => r.id !== id))
-    await dismissQueuedRun(id)
-  }
-
   const visible = threads.filter(t => {
     if (filter === 'all') { if (t.status === 'resolved') return false }
     else if (t.status !== filter) return false
@@ -193,22 +183,7 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChann
             <span className="pt-nav-badge">{pending.length}</span>
           </div>
           {pending.map(r => (
-            <div key={r.id} className="pt-pending-row">
-              <div className="pt-pending-meta">
-                <span className="pt-pending-customer">{r.contextLabel ?? '—'}</span>
-                <span className="pt-pending-sep">·</span>
-                <span className="pt-pending-auto">{r.automationName}</span>
-              </div>
-              <div className="pt-pending-msg">{r.message}</div>
-              <div className="pt-pending-actions">
-                <button className="pt-btn pt-btn-primary" style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => approve(r.id)}>
-                  Send
-                </button>
-                <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => dismiss(r.id)}>
-                  ✕
-                </button>
-              </div>
-            </div>
+            <PendingApprovalRow key={r.id} run={r} onRemove={id => setPending(p => p.filter(r => r.id !== id))} />
           ))}
         </div>
       )}

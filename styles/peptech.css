@@ -2251,3 +2251,143 @@ kbd {
   display: flex; gap: 6px; align-items: center;
   margin-top: 2px;
 }
+
+/* ── Pending Approval Row interactive component (PendingApprovalRow.tsx) ── */
+.pt-pa-row {
+  position: relative;
+  overflow: hidden;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 8px 0;
+  border-bottom: 0.5px solid var(--pt-line-soft);
+  min-height: 68px;
+}
+.pt-pa-row:last-child { border-bottom: none; }
+.pt-pa-meta {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10.5px; color: var(--pt-fg-4);
+}
+.pt-pa-sep { color: var(--pt-fg-4); }
+.pt-pa-automation { font-size: 10px; color: var(--pt-fg-4); }
+.pt-pa-customer { font-weight: 500; color: var(--pt-fg-3); }
+.pt-pa-msg {
+  font-size: 12px; color: var(--pt-fg-2); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+  padding-right: 22px;
+}
+
+/* Dismiss button — top-right, reveal on hover */
+.pt-pa-dismiss {
+  position: absolute;
+  top: 6px; right: 0;
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; cursor: pointer;
+  font-size: 9px; color: var(--pt-fg-4);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.pt-pa-row:hover .pt-pa-dismiss { opacity: 1; }
+
+/* Send bar — gradient veil at bottom, reveal on hover */
+.pt-pa-send-bar {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 18px 10px 8px;
+  background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%);
+  color: white;
+  font-size: 10.5px; font-weight: 500;
+  letter-spacing: 0.025em;
+  text-align: center;
+  border: 0; cursor: pointer; width: 100%;
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.pt-pa-row:hover .pt-pa-send-bar { opacity: 1; transform: translateY(0); }
+.pt-pa-send-bar:hover { background: linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 100%); }
+
+/* Overlay — frosted glass for confirm / sending / sent */
+.pt-pa-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(10, 10, 14, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: var(--pt-radius-sm, 6px);
+  animation: pt-pa-overlay-in 0.16s ease;
+}
+@keyframes pt-pa-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+.pt-pa-overlay-inner {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 5px; padding: 4px 12px; text-align: center; width: 100%;
+}
+.pt-pa-full-msg {
+  font-size: 11.5px; color: rgba(255,255,255,0.85); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pt-pa-send-to {
+  font-size: 10px; color: rgba(255,255,255,0.5);
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.pt-pa-overlay-btns { display: flex; gap: 5px; margin-top: 2px; }
+.pt-pa-confirm-btn {
+  background: white; color: #0a0a0e; border: 0;
+  border-radius: 5px; padding: 5px 13px;
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: background 0.12s, transform 0.1s;
+}
+.pt-pa-confirm-btn:hover { background: #f0f0f4; transform: scale(1.02); }
+.pt-pa-confirm-btn:active { transform: scale(0.98); }
+.pt-pa-cancel-btn {
+  background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.75);
+  border: 0.5px solid rgba(255,255,255,0.22);
+  border-radius: 5px; padding: 5px 10px;
+  font-size: 11px; cursor: pointer;
+  transition: background 0.12s;
+}
+.pt-pa-cancel-btn:hover { background: rgba(255,255,255,0.2); }
+.pt-pa-overlay-label { font-size: 11px; color: rgba(255,255,255,0.7); letter-spacing: 0.02em; }
+
+/* Progress bar */
+.pt-pa-progressbar {
+  width: 64px; height: 2px;
+  background: rgba(255,255,255,0.2); border-radius: 999px; overflow: hidden;
+}
+.pt-pa-progressbar-fill {
+  height: 100%; width: 0%;
+  background: white; border-radius: 999px;
+  animation: pt-pa-progress-sweep 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes pt-pa-progress-sweep {
+  0%   { width: 0%; }
+  55%  { width: 70%; }
+  90%  { width: 92%; }
+  100% { width: 100%; }
+}
+
+/* Success checkmark */
+.pt-pa-check {
+  width: 28px; height: 28px; background: #22c55e; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 13px;
+  animation: pt-pa-check-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes pt-pa-check-pop {
+  from { transform: scale(0.4); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+/* Go to chat button */
+.pt-pa-goto {
+  margin-top: 2px;
+  background: rgba(255,255,255,0.15); color: white;
+  border: 0.5px solid rgba(255,255,255,0.3);
+  border-radius: 5px; padding: 4px 10px;
+  font-size: 10.5px; font-weight: 500; cursor: pointer;
+  transition: background 0.12s, transform 0.1s;
+  letter-spacing: 0.01em;
+  animation: pt-pa-overlay-in 0.3s 0.2s ease both;
+}
+.pt-pa-goto:hover { background: rgba(255,255,255,0.26); transform: translateX(2px); }
