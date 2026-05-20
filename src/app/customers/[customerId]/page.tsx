@@ -107,7 +107,16 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
   if (!user) redirect('/login')
 
   const supabase = await createClient()
-  const [{ data: customer }, { data: notes }, { data: orders }, { data: tenantRow }, { data: activityRaw }, { data: conversation }] = await Promise.all([
+  type AutomationRunRow = {
+    id: string
+    state: string
+    action_summary: string | null
+    action_payload: { message?: string } | null
+    created_at: string
+    automations: { name: string } | null
+  }
+
+  const [{ data: customer }, { data: notes }, { data: orders }, { data: tenantRow }, { data: activityRaw }, { data: conversation }, { data: automationRunsRaw }] = await Promise.all([
     supabase
       .from('customers')
       .select('id, display_name, trust_score, ltv, created_at, customer_channels(channel_type, display_handle, is_primary), customer_tags(tag)')
@@ -143,12 +152,19 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
       .order('last_message_at', { ascending: false, nullsFirst: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from('automation_runs')
+      .select('id, state, action_summary, action_payload, created_at, automations(name)')
+      .eq('context_ref', customerId)
+      .order('created_at', { ascending: false })
+      .limit(20),
   ])
 
   if (!customer) redirect('/customers')
 
   const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
   const activity = (activityRaw ?? []) as ActivityItem[]
+  const automationRuns = (automationRunsRaw ?? []) as AutomationRunRow[]
 
   const primary = customer.customer_channels?.find(c => c.is_primary) ?? customer.customer_channels?.[0]
   const chKey = primary ? CH_KEY[primary.channel_type] ?? 'wa' : 'wa'
@@ -448,6 +464,46 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                           <li key={a.id}>
                             <i className={`pt-cu-act-dot${bullet ? ` pt-bul-${bullet}` : ''}`} />
                             <span className="pt-cu-act-text"><b>{a.label}</b>{actDetail(a, baseCurrency)} · <span className="pt-cu-act-time">{fmtActivityDate(a.created_at)}</span></span>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </div>
+              </section>
+            }
+            automations={
+              <section className="pt-card">
+                <header className="pt-card-hd">
+                  <div>
+                    <h3>Automations</h3>
+                    <p>{automationRuns.length} run{automationRuns.length !== 1 ? 's' : ''}</p>
+                  </div>
+                </header>
+                <div className="pt-card-body" style={{ padding: 0 }}>
+                  {automationRuns.length === 0 ? (
+                    <div style={{ padding: '12px 14px', fontSize: 12, color: 'var(--pt-fg-4)' }}>No automation runs yet</div>
+                  ) : (
+                    <ul className="pt-cu-act">
+                      {automationRuns.map(r => {
+                        const dotCls = r.state === 'ok' ? ' pt-bul-cool' : r.state === 'queued' ? ' pt-bul-warn' : r.state === 'err' ? ' pt-bul-warn' : ''
+                        const stateLabel = r.state === 'ok' ? 'sent' : r.state === 'queued' ? 'queued' : r.state === 'skip' ? 'skipped' : r.state === 'err' ? 'failed' : r.state
+                        const msg = r.action_payload?.message
+                        return (
+                          <li key={r.id}>
+                            <i className={`pt-cu-act-dot${dotCls}`} />
+                            <span className="pt-cu-act-text">
+                              <b>{r.automations?.name ?? 'Automation'}</b>
+                              {' · '}
+                              <span className="pt-cu-act-time">{stateLabel}</span>
+                              {msg && (
+                                <span style={{ display: 'block', fontSize: 11, color: 'var(--pt-fg-4)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  &ldquo;{msg}&rdquo;
+                                </span>
+                              )}
+                              {' · '}
+                              <span className="pt-cu-act-time">{fmtActivityDate(r.created_at)}</span>
+                            </span>
                           </li>
                         )
                       })}

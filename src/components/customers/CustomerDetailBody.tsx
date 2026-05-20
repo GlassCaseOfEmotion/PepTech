@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-type Tab = 'cycles' | 'activity' | 'orders' | 'notes'
+type Tab = 'cycles' | 'activity' | 'orders' | 'notes' | 'automations'
 
 interface CustomerDetailBodyProps {
   cycles: React.ReactNode
@@ -11,16 +11,18 @@ interface CustomerDetailBodyProps {
   notes: React.ReactNode
   trust?: React.ReactNode
   details?: React.ReactNode
+  automations?: React.ReactNode
 }
 
-export function CustomerDetailBody({ cycles, activity, orders, notes, trust, details }: CustomerDetailBodyProps) {
+export function CustomerDetailBody({ cycles, activity, orders, notes, trust, details, automations }: CustomerDetailBodyProps) {
   const [tab, setTab] = useState<Tab>('cycles')
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: 'cycles',   label: 'Cycles'   },
-    { id: 'activity', label: 'Activity' },
-    { id: 'orders',   label: 'Orders'   },
-    { id: 'notes',    label: 'Notes'    },
+    { id: 'cycles',      label: 'Cycles'      },
+    { id: 'activity',    label: 'Activity'    },
+    { id: 'orders',      label: 'Orders'      },
+    { id: 'notes',       label: 'Notes'       },
+    { id: 'automations', label: 'Automations' },
   ]
 
   return (
@@ -65,6 +67,11 @@ export function CustomerDetailBody({ cycles, activity, orders, notes, trust, det
           <div className={`pt-cd-section${tab === 'activity' ? ' is-active' : ''}`} data-section="activity">
             {activity}
           </div>
+          {automations && (
+            <div className={`pt-cd-section${tab === 'automations' ? ' is-active' : ''}`} data-section="automations">
+              {automations}
+            </div>
+          )}
         </div>
       </div>
     </>
