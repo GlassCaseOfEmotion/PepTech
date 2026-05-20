@@ -50,27 +50,113 @@ async function processScheduleAutomations(
 
   for (const rawAuto of automations) {
     const automation = rawAuto as unknown as Automation
-    const tp = automation.trigger_params as { cron?: string }
+    const tp = automation.trigger_params as { cron?: string; scope?: 'tenant' | 'customers' }
     if (!tp.cron) continue
 
     const triggerHour = parseCronHour(tp.cron)
     if (triggerHour !== currentHour) continue
 
-    // No customer context for schedule automations — conditions pass by default
-    // (evaluateCondition already handles missing customerId by returning true)
+    if (tp.scope === 'customers') {
+      inserted += await processSchedulePerCustomer(supabase, automation)
+    } else {
+      inserted += await processScheduleTenant(supabase, automation)
+    }
+  }
+
+  return inserted
+}
+
+async function processScheduleTenant(
+  supabase: ReturnType<typeof createServiceClient>,
+  automation: Automation,
+): Promise<number> {
+  try {
+    const conditions = (automation.conditions ?? []) as Condition[]
+    const condResults = await Promise.all(
+      conditions.map(c => evaluateCondition(c, { automationId: automation.id }, supabase)),
+    )
+    if (!condResults.every(Boolean)) {
+      await supabase.from('automation_runs').insert({
+        automation_id: automation.id,
+        tenant_id: automation.tenant_id,
+        state: 'skip',
+        context_ref: null,
+        context_label: null,
+        action_summary: 'Conditions not met',
+        action_payload: null,
+      })
+      return 1
+    }
+    const result = await executeAction(automation, {}, supabase)
+    await supabase.from('automation_runs').insert({
+      automation_id: automation.id,
+      tenant_id: automation.tenant_id,
+      state: result.state,
+      context_ref: null,
+      context_label: null,
+      action_summary: result.action_summary,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      action_payload: result.action_payload as any,
+    })
+    return 1
+  } catch (err) {
+    console.error(`[cron] schedule automation ${automation.id} failed:`, err)
+    try {
+      await supabase.from('automation_runs').insert({
+        automation_id: automation.id,
+        tenant_id: automation.tenant_id,
+        state: 'err',
+        context_ref: null,
+        context_label: null,
+        action_summary: err instanceof Error ? err.message : String(err),
+        action_payload: null,
+      })
+    } catch { /* swallow */ }
+    return 1
+  }
+}
+
+async function processSchedulePerCustomer(
+  supabase: ReturnType<typeof createServiceClient>,
+  automation: Automation,
+): Promise<number> {
+  const { data: customers } = await supabase
+    .from('customers')
+    .select('id')
+    .eq('tenant_id', automation.tenant_id)
+
+  if (!customers?.length) return 0
+
+  let inserted = 0
+  for (const customer of customers) {
+    const customerId = customer.id
+
+    const { data: conv } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('customer_id', customerId)
+      .order('last_message_at', { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle()
+
+    const context = {
+      customerId,
+      conversationId: conv?.id ?? undefined,
+      automationId: automation.id,
+    }
+
     try {
       const conditions = (automation.conditions ?? []) as Condition[]
       const condResults = await Promise.all(
-        conditions.map(c => evaluateCondition(c, {}, supabase)),
+        conditions.map(c => evaluateCondition(c, context, supabase)),
       )
-      const conditionsPassed = condResults.every(Boolean)
 
-      if (!conditionsPassed) {
+      if (!condResults.every(Boolean)) {
         await supabase.from('automation_runs').insert({
           automation_id: automation.id,
           tenant_id: automation.tenant_id,
           state: 'skip',
-          context_ref: null,
+          context_ref: customerId,
           context_label: null,
           action_summary: 'Conditions not met',
           action_payload: null,
@@ -79,13 +165,12 @@ async function processScheduleAutomations(
         continue
       }
 
-      const result = await executeAction(automation, {}, supabase)
-
+      const result = await executeAction(automation, context, supabase)
       await supabase.from('automation_runs').insert({
         automation_id: automation.id,
         tenant_id: automation.tenant_id,
         state: result.state,
-        context_ref: null,
+        context_ref: customerId,
         context_label: null,
         action_summary: result.action_summary,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -93,13 +178,13 @@ async function processScheduleAutomations(
       })
       inserted++
     } catch (err) {
-      console.error(`[cron] schedule automation ${automation.id} failed:`, err)
+      console.error(`[cron] schedule per-customer automation ${automation.id} customer ${customerId} failed:`, err)
       try {
         await supabase.from('automation_runs').insert({
           automation_id: automation.id,
           tenant_id: automation.tenant_id,
           state: 'err',
-          context_ref: null,
+          context_ref: customerId,
           context_label: null,
           action_summary: err instanceof Error ? err.message : String(err),
           action_payload: null,
@@ -108,7 +193,6 @@ async function processScheduleAutomations(
       } catch { /* swallow */ }
     }
   }
-
   return inserted
 }
 
@@ -259,7 +343,7 @@ async function processProtocolProgressAutomations(
       if ((existingCount ?? 0) > 0) continue
 
       try {
-        const context = { customerId: customer.customer_id }
+        const context = { customerId: customer.customer_id, automationId: automation.id }
         const conditions = (automation.conditions ?? []) as Condition[]
         const condResults = await Promise.all(
           conditions.map(c => evaluateCondition(c, context, supabase)),
@@ -359,6 +443,7 @@ async function processScheduledRuns(
         customerId: storedPayload?.context?.customerId ?? undefined,
         orderId: storedPayload?.context?.orderId ?? undefined,
         conversationId: storedPayload?.context?.conversationId ?? undefined,
+        automationId: run.automation_id,
       }
 
       const condResults = await Promise.all(

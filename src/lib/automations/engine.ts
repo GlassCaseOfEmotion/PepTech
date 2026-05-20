@@ -298,7 +298,7 @@ export async function runAutomationsForEvent(
     try {
       const conditions = (automation.conditions ?? []) as Condition[]
       const condResults = await Promise.all(
-        conditions.map(c => evaluateCondition(c, context, supabase))
+        conditions.map(c => evaluateCondition(c, { ...context, automationId: automation.id }, supabase))
       )
       const conditionsPassed = condResults.every(Boolean)
 
