@@ -83,14 +83,14 @@ export default function AutomationModal({ mode, automation, onClose }: Props) {
               </select>
             </div>
             <div className="pt-au-modal-field">
-              <label className="pt-au-modal-field-label">Runs</label>
+              <label className="pt-au-modal-field-label">Who does this apply to?</label>
               <select
                 className="pt-input"
                 value={scope}
                 onChange={e => setTriggerParams(prev => ({ ...prev, scope: e.target.value }))}
               >
-                <option value="tenant">Once per run</option>
-                <option value="customers">For each customer</option>
+                <option value="tenant">The whole account</option>
+                <option value="customers">Each customer individually</option>
               </select>
             </div>
             {scope === 'customers' && (
