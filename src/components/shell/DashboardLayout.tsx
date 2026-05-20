@@ -17,6 +17,7 @@ import type { DashboardStats } from '@/types/dashboard'
 import type { ReorderSignal } from '@/lib/reorder-signals'
 import type { ShipmentRow } from '@/types/orders'
 import type { PackingOrder, ActivityItem } from '@/types/dashboard'
+import type { QueuedRun } from '@/types/automations'
 
 interface DashboardLayoutProps {
   displayName: string
@@ -31,9 +32,11 @@ interface DashboardLayoutProps {
   packingOrders: PackingOrder[]
   activityItems: ActivityItem[]
   onboardingStatus?: { hasProducts: boolean; hasChannel: boolean; hasPayment: boolean } | null
+  queuedCount: number
+  queuedRuns: QueuedRun[]
 }
 
-export function DashboardLayout({ displayName, connectedChannels, threads, initialPinned, stockProducts, stats, reorderSignals, baseCurrency, shipments, packingOrders, activityItems, onboardingStatus }: DashboardLayoutProps) {
+export function DashboardLayout({ displayName, connectedChannels, threads, initialPinned, stockProducts, stats, reorderSignals, baseCurrency, shipments, packingOrders, activityItems, onboardingStatus, queuedCount, queuedRuns }: DashboardLayoutProps) { // queuedRuns used in Task 3
   const [rightOpen, setRightOpen] = useState(true)
   const channels = connectedChannels
   const focusThread = threads.find(t => t.status === 'needs_reply') ?? threads[0] ?? null
@@ -53,7 +56,7 @@ export function DashboardLayout({ displayName, connectedChannels, threads, initi
           hasPayment={onboardingStatus.hasPayment}
         />
       )}
-      <Sidebar displayName={displayName} initialPinned={initialPinned} />
+      <Sidebar displayName={displayName} initialPinned={initialPinned} queuedCount={queuedCount} />
       <main className="pt-main">
         <TopBar
           section="Dashboard"

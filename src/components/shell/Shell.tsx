@@ -1,4 +1,5 @@
 import { createClient, getServerUser } from '@/lib/supabase/server'
+import { getQueuedRuns } from '@/app/automations/actions'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { GlobalNotifications } from './GlobalNotifications'
@@ -53,6 +54,9 @@ export async function Shell({ children, section, isInbox = false, rightRail }: S
     (c: { unread_count: number }) => c.unread_count > 0
   ).length
 
+  const queuedRuns = await getQueuedRuns().catch(() => [])
+  const queuedCount = queuedRuns.length
+
   const rootClass = rightRail
     ? 'pt-root'
     : `pt-root no-right${isInbox ? ' is-inbox' : ''}`
@@ -63,7 +67,7 @@ export async function Shell({ children, section, isInbox = false, rightRail }: S
       <AgentPalette />
       <CommandPalette />
       <ComposeModal />
-      <Sidebar displayName={displayName} initialPinned={pinnedConversations} />
+      <Sidebar displayName={displayName} initialPinned={pinnedConversations} queuedCount={queuedCount} />
       <main className="pt-main">
         <TopBar section={section} connectedChannels={connectedChannels} />
         {children}

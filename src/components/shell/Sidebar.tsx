@@ -74,9 +74,10 @@ const PINNED_SELECT = `
 interface SidebarProps {
   displayName: string
   initialPinned?: DbConversation[]
+  queuedCount?: number
 }
 
-export function Sidebar({ displayName, initialPinned = [] }: SidebarProps) {
+export function Sidebar({ displayName, initialPinned = [], queuedCount = 0 }: SidebarProps) {
   const pathname = usePathname()
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
   const supabase = useMemo(() => createClient(), [])
@@ -206,11 +207,12 @@ export function Sidebar({ displayName, initialPinned = [] }: SidebarProps) {
         {NAV_PRIMARY.map((n) => {
           const Icon = n.icon
           const on = isActive(n.href)
+          const badge = n.href === '/automations' && queuedCount > 0 ? queuedCount : null
           return (
             <Link key={n.href} href={n.href} className={`pt-nav-item ${on ? 'is-on' : ''}`} {...(n.href === '/inbox' ? { 'data-tour': 'inbox-link' } : {})}>
               <Icon size={15} />
               <span className="pt-nav-label">{n.label}</span>
-              {n.badge != null && <span className="pt-nav-badge">{n.badge}</span>}
+              {badge != null && <span className="pt-nav-badge">{badge}</span>}
             </Link>
           )
         })}
