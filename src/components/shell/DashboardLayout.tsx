@@ -75,6 +75,7 @@ export function DashboardLayout({ displayName, connectedChannels, threads, initi
           reordersDueSoon={reorderSignals.filter(r => r.daysRemaining <= 3)}
           packingOrders={packingOrders}
           activityItems={activityItems}
+          queuedRuns={queuedRuns}
         />
       )}
       <BottomNav unreadCount={unreadCount} />

@@ -14,6 +14,8 @@ import type { DashboardStats, PendingOrder, PackingOrder, ActivityItem } from '@
 import { initials } from '@/types/inbox'
 import { PAYMENT_BADGE } from '@/types/payments'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { approveAndSendQueuedRun, dismissQueuedRun } from '@/app/automations/actions'
+import type { QueuedRun } from '@/types/automations'
 
 const ACTIVE_STATUSES = new Set(['new', 'needs_reply', 'in_progress', 'snoozed'])
 
@@ -569,6 +571,7 @@ export function DashboardRightRail({
   reordersDueSoon,
   packingOrders,
   activityItems,
+  queuedRuns,
 }: {
   focusThread: InboxThread | null
   baseCurrency: string
@@ -577,6 +580,7 @@ export function DashboardRightRail({
   reordersDueSoon: ReorderSignal[]
   packingOrders: PackingOrder[]
   activityItems: ActivityItem[]
+  queuedRuns: QueuedRun[]
 }) {
   const t = focusThread
 
@@ -594,8 +598,53 @@ export function DashboardRightRail({
     agendaItems.push({ bullet: '', title: `Reorder ${r.product}`, sub: r.dueIn === 'now' ? 'Due now' : `Due in ${r.dueIn}`, href: `/customers/${r.customerId}` })
   })
 
+  const [pending, setPending] = useState<QueuedRun[]>(queuedRuns)
+
+  async function approve(id: string) {
+    setPending(p => p.filter(r => r.id !== id))
+    await approveAndSendQueuedRun(id)
+  }
+
+  async function dismiss(id: string) {
+    setPending(p => p.filter(r => r.id !== id))
+    await dismissQueuedRun(id)
+  }
+
   return (
     <aside className="pt-right">
+      {pending.length > 0 && (
+        <div className="pt-right-section">
+          <div className="pt-right-hd">
+            <span>Pending approvals</span>
+            <span className="pt-nav-badge">{pending.length}</span>
+          </div>
+          <div className="pt-pending-list">
+            {pending.slice(0, 5).map(r => (
+              <div key={r.id} className="pt-pending-row">
+                <div className="pt-pending-meta">
+                  <span className="pt-pending-auto">{r.automationName}</span>
+                  <span className="pt-pending-sep">·</span>
+                  <span className="pt-pending-customer">{r.contextLabel ?? '—'}</span>
+                </div>
+                <div className="pt-pending-msg">{r.message}</div>
+                <div className="pt-pending-actions">
+                  <button className="pt-btn pt-btn-primary" style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => approve(r.id)}>
+                    Approve &amp; Send
+                  </button>
+                  <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => dismiss(r.id)}>
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ))}
+            {pending.length > 5 && (
+              <a href="/automations" className="pt-link" style={{ fontSize: 11, padding: '4px 0', display: 'block' }}>
+                View all {pending.length} →
+              </a>
+            )}
+          </div>
+        </div>
+      )}
       <div className="pt-right-section">
         <div className="pt-right-hd"><span>Today</span></div>
         <ul className="pt-agenda">

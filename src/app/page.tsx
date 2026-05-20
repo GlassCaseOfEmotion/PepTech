@@ -7,6 +7,8 @@ import type { DashboardStats, PackingOrder, ActivityItem } from '@/types/dashboa
 import { computeReorderSignals } from '@/lib/reorder-signals'
 import type { ProductProtocol, CustomerProtocolOverride } from '@/types/protocols'
 import type { ShipmentRow } from '@/types/orders'
+import { getQueuedRuns } from '@/app/automations/actions'
+import type { QueuedRun } from '@/types/automations'
 
 const PINNED_SELECT = `
   id, status, unread_count, last_message_at, last_message_snippet,
@@ -126,6 +128,8 @@ export default async function Home() {
       .limit(10),
     supabase.from('tenant_payment_configs').select('id', { count: 'exact', head: true }).eq('is_active', true),
   ])
+
+  const queuedRuns = await getQueuedRuns().catch((): QueuedRun[] => [])
 
   // ── Revenue stats ────────────────────────────────────────────────────────
   const cutoff7d  = now - 7  * 86400_000
@@ -296,6 +300,8 @@ export default async function Home() {
       packingOrders={packingOrders}
       activityItems={activityItems}
       onboardingStatus={onboardingStatus}
+      queuedRuns={queuedRuns}
+      queuedCount={queuedRuns.length}
     />
   )
 }
