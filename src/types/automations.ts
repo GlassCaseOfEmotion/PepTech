@@ -51,6 +51,7 @@ export type AutomationRun = {
 
 export type AutomationWithRuns = Automation & { automation_runs: AutomationRun[] }
 
+// Presentation type — transformed from automation_runs + joined automation name for UI display
 export type QueuedRun = {
   id: string
   automationName: string
