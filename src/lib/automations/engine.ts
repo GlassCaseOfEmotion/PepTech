@@ -34,6 +34,29 @@ export async function evaluateCondition(
 ): Promise<boolean> {
   const { customerId } = context
 
+  if (cond.type === 'cooldown_days') {
+    const { automationId } = context
+    if (!automationId) return false  // fail closed — no automationId means can't check
+    const windowStart = new Date(Date.now() - (cond.value as number) * 86_400_000).toISOString()
+    try {
+      const baseQuery = supabase
+        .from('automation_runs')
+        .select('id', { count: 'exact', head: true })
+        .eq('automation_id', automationId)
+        .in('state', ['ok', 'warn', 'queued', 'scheduled'])
+        .gte('created_at', windowStart)
+      // For per-customer automations: scope to this customer's runs.
+      // For tenant-scoped automations (no customerId): scope to runs with null context_ref.
+      const { count, error } = customerId
+        ? await baseQuery.eq('context_ref', customerId)
+        : await baseQuery.is('context_ref', null)
+      if (error) return false  // fail closed on DB error
+      return (count ?? 1) === 0
+    } catch {
+      return false  // fail closed on any exception
+    }
+  }
+
   // If the condition requires a customer but we don't have one, allow through
   if (!customerId) return true
 
@@ -143,25 +166,6 @@ export async function evaluateCondition(
       .eq('tag', cond.value as string)
       .maybeSingle()
     return data != null
-  }
-
-  if (cond.type === 'cooldown_days') {
-    const { automationId } = context
-    if (!automationId) return false  // fail closed — no automationId means can't check
-    const windowStart = new Date(Date.now() - (cond.value as number) * 86_400_000).toISOString()
-    try {
-      const { count, error } = await supabase
-        .from('automation_runs')
-        .select('id', { count: 'exact', head: true })
-        .eq('automation_id', automationId)
-        .eq('context_ref', customerId)
-        .in('state', ['ok', 'warn', 'queued', 'scheduled'])
-        .gte('created_at', windowStart)
-      if (error) return false  // fail closed on DB error
-      return (count ?? 1) === 0
-    } catch {
-      return false  // fail closed on any exception
-    }
   }
 
   return true

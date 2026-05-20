@@ -17,7 +17,7 @@ function makeSupabase(
         then: resolved.then.bind(resolved),
         catch: resolved.catch.bind(resolved),
       }
-      ;['select','eq','neq','in','gte','not','order','limit'].forEach(m => {
+      ;['select','eq','neq','in','gte','not','order','limit','is'].forEach(m => {
         chain[m] = vi.fn().mockReturnValue(chain)
       })
       chain['maybeSingle'] = vi.fn().mockResolvedValue(result)
@@ -199,7 +199,7 @@ describe('evaluateCondition: cooldown_days', () => {
       then: resolved.then.bind(resolved),
       catch: resolved.catch.bind(resolved),
     }
-    ;['select','eq','neq','in','gte','not','order','limit'].forEach(m => {
+    ;['select','eq','neq','in','gte','not','order','limit','is'].forEach(m => {
       chain[m] = vi.fn().mockReturnValue(chain)
     })
     chain['maybeSingle'] = vi.fn().mockResolvedValue(errorResult)
@@ -211,5 +211,25 @@ describe('evaluateCondition: cooldown_days', () => {
       supabase,
     )
     expect(result).toBe(false)
+  })
+
+  it('returns false when tenant-scoped automation fired recently (no customerId)', async () => {
+    const supabase = makeSupabase({ automation_runs: { count: 1 } })
+    const result = await evaluateCondition(
+      { type: 'cooldown_days', value: 30 },
+      { automationId: 'auto1' },  // no customerId — tenant-scoped
+      supabase,
+    )
+    expect(result).toBe(false)
+  })
+
+  it('returns true when tenant-scoped automation has not fired recently', async () => {
+    const supabase = makeSupabase({ automation_runs: { count: 0 } })
+    const result = await evaluateCondition(
+      { type: 'cooldown_days', value: 30 },
+      { automationId: 'auto1' },  // no customerId — tenant-scoped
+      supabase,
+    )
+    expect(result).toBe(true)
   })
 })
