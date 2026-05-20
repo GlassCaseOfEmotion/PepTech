@@ -8,6 +8,7 @@ type Context = {
   orderId?: string
   toStatus?: string
   fromStatus?: string
+  automationId?: string
 }
 
 type RunResult = {
@@ -78,6 +79,87 @@ export async function evaluateCondition(
       .eq('status', 'delivered')
     const isNew = (count ?? 0) === 0
     return isNew === (cond.value as boolean)
+  }
+
+  if (cond.type === 'protocol_days_remaining') {
+    // Step 1: most recent delivered order for this customer
+    const { data: order } = await supabase
+      .from('orders')
+      .select('id, delivered_at')
+      .eq('customer_id', customerId)
+      .eq('status', 'delivered')
+      .not('delivered_at', 'is', null)
+      .order('delivered_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (!order?.delivered_at) return false
+
+    // Step 2: product IDs in that order
+    const { data: items } = await supabase
+      .from('order_items')
+      .select('product_id')
+      .eq('order_id', order.id)
+    const productIds = (items ?? []).map((r: { product_id: string }) => r.product_id)
+    if (!productIds.length) return false
+
+    // Step 3: max cycle_length_weeks across those products
+    const { data: protocols } = await supabase
+      .from('product_protocols')
+      .select('cycle_length_weeks')
+      .in('product_id', productIds)
+    const weeks = (protocols ?? []).reduce(
+      (max: number, r: { cycle_length_weeks: number | null }) =>
+        r.cycle_length_weeks != null && r.cycle_length_weeks > max ? r.cycle_length_weeks : max,
+      0,
+    )
+    if (!weeks) return false
+
+    const cycleDays = weeks * 7
+    const daysSince = (Date.now() - new Date(order.delivered_at).getTime()) / 86_400_000
+    const daysRemaining = Math.round(cycleDays - daysSince)
+    return compare(daysRemaining, cond.operator, cond.value as number)
+  }
+
+  if (cond.type === 'days_since_last_order') {
+    const { data: order } = await supabase
+      .from('orders')
+      .select('created_at')
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (!order?.created_at) return false
+    const daysSince = (Date.now() - new Date(order.created_at).getTime()) / 86_400_000
+    return compare(daysSince, cond.operator, cond.value as number)
+  }
+
+  if (cond.type === 'has_tag') {
+    const { data } = await supabase
+      .from('customer_tags')
+      .select('tag')
+      .eq('customer_id', customerId)
+      .eq('tag', cond.value as string)
+      .maybeSingle()
+    return data != null
+  }
+
+  if (cond.type === 'cooldown_days') {
+    const { automationId } = context
+    if (!automationId) return false  // fail closed — no automationId means can't check
+    const windowStart = new Date(Date.now() - (cond.value as number) * 86_400_000).toISOString()
+    try {
+      const { count, error } = await supabase
+        .from('automation_runs')
+        .select('id', { count: 'exact', head: true })
+        .eq('automation_id', automationId)
+        .eq('context_ref', customerId)
+        .in('state', ['ok', 'queued', 'scheduled'])
+        .gte('created_at', windowStart)
+      if (error) return false  // fail closed on DB error
+      return (count ?? 1) === 0
+    } catch {
+      return false  // fail closed on any exception
+    }
   }
 
   return true
