@@ -146,7 +146,7 @@ export default function AutomationGuideModal({ onClose }: Props) {
               </div>
               <div className="pt-guide-example-row pt-guide-example-row-and">
                 <span className="pt-guide-example-badge if">AND</span>
-                <span>Don't re-fire within <b>30</b> days</span>
+                <span>Don&apos;t re-fire within <b>30</b> days</span>
               </div>
               <div className="pt-guide-example-row">
                 <span className="pt-guide-example-badge then">THEN</span>
