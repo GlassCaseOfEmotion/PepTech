@@ -116,11 +116,13 @@ export async function evaluateCondition(
 
     const cycleDays = weeks * 7
     const daysSince = (Date.now() - new Date(order.delivered_at).getTime()) / 86_400_000
+    // Math.round: 4.5 remaining → 5, so lte 5 fires up to half a day before the threshold
     const daysRemaining = Math.round(cycleDays - daysSince)
     return compare(daysRemaining, cond.operator, cond.value as number)
   }
 
   if (cond.type === 'days_since_last_order') {
+    // Uses created_at (order placement date), not delivered_at — "days since last purchase"
     const { data: order } = await supabase
       .from('orders')
       .select('created_at')
@@ -153,7 +155,7 @@ export async function evaluateCondition(
         .select('id', { count: 'exact', head: true })
         .eq('automation_id', automationId)
         .eq('context_ref', customerId)
-        .in('state', ['ok', 'queued', 'scheduled'])
+        .in('state', ['ok', 'warn', 'queued', 'scheduled'])
         .gte('created_at', windowStart)
       if (error) return false  // fail closed on DB error
       return (count ?? 1) === 0
