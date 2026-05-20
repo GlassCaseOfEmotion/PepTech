@@ -11,6 +11,7 @@ import {
 import { EmptyState } from '@/components/ui/EmptyState'
 
 import AutomationModal from './AutomationModal'
+import AutomationGuideModal from './AutomationGuideModal'
 
 type Props = { automations: AutomationWithRuns[] }
 
@@ -72,6 +73,7 @@ export default function AutomationsView({ automations }: Props) {
   const [items, setItems] = useState<AutomationWithRuns[]>(automations)
   const [selectedId, setSelectedId] = useState<string>(automations[0]?.id ?? '')
   const [showModal, setShowModal] = useState<{ mode: 'create' } | { mode: 'edit'; automation: Automation } | null>(null)
+  const [showGuide, setShowGuide] = useState(false)
 
   const sel = items.find(a => a.id === selectedId) ?? items[0]
 
@@ -118,6 +120,7 @@ export default function AutomationsView({ automations }: Props) {
           </p>
         </div>
         <div className="pt-au-hd-actions">
+          <button className="pt-btn pt-btn-ghost" onClick={() => setShowGuide(true)}>How automations work →</button>
           <button className="pt-btn pt-btn-ghost"><Icons.search size={12} /> Browse templates</button>
           <button className="pt-btn pt-btn-primary" onClick={() => setShowModal({ mode: 'create' })}>
             <Icons.plus size={12} /> New automation
@@ -338,6 +341,7 @@ export default function AutomationsView({ automations }: Props) {
           onClose={() => setShowModal(null)}
         />
       )}
+      {showGuide && <AutomationGuideModal onClose={() => setShowGuide(false)} />}
     </div>
   )
 }
