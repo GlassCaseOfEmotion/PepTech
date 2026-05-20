@@ -160,7 +160,7 @@ export default function AutomationGuideModal({ onClose }: Props) {
 
         </div>
 
-        <div className="pt-au-modal-footer">
+        <div className="pt-au-modal-footer" style={{ justifyContent: 'flex-end' }}>
           <button className="pt-btn pt-btn-primary" onClick={onClose}>Got it</button>
         </div>
 
