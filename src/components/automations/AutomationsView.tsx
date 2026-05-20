@@ -2,69 +2,153 @@
 
 import React, { useState } from 'react'
 import { Icons } from '@/lib/icons'
-import type { AutoState, AutomationWithRuns, AutomationRun, Automation } from '@/types/automations'
+import type { AutoState, AutomationWithRuns, AutomationRun, Automation, Condition } from '@/types/automations'
+import type { QueuedRun } from '@/types/automations'
 import {
   toggleAutomation,
-  approveAndSendQueuedRun,
-  dismissQueuedRun,
 } from '@/app/automations/actions'
 import { EmptyState } from '@/components/ui/EmptyState'
-
+import { PendingApprovalRow } from '@/components/shared/PendingApprovalRow'
 import AutomationModal from './AutomationModal'
 import AutomationGuideModal from './AutomationGuideModal'
 
 type Props = { automations: AutomationWithRuns[] }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Plain-English helpers ─────────────────────────────────────────────────────
 
-function triggerLabel(a: AutomationWithRuns): string {
+function triggerText(a: AutomationWithRuns): string {
   switch (a.trigger_type) {
-    case 'protocol_progress': {
-      const p = a.trigger_params as { days_before_end?: number }
-      return p.days_before_end != null ? `Cycle ends in ${p.days_before_end}d` : 'Protocol progress'
+    case 'new_thread': {
+      const p = a.trigger_params as { delay_days?: number }
+      return p.delay_days ? `New conversation — fires ${p.delay_days}d later` : 'When a new conversation opens'
+    }
+    case 'order_state': {
+      const p = a.trigger_params as { to_status?: string; delay_days?: number }
+      const d = p.delay_days ? `, ${p.delay_days}d after` : ''
+      return `When an order is marked ${p.to_status ?? '…'}${d}`
     }
     case 'schedule': {
-      const p = a.trigger_params as { cron?: string }
-      return p.cron ?? 'Scheduled'
+      const p = a.trigger_params as { cron?: string; scope?: string }
+      const cron = p.cron ?? ''
+      const hour = cron.split(' ')[1]
+      const time = hour && hour !== '*' ? ` at ${String(parseInt(hour, 10)).padStart(2, '0')}:00 UTC` : ''
+      return p.scope === 'customers'
+        ? `Daily${time} — runs for each customer`
+        : `Daily${time} — runs once`
     }
-    case 'new_thread': return 'New thread'
-    case 'order_state': {
-      const p = a.trigger_params as { to_status?: string }
-      return p.to_status ? `Order → ${p.to_status}` : 'Order state change'
+    case 'protocol_progress': {
+      const p = a.trigger_params as { days_before_end?: number }
+      return p.days_before_end != null
+        ? `${p.days_before_end} days before cycle ends`
+        : 'Protocol progress'
     }
     default: return a.trigger_type
   }
 }
 
-function actionLabel(a: AutomationWithRuns): string {
+function actionText(a: AutomationWithRuns): string {
   switch (a.action_type) {
-    case 'send_dm': return 'Send DM'
-    case 'operator_alert': return 'Notify operator'
+    case 'send_dm': {
+      const p = a.action_params as { review_required?: boolean }
+      return p.review_required !== false ? 'Send a DM — held for your review' : 'Send a DM automatically'
+    }
+    case 'operator_alert': return 'Send you an alert'
     case 'score_adjust': {
       const p = a.action_params as { delta?: number }
-      return p.delta != null ? `Adjust trust score (${p.delta > 0 ? '+' : ''}${p.delta})` : 'Adjust trust score'
+      if (p.delta == null) return 'Adjust trust score'
+      return p.delta > 0 ? `Increase trust score by ${p.delta}` : `Decrease trust score by ${Math.abs(p.delta)}`
     }
-    case 'operator_task': return 'Add task'
+    case 'operator_task': return 'Create a task'
     default: return a.action_type
   }
 }
 
+function automationSummary(a: AutomationWithRuns): string {
+  const trigger = (() => {
+    switch (a.trigger_type) {
+      case 'new_thread': return 'new conversation'
+      case 'order_state': {
+        const p = a.trigger_params as { to_status?: string }
+        return `order → ${p.to_status ?? 'update'}`
+      }
+      case 'schedule': {
+        const p = a.trigger_params as { scope?: string }
+        return p.scope === 'customers' ? 'schedule · per customer' : 'schedule · once'
+      }
+      case 'protocol_progress': {
+        const p = a.trigger_params as { days_before_end?: number }
+        return p.days_before_end != null ? `${p.days_before_end}d before cycle ends` : 'protocol progress'
+      }
+      default: return a.trigger_type
+    }
+  })()
+  const action = (() => {
+    switch (a.action_type) {
+      case 'send_dm': {
+        const p = a.action_params as { review_required?: boolean }
+        return p.review_required !== false ? 'send DM (review)' : 'send DM'
+      }
+      case 'operator_alert': return 'alert operator'
+      case 'score_adjust': {
+        const p = a.action_params as { delta?: number }
+        return `${p.delta != null && p.delta > 0 ? '+' : ''}${p.delta ?? '?'} trust`
+      }
+      case 'operator_task': return 'create task'
+      default: return a.action_type
+    }
+  })()
+  return `${trigger} → ${action}`
+}
+
+function conditionText(c: Condition): string {
+  const op: Record<string, string> = { gte: '≥', lte: '≤', eq: '=' }
+  switch (c.type) {
+    case 'trust_score':             return `Trust score ${op[(c as {operator:string}).operator]} ${c.value}`
+    case 'ltv':                     return `Lifetime value ${op[(c as {operator:string}).operator]} $${c.value}`
+    case 'last_message_hours':      return `Hours since last message ${op[(c as {operator:string}).operator]} ${c.value}`
+    case 'is_new_customer':         return c.value ? 'Is a new customer' : 'Is not a new customer'
+    case 'protocol_days_remaining': return `Days left in cycle ${op[(c as {operator:string}).operator]} ${c.value}`
+    case 'days_since_last_order':   return `Days since last order ${op[(c as {operator:string}).operator]} ${c.value}`
+    case 'has_tag':                 return `Has tag "${c.value}"`
+    case 'cooldown_days':           return `Not fired in the last ${c.value} days`
+    default: return JSON.stringify(c)
+  }
+}
+
+function runLabel(r: AutomationRun): string {
+  if (r.state === 'skip') return 'Skipped'
+  if (r.state === 'err') return r.action_summary ?? 'Error'
+  if (r.state === 'scheduled') return 'Scheduled (delayed)'
+  if (r.state === 'warn') return r.action_summary ?? 'Warning'
+  return r.action_summary ?? r.state
+}
+
 function formatRelativeTime(iso: string): string {
-  const now = Date.now()
-  const ms = now - new Date(iso).getTime()
+  const ms = Date.now() - new Date(iso).getTime()
   const mins = Math.floor(ms / 60_000)
   if (mins < 1) return 'just now'
   if (mins < 60) return `${mins}m ago`
   const hrs = Math.floor(mins / 60)
   if (hrs < 24) return `${hrs}h ago`
   const days = Math.floor(hrs / 24)
-  if (days === 1) return 'Yesterday'
-  return `${days}d ago`
+  return days === 1 ? 'Yesterday' : `${days}d ago`
 }
 
-function runsInWindow(runs: AutomationRun[], hours: number): number {
-  const cutoff = Date.now() - hours * 60 * 60 * 1000
-  return runs.filter(r => new Date(r.created_at).getTime() >= cutoff).length
+function runsInWindow(runs: AutomationRun[], hours: number) {
+  const cutoff = Date.now() - hours * 3_600_000
+  return runs.filter(r => new Date(r.created_at).getTime() >= cutoff)
+}
+
+function toQueuedRun(r: AutomationRun, automationName: string): QueuedRun {
+  const payload = r.action_payload as Record<string, unknown> | null
+  return {
+    id: r.id,
+    automationName,
+    contextLabel: r.context_label,
+    message: (payload?.message as string) ?? r.action_summary ?? '',
+    conversationId: (payload?.conversationId as string) ?? null,
+    createdAt: r.created_at,
+  }
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -78,9 +162,7 @@ export default function AutomationsView({ automations }: Props) {
   const sel = items.find(a => a.id === selectedId) ?? items[0]
 
   const onCount = items.filter(a => a.state === 'on').length
-  const totalRuns24h = items.reduce((sum, a) => sum + runsInWindow(a.automation_runs, 24), 0)
-  const pausedCount = items.filter(a => a.state === 'paused').length
-  const offCount = items.filter(a => a.state === 'off').length
+  const totalPending = items.reduce((s, a) => s + a.automation_runs.filter(r => r.state === 'queued').length, 0)
 
   async function handleToggle(id: string, currentState: AutoState) {
     const next: AutoState = currentState === 'on' ? 'off' : 'on'
@@ -88,35 +170,30 @@ export default function AutomationsView({ automations }: Props) {
     await toggleAutomation(id, next)
   }
 
-  async function handleApprove(runId: string) {
+  function handleRemoveRun(runId: string) {
     setItems(prev => prev.map(a => ({
       ...a,
       automation_runs: a.automation_runs.filter(r => r.id !== runId),
     })))
-    await approveAndSendQueuedRun(runId)
-  }
-
-  async function handleDismiss(runId: string) {
-    setItems(prev => prev.map(a => ({
-      ...a,
-      automation_runs: a.automation_runs.filter(r => r.id !== runId),
-    })))
-    await dismissQueuedRun(runId)
   }
 
   const selRuns = sel?.automation_runs ?? []
-  const recentRuns = selRuns.filter(r => r.state !== 'queued')
-  const queuedRuns = selRuns.filter(r => r.state === 'queued')
+  const queued = selRuns.filter(r => r.state === 'queued')
+  const history = selRuns.filter(r => r.state !== 'queued').slice(0, 20)
+  const runs7d = runsInWindow(selRuns, 168)
+  const errors7d = runs7d.filter(r => r.state === 'err').length
+  const nonQueued7d = runs7d.filter(r => r.state !== 'queued')
 
   return (
     <div className="pt-au">
+
+      {/* ── Header ── */}
       <div className="pt-au-hd">
         <div>
           <h1>Automations</h1>
           <p>
-            {onCount} active · {totalRuns24h} runs in last 24h
-            {pausedCount > 0 && ` · ${pausedCount} paused`}
-            {offCount > 0 && ` · ${offCount} off`}
+            {onCount} active
+            {totalPending > 0 && <> · <span className="pt-au-hd-pending">{totalPending} awaiting review</span></>}
           </p>
         </div>
         <div className="pt-au-hd-actions">
@@ -134,37 +211,19 @@ export default function AutomationsView({ automations }: Props) {
             size="lg"
             icon={
               <svg width="130" height="88" viewBox="0 0 130 88" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-                {/* WHEN box */}
                 <rect x="4" y="28" width="32" height="22" rx="4" strokeWidth="1.1"/>
                 <text x="20" y="38.5" textAnchor="middle" fontSize="5.5" fill="currentColor" stroke="none" opacity="0.5" fontFamily="inherit" letterSpacing="0.05em">WHEN</text>
                 <text x="20" y="46" textAnchor="middle" fontSize="4.8" fill="currentColor" stroke="none" opacity="0.85" fontFamily="inherit">New thread</text>
-                {/* Arrow 1 */}
                 <line x1="36" y1="39" x2="46" y2="39" strokeWidth="0.9" opacity="0.5"/>
                 <polyline points="44,36.5 46.5,39 44,41.5" strokeWidth="0.9" opacity="0.5" fill="none"/>
-                {/* IF box */}
                 <rect x="47" y="28" width="32" height="22" rx="4" strokeWidth="1.1"/>
                 <text x="63" y="38.5" textAnchor="middle" fontSize="5.5" fill="currentColor" stroke="none" opacity="0.5" fontFamily="inherit" letterSpacing="0.05em">IF</text>
                 <text x="63" y="46" textAnchor="middle" fontSize="4.8" fill="currentColor" stroke="none" opacity="0.85" fontFamily="inherit">Trust ≥ 50</text>
-                {/* Arrow 2 */}
                 <line x1="79" y1="39" x2="89" y2="39" strokeWidth="0.9" opacity="0.5"/>
                 <polyline points="87,36.5 89.5,39 87,41.5" strokeWidth="0.9" opacity="0.5" fill="none"/>
-                {/* THEN box */}
                 <rect x="90" y="28" width="36" height="22" rx="4" strokeWidth="1.1"/>
                 <text x="108" y="38.5" textAnchor="middle" fontSize="5.5" fill="currentColor" stroke="none" opacity="0.5" fontFamily="inherit" letterSpacing="0.05em">THEN</text>
                 <text x="108" y="46" textAnchor="middle" fontSize="4.8" fill="currentColor" stroke="none" opacity="0.85" fontFamily="inherit">Send DM</text>
-                {/* Second row — dimmed, offset */}
-                <rect x="14" y="60" width="30" height="18" rx="3.5" strokeWidth="0.8" opacity="0.22"/>
-                <line x1="44" y1="69" x2="52" y2="69" strokeWidth="0.8" opacity="0.18"/>
-                <polyline points="50.5,67 52.5,69 50.5,71" strokeWidth="0.8" opacity="0.18" fill="none"/>
-                <rect x="53" y="60" width="30" height="18" rx="3.5" strokeWidth="0.8" opacity="0.22"/>
-                <line x1="83" y1="69" x2="91" y2="69" strokeWidth="0.8" opacity="0.18"/>
-                <polyline points="89.5,67 91.5,69 89.5,71" strokeWidth="0.8" opacity="0.18" fill="none"/>
-                <rect x="92" y="60" width="30" height="18" rx="3.5" strokeWidth="0.8" opacity="0.22"/>
-                {/* Plus badge on first box — suggests creating */}
-                <circle cx="4" cy="28" r="5.5" fill="currentColor" opacity="0.08" stroke="none"/>
-                <circle cx="4" cy="28" r="5.5" strokeWidth="0.8" opacity="0.3"/>
-                <line x1="4" y1="25.5" x2="4" y2="30.5" strokeWidth="1" opacity="0.5"/>
-                <line x1="1.5" y1="28" x2="6.5" y2="28" strokeWidth="1" opacity="0.5"/>
               </svg>
             }
             title="No automations yet"
@@ -173,165 +232,201 @@ export default function AutomationsView({ automations }: Props) {
           />
         </div>
       ) : (
-      <div className="pt-au-body">
-        <section className="pt-card pt-au-list-card">
-          <div className="pt-card-body pt-au-list-body">
-            <ul className="pt-au-list">
-              {items.map(a => (
-                <li
-                  key={a.id}
-                  className={`pt-au-row ${selectedId === a.id ? 'is-active' : ''} pt-au-state-${a.state}`}
-                  onClick={() => setSelectedId(a.id)}
-                >
-                  <span className={`pt-au-dot pt-au-dot-${a.state}`} />
-                  <div className="pt-au-row-mid">
-                    <div className="pt-au-row-name">{a.name}</div>
-                    <div className="pt-au-row-flow">
-                      <span className="pt-au-trig">{triggerLabel(a)}</span>
-                      <span className="pt-au-arrow">→</span>
-                      <span className="pt-au-act">{actionLabel(a)}</span>
-                    </div>
-                  </div>
-                  <div className="pt-au-row-meta">
-                    <div className="pt-au-row-runs mono">{runsInWindow(a.automation_runs, 168)}<span> /7d</span></div>
-                    <div className="pt-au-row-last">
-                      {a.automation_runs[0] ? formatRelativeTime(a.automation_runs[0].created_at) : '—'}
-                    </div>
-                  </div>
-                  <button
-                    className={`pt-au-toggle pt-au-toggle-${a.state}`}
-                    onClick={e => { e.stopPropagation(); handleToggle(a.id, a.state) }}
-                  >
-                    <span />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
+        <div className="pt-au-body">
 
-        {sel && (
-          <section className="pt-card pt-au-detail">
-            <header className="pt-card-hd">
-              <div><h3>{sel.name}</h3></div>
-              <div className="pt-au-d-state">
-                <span className={`pt-au-state-pill pt-au-state-pill-${sel.state}`}>
-                  <span className={`pt-au-dot pt-au-dot-${sel.state}`} />
-                  {sel.state === 'on' ? 'Active' : sel.state === 'paused' ? 'Paused' : 'Off'}
-                </span>
-              </div>
-            </header>
-            <div className="pt-card-body">
-              <div className="pt-au-flow">
-                <div className="pt-au-flow-step pt-au-flow-trigger">
-                  <div className="pt-au-flow-tag">When</div>
-                  <div className="pt-au-flow-label">{triggerLabel(sel)}</div>
-                  <div className="pt-au-flow-detail">{sel.trigger_type}</div>
-                </div>
-                <div className="pt-au-flow-arrow">↓</div>
-                {sel.conditions.length > 0 && (
-                  <>
-                    <div className="pt-au-flow-step pt-au-flow-conds">
-                      <div className="pt-au-flow-tag">If</div>
-                      <ul className="pt-au-conds">
-                        {sel.conditions.map((c, i) => (
-                          <li key={i} className="is-ok">
-                            <Icons.check size={11} />
-                            <span>{c.type}{'operator' in c ? ` ${c.operator}` : ''} {String(c.value)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="pt-au-flow-arrow">↓</div>
-                  </>
-                )}
-                <div className="pt-au-flow-step pt-au-flow-action">
-                  <div className="pt-au-flow-tag">Then</div>
-                  <div className="pt-au-flow-label">{actionLabel(sel)}</div>
-                  <div className="pt-au-flow-detail">{sel.action_type}</div>
-                </div>
-              </div>
-
-              <div className="pt-au-runs">
-                <div className="pt-au-runs-hd">
-                  <h4>Recent runs</h4>
-                  <span className="pt-au-runs-count">{recentRuns.length} {recentRuns.length === 1 ? 'run' : 'runs'}</span>
-                </div>
-                {recentRuns.length === 0 ? (
-                  <div className="pt-au-runs-empty">Hasn&apos;t fired yet — turn it on to start collecting runs.</div>
-                ) : (
-                  <ul className="pt-au-runs-list">
-                    {recentRuns.map(r => (
-                      <li key={r.id} className={`pt-au-run pt-au-run-${r.state}`}>
-                        <span className="pt-au-run-time mono">{formatRelativeTime(r.created_at)}</span>
-                        <span className={`pt-au-run-bullet pt-au-run-bullet-${r.state}`} />
-                        <span className="pt-au-run-who">{r.context_label ?? r.context_ref ?? '—'}</span>
-                        <span className="pt-au-run-action">
-                          {r.state === 'scheduled'
-                            ? (r.context_label ?? 'Scheduled')
-                            : (r.action_summary ?? r.state)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {queuedRuns.length > 0 && (
-                  <div className="pt-au-queued">
-                    <div className="pt-au-runs-hd">
-                      <h4>Pending review</h4>
-                      <span className="pt-au-runs-count">{queuedRuns.length}</span>
-                    </div>
-                    <ul className="pt-au-runs-list">
-                      {queuedRuns.map(r => (
-                        <li key={r.id} className="pt-au-run pt-au-run-queued">
-                          <span className="pt-au-run-time mono">{formatRelativeTime(r.created_at)}</span>
-                          <span className="pt-au-run-bullet pt-au-run-bullet-queued" />
-                          <span className="pt-au-run-who">{r.context_label ?? r.context_ref ?? '—'}</span>
-                          <span className="pt-au-run-action">
-                            {(r.action_payload?.message as string | undefined) ?? r.action_summary ?? 'Queued'}
-                          </span>
-                          <div className="pt-au-queued-actions">
-                            <button
-                              className="pt-btn pt-btn-primary pt-btn-xs"
-                              onClick={() => handleApprove(r.id)}
-                            >
-                              Approve &amp; Send
-                            </button>
-                            <button
-                              className="pt-btn pt-btn-ghost pt-btn-xs"
-                              onClick={() => handleDismiss(r.id)}
-                            >
-                              Dismiss
-                            </button>
+          {/* ── Left: automation list ── */}
+          <section className="pt-card pt-au-list-card">
+            <div className="pt-card-body pt-au-list-body">
+              <ul className="pt-au-list">
+                {items.map(a => {
+                  const pendingCount = a.automation_runs.filter(r => r.state === 'queued').length
+                  const runs = runsInWindow(a.automation_runs, 168).length
+                  return (
+                    <li
+                      key={a.id}
+                      className={`pt-au-row pt-au-state-${a.state}${selectedId === a.id ? ' is-active' : ''}`}
+                      onClick={() => setSelectedId(a.id)}
+                    >
+                      <span className={`pt-au-state-bar pt-au-state-bar-${a.state}`} />
+                      <div className="pt-au-row-body">
+                        <div className="pt-au-row-top">
+                          <span className="pt-au-row-name">{a.name}</span>
+                          <div className="pt-au-row-badges">
+                            {pendingCount > 0 && (
+                              <span className="pt-au-row-badge pt-au-row-badge-pending">{pendingCount} pending</span>
+                            )}
+                            {runs > 0 && pendingCount === 0 && (
+                              <span className="pt-au-row-badge pt-au-row-badge-runs">{runs} /7d</span>
+                            )}
                           </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-
-              <div className="pt-au-foot">
-                <div className="pt-au-foot-stats">
-                  <div><span className="mono">{runsInWindow(sel.automation_runs, 168)}</span> runs · 7d</div>
-                  <div><span className="mono">{runsInWindow(sel.automation_runs, 24)}</span> runs · 24h</div>
-                  <div>last <span>{sel.automation_runs[0] ? formatRelativeTime(sel.automation_runs[0].created_at) : '—'}</span></div>
-                </div>
-                <div className="pt-au-foot-actions">
-                  <button
-                    className="pt-btn pt-btn-ghost"
-                    onClick={() => setShowModal({ mode: 'edit', automation: sel })}
-                  >
-                    Edit flow
-                  </button>
-                  <button className="pt-btn pt-btn-ghost">View all runs</button>
-                </div>
-              </div>
+                        </div>
+                        <div className="pt-au-row-summary">{automationSummary(a)}</div>
+                      </div>
+                      <button
+                        className={`pt-au-toggle pt-au-toggle-${a.state}`}
+                        onClick={e => { e.stopPropagation(); void handleToggle(a.id, a.state) }}
+                        title={a.state === 'on' ? 'Turn off' : 'Turn on'}
+                      >
+                        <span />
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
             </div>
           </section>
-        )}
-      </div>
+
+          {/* ── Right: detail panel ── */}
+          {sel && (
+            <section className="pt-card pt-au-detail">
+              <div className="pt-card-body pt-au-detail-body">
+
+                {/* Hero */}
+                <div className="pt-au-hero">
+                  <div className="pt-au-hero-top">
+                    <h2 className="pt-au-hero-name">{sel.name}</h2>
+                    <div className="pt-au-hero-actions">
+                      <button
+                        className={`pt-au-toggle pt-au-toggle-${sel.state}`}
+                        onClick={() => void handleToggle(sel.id, sel.state)}
+                        title={sel.state === 'on' ? 'Turn off' : 'Turn on'}
+                      ><span /></button>
+                      <span className={`pt-au-state-label pt-au-state-label-${sel.state}`}>
+                        {sel.state === 'on' ? 'Active' : sel.state === 'paused' ? 'Paused' : 'Off'}
+                      </span>
+                      <button
+                        className="pt-btn pt-btn-ghost"
+                        style={{ fontSize: 12, padding: '4px 10px' }}
+                        onClick={() => setShowModal({ mode: 'edit', automation: sel })}
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </div>
+                  <p className="pt-au-hero-summary">
+                    {triggerText(sel)} · {actionText(sel).toLowerCase()}
+                  </p>
+                </div>
+
+                {/* Stats bar */}
+                <div className="pt-au-stats">
+                  <div className="pt-au-stat">
+                    <span className="pt-au-stat-val">{nonQueued7d.length}</span>
+                    <span className="pt-au-stat-lbl">Runs · 7d</span>
+                  </div>
+                  <div className="pt-au-stat-div" />
+                  <div className="pt-au-stat">
+                    <span className={`pt-au-stat-val${queued.length > 0 ? ' pt-au-stat-warn' : ''}`}>{queued.length}</span>
+                    <span className="pt-au-stat-lbl">Awaiting review</span>
+                  </div>
+                  <div className="pt-au-stat-div" />
+                  <div className="pt-au-stat">
+                    <span className={`pt-au-stat-val${errors7d > 0 ? ' pt-au-stat-err' : ''}`}>{errors7d}</span>
+                    <span className="pt-au-stat-lbl">Errors · 7d</span>
+                  </div>
+                  <div className="pt-au-stat-div" />
+                  <div className="pt-au-stat">
+                    <span className="pt-au-stat-val">
+                      {nonQueued7d.length > 0
+                        ? `${Math.round((nonQueued7d.filter(r => r.state === 'ok').length / nonQueued7d.length) * 100)}%`
+                        : '—'}
+                    </span>
+                    <span className="pt-au-stat-lbl">Success rate</span>
+                  </div>
+                </div>
+
+                {/* Pending review */}
+                {queued.length > 0 && (
+                  <div className="pt-au-pending-section">
+                    <div className="pt-au-pending-hd">
+                      <span className="pt-au-pending-dot" />
+                      <span className="pt-au-pending-title">
+                        {queued.length} message{queued.length > 1 ? 's' : ''} waiting for your review
+                      </span>
+                    </div>
+                    <div className="pt-au-pending-rows">
+                      {queued.map(r => (
+                        <PendingApprovalRow
+                          key={r.id}
+                          run={toQueuedRun(r, sel.name)}
+                          onRemove={handleRemoveRun}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Flow — plain English */}
+                <div className="pt-au-flow-plain">
+                  <div className="pt-au-flow-row">
+                    <span className="pt-au-flow-tag pt-au-flow-tag-when">WHEN</span>
+                    <span className="pt-au-flow-val">{triggerText(sel)}</span>
+                  </div>
+                  {sel.conditions.filter(c => c.type !== 'cooldown_days').length > 0 && (
+                    <div className="pt-au-flow-row">
+                      <span className="pt-au-flow-tag pt-au-flow-tag-if">IF</span>
+                      <span className="pt-au-flow-val">
+                        {sel.conditions
+                          .filter(c => c.type !== 'cooldown_days')
+                          .map((c, i, arr) => (
+                            <span key={i}>
+                              {conditionText(c)}
+                              {i < arr.length - 1 && <span className="pt-au-flow-and"> and </span>}
+                            </span>
+                          ))}
+                      </span>
+                    </div>
+                  )}
+                  {sel.conditions.find(c => c.type === 'cooldown_days') && (
+                    <div className="pt-au-flow-row">
+                      <span className="pt-au-flow-tag pt-au-flow-tag-cd">LIMIT</span>
+                      <span className="pt-au-flow-val">
+                        {conditionText(sel.conditions.find(c => c.type === 'cooldown_days')!)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="pt-au-flow-row">
+                    <span className="pt-au-flow-tag pt-au-flow-tag-then">THEN</span>
+                    <span className="pt-au-flow-val">{actionText(sel)}</span>
+                  </div>
+                  {sel.action_type === 'send_dm' && (sel.action_params as {message?: string}).message && (
+                    <div className="pt-au-flow-msg">
+                      &ldquo;{(sel.action_params as {message: string}).message}&rdquo;
+                    </div>
+                  )}
+                </div>
+
+                {/* Activity timeline */}
+                <div className="pt-au-timeline">
+                  <div className="pt-au-timeline-hd">Recent activity</div>
+                  {history.length === 0 ? (
+                    <div className="pt-au-timeline-empty">
+                      {sel.state === 'on'
+                        ? 'No runs yet — waiting for the trigger to fire.'
+                        : 'Turn this automation on to start collecting runs.'}
+                    </div>
+                  ) : (
+                    <ul className="pt-au-timeline-list">
+                      {history.slice(0, 12).map(r => {
+                        const stateIcon = r.state === 'ok' ? '✓' : r.state === 'err' ? '✕' : r.state === 'warn' ? '⚠' : '—'
+                        const stateCls  = r.state === 'ok' ? 'ok' : r.state === 'err' ? 'err' : r.state === 'skip' ? 'skip' : 'warn'
+                        return (
+                          <li key={r.id} className="pt-au-timeline-row">
+                            <span className={`pt-au-timeline-icon pt-au-tl-${stateCls}`}>{stateIcon}</span>
+                            <span className="pt-au-timeline-who">{r.context_label ?? r.context_ref ?? 'Account'}</span>
+                            <span className="pt-au-timeline-what">{runLabel(r)}</span>
+                            <span className="pt-au-timeline-when">{formatRelativeTime(r.created_at)}</span>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </div>
+
+              </div>
+            </section>
+          )}
+        </div>
       )}
 
       {showModal && (
