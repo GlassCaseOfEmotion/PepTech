@@ -145,6 +145,21 @@ async function processSchedulePerCustomer(
       automationId: automation.id,
     }
 
+    // send_dm requires a conversation — skip customers who have none
+    if (automation.action_type === 'send_dm' && !context.conversationId) {
+      await supabase.from('automation_runs').insert({
+        automation_id: automation.id,
+        tenant_id: automation.tenant_id,
+        state: 'skip',
+        context_ref: customerId,
+        context_label: null,
+        action_summary: 'No conversation — skipped',
+        action_payload: null,
+      })
+      inserted++
+      continue
+    }
+
     try {
       const conditions = (automation.conditions ?? []) as Condition[]
       const condResults = await Promise.all(
