@@ -41,20 +41,18 @@ export function PendingApprovalRow({ run, onRemove }: {
   return (
     <div className={`pt-pa-row${state !== 'idle' ? ' is-active' : ''}`}>
 
-      {/* Always-visible content */}
-      <div className="pt-pa-meta">
-        <span className="pt-pa-automation">{run.automationName}</span>
-        <span className="pt-pa-sep">·</span>
-        <span className="pt-pa-customer">{run.contextLabel ?? '—'}</span>
-      </div>
-      <div className="pt-pa-msg">{run.message}</div>
-
-      {/* Idle: hover-reveal send bar + dismiss */}
+      {/* Idle: always-visible content + hover-reveal send bar */}
       {state === 'idle' && (
         <>
+          <div className="pt-pa-meta">
+            <span className="pt-pa-automation">{run.automationName}</span>
+            <span className="pt-pa-sep">·</span>
+            <span className="pt-pa-customer">{run.contextLabel ?? '—'}</span>
+          </div>
+          <div className="pt-pa-msg">{run.message}</div>
           <button className="pt-pa-dismiss" onClick={handleDismiss} title="Dismiss">✕</button>
           <button className="pt-pa-send-bar" onClick={() => setState('confirming')}>
-            Approve &amp; Send →
+            Review &amp; Send →
           </button>
         </>
       )}

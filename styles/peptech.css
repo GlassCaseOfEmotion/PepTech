@@ -2260,9 +2260,8 @@ kbd {
   padding: 8px 0;
   border-bottom: 0.5px solid var(--pt-line-soft);
   min-height: 68px;
-  transition: min-height 0.18s ease;
 }
-.pt-pa-row.is-active { min-height: 120px; }
+.pt-pa-row.is-active { overflow: visible; min-height: 0; }
 .pt-pa-row:last-child { border-bottom: none; }
 .pt-pa-meta {
   display: flex; align-items: center; gap: 5px;
@@ -2309,14 +2308,15 @@ kbd {
 .pt-pa-row:hover .pt-pa-send-bar { opacity: 1; transform: translateY(0); }
 .pt-pa-send-bar:hover { background: linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 100%); }
 
-/* Overlay — frosted glass for confirm / sending / sent */
+/* Overlay — frosted glass for confirm / sending / sent (flow, not absolute) */
 .pt-pa-overlay {
-  position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(10, 10, 14, 0.72);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  border-radius: var(--pt-radius-sm, 6px);
+  background: rgba(10, 10, 14, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 8px;
+  padding: 14px 12px;
+  width: 100%;
   animation: pt-pa-overlay-in 0.16s ease;
 }
 @keyframes pt-pa-overlay-in { from { opacity: 0; } to { opacity: 1; } }
@@ -2325,9 +2325,8 @@ kbd {
   gap: 5px; padding: 4px 12px; text-align: center; width: 100%;
 }
 .pt-pa-full-msg {
-  font-size: 11.5px; color: rgba(255,255,255,0.85); line-height: 1.4;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
-  overflow: hidden;
+  font-size: 11.5px; color: rgba(255,255,255,0.85); line-height: 1.5;
+  word-break: break-word;
 }
 .pt-pa-send-to {
   font-size: 10px; color: rgba(255,255,255,0.5);
