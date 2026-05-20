@@ -175,7 +175,14 @@ export async function approveAndSendQueuedRun(runId: string, overrideMessage?: s
 
     if (!sendRes.ok) {
       const body = await sendRes.json().catch(() => ({})) as Record<string, unknown>
-      return { error: (body.error as string) ?? `Send failed with status ${sendRes.status}` }
+      const errorMsg = (body.error as string) ?? `Send failed with status ${sendRes.status}`
+      // Record the failure so it's visible in the run history
+      await supabase
+        .from('automation_runs')
+        .update({ state: 'err', action_summary: errorMsg })
+        .eq('id', runId)
+        .eq('tenant_id', tenantId)
+      return { error: errorMsg }
     }
 
     const { error: updateError } = await supabase

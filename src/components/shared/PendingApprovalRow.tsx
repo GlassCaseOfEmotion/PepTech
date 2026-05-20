@@ -5,7 +5,19 @@ import { useRouter } from 'next/navigation'
 import { approveAndSendQueuedRun, dismissQueuedRun } from '@/app/automations/actions'
 import type { QueuedRun } from '@/types/automations'
 
-type SendState = 'idle' | 'confirming' | 'sending' | 'sent'
+type SendState = 'idle' | 'confirming' | 'sending' | 'sent' | 'error'
+
+function friendlyError(code: string): string {
+  if (code === 'window_expired')
+    return 'The 24-hour messaging window has expired. The customer needs to message you first before you can send a free-form message on this channel.'
+  if (code.includes('not connected') || code.toLowerCase().includes('channel'))
+    return 'This channel is no longer connected. Check your channel settings before trying again.'
+  if (code.includes('not found') || code.includes('Conversation'))
+    return 'The conversation no longer exists.'
+  if (code.includes('Unauthorized'))
+    return 'Your session has expired. Please refresh the page.'
+  return 'The message could not be delivered. Open the chat to send it manually or try again.'
+}
 
 export function PendingApprovalRow({ run, onRemove }: {
   run: QueuedRun
@@ -14,16 +26,19 @@ export function PendingApprovalRow({ run, onRemove }: {
   const [state, setState] = useState<SendState>('idle')
   const [editedMessage, setEditedMessage] = useState(run.message)
   const [isEditing, setIsEditing] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
   const router = useRouter()
 
   async function handleSend() {
     setIsEditing(false)
     setState('sending')
-    try {
-      await approveAndSendQueuedRun(run.id, editedMessage)
+    const result = await approveAndSendQueuedRun(run.id, editedMessage)
+      .catch(e => ({ error: e instanceof Error ? e.message : 'Unknown error' }))
+    if ('error' in result) {
+      setErrorMessage(friendlyError(result.error))
+      setState('error')
+    } else {
       setState('sent')
-    } catch {
-      setState('confirming')
     }
   }
 
@@ -100,6 +115,21 @@ export function PendingApprovalRow({ run, onRemove }: {
             <div className="pt-pa-overlay-label">Sending…</div>
             <div className="pt-pa-progressbar">
               <div className="pt-pa-progressbar-fill" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error overlay */}
+      {state === 'error' && (
+        <div className="pt-pa-overlay">
+          <div className="pt-pa-overlay-inner">
+            <div className="pt-pa-error-icon">✕</div>
+            <div className="pt-pa-overlay-label">Failed to send</div>
+            <div className="pt-pa-error-msg">{errorMessage}</div>
+            <div className="pt-pa-overlay-btns">
+              <button className="pt-pa-confirm-btn" onClick={() => setState('confirming')}>Try again</button>
+              <button className="pt-pa-cancel-btn" onClick={handleNavigate}>Open chat →</button>
             </div>
           </div>
         </div>

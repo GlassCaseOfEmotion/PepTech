@@ -2404,6 +2404,20 @@ kbd {
   to   { transform: scale(1);   opacity: 1; }
 }
 
+/* Error state */
+.pt-pa-error-icon {
+  width: 28px; height: 28px;
+  background: var(--pt-danger, #ef4444); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 12px; font-weight: 700;
+  animation: pt-pa-check-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.pt-pa-error-msg {
+  font-size: 11px; color: rgba(255,255,255,0.65);
+  text-align: center; line-height: 1.5;
+  max-width: 210px;
+}
+
 /* Go to chat button */
 .pt-pa-goto {
   margin-top: 2px;
