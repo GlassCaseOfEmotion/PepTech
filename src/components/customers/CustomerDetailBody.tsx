@@ -59,6 +59,11 @@ export function CustomerDetailBody({ cycles, activity, orders, notes, trust, det
               {trust}
             </div>
           )}
+          {automations && (
+            <div className={`pt-cd-section${tab === 'automations' ? ' is-active' : ''}`} data-section="automations">
+              {automations}
+            </div>
+          )}
           {details && (
             <div className="pt-cd-section pt-cd-desktop-only" data-section="details">
               {details}
@@ -67,11 +72,6 @@ export function CustomerDetailBody({ cycles, activity, orders, notes, trust, det
           <div className={`pt-cd-section${tab === 'activity' ? ' is-active' : ''}`} data-section="activity">
             {activity}
           </div>
-          {automations && (
-            <div className={`pt-cd-section${tab === 'automations' ? ' is-active' : ''}`} data-section="automations">
-              {automations}
-            </div>
-          )}
         </div>
       </div>
     </>
