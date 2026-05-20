@@ -2260,7 +2260,9 @@ kbd {
   padding: 8px 0;
   border-bottom: 0.5px solid var(--pt-line-soft);
   min-height: 68px;
+  transition: min-height 0.18s ease;
 }
+.pt-pa-row.is-active { min-height: 120px; }
 .pt-pa-row:last-child { border-bottom: none; }
 .pt-pa-meta {
   display: flex; align-items: center; gap: 5px;
