@@ -419,7 +419,7 @@ export default function AutomationModal({ mode, automation, onClose }: Props) {
                       ))}
                     </select>
 
-                    {c.type !== 'cooldown_days' && c.type !== 'has_tag' && (
+                    {c.type !== 'cooldown_days' && c.type !== 'has_tag' && c.type !== 'is_new_customer' && (
                       <select
                         className="pt-input pt-au-condition-op"
                         value={'operator' in c ? c.operator : 'gte'}
@@ -449,7 +449,7 @@ export default function AutomationModal({ mode, automation, onClose }: Props) {
                       />
                     )}
                     {c.type === 'cooldown_days' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div className="pt-au-condition-inline">
                         <input
                           type="number"
                           className="pt-input pt-au-condition-val"

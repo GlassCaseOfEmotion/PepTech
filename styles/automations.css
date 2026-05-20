@@ -372,6 +372,8 @@
 }
 .pt-au-condition-remove:hover { color: var(--pt-danger); }
 
+.pt-au-condition-inline { display: flex; align-items: center; gap: 6px; }
+
 .pt-au-add-condition {
   align-self: flex-start;
   font-size: 12px;
