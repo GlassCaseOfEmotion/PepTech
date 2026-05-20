@@ -171,6 +171,17 @@ describe('evaluateCondition: cooldown_days', () => {
     expect(result).toBe(true)
   })
 
+  it('returns false when a scheduled (delayed) run exists within the window', async () => {
+    // state 'scheduled' = delayed send already queued — cooldown should still block
+    const supabase = makeSupabase({ automation_runs: { count: 1 } })
+    const result = await evaluateCondition(
+      { type: 'cooldown_days', value: 30 },
+      { customerId: 'c1', automationId: 'auto1' },
+      supabase,
+    )
+    expect(result).toBe(false)
+  })
+
   it('returns false (fail closed) when automationId is missing', async () => {
     const supabase = makeSupabase({})
     const result = await evaluateCondition(
@@ -182,19 +193,18 @@ describe('evaluateCondition: cooldown_days', () => {
   })
 
   it('returns false (fail closed) when query errors', async () => {
-    const supabase = {
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              in: vi.fn().mockReturnValue({
-                gte: vi.fn().mockResolvedValue({ count: null, error: { message: 'DB error' } }),
-              }),
-            }),
-          }),
-        }),
-      }),
-    } as unknown as SupabaseClient<Database>
+    const errorResult = { count: null, error: { message: 'DB error' }, data: null }
+    const resolved = Promise.resolve(errorResult)
+    const chain: Record<string, unknown> = {
+      then: resolved.then.bind(resolved),
+      catch: resolved.catch.bind(resolved),
+    }
+    ;['select','eq','neq','in','gte','not','order','limit'].forEach(m => {
+      chain[m] = vi.fn().mockReturnValue(chain)
+    })
+    chain['maybeSingle'] = vi.fn().mockResolvedValue(errorResult)
+    chain['single']      = vi.fn().mockResolvedValue(errorResult)
+    const supabase = { from: vi.fn().mockReturnValue(chain) } as unknown as SupabaseClient<Database>
     const result = await evaluateCondition(
       { type: 'cooldown_days', value: 30 },
       { customerId: 'c1', automationId: 'auto1' },
