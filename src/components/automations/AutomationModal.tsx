@@ -14,7 +14,16 @@ const ICON_OPTIONS = ['send', 'bell', 'zap', 'star', 'clock', 'shield', 'tag', '
 
 const ORDER_STATUSES = ['awaiting', 'confirming', 'packing', 'shipped', 'delivered', 'disputed']
 
-const CONDITION_TYPES: Condition['type'][] = ['trust_score', 'ltv', 'last_message_hours', 'is_new_customer']
+const CONDITION_TYPES: { value: Condition['type']; label: string }[] = [
+  { value: 'trust_score',             label: 'Trust score'              },
+  { value: 'ltv',                     label: 'Lifetime value'           },
+  { value: 'last_message_hours',      label: 'Hours since last message' },
+  { value: 'is_new_customer',         label: 'Is new customer'         },
+  { value: 'protocol_days_remaining', label: 'Days remaining in cycle'  },
+  { value: 'days_since_last_order',   label: 'Days since last order'    },
+  { value: 'has_tag',                 label: 'Customer has tag'         },
+  { value: 'cooldown_days',           label: "Don't re-fire within"     },
+]
 const CONDITION_OPERATORS: { value: Extract<Condition, { operator: string }>['operator']; label: string }[] = [
   { value: 'gte', label: '≥' },
   { value: 'lte', label: '≤' },
@@ -56,23 +65,40 @@ export default function AutomationModal({ mode, automation, onClose }: Props) {
         )
       }
       case 'schedule': {
-        const cron = (triggerParams.cron as string | undefined) ?? '0 9 * * *'
-        const hour = parseInt(cron.split(' ')[1] ?? '9', 10)
+        const cron  = (triggerParams.cron  as string | undefined) ?? '0 9 * * *'
+        const scope = (triggerParams.scope as string | undefined) ?? 'tenant'
+        const hour  = parseInt(cron.split(' ')[1] ?? '9', 10)
         return (
-          <div className="pt-au-modal-field">
-            <label className="pt-au-modal-field-label">Hour (every day)</label>
-            <select
-              className="pt-input"
-              value={hour}
-              onChange={e => setTriggerParams({ cron: `0 ${e.target.value} * * *` })}
-            >
-              {Array.from({ length: 24 }, (_, h) => (
-                <option key={h} value={h}>
-                  {String(h).padStart(2, '0')}:00
-                </option>
-              ))}
-            </select>
-          </div>
+          <>
+            <div className="pt-au-modal-field">
+              <label className="pt-au-modal-field-label">Hour (every day)</label>
+              <select
+                className="pt-input"
+                value={hour}
+                onChange={e => setTriggerParams(prev => ({ ...prev, cron: `0 ${e.target.value} * * *` }))}
+              >
+                {Array.from({ length: 24 }, (_, h) => (
+                  <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+                ))}
+              </select>
+            </div>
+            <div className="pt-au-modal-field">
+              <label className="pt-au-modal-field-label">Runs</label>
+              <select
+                className="pt-input"
+                value={scope}
+                onChange={e => setTriggerParams(prev => ({ ...prev, scope: e.target.value }))}
+              >
+                <option value="tenant">Once per run</option>
+                <option value="customers">For each customer</option>
+              </select>
+            </div>
+            {scope === 'customers' && (
+              <p className="pt-au-modal-hint">
+                Evaluates conditions for every customer individually. Add a <b>Don&apos;t re-fire within</b> condition to prevent repeated sends.
+              </p>
+            )}
+          </>
         )
       }
       case 'new_thread':
@@ -164,22 +190,25 @@ export default function AutomationModal({ mode, automation, onClose }: Props) {
   // ── Condition helpers ────────────────────────────────────────────────────────
 
   function addCondition() {
-    setConditions(prev => [...prev, { type: 'trust_score', operator: 'gte', value: 0 }])
+    setConditions(prev => [...prev, { type: 'trust_score', operator: 'gte', value: 0 } as Condition])
   }
 
   function removeCondition(i: number) {
     setConditions(prev => prev.filter((_, idx) => idx !== i))
   }
 
-  function updateCondition(i: number, patch: Partial<Condition>) {
+  function updateCondition(i: number, patch: Partial<Record<string, unknown>>) {
     setConditions(prev => prev.map((c, idx) => {
       if (idx !== i) return c
-      const next = { ...c, ...patch }
-      // Reset value type when switching to/from is_new_customer
+      const next = { ...c, ...patch } as Condition
       if (patch.type !== undefined && patch.type !== c.type) {
-        next.value = patch.type === 'is_new_customer' ? false : 0
+        const t = patch.type as Condition['type']
+        if (t === 'is_new_customer') return { type: t, operator: 'eq', value: false } as Condition
+        if (t === 'has_tag') return { type: t, operator: 'eq', value: '' } as Condition
+        if (t === 'cooldown_days') return { type: t, value: 30 } as Condition
+        return { type: t, operator: 'gte', value: 0 } as Condition
       }
-      return next as Condition
+      return next
     }))
   }
 
@@ -383,29 +412,55 @@ export default function AutomationModal({ mode, automation, onClose }: Props) {
                     <select
                       className="pt-input"
                       value={c.type}
-                      onChange={e => updateCondition(i, { type: e.target.value as Condition['type'] })}
+                      onChange={e => updateCondition(i, { type: e.target.value })}
                     >
                       {CONDITION_TYPES.map(t => (
-                        <option key={t} value={t}>{t}</option>
+                        <option key={t.value} value={t.value}>{t.label}</option>
                       ))}
                     </select>
-                    <select
-                      className="pt-input pt-au-condition-op"
-                      value={'operator' in c ? c.operator : 'gte'}
-                      onChange={e => updateCondition(i, { operator: e.target.value as Extract<Condition, { operator: string }>['operator'] })}
-                    >
-                      {CONDITION_OPERATORS.map(o => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
-                    {c.type === 'is_new_customer' ? (
+
+                    {c.type !== 'cooldown_days' && c.type !== 'has_tag' && (
+                      <select
+                        className="pt-input pt-au-condition-op"
+                        value={'operator' in c ? c.operator : 'gte'}
+                        onChange={e => updateCondition(i, { operator: e.target.value })}
+                      >
+                        {CONDITION_OPERATORS.map(o => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    )}
+
+                    {c.type === 'is_new_customer' && (
                       <input
                         type="checkbox"
                         className="pt-au-condition-bool"
                         checked={Boolean(c.value)}
                         onChange={e => updateCondition(i, { value: e.target.checked })}
                       />
-                    ) : (
+                    )}
+                    {c.type === 'has_tag' && (
+                      <input
+                        type="text"
+                        className="pt-input pt-au-condition-val"
+                        placeholder="tag name"
+                        value={c.value as string}
+                        onChange={e => updateCondition(i, { value: e.target.value })}
+                      />
+                    )}
+                    {c.type === 'cooldown_days' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <input
+                          type="number"
+                          className="pt-input pt-au-condition-val"
+                          min={1}
+                          value={c.value as number}
+                          onChange={e => updateCondition(i, { value: Number(e.target.value) })}
+                        />
+                        <span style={{ fontSize: 12, color: 'var(--pt-fg-3)', whiteSpace: 'nowrap' }}>days</span>
+                      </div>
+                    )}
+                    {c.type !== 'is_new_customer' && c.type !== 'has_tag' && c.type !== 'cooldown_days' && (
                       <input
                         type="number"
                         className="pt-input pt-au-condition-val"
@@ -413,13 +468,12 @@ export default function AutomationModal({ mode, automation, onClose }: Props) {
                         onChange={e => updateCondition(i, { value: Number(e.target.value) })}
                       />
                     )}
+
                     <button
                       className="pt-au-condition-remove"
                       onClick={() => removeCondition(i)}
                       aria-label="Remove condition"
-                    >
-                      ✕
-                    </button>
+                    >✕</button>
                   </div>
                 ))}
               </div>
