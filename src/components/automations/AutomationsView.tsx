@@ -238,7 +238,9 @@ export default function AutomationsView({ automations }: Props) {
           <section className="pt-card pt-au-list-card">
             <div className="pt-card-body pt-au-list-body">
               <ul className="pt-au-list">
-                {items.map(a => {
+                {[...items]
+                  .sort((a, b) => ({ on: 0, paused: 1, off: 2 }[a.state] ?? 3) - ({ on: 0, paused: 1, off: 2 }[b.state] ?? 3))
+                  .map(a => {
                   const pendingCount = a.automation_runs.filter(r => r.state === 'queued').length
                   const runs = runsInWindow(a.automation_runs, 168).length
                   return (
@@ -249,26 +251,24 @@ export default function AutomationsView({ automations }: Props) {
                     >
                       <span className={`pt-au-state-bar pt-au-state-bar-${a.state}`} />
                       <div className="pt-au-row-body">
-                        <div className="pt-au-row-top">
-                          <span className="pt-au-row-name">{a.name}</span>
-                          <div className="pt-au-row-badges">
-                            {pendingCount > 0 && (
-                              <span className="pt-au-row-badge pt-au-row-badge-pending">{pendingCount} pending</span>
-                            )}
-                            {runs > 0 && pendingCount === 0 && (
-                              <span className="pt-au-row-badge pt-au-row-badge-runs">{runs} /7d</span>
-                            )}
-                          </div>
-                        </div>
+                        <div className="pt-au-row-name">{a.name}</div>
                         <div className="pt-au-row-summary">{automationSummary(a)}</div>
                       </div>
-                      <button
-                        className={`pt-au-toggle pt-au-toggle-${a.state}`}
-                        onClick={e => { e.stopPropagation(); void handleToggle(a.id, a.state) }}
-                        title={a.state === 'on' ? 'Turn off' : 'Turn on'}
-                      >
-                        <span />
-                      </button>
+                      <div className="pt-au-row-right">
+                        {pendingCount > 0 && (
+                          <span className="pt-au-row-badge pt-au-row-badge-pending">{pendingCount} pending</span>
+                        )}
+                        {runs > 0 && pendingCount === 0 && (
+                          <span className="pt-au-row-badge pt-au-row-badge-runs">{runs} /7d</span>
+                        )}
+                        <button
+                          className={`pt-au-toggle pt-au-toggle-${a.state}`}
+                          onClick={e => { e.stopPropagation(); void handleToggle(a.id, a.state) }}
+                          title={a.state === 'on' ? 'Turn off' : 'Turn on'}
+                        >
+                          <span />
+                        </button>
+                      </div>
                     </li>
                   )
                 })}

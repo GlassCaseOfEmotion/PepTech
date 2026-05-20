@@ -50,18 +50,19 @@
 
 .pt-au-row-body {
   flex: 1; min-width: 0;
-  padding: 11px 12px;
+  padding: 11px 10px 11px 12px;
 }
-.pt-au-row-top {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 8px; margin-bottom: 3px;
-}
-.pt-au-row-name { font-size: 13px; font-weight: 600; letter-spacing: -0.008em; color: var(--pt-fg); }
+.pt-au-row-name { font-size: 13px; font-weight: 600; letter-spacing: -0.008em; color: var(--pt-fg); margin-bottom: 3px; }
 .pt-au-row-summary { font-size: 11px; color: var(--pt-fg-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pt-au-row-badges { display: flex; gap: 5px; flex-shrink: 0; }
+
+/* Right side: badge + toggle, vertically centred, with right padding */
+.pt-au-row-right {
+  display: flex; align-items: center; gap: 8px;
+  padding-right: 14px; flex-shrink: 0;
+}
 .pt-au-row-badge {
   font-size: 10px; font-weight: 600; border-radius: 20px;
-  padding: 1px 7px; white-space: nowrap;
+  padding: 2px 8px; white-space: nowrap;
 }
 .pt-au-row-badge-pending { background: oklch(from var(--pt-warn) l c h / 0.15); color: var(--pt-warn); }
 .pt-au-row-badge-runs    { background: oklch(from var(--pt-fg) l c h / 0.06);   color: var(--pt-fg-3); font-weight: 500; }
