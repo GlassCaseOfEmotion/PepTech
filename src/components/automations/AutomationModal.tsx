@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import type { Automation, TriggerType, ActionType, Condition } from '@/types/automations'
 import { createAutomation, updateAutomation } from '@/app/automations/actions'
 
@@ -63,6 +63,8 @@ export default function AutomationModal({ mode, automation, onClose }: Props) {
   const [actionType, setActionType]   = useState<ActionType>(automation?.action_type ?? 'send_dm')
   const [actionParams, setActionParams] = useState<Record<string, unknown>>(automation?.action_params ?? {})
   const [saving, setSaving]           = useState(false)
+  const [nameError, setNameError]     = useState(false)
+  const nameRef = useRef<HTMLInputElement>(null)
 
   function handleTriggerTypeChange(t: TriggerType) {
     setTriggerType(t)
@@ -91,7 +93,11 @@ export default function AutomationModal({ mode, automation, onClose }: Props) {
   }
 
   async function handleSave() {
-    if (!name.trim()) return
+    if (!name.trim()) {
+      setNameError(true)
+      nameRef.current?.focus()
+      return
+    }
     setSaving(true)
     const allConditions: Condition[] = [
       ...conditions,
@@ -115,18 +121,22 @@ export default function AutomationModal({ mode, automation, onClose }: Props) {
       <div className="pt-ab" onClick={e => e.stopPropagation()}>
 
         {/* ── Header ── */}
-        <div className="pt-ab-hd">
-          <div className="pt-ab-name-row">
-            <select className="pt-ab-icon-sel" value={icon} onChange={e => setIcon(e.target.value)} title="Choose icon">
-              {ICON_OPTIONS.map(i => <option key={i} value={i}>{i}</option>)}
-            </select>
-            <input
-              className="pt-ab-name-input"
-              placeholder="Name this automation…"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              autoFocus
-            />
+        <div className={`pt-ab-hd${nameError ? ' pt-ab-hd-error' : ''}`}>
+          <div className="pt-ab-name-col">
+            <div className="pt-ab-name-row">
+              <select className="pt-ab-icon-sel" value={icon} onChange={e => setIcon(e.target.value)} title="Choose icon">
+                {ICON_OPTIONS.map(i => <option key={i} value={i}>{i}</option>)}
+              </select>
+              <input
+                ref={nameRef}
+                className={`pt-ab-name-input${nameError ? ' is-error' : ''}`}
+                placeholder="Name this automation…"
+                value={name}
+                onChange={e => { setName(e.target.value); if (nameError) setNameError(false) }}
+                autoFocus
+              />
+            </div>
+            {nameError && <p className="pt-ab-name-error">A name is required before saving.</p>}
           </div>
           <button className="pt-au-modal-close" onClick={onClose}>✕</button>
         </div>
@@ -429,7 +439,7 @@ export default function AutomationModal({ mode, automation, onClose }: Props) {
         {/* ── Footer ── */}
         <div className="pt-ab-footer">
           <button className="pt-btn pt-btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="pt-btn pt-btn-primary" disabled={saving || !name.trim()}
+          <button className="pt-btn pt-btn-primary" disabled={saving}
             onClick={() => void handleSave()}>
             {saving ? 'Saving…' : mode === 'create' ? 'Create automation' : 'Save changes'}
           </button>

@@ -437,6 +437,11 @@
   color: var(--pt-fg);
 }
 .pt-ab-name-input::placeholder { color: var(--pt-fg-4); font-weight: 400; }
+.pt-ab-name-input.is-error { color: var(--pt-danger); }
+.pt-ab-name-input.is-error::placeholder { color: oklch(from var(--pt-danger) l c h / 0.5); }
+.pt-ab-name-col { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.pt-ab-name-error { font-size: 11.5px; color: var(--pt-danger); margin: 0; padding-left: 2px; }
+.pt-ab-hd-error { border-bottom-color: oklch(from var(--pt-danger) l c h / 0.4); }
 
 /* Scrollable body */
 .pt-ab-body {
