@@ -50,3 +50,12 @@ export type AutomationRun = {
 }
 
 export type AutomationWithRuns = Automation & { automation_runs: AutomationRun[] }
+
+export type QueuedRun = {
+  id: string
+  automationName: string
+  contextLabel: string | null
+  message: string
+  conversationId: string | null
+  createdAt: string
+}

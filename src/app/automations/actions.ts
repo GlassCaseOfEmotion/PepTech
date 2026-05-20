@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import type { AutoState, AutomationWithRuns, TriggerType, ActionType, Condition, Automation } from '@/types/automations'
+import type { AutoState, AutomationWithRuns, TriggerType, ActionType, Condition, Automation, QueuedRun } from '@/types/automations'
 
 async function getTenantId() {
   const supabase = await createClient()
@@ -31,6 +31,33 @@ export async function getAutomations(): Promise<AutomationWithRuns[]> {
       )
       .slice(0, 5),
   })) as AutomationWithRuns[]
+}
+
+export async function getQueuedRuns(): Promise<QueuedRun[]> {
+  try {
+    const { supabase } = await getTenantId()
+    const { data, error } = await supabase
+      .from('automation_runs')
+      .select('id, context_label, action_payload, created_at, automations(name)')
+      .eq('state', 'queued')
+      .order('created_at', { ascending: true })
+      .limit(20)
+    if (error) return []
+    return (data ?? []).map(r => {
+      const payload = (r.action_payload ?? {}) as Record<string, unknown>
+      const auto = r.automations as { name: string } | null
+      return {
+        id: r.id,
+        automationName: auto?.name ?? 'Automation',
+        contextLabel: r.context_label,
+        message: (payload.message as string) ?? '',
+        conversationId: (payload.conversationId as string) ?? null,
+        createdAt: r.created_at,
+      }
+    })
+  } catch {
+    return []
+  }
 }
 
 export async function createAutomation(data: {
