@@ -613,8 +613,8 @@ export function DashboardRightRail({
               <PendingApprovalRow key={r.id} run={r} onRemove={id => setPending(p => p.filter(r => r.id !== id))} />
             ))}
             {pending.length > 5 && (
-              <a href="/automations" className="pt-link" style={{ fontSize: 11, padding: '4px 0', display: 'block' }}>
-                View all {pending.length} →
+              <a href="/inbox" className="pt-link" style={{ fontSize: 11, padding: '4px 0', display: 'block' }}>
+                View all {pending.length} in inbox →
               </a>
             )}
           </div>
