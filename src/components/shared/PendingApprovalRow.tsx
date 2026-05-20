@@ -12,12 +12,15 @@ export function PendingApprovalRow({ run, onRemove }: {
   onRemove: (id: string) => void
 }) {
   const [state, setState] = useState<SendState>('idle')
+  const [editedMessage, setEditedMessage] = useState(run.message)
+  const [isEditing, setIsEditing] = useState(false)
   const router = useRouter()
 
   async function handleSend() {
+    setIsEditing(false)
     setState('sending')
     try {
-      await approveAndSendQueuedRun(run.id)
+      await approveAndSendQueuedRun(run.id, editedMessage)
       setState('sent')
     } catch {
       setState('confirming')
@@ -61,11 +64,30 @@ export function PendingApprovalRow({ run, onRemove }: {
       {state === 'confirming' && (
         <div className="pt-pa-overlay">
           <div className="pt-pa-overlay-inner">
-            <div className="pt-pa-full-msg">{run.message}</div>
-            <div className="pt-pa-send-to">Send to {run.contextLabel ?? 'customer'}?</div>
+            {isEditing ? (
+              <textarea
+                className="pt-pa-edit-ta"
+                value={editedMessage}
+                onChange={e => setEditedMessage(e.target.value)}
+                onBlur={() => setIsEditing(false)}
+                autoFocus
+                rows={4}
+              />
+            ) : (
+              <div
+                className="pt-pa-full-msg pt-pa-full-msg-editable"
+                onClick={() => setIsEditing(true)}
+                title="Click to edit"
+              >
+                {editedMessage}
+              </div>
+            )}
+            <div className="pt-pa-send-to">
+              {isEditing ? 'Editing — click outside to finish' : `Send to ${run.contextLabel ?? 'customer'}?`}
+            </div>
             <div className="pt-pa-overlay-btns">
-              <button className="pt-pa-confirm-btn" onClick={handleSend}>Send</button>
-              <button className="pt-pa-cancel-btn" onClick={() => setState('idle')}>Cancel</button>
+              <button className="pt-pa-confirm-btn" onClick={handleSend} disabled={!editedMessage.trim()}>Send</button>
+              <button className="pt-pa-cancel-btn" onClick={() => { setState('idle'); setEditedMessage(run.message); setIsEditing(false) }}>Cancel</button>
             </div>
           </div>
         </div>

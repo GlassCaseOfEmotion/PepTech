@@ -138,7 +138,7 @@ export async function toggleAutomation(id: string, state: AutoState): Promise<{ 
   }
 }
 
-export async function approveAndSendQueuedRun(runId: string): Promise<{ success: true } | { error: string }> {
+export async function approveAndSendQueuedRun(runId: string, overrideMessage?: string): Promise<{ success: true } | { error: string }> {
   try {
     const { supabase, tenantId } = await getTenantId()
 
@@ -154,7 +154,7 @@ export async function approveAndSendQueuedRun(runId: string): Promise<{ success:
 
     const payload = run.action_payload as Record<string, unknown> | null
     const conversationId = payload?.conversationId as string | undefined
-    const message = payload?.message as string | undefined
+    const message = overrideMessage?.trim() || (payload?.message as string | undefined)
 
     if (!conversationId || !message) return { error: 'Run payload missing conversationId or message' }
 
