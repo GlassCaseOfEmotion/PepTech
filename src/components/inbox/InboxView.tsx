@@ -12,6 +12,8 @@ import { TemplatePicker } from './TemplatePicker'
 import { WaTemplatePicker } from './WaTemplatePicker'
 import { ProductInfoPicker } from './ProductInfoPicker'
 import type { DbConversation, DbQuickReply, DbTemplate, InboxThread, InboxMessage } from '@/types/inbox'
+import { approveAndSendQueuedRun, dismissQueuedRun } from '@/app/automations/actions'
+import type { QueuedRun } from '@/types/automations'
 import { initials } from '@/types/inbox'
 import { createClient } from '@/lib/supabase/client'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -107,9 +109,9 @@ function IxThread({ t, active, onClick }: { t: InboxThread; active: boolean; onC
 
 // ─── Thread column ───────────────────────────────────────────────────────────
 
-function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChannels }: {
+function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChannels, queuedRuns }: {
   threads: InboxThread[]; activeId: string; onSelect: (id: string) => void
-  filter: string; setFilter: (f: string) => void; hasChannels: boolean
+  filter: string; setFilter: (f: string) => void; hasChannels: boolean; queuedRuns: QueuedRun[]
 }) {
   const { resolvedCount } = useInbox()
   const [search, setSearch] = useState('')
@@ -143,6 +145,18 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChann
     { id: 'resolved',    label: 'Resolved',      count: counts.resolved },
   ]
 
+  const [pending, setPending] = useState<QueuedRun[]>(queuedRuns)
+
+  async function approve(id: string) {
+    setPending(p => p.filter(r => r.id !== id))
+    await approveAndSendQueuedRun(id)
+  }
+
+  async function dismiss(id: string) {
+    setPending(p => p.filter(r => r.id !== id))
+    await dismissQueuedRun(id)
+  }
+
   const visible = threads.filter(t => {
     if (filter === 'all') { if (t.status === 'resolved') return false }
     else if (t.status !== filter) return false
@@ -172,6 +186,32 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChann
         />
         <kbd>⌘F</kbd>
       </div>
+      {pending.length > 0 && (
+        <div className="pt-pending-section">
+          <div className="pt-pending-section-hd">
+            <span>Pending approvals</span>
+            <span className="pt-nav-badge">{pending.length}</span>
+          </div>
+          {pending.map(r => (
+            <div key={r.id} className="pt-pending-row">
+              <div className="pt-pending-meta">
+                <span className="pt-pending-customer">{r.contextLabel ?? '—'}</span>
+                <span className="pt-pending-sep">·</span>
+                <span className="pt-pending-auto">{r.automationName}</span>
+              </div>
+              <div className="pt-pending-msg">{r.message}</div>
+              <div className="pt-pending-actions">
+                <button className="pt-btn pt-btn-primary" style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => approve(r.id)}>
+                  Send
+                </button>
+                <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => dismiss(r.id)}>
+                  ✕
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="pt-ix-filters">
         {filters.map(f => (
           <button key={f.id} className={`pt-pill ${filter === f.id ? 'is-on' : ''}`} onClick={() => setFilter(f.id)}>
@@ -1013,7 +1053,7 @@ function ConversationRail({ thread, baseCurrency }: { thread: InboxThread; baseC
 
 // ─── Inner layout (consumes context) ────────────────────────────────────────
 
-function InboxLayout({ initialPrefill, baseCurrency, hasChannels }: { initialPrefill?: string; baseCurrency: string; hasChannels: boolean }) {
+function InboxLayout({ initialPrefill, baseCurrency, hasChannels, queuedRuns }: { initialPrefill?: string; baseCurrency: string; hasChannels: boolean; queuedRuns: QueuedRun[] }) {
   const { threads, activeId, setActiveId, filter, setFilter, messages, isSending, sendMessage } = useInbox()
   const activeThread = threads.find(t => t.id === activeId) ?? threads[0]
   const [showOrderRail, setShowOrderRail] = useState(false)
@@ -1041,6 +1081,7 @@ function InboxLayout({ initialPrefill, baseCurrency, hasChannels }: { initialPre
         filter={filter}
         setFilter={setFilter}
         hasChannels={hasChannels}
+        queuedRuns={queuedRuns}
       />
       {activeThread && (
         <ConversationPane
@@ -1080,9 +1121,10 @@ interface InboxViewProps {
   initialPrefill?: string
   baseCurrency: string
   hasChannels?: boolean
+  queuedRuns?: QueuedRun[]
 }
 
-export function InboxView({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId, initialInvoicePath, initialInvoiceName, initialPrefill, baseCurrency, hasChannels = true }: InboxViewProps) {
+export function InboxView({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId, initialInvoicePath, initialInvoiceName, initialPrefill, baseCurrency, hasChannels = true, queuedRuns = [] }: InboxViewProps) {
   return (
     <InboxProvider
       initialConversations={initialConversations}
@@ -1094,7 +1136,7 @@ export function InboxView({ initialConversations, quickReplies, templates, initi
       initialInvoiceName={initialInvoiceName}
     >
       <Suspense fallback={null}>
-        <InboxLayout initialPrefill={initialPrefill} baseCurrency={baseCurrency} hasChannels={hasChannels} />
+        <InboxLayout initialPrefill={initialPrefill} baseCurrency={baseCurrency} hasChannels={hasChannels} queuedRuns={queuedRuns} />
       </Suspense>
     </InboxProvider>
   )
