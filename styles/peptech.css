@@ -2536,32 +2536,49 @@ kbd {
   border-color: oklch(from var(--pt-warn) l c h / 0.5);
 }
 
+/* Idle content wrapper — direct flex child of .pt-pac */
+.pt-pac-idle, .pt-pac-ghost {
+  display: flex; flex-direction: column; gap: 8px; flex: 1;
+}
+.pt-pac-ghost {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 /* ── Card overlay (covers card when confirming / sending / sent / error) ── */
 .pt-pac-overlay {
   position: absolute; inset: 0;
   border-radius: inherit;
   background: var(--pt-surface);
   border-top: 2.5px solid oklch(from var(--pt-warn) l c h / 0.6);
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 14px 12px;
+  display: flex; flex-direction: column; align-items: stretch;
+  padding: 12px;
   gap: 7px;
   animation: ptPacOverlayIn 160ms ease both;
 }
 @keyframes ptPacOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Centred inner wrapper for sending / sent / error (small content) */
+.pt-pac-state-inner {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 7px;
+}
 
 .pt-pac-overlay-lbl {
   font-size: 11.5px; font-weight: 500; color: var(--pt-fg-3);
   text-align: center; line-height: 1.3;
 }
 
+/* Message fills overlay height, scrolls only when content overflows */
 .pt-pac-full-msg {
-  width: 100%;
+  flex: 1;
   font-size: 11.5px; color: var(--pt-fg-2); line-height: 1.5;
   background: var(--pt-surface-2); border-radius: var(--pt-radius-sm);
   padding: 7px 9px; cursor: text;
   border: 1px solid transparent;
   transition: border-color 120ms;
-  max-height: 72px; overflow-y: auto;
+  overflow-y: auto;
 }
 .pt-pac-full-msg:hover { border-color: var(--pt-accent); }
 
@@ -2575,7 +2592,7 @@ kbd {
   outline: none;
 }
 
-.pt-pac-overlay-btns { display: flex; gap: 6px; width: 100%; }
+.pt-pac-overlay-btns { display: flex; gap: 6px; width: 100%; margin-top: auto; }
 .pt-pac-confirm-btn {
   flex: 1; padding: 7px 0;
   background: var(--pt-accent); color: #fff;

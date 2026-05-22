@@ -58,23 +58,22 @@ export function PendingApprovalCard({ run, onRemove }: {
 
   return (
     <div className="pt-pac">
-      {state === 'idle' && (
-        <>
-          <button className="pt-pac-dismiss" onClick={handleDismiss} title="Dismiss">✕</button>
-          <div className="pt-pac-head">
-            <span className="pt-pac-auto">{run.automationName}</span>
-            <span className="pt-pac-cust">{run.contextLabel ?? '—'}</span>
-          </div>
-          <div className="pt-pac-bubble">
-            <div className="pt-pac-msg">{run.message}</div>
-          </div>
-          <div className="pt-pac-foot">
-            <button className="pt-pac-send-btn" onClick={() => setState('confirming')}>
-              Review &amp; Send →
-            </button>
-          </div>
-        </>
-      )}
+      {/* Always in DOM — invisible when not idle, holds card height */}
+      <div className={state !== 'idle' ? 'pt-pac-ghost' : 'pt-pac-idle'}>
+        <button className="pt-pac-dismiss" onClick={handleDismiss} title="Dismiss">✕</button>
+        <div className="pt-pac-head">
+          <span className="pt-pac-auto">{run.automationName}</span>
+          <span className="pt-pac-cust">{run.contextLabel ?? '—'}</span>
+        </div>
+        <div className="pt-pac-bubble">
+          <div className="pt-pac-msg">{run.message}</div>
+        </div>
+        <div className="pt-pac-foot">
+          <button className="pt-pac-send-btn" onClick={() => setState('confirming')}>
+            Review &amp; Send →
+          </button>
+        </div>
+      </div>
 
       {state === 'confirming' && (
         <div className="pt-pac-overlay">
@@ -108,7 +107,7 @@ export function PendingApprovalCard({ run, onRemove }: {
 
       {state === 'sending' && (
         <div className="pt-pac-overlay">
-          <div className="pt-pac-sending-inner">
+          <div className="pt-pac-state-inner">
             <div className="pt-pac-overlay-lbl">Sending…</div>
             <div className="pt-pac-progressbar"><div className="pt-pac-progressbar-fill" /></div>
           </div>
@@ -117,21 +116,25 @@ export function PendingApprovalCard({ run, onRemove }: {
 
       {state === 'error' && (
         <div className="pt-pac-overlay">
-          <div className="pt-pac-error-icon">✕</div>
-          <div className="pt-pac-overlay-lbl">Failed to send</div>
-          <div className="pt-pac-error-msg">{errorMessage}</div>
-          <div className="pt-pac-overlay-btns">
-            <button className="pt-pac-confirm-btn" onClick={() => setState('confirming')}>Retry</button>
-            <button className="pt-pac-cancel-btn" onClick={handleNavigate}>Open chat</button>
+          <div className="pt-pac-state-inner">
+            <div className="pt-pac-error-icon">✕</div>
+            <div className="pt-pac-overlay-lbl">Failed to send</div>
+            <div className="pt-pac-error-msg">{errorMessage}</div>
+            <div className="pt-pac-overlay-btns">
+              <button className="pt-pac-confirm-btn" onClick={() => setState('confirming')}>Retry</button>
+              <button className="pt-pac-cancel-btn" onClick={handleNavigate}>Open chat</button>
+            </div>
           </div>
         </div>
       )}
 
       {state === 'sent' && (
         <div className="pt-pac-overlay">
-          <div className="pt-pac-check">✓</div>
-          <div className="pt-pac-overlay-lbl">Sent!</div>
-          <button className="pt-pac-goto" onClick={handleNavigate}>Go to chat →</button>
+          <div className="pt-pac-state-inner">
+            <div className="pt-pac-check">✓</div>
+            <div className="pt-pac-overlay-lbl">Sent!</div>
+            <button className="pt-pac-goto" onClick={handleNavigate}>Go to chat →</button>
+          </div>
         </div>
       )}
     </div>
