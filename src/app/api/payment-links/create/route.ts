@@ -43,7 +43,6 @@ export async function POST(request: Request) {
   try {
     payment = await createNowPayment({
       amountUsd: Number(order.payment_amount),
-      payoutAddress: wallet.solana_address,
       orderId: order.id,
       orderDescription: order.ref_number,
     })

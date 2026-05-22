@@ -202,7 +202,6 @@ export async function createPaymentLink(orderId: string, memo?: string): Promise
     const { createNowPayment } = await import('@/lib/payments/nowpayments')
     const payment = await createNowPayment({
       amountUsd,
-      payoutAddress: wallet.solana_address,
       orderId: order.id,
       orderDescription: memo ?? order.ref_number,
     })

@@ -6,7 +6,6 @@ function apiKey() {
 
 export type CreatePaymentInput = {
   amountUsd: number
-  payoutAddress: string
   orderId: string
   orderDescription: string
 }
@@ -36,8 +35,6 @@ export async function createNowPayment(input: CreatePaymentInput): Promise<Creat
     body: JSON.stringify({
       price_amount: input.amountUsd,
       price_currency: 'usd',
-      payout_currency: 'usdcsol',
-      payout_address: input.payoutAddress,
       order_id: input.orderId,
       order_description: input.orderDescription,
     }),
