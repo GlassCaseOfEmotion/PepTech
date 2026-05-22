@@ -334,6 +334,51 @@ export type Database = {
           },
         ]
       }
+      crypto_payment_links: {
+        Row: {
+          id: string
+          tenant_id: string
+          order_id: string
+          nowpayments_id: string
+          hosted_url: string
+          amount_usd: number
+          status: string
+          payout_address: string
+          created_at: string
+          expires_at: string | null
+          confirmed_at: string | null
+          paid_token: string | null
+          paid_amount: number | null
+          usdc_received: number | null
+          nowpayments_tx_id: string | null
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          order_id: string
+          nowpayments_id: string
+          hosted_url: string
+          amount_usd: number
+          status?: string
+          payout_address: string
+          created_at?: string
+          expires_at?: string | null
+          confirmed_at?: string | null
+          paid_token?: string | null
+          paid_amount?: number | null
+          usdc_received?: number | null
+          nowpayments_tx_id?: string | null
+        }
+        Update: {
+          status?: string
+          confirmed_at?: string | null
+          paid_token?: string | null
+          paid_amount?: number | null
+          usdc_received?: number | null
+          nowpayments_tx_id?: string | null
+        }
+        Relationships: []
+      }
       customer_channels: {
         Row: {
           channel_type: string
@@ -1219,6 +1264,31 @@ export type Database = {
           },
         ]
       }
+      tenant_crypto_wallets: {
+        Row: {
+          id: string
+          tenant_id: string
+          privy_wallet_id: string
+          solana_address: string
+          balance_usdc: number
+          created_at: string
+          last_synced_at: string | null
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          privy_wallet_id: string
+          solana_address: string
+          balance_usdc?: number
+          created_at?: string
+          last_synced_at?: string | null
+        }
+        Update: {
+          balance_usdc?: number
+          last_synced_at?: string | null
+        }
+        Relationships: []
+      }
       tenant_order_sequences: {
         Row: {
           last_value: number
@@ -1418,6 +1488,32 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      wallet_transactions: {
+        Row: {
+          id: string
+          tenant_id: string
+          crypto_payment_link_id: string | null
+          amount_usdc: number
+          solana_tx_signature: string | null
+          source_token: string | null
+          source_amount: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          crypto_payment_link_id?: string | null
+          amount_usdc: number
+          solana_tx_signature?: string | null
+          source_token?: string | null
+          source_amount?: number | null
+          created_at?: string
+        }
+        Update: {
+          solana_tx_signature?: string | null
+        }
+        Relationships: []
       }
       order_attachments: {
         Row: {
