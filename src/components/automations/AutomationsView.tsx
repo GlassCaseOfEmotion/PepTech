@@ -8,6 +8,7 @@ import {
   toggleAutomation,
 } from '@/app/automations/actions'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { PendingApprovalCard } from '@/components/shared/PendingApprovalCard'
 import { PendingApprovalRow } from '@/components/shared/PendingApprovalRow'
 import AutomationModal from './AutomationModal'
 import AutomationGuideModal from './AutomationGuideModal'
@@ -221,9 +222,9 @@ export default function AutomationsView({ automations }: Props) {
               {allQueued.length} message{allQueued.length > 1 ? 's' : ''} awaiting your review
             </span>
           </div>
-          <div className="pt-au-pending-banner-rows">
+          <div className="pt-au-pending-banner-grid">
             {allQueued.map(r => (
-              <PendingApprovalRow key={r.id} run={r} onRemove={handleRemoveRun} />
+              <PendingApprovalCard key={r.id} run={r} onRemove={handleRemoveRun} />
             ))}
           </div>
         </div>

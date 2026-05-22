@@ -30,9 +30,11 @@
 .pt-au-pending-banner-title {
   font-size: 12px; font-weight: 700; color: var(--pt-warn);
 }
-.pt-au-pending-banner-rows {
-  display: flex; flex-direction: column;
-  max-height: 400px; overflow-y: auto;
+.pt-au-pending-banner-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+  max-height: 480px; overflow-y: auto;
 }
 
 .pt-au-body {
