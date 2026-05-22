@@ -47,12 +47,12 @@ export async function createNowPayment(input: CreatePaymentInput): Promise<Creat
     throw new Error(`NOWPayments error ${res.status}: ${text}`)
   }
   const data = await res.json() as {
-    id: string
+    payment_id: string
     payment_url: string
     expiration_estimate_date: string | null
   }
   return {
-    id: data.id,
+    id: String(data.payment_id),
     hostedUrl: data.payment_url,
     expiresAt: data.expiration_estimate_date ?? null,
   }

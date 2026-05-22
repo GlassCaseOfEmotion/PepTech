@@ -8,7 +8,7 @@ describe('createNowPayment', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        id: 'pay_123',
+        payment_id: 'pay_123',
         payment_url: 'https://nowpayments.io/payment/?iid=pay_123',
         expiration_estimate_date: '2026-05-23T10:00:00Z',
       }),
