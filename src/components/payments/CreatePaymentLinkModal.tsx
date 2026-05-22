@@ -1,10 +1,10 @@
 // src/components/payments/CreatePaymentLinkModal.tsx
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { ReactElement } from 'react'
 import { Icons } from '@/lib/icons'
-import { lookupOrder, createPaymentLink } from '@/app/payments/actions'
+import { getRecentOrders, lookupOrder, createPaymentLink } from '@/app/payments/actions'
 
 function QrPlaceholder({ size = 124 }: { size?: number }) {
   const cells = 21
@@ -38,7 +38,7 @@ function QrPlaceholder({ size = 124 }: { size?: number }) {
   )
 }
 
-type FoundOrder = {
+type OrderOption = {
   id: string
   ref_number: string
   payment_amount: number
@@ -53,46 +53,80 @@ type CreatedLink = {
 const EXPIRY_OPTIONS = ['1h', '6h', '24h', '7d', 'never'] as const
 
 export function CreateComposer({ onBack }: { onBack: () => void }) {
-  const [orderQuery, setOrderQuery] = useState('')
-  const [orderResults, setOrderResults] = useState<FoundOrder[]>([])
-  const [foundOrder, setFoundOrder] = useState<FoundOrder | null>(null)
-  const [lookupLoading, setLookupLoading] = useState(false)
-  const [lookupError, setLookupError] = useState('')
+  const [query, setQuery] = useState('')
+  const [isOpen, setIsOpen] = useState(false)
+  const [recentOrders, setRecentOrders] = useState<OrderOption[]>([])
+  const [searchResults, setSearchResults] = useState<OrderOption[]>([])
+  const [loadingRecent, setLoadingRecent] = useState(false)
+  const [loadingSearch, setLoadingSearch] = useState(false)
+  const [foundOrder, setFoundOrder] = useState<OrderOption | null>(null)
   const [memo, setMemo] = useState('')
   const [expiry, setExpiry] = useState('24h')
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [createdLink, setCreatedLink] = useState<CreatedLink | null>(null)
   const [copied, setCopied] = useState(false)
-  const lookupTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pickerRef = useRef<HTMLDivElement>(null)
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  async function handleOrderSearch(query: string) {
-    setOrderQuery(query)
-    setOrderResults([])
-    setFoundOrder(null)
-    setLookupError('')
-    if (!query.trim()) return
-    if (lookupTimer.current) clearTimeout(lookupTimer.current)
-    lookupTimer.current = setTimeout(async () => {
-      setLookupLoading(true)
-      const result = await lookupOrder(query)
-      setLookupLoading(false)
-      if (result.error) { setLookupError(result.error); return }
-      if (!result.orders?.length) { setLookupError('No matching orders'); return }
-      setOrderResults(result.orders)
-      if (result.orders.length === 1) selectOrder(result.orders[0])
+  // Close dropdown on outside click
+  useEffect(() => {
+    function onMouseDown(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    return () => document.removeEventListener('mousedown', onMouseDown)
+  }, [])
+
+  async function loadRecentOrders() {
+    if (recentOrders.length) return
+    setLoadingRecent(true)
+    const result = await getRecentOrders()
+    setLoadingRecent(false)
+    if (result.orders) setRecentOrders(result.orders)
+  }
+
+  function handleFocus() {
+    setIsOpen(true)
+    setQuery('')
+    setSearchResults([])
+    loadRecentOrders()
+  }
+
+  async function handleSearch(e: React.ChangeEvent<HTMLInputElement>) {
+    const q = e.target.value
+    setQuery(q)
+    setIsOpen(true)
+    if (!q.trim()) { setSearchResults([]); return }
+    if (searchTimer.current) clearTimeout(searchTimer.current)
+    searchTimer.current = setTimeout(async () => {
+      setLoadingSearch(true)
+      const result = await lookupOrder(q)
+      setLoadingSearch(false)
+      if (result.orders) setSearchResults(result.orders)
     }, 350)
   }
 
-  function selectOrder(o: FoundOrder) {
+  function selectOrder(o: OrderOption) {
     setFoundOrder(o)
-    setOrderResults([])
-    setOrderQuery(o.ref_number)
+    setIsOpen(false)
+    setQuery('')
+    setSearchResults([])
     if (!memo) setMemo(o.ref_number)
   }
 
+  function clearOrder() {
+    setFoundOrder(null)
+    setQuery('')
+    setMemo('')
+    setSubmitError('')
+  }
+
   async function handleSubmit() {
-    if (!foundOrder) { setSubmitError('Find an order first'); return }
+    if (!foundOrder) { setSubmitError('Select an order first'); return }
     setSubmitting(true)
     setSubmitError('')
     const result = await createPaymentLink(foundOrder.id, memo || foundOrder.ref_number)
@@ -111,6 +145,9 @@ export function CreateComposer({ onBack }: { onBack: () => void }) {
     })
   }
 
+  const displayedOptions = query.trim() ? searchResults : recentOrders
+  const isLoading = loadingRecent || loadingSearch
+
   return (
     <div className="pay-comp">
       <div className="pay-comp-side">
@@ -122,73 +159,77 @@ export function CreateComposer({ onBack }: { onBack: () => void }) {
           ← Back
         </button>
         <h2>Request payment</h2>
-        <p className="sub">Create a checkout URL. The customer pays in crypto; funds land in your Vault.</p>
+        <p className="sub">Pick an order — the customer pays in crypto, you get USDC.</p>
 
-        {/* Amount */}
+        {/* ── Order picker ─────────────────────────────────────── */}
         <div className="pay-comp-section">
-          <h4>Amount</h4>
-          <div className="pay-comp-input is-amt">
-            <span className="cur">$</span>
-            <input
-              value={foundOrder ? foundOrder.payment_amount.toFixed(2) : ''}
-              readOnly={!!foundOrder}
-              placeholder="0.00"
-              onChange={() => {}}
-            />
-            <span className="ccy">USD</span>
-          </div>
-          <div className="hint">Pulled from the order. Rate locked when customer opens link.</div>
-        </div>
-
-        {/* For */}
-        <div className="pay-comp-section">
-          <h4>For</h4>
-          <div className="pay-comp-field">
-            <label>Attach to order</label>
-            <div className="pay-comp-input" style={{ borderColor: lookupError ? 'var(--pt-danger)' : foundOrder ? 'var(--pt-accent)' : undefined }}>
-              <Icons.box size={13} />
+          <h4>Order</h4>
+          <div className="pay-comp-picker" ref={pickerRef}>
+            <div className={`pay-comp-picker-input${isOpen ? ' is-open' : ''}`}>
+              <Icons.box size={13} style={{ color: 'var(--pt-fg-3)', flexShrink: 0 }} />
               <input
-                value={orderQuery}
-                onChange={e => handleOrderSearch(e.target.value)}
-                placeholder="Type order ref e.g. A-1234…"
+                value={query}
+                onChange={handleSearch}
+                onFocus={handleFocus}
+                placeholder={foundOrder ? `${foundOrder.ref_number} — change order` : 'Click to select or search…'}
               />
-              {lookupLoading && <span style={{ fontSize: 10, color: 'var(--pt-fg-4)' }}>searching…</span>}
-              {foundOrder && !lookupLoading && <Icons.check size={11} style={{ color: 'var(--pt-ok)' }} />}
+              {isLoading && <span className="pay-comp-picker-spin">loading…</span>}
+              {!isLoading && foundOrder && !isOpen && (
+                <Icons.check size={11} style={{ color: 'var(--pt-ok)', flexShrink: 0 }} />
+              )}
             </div>
-            {lookupError && (
-              <div style={{ fontSize: 11, color: 'var(--pt-danger)', marginTop: 4 }}>{lookupError}</div>
-            )}
-            {orderResults.length > 1 && (
-              <div style={{ border: '0.5px solid var(--pt-line)', borderRadius: 6, marginTop: 4, overflow: 'hidden', background: 'var(--pt-surface)' }}>
-                {orderResults.map(o => (
-                  <button
-                    key={o.id}
-                    onClick={() => selectOrder(o)}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 12px', background: 'none', border: 'none', borderTop: '0.5px solid var(--pt-line-soft)', cursor: 'pointer', textAlign: 'left', fontSize: 12 }}
-                  >
-                    <span style={{ fontFamily: 'var(--pt-mono)', fontWeight: 600 }}>#{o.ref_number}</span>
-                    <span style={{ color: 'var(--pt-fg-3)' }}>{o.customer_name ?? '—'}</span>
-                    <span style={{ fontFamily: 'var(--pt-mono)' }}>${o.payment_amount.toFixed(2)}</span>
-                  </button>
-                ))}
+
+            {isOpen && (
+              <div className="pay-comp-picker-drop">
+                <div className="pay-comp-picker-drop-hd">
+                  {query.trim() ? 'Search results' : 'Recent orders'}
+                </div>
+                {isLoading ? (
+                  <div className="pay-comp-picker-empty">Loading…</div>
+                ) : displayedOptions.length === 0 ? (
+                  <div className="pay-comp-picker-empty">
+                    {query.trim() ? 'No matching orders' : 'No recent orders'}
+                  </div>
+                ) : (
+                  displayedOptions.map(o => (
+                    <button
+                      key={o.id}
+                      className="pay-comp-picker-opt"
+                      onMouseDown={e => { e.preventDefault(); selectOrder(o) }}
+                    >
+                      <span className="ref">#{o.ref_number}</span>
+                      <span className="cust">{o.customer_name ?? '—'}</span>
+                      <span className="amt">${o.payment_amount.toFixed(2)}</span>
+                    </button>
+                  ))
+                )}
               </div>
             )}
           </div>
-          <div className="pay-comp-field">
-            <label>Customer</label>
-            <div className="pay-comp-input">
-              <Icons.user size={13} />
-              <input
-                value={foundOrder?.customer_name ?? ''}
-                readOnly
-                placeholder="Auto-filled from order"
-                style={{ color: foundOrder?.customer_name ? 'var(--pt-fg)' : 'var(--pt-fg-4)' }}
-                onChange={() => {}}
-              />
+
+          {/* Selection summary card */}
+          {foundOrder && !isOpen && (
+            <div className="pay-comp-sel">
+              <div className="pay-comp-sel-amt">
+                <span className="cur">$</span>
+                {foundOrder.payment_amount.toFixed(2)}
+              </div>
+              <div className="pay-comp-sel-meta">
+                <div className="pay-comp-sel-cust">{foundOrder.customer_name ?? '—'}</div>
+                <div className="pay-comp-sel-ref">Order #{foundOrder.ref_number}</div>
+              </div>
+              <button className="pay-comp-sel-clear" onClick={clearOrder} title="Change order">
+                <Icons.x size={12} />
+              </button>
             </div>
-          </div>
+          )}
+        </div>
+
+        {/* ── Memo ─────────────────────────────────────────────── */}
+        <div className="pay-comp-section">
+          <h4>Memo</h4>
           <div className="pay-comp-field">
-            <label>Memo (customer sees this)</label>
+            <label>Shown to the customer on the checkout page</label>
             <div className="pay-comp-input">
               <input
                 value={memo}
@@ -199,33 +240,40 @@ export function CreateComposer({ onBack }: { onBack: () => void }) {
           </div>
         </div>
 
-        {/* Accepted assets — informational only, NOWPayments handles currency selection */}
+        {/* ── Advanced ─────────────────────────────────────────── */}
         <div className="pay-comp-section">
-          <h4>Accepted assets</h4>
-          <div style={{ fontSize: 11.5, color: 'var(--pt-fg-3)', lineHeight: 1.5 }}>
-            {/* DECISION NEEDED — per-link accepted assets not configured in our API call.
-                NOWPayments lets the customer choose any supported currency.
-                To restrict per-link, we'd need to pass a currency list to NOWPayments. */}
-            Customer can pay with any currency NOWPayments supports (BTC, ETH, USDT, SOL, XMR, and 300+ more).
-            Funds always settle as USDC to your wallet.
-          </div>
-        </div>
+          <button
+            className={`pay-comp-adv-toggle${showAdvanced ? ' is-open' : ''}`}
+            onClick={() => setShowAdvanced(s => !s)}
+          >
+            <Icons.gear size={11} />
+            Advanced options
+            <Icons.arrowDn size={10} />
+          </button>
 
-        {/* Expires — display-only; NOWPayments default is 24h and not currently overridden */}
-        <div className="pay-comp-section">
-          <h4>Expires after</h4>
-          <div className="pay-comp-segctl">
-            {EXPIRY_OPTIONS.map(e => (
-              <button key={e} className={expiry === e ? 'is-on' : ''} onClick={() => setExpiry(e)}>{e}</button>
-            ))}
-          </div>
-          {/* DECISION NEEDED — expiry not yet passed to NOWPayments API (uses their default 24h).
-              To wire: add validity_time param to createNowPayment call. */}
-          <div className="hint" style={{ marginTop: 6 }}>Expiry selection not yet wired — defaults to 24h.</div>
+          {showAdvanced && (
+            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="pay-comp-field">
+                <label>Expires after</label>
+                <div className="pay-comp-segctl">
+                  {EXPIRY_OPTIONS.map(e => (
+                    <button key={e} className={expiry === e ? 'is-on' : ''} onClick={() => setExpiry(e)}>{e}</button>
+                  ))}
+                </div>
+                {/* DECISION NEEDED — expiry not yet passed to NOWPayments API (uses their 24h default). Wire validity_time param to make this functional. */}
+                <div className="hint" style={{ marginTop: 5 }}>Not yet wired — defaults to 24h.</div>
+              </div>
+              <div className="pay-comp-field" style={{ fontSize: 11.5, color: 'var(--pt-fg-3)', lineHeight: 1.6 }}>
+                <label>Accepted assets</label>
+                {/* DECISION NEEDED — per-link currency restriction not implemented. NOWPayments accepts all tokens. */}
+                Customer can pay with any crypto (BTC, ETH, USDT, SOL, XMR and 300+ more). Funds settle as USDC.
+              </div>
+            </div>
+          )}
         </div>
 
         {submitError && (
-          <div style={{ fontSize: 12, color: 'var(--pt-danger)', padding: '8px 10px', background: 'oklch(from var(--pt-danger) l c h / 0.08)', borderRadius: 6, marginTop: 8 }}>
+          <div style={{ fontSize: 12, color: 'var(--pt-danger)', padding: '8px 10px', background: 'oklch(from var(--pt-danger) l c h / 0.08)', borderRadius: 6, marginTop: 4 }}>
             {submitError}
           </div>
         )}
@@ -242,6 +290,7 @@ export function CreateComposer({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
+      {/* ── Preview pane ─────────────────────────────────────────── */}
       <div className="pay-comp-pv">
         {createdLink ? (
           <>
@@ -267,8 +316,6 @@ export function CreateComposer({ onBack }: { onBack: () => void }) {
 
             <h4>QR code</h4>
             <div style={{ background: 'var(--pt-surface)', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 16, display: 'flex', justifyContent: 'center' }}>
-              {/* DECISION NEEDED — QR is a placeholder pattern, not a real QR for the URL.
-                  To make real: install a QR library (e.g. qrcode) and generate from createdLink.hosted_url */}
               <QrPlaceholder size={140} />
             </div>
 
@@ -278,44 +325,42 @@ export function CreateComposer({ onBack }: { onBack: () => void }) {
           </>
         ) : (
           <>
-            <h4>Preview · checkout URL</h4>
-            <div className="pay-comp-url">
-              <Icons.lock size={12} style={{ color: foundOrder ? 'var(--pt-ok)' : 'var(--pt-fg-4)' }} />
-              <span className="u" style={{ color: foundOrder ? 'var(--pt-fg-2)' : 'var(--pt-fg-4)' }}>
-                {foundOrder ? `pay.peptech.app / pl_…` : 'Select an order to preview URL'}
-              </span>
-            </div>
+            <h4>Preview</h4>
+            {foundOrder ? (
+              <div style={{ background: 'var(--pt-surface)', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 16 }}>
+                <div style={{ fontSize: 11, color: 'var(--pt-fg-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Payment request
+                </div>
+                <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.025em', marginTop: 6, fontVariantNumeric: 'tabular-nums' }}>
+                  <span style={{ fontFamily: 'var(--pt-mono)', fontSize: 15, color: 'var(--pt-fg-3)' }}>$</span>
+                  {foundOrder.payment_amount.toFixed(2)}
+                  <span style={{ fontFamily: 'var(--pt-mono)', fontSize: 12, color: 'var(--pt-fg-3)', marginLeft: 6 }}>USD</span>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--pt-fg-2)', marginTop: 5 }}>
+                  {memo || foundOrder.ref_number}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--pt-fg-4)', marginTop: 8 }}>
+                  Pay with any crypto · settles as USDC
+                </div>
+              </div>
+            ) : (
+              <div style={{ background: 'var(--pt-surface)', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 24, textAlign: 'center', color: 'var(--pt-fg-4)', fontSize: 12 }}>
+                Select an order to see a preview
+              </div>
+            )}
 
             <h4>Share via</h4>
-            <div className="pay-comp-send">
-              <button className="pay-comp-send-btn"><Icons.wa size={13} /> WhatsApp</button>
-              <button className="pay-comp-send-btn"><Icons.tg size={13} /> Telegram</button>
-              <button className="pay-comp-send-btn"><Icons.em size={13} /> Email</button>
-              <button className="pay-comp-send-btn"><Icons.doc size={13} /> Copy link</button>
+            <div className="pay-comp-send" style={{ opacity: foundOrder ? 1 : 0.4 }}>
+              <button className="pay-comp-send-btn" disabled={!foundOrder}><Icons.wa size={13} /> WhatsApp</button>
+              <button className="pay-comp-send-btn" disabled={!foundOrder}><Icons.tg size={13} /> Telegram</button>
+              <button className="pay-comp-send-btn" disabled={!foundOrder}><Icons.em size={13} /> Email</button>
+              <button className="pay-comp-send-btn" disabled={!foundOrder}><Icons.doc size={13} /> Copy link</button>
             </div>
 
             <h4>QR code</h4>
-            <div style={{ background: 'var(--pt-surface)', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 16, display: 'flex', justifyContent: 'center' }}>
+            <div style={{ background: 'var(--pt-surface)', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 16, display: 'flex', justifyContent: 'center', opacity: foundOrder ? 1 : 0.35 }}>
               <QrPlaceholder size={140} />
             </div>
-
-            {foundOrder && (
-              <>
-                <h4>What the customer will see</h4>
-                <div style={{ background: 'var(--pt-surface)', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 14 }}>
-                  <div style={{ fontSize: 11, color: 'var(--pt-fg-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                    Payment request
-                  </div>
-                  <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 4 }}>
-                    <span style={{ fontFamily: 'var(--pt-mono)', fontSize: 16, color: 'var(--pt-fg-3)' }}>$</span>
-                    {foundOrder.payment_amount.toFixed(2)}{' '}
-                    <span style={{ fontFamily: 'var(--pt-mono)', fontSize: 12, color: 'var(--pt-fg-3)' }}>USD</span>
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--pt-fg-2)', marginTop: 5 }}>{memo || foundOrder.ref_number}</div>
-                  <div style={{ fontSize: 11, color: 'var(--pt-fg-4)', marginTop: 10 }}>Pay with any crypto · settles as USDC</div>
-                </div>
-              </>
-            )}
           </>
         )}
       </div>

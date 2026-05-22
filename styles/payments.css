@@ -491,3 +491,83 @@
 }
 .pay-detail-side-actions button:hover { background: var(--pt-surface-2); }
 .pay-detail-side-actions .is-danger { color: var(--pt-danger); }
+
+/* ─── Order picker combobox ──────────────────────────────────────────────── */
+.pay-comp-picker { position: relative; }
+
+.pay-comp-picker-input {
+  display: flex; align-items: center; gap: 9px;
+  height: 40px; padding: 0 12px;
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line); border-radius: 7px;
+  cursor: text; transition: border-color 0.1s, box-shadow 0.1s;
+}
+.pay-comp-picker-input.is-open {
+  border-color: var(--pt-accent);
+  box-shadow: 0 0 0 1px var(--pt-accent);
+}
+.pay-comp-picker-input input {
+  flex: 1; border: 0; outline: none; background: transparent;
+  font: inherit; font-size: 13px; color: var(--pt-fg);
+}
+.pay-comp-picker-input input::placeholder { color: var(--pt-fg-4); }
+.pay-comp-picker-spin { font-size: 10px; color: var(--pt-fg-4); flex-shrink: 0; }
+
+.pay-comp-picker-drop {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 50;
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px oklch(0 0 0 / 0.12), 0 2px 6px oklch(0 0 0 / 0.06);
+  overflow: hidden;
+}
+.pay-comp-picker-drop-hd {
+  padding: 7px 12px 6px;
+  font-size: 10px; color: var(--pt-fg-4);
+  text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500;
+}
+.pay-comp-picker-opt {
+  display: grid; grid-template-columns: auto 1fr auto;
+  gap: 12px; align-items: center;
+  width: 100%; padding: 9px 12px;
+  border: 0; border-top: 0.5px solid var(--pt-line-soft);
+  background: none; font-family: inherit; text-align: left; cursor: pointer;
+}
+.pay-comp-picker-opt:hover { background: oklch(from var(--pt-fg) l c h / 0.03); }
+.pay-comp-picker-opt .ref { font-family: var(--pt-mono); font-size: 12px; font-weight: 600; color: var(--pt-fg); }
+.pay-comp-picker-opt .cust { font-size: 12px; color: var(--pt-fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pay-comp-picker-opt .amt { font-family: var(--pt-mono); font-size: 12px; font-weight: 600; color: var(--pt-fg); }
+.pay-comp-picker-empty { padding: 16px 12px; font-size: 12px; color: var(--pt-fg-4); text-align: center; }
+
+/* ─── Selected order summary card ────────────────────────────────────────── */
+.pay-comp-sel {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 16px; margin-top: 8px;
+  background: var(--pt-accent-soft);
+  border: 0.5px solid var(--pt-accent); border-radius: 8px;
+}
+.pay-comp-sel-amt {
+  font-size: 24px; font-weight: 600; letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums; flex-shrink: 0; line-height: 1;
+}
+.pay-comp-sel-amt .cur { font-family: var(--pt-mono); font-size: 14px; color: var(--pt-fg-3); margin-right: 1px; font-weight: 500; }
+.pay-comp-sel-meta { flex: 1; min-width: 0; }
+.pay-comp-sel-cust { font-size: 13px; font-weight: 500; color: var(--pt-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pay-comp-sel-ref { font-family: var(--pt-mono); font-size: 11px; color: var(--pt-fg-3); margin-top: 2px; }
+.pay-comp-sel-clear {
+  width: 24px; height: 24px; border-radius: 5px; flex-shrink: 0;
+  border: 0; background: transparent; color: var(--pt-fg-4);
+  cursor: pointer; display: grid; place-items: center;
+}
+.pay-comp-sel-clear:hover { background: oklch(from var(--pt-fg) l c h / 0.08); color: var(--pt-fg); }
+
+/* ─── Advanced toggle ────────────────────────────────────────────────────── */
+.pay-comp-adv-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 0; padding: 0;
+  font-family: inherit; font-size: 11.5px; color: var(--pt-fg-4);
+  cursor: pointer;
+}
+.pay-comp-adv-toggle:hover { color: var(--pt-fg-3); }
+.pay-comp-adv-toggle svg { transition: transform 0.15s; }
+.pay-comp-adv-toggle.is-open svg { transform: rotate(180deg); }

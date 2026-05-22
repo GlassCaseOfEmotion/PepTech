@@ -46,6 +46,33 @@ export async function getPaymentLinks(): Promise<CryptoPaymentLinkWithOrder[]> {
   return (data ?? []) as unknown as CryptoPaymentLinkWithOrder[]
 }
 
+export async function getRecentOrders(): Promise<{
+  orders?: { id: string; ref_number: string; payment_amount: number; customer_name: string | null }[]
+  error?: string
+}> {
+  try {
+    const { supabase } = await getTenantId()
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, ref_number, payment_amount, customers(display_name)')
+      .not('status', 'eq', 'cancelled')
+      .gt('payment_amount', 0)
+      .order('created_at', { ascending: false })
+      .limit(8)
+    if (error) return { error: error.message }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const orders = (data ?? []).map((o: any) => ({
+      id: o.id,
+      ref_number: o.ref_number,
+      payment_amount: Number(o.payment_amount),
+      customer_name: o.customers?.display_name ?? null,
+    }))
+    return { orders }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
 export async function lookupOrder(query: string): Promise<{
   orders?: { id: string; ref_number: string; payment_amount: number; customer_name: string | null }[]
   error?: string
