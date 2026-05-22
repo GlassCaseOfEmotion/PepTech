@@ -41,13 +41,14 @@ function useTheme() {
 }
 
 const NAV_PRIMARY = [
-  { label: 'Dashboard',   href: '/',              icon: Icons.spark, badge: null },
-  { label: 'Inbox',       href: '/inbox',          icon: Icons.inbox, badge: null },
-  { label: 'Customers',   href: '/customers',      icon: Icons.users, badge: null },
-  { label: 'Orders',      href: '/orders',         icon: Icons.box,   badge: null },
-  { label: 'Catalog',     href: '/catalog',        icon: Icons.flask, badge: null },
-  { label: 'Broadcasts',  href: '/broadcasts',     icon: Icons.send,  badge: null },
-  { label: 'Automations', href: '/automations',    icon: Icons.zap,   badge: null },
+  { label: 'Dashboard',   href: '/',              icon: Icons.spark,  badge: null },
+  { label: 'Inbox',       href: '/inbox',          icon: Icons.inbox,  badge: null },
+  { label: 'Customers',   href: '/customers',      icon: Icons.users,  badge: null },
+  { label: 'Orders',      href: '/orders',         icon: Icons.box,    badge: null },
+  { label: 'Payments',    href: '/payments',       icon: Icons.wallet, badge: null },
+  { label: 'Catalog',     href: '/catalog',        icon: Icons.flask,  badge: null },
+  { label: 'Broadcasts',  href: '/broadcasts',     icon: Icons.send,   badge: null },
+  { label: 'Automations', href: '/automations',    icon: Icons.zap,    badge: null },
 ]
 
 const NAV_SECONDARY = [
