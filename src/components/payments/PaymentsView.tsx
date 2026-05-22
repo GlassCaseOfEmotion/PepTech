@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import { Icons } from '@/lib/icons'
 import type { TenantCryptoWallet, CryptoPaymentLinkWithOrder, CryptoPaymentStatus, WalletTransaction } from '@/types/payments-crypto'
+import { formatAmountCompact } from '@/lib/currency'
 import { PaymentLinkDetail } from './PaymentLinkDetail'
 import { CreateComposer } from './CreatePaymentLinkModal'
 
@@ -65,7 +66,8 @@ function computeKpis(links: CryptoPaymentLinkWithOrder[]) {
   const now = Date.now()
   const active    = links.filter(l => !['finished', 'failed', 'expired', 'refunded'].includes(l.status))
   const confirming = links.filter(l => ['confirming', 'confirmed', 'sending', 'partially_paid'].includes(l.status))
-  const outstanding = active.reduce((s, l) => s + l.amount_usd, 0)
+  // Use amount_base (tenant's currency) for outstanding; fall back to amount_usd for old links
+  const outstanding = active.reduce((s, l) => s + (l.amount_base ?? l.amount_usd), 0)
 
   const sevenDaysAgo = now - 7 * 86400000
   const settled7d    = links.filter(l => l.status === 'finished' && l.confirmed_at && new Date(l.confirmed_at).getTime() > sevenDaysAgo)
@@ -117,10 +119,12 @@ export function PaymentsView({
   wallet,
   recentTransactions: _transactions,
   paymentLinks,
+  baseCurrency = 'USD',
 }: {
   wallet: TenantCryptoWallet | null
   recentTransactions: WalletTransaction[]
   paymentLinks: CryptoPaymentLinkWithOrder[]
+  baseCurrency?: string
 }) {
   const [view, setView] = useState<'list' | 'create' | 'detail'>('list')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -140,7 +144,7 @@ export function PaymentsView({
   ]
 
   if (view === 'create') {
-    return <CreateComposer onBack={() => setView('list')} />
+    return <CreateComposer onBack={() => setView('list')} baseCurrency={baseCurrency} />
   }
 
   if (view === 'detail' && selectedLink) {
@@ -148,9 +152,9 @@ export function PaymentsView({
   }
 
   // ── Header subtitle ──────────────────────────────────────────────────────
-  const activeCount  = kpi.activeCount
-  const outstandingFmt = kpi.outstanding > 0 ? `$${kpi.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} outstanding` : 'no outstanding links'
-  const settled7dFmt   = kpi.settled7dAmt > 0 ? `$${kpi.settled7dAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} settled (7d)` : ''
+  const activeCount    = kpi.activeCount
+  const outstandingFmt = kpi.outstanding > 0 ? `${formatAmountCompact(kpi.outstanding, baseCurrency)} outstanding` : 'no outstanding links'
+  const settled7dFmt   = kpi.settled7dAmt > 0 ? `$${kpi.settled7dAmt.toLocaleString(undefined, { maximumFractionDigits: 0 })} USDC settled (7d)` : ''
 
   return (
     <div className="pay-page">
@@ -189,7 +193,9 @@ export function PaymentsView({
       <div className="pay-strip">
         <div className="pay-kpi">
           <div className="pay-kpi-lbl">Outstanding</div>
-          <div className="pay-kpi-val">${kpi.outstanding.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+          <div className="pay-kpi-val" style={{ fontSize: baseCurrency !== 'USD' ? 16 : undefined }}>
+            {formatAmountCompact(kpi.outstanding, baseCurrency)}
+          </div>
           <div className="pay-kpi-sub">{kpi.activeCount} link{kpi.activeCount !== 1 ? 's' : ''}</div>
         </div>
         <div className="pay-kpi">
@@ -198,8 +204,9 @@ export function PaymentsView({
           <div className="pay-kpi-sub">on-chain</div>
         </div>
         <div className="pay-kpi">
+          {/* Settled shows in USDC (what actually landed in wallet), not tenant currency */}
           <div className="pay-kpi-lbl">Settled · 7d</div>
-          <div className="pay-kpi-val">${kpi.settled7dAmt.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+          <div className="pay-kpi-val">${kpi.settled7dAmt.toLocaleString(undefined, { maximumFractionDigits: 0 })}<span className="u">USDC</span></div>
           <div className="pay-kpi-sub"><span className="ok">{kpi.settled7dCount} link{kpi.settled7dCount !== 1 ? 's' : ''}</span></div>
         </div>
         <div className="pay-kpi">
@@ -298,7 +305,7 @@ export function PaymentsView({
                         ? <span className="mono" style={{ fontSize: 11, color: 'var(--pt-fg-2)' }}>#{orderRef}</span>
                         : <span style={{ color: 'var(--pt-fg-4)' }}>—</span>}
                     </td>
-                    <td className="r mono">${l.amount_usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="r mono">{formatAmountCompact(l.amount_base ?? l.amount_usd, l.base_currency ?? baseCurrency)}</td>
                     <td>
                       {/* DECISION NEEDED — accepted assets: not stored per link (NOWPayments accepts all). Showing paid token after payment, dash before. */}
                       <span className="pay-assets">

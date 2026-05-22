@@ -4,7 +4,8 @@
 import { useState, useRef, useEffect } from 'react'
 import type { ReactElement } from 'react'
 import { Icons } from '@/lib/icons'
-import { getRecentOrders, lookupOrder, createPaymentLink } from '@/app/payments/actions'
+import { getRecentOrders, lookupOrder, createPaymentLink, estimateUsd } from '@/app/payments/actions'
+import { formatAmountCompact, formatAmount } from '@/lib/currency'
 
 function QrPlaceholder({ size = 124 }: { size?: number }) {
   const cells = 21
@@ -42,6 +43,7 @@ type OrderOption = {
   id: string
   ref_number: string
   payment_amount: number
+  currency: string
   customer_name: string | null
 }
 
@@ -52,7 +54,7 @@ type CreatedLink = {
 
 const EXPIRY_OPTIONS = ['1h', '6h', '24h', '7d', 'never'] as const
 
-export function CreateComposer({ onBack }: { onBack: () => void }) {
+export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () => void; baseCurrency?: string }) {
   const [query, setQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [recentOrders, setRecentOrders] = useState<OrderOption[]>([])
@@ -60,6 +62,7 @@ export function CreateComposer({ onBack }: { onBack: () => void }) {
   const [loadingRecent, setLoadingRecent] = useState(false)
   const [loadingSearch, setLoadingSearch] = useState(false)
   const [foundOrder, setFoundOrder] = useState<OrderOption | null>(null)
+  const [usdEstimate, setUsdEstimate] = useState<number | null>(null)
   const [memo, setMemo] = useState('')
   const [expiry, setExpiry] = useState('24h')
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -112,14 +115,24 @@ export function CreateComposer({ onBack }: { onBack: () => void }) {
 
   function selectOrder(o: OrderOption) {
     setFoundOrder(o)
+    setUsdEstimate(null)
     setIsOpen(false)
     setQuery('')
     setSearchResults([])
     if (!memo) setMemo(o.ref_number)
+    // Fetch live USD estimate for non-USD orders
+    if (o.currency !== 'USD') {
+      estimateUsd(o.payment_amount, o.currency).then(r => {
+        if (r.amountUsd !== undefined) setUsdEstimate(r.amountUsd)
+      })
+    } else {
+      setUsdEstimate(o.payment_amount)
+    }
   }
 
   function clearOrder() {
     setFoundOrder(null)
+    setUsdEstimate(null)
     setQuery('')
     setMemo('')
     setSubmitError('')
@@ -199,7 +212,7 @@ export function CreateComposer({ onBack }: { onBack: () => void }) {
                     >
                       <span className="ref">#{o.ref_number}</span>
                       <span className="cust">{o.customer_name ?? '—'}</span>
-                      <span className="amt">${o.payment_amount.toFixed(2)}</span>
+                      <span className="amt">{formatAmountCompact(o.payment_amount, o.currency)}</span>
                     </button>
                   ))
                 )}
@@ -211,12 +224,18 @@ export function CreateComposer({ onBack }: { onBack: () => void }) {
           {foundOrder && !isOpen && (
             <div className="pay-comp-sel">
               <div className="pay-comp-sel-amt">
-                <span className="cur">$</span>
-                {foundOrder.payment_amount.toFixed(2)}
+                {formatAmount(foundOrder.payment_amount, foundOrder.currency)}
               </div>
               <div className="pay-comp-sel-meta">
                 <div className="pay-comp-sel-cust">{foundOrder.customer_name ?? '—'}</div>
-                <div className="pay-comp-sel-ref">Order #{foundOrder.ref_number}</div>
+                <div className="pay-comp-sel-ref">
+                  Order #{foundOrder.ref_number}
+                  {foundOrder.currency !== 'USD' && (
+                    usdEstimate !== null
+                      ? <> · ≈ ${usdEstimate.toFixed(2)} USD</>
+                      : <> · calculating USD…</>
+                  )}
+                </div>
               </div>
               <button className="pay-comp-sel-clear" onClick={clearOrder} title="Change order">
                 <Icons.x size={12} />
@@ -332,10 +351,13 @@ export function CreateComposer({ onBack }: { onBack: () => void }) {
                   Payment request
                 </div>
                 <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.025em', marginTop: 6, fontVariantNumeric: 'tabular-nums' }}>
-                  <span style={{ fontFamily: 'var(--pt-mono)', fontSize: 15, color: 'var(--pt-fg-3)' }}>$</span>
-                  {foundOrder.payment_amount.toFixed(2)}
-                  <span style={{ fontFamily: 'var(--pt-mono)', fontSize: 12, color: 'var(--pt-fg-3)', marginLeft: 6 }}>USD</span>
+                  {formatAmount(foundOrder.payment_amount, foundOrder.currency)}
                 </div>
+                {foundOrder.currency !== 'USD' && usdEstimate !== null && (
+                  <div style={{ fontSize: 11, color: 'var(--pt-fg-4)', marginTop: 3, fontFamily: 'var(--pt-mono)' }}>
+                    ≈ ${usdEstimate.toFixed(2)} USD · rate locked on creation
+                  </div>
+                )}
                 <div style={{ fontSize: 12, color: 'var(--pt-fg-2)', marginTop: 5 }}>
                   {memo || foundOrder.ref_number}
                 </div>

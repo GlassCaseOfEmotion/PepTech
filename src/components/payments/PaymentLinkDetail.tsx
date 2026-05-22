@@ -3,6 +3,7 @@
 
 import type { CSSProperties, ReactElement } from 'react'
 import { Icons } from '@/lib/icons'
+import { formatAmount } from '@/lib/currency'
 import type { CryptoPaymentLinkWithOrder, CryptoPaymentStatus } from '@/types/payments-crypto'
 
 function QrPlaceholder({ size = 124 }: { size?: number }) {
@@ -180,9 +181,16 @@ export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWit
             </button>
             <div className="id">{link.nowpayments_id}</div>
             <div className="amt" style={{ marginTop: 10 }}>
-              <span className="cur">$</span>{link.amount_usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
-              <span style={{ fontFamily: 'var(--pt-mono)', fontSize: 14, color: 'var(--pt-fg-3)', fontWeight: 500, marginLeft: 4 }}>USD</span>
+              {/* Show tenant's currency as primary amount */}
+              {link.amount_base && link.base_currency !== 'USD'
+                ? formatAmount(link.amount_base, link.base_currency)
+                : <><span className="cur">$</span>{link.amount_usd.toFixed(2)}</>}
             </div>
+            {link.base_currency !== 'USD' && (
+              <div style={{ fontSize: 11.5, color: 'var(--pt-fg-4)', marginTop: 3, fontFamily: 'var(--pt-mono)' }}>
+                ≈ ${link.amount_usd.toFixed(2)} USD · sent to NOWPayments
+              </div>
+            )}
             <div style={{ fontSize: 12.5, color: 'var(--pt-fg-3)', marginTop: 6 }}>
               {link.memo ?? orderRef ?? '—'}
               {customer ? ` · for ${customer.display_name}` : ''}
@@ -247,6 +255,18 @@ export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWit
             <div>
               <dt>Order</dt>
               <dd className="mono">{orderRef ? `#${orderRef}` : '—'}</dd>
+            </div>
+            <div>
+              <dt>Order amount</dt>
+              <dd className="mono">
+                {link.amount_base && link.base_currency !== 'USD'
+                  ? formatAmount(link.amount_base, link.base_currency)
+                  : `$${link.amount_usd.toFixed(2)}`}
+              </dd>
+            </div>
+            <div>
+              <dt>USD (gateway)</dt>
+              <dd className="mono">${link.amount_usd.toFixed(2)}</dd>
             </div>
             <div>
               <dt>USDC received</dt>

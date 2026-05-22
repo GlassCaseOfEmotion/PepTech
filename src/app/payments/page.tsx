@@ -3,16 +3,16 @@ import { redirect } from 'next/navigation'
 import { getServerUser } from '@/lib/supabase/server'
 import { Shell } from '@/components/shell/Shell'
 import { PaymentsView } from '@/components/payments/PaymentsView'
-import { getWallet, getPaymentLinks } from './actions'
-import type { CryptoPaymentLinkWithOrder } from '@/types/payments-crypto'
+import { getWallet, getPaymentLinks, getTenantCurrency } from './actions'
 
 export default async function PaymentsPage() {
   const user = await getServerUser()
   if (!user) redirect('/login')
 
-  const [{ wallet, recentTransactions }, paymentLinks] = await Promise.all([
+  const [{ wallet, recentTransactions }, paymentLinks, baseCurrency] = await Promise.all([
     getWallet(),
     getPaymentLinks(),
+    getTenantCurrency(),
   ])
 
   return (
@@ -21,6 +21,7 @@ export default async function PaymentsPage() {
         wallet={wallet}
         recentTransactions={recentTransactions}
         paymentLinks={paymentLinks}
+        baseCurrency={baseCurrency}
       />
     </Shell>
   )

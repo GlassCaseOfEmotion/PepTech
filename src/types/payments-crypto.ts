@@ -28,7 +28,9 @@ export type CryptoPaymentLink = {
   order_id: string
   nowpayments_id: string
   hosted_url: string
-  amount_usd: number
+  amount_usd: number       // USD sent to NOWPayments (always USD)
+  amount_base: number | null  // amount in tenant's own currency (e.g. IDR)
+  base_currency: string    // tenant's currency at time of creation (e.g. 'IDR')
   status: CryptoPaymentStatus
   payout_address: string
   memo: string | null
