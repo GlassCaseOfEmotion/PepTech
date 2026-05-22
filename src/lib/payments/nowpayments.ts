@@ -72,13 +72,13 @@ export async function getNowPayment(paymentId: string): Promise<NowPaymentStatus
 // Currencies supported for customer payments in v1.
 // NOWPayments pay_currency codes → display info.
 export const PAY_CURRENCIES = [
-  { id: 'usdttrc20', label: 'USDT', chain: 'TRC-20',  fee: '~$1 fee · 1-2 min'  },
-  { id: 'btc',       label: 'BTC',  chain: 'Mainnet', fee: '~$2 fee · ~30 min'  },
-  { id: 'eth',       label: 'ETH',  chain: 'Mainnet', fee: '~$3 fee · ~5 min'   },
-  { id: 'xmr',       label: 'XMR',  chain: 'Mainnet', fee: '~$1 fee · ~20 min'  },
-  { id: 'sol',       label: 'SOL',  chain: 'Mainnet', fee: '~$0 fee · ~30 sec'  },
-  { id: 'usdterc20', label: 'USDT', chain: 'ERC-20',  fee: '~$3 fee · ~5 min'   },
-  { id: 'ltc',       label: 'LTC',  chain: 'Mainnet', fee: '~$0 fee · ~2.5 min' },
+  { id: 'usdttrc20', label: 'USDT', chain: 'TRC-20'  },
+  { id: 'btc',       label: 'BTC',  chain: 'Mainnet' },
+  { id: 'eth',       label: 'ETH',  chain: 'Mainnet' },
+  { id: 'xmr',       label: 'XMR',  chain: 'Mainnet' },
+  { id: 'sol',       label: 'SOL',  chain: 'Mainnet' },
+  { id: 'usdterc20', label: 'USDT', chain: 'ERC-20'  },
+  { id: 'ltc',       label: 'LTC',  chain: 'Mainnet' },
 ] as const
 
 export type PayCurrencyId = typeof PAY_CURRENCIES[number]['id']

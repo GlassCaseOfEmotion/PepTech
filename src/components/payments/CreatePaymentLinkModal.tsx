@@ -282,7 +282,6 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
                     {c.label}{' '}
                     <span style={{ color: 'var(--pt-fg-4)', fontWeight: 400 }}>· {c.chain}</span>
                   </span>
-                  <span className="meta">{c.fee}</span>
                 </span>
               </button>
             ))}
