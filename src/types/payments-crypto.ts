@@ -8,6 +8,7 @@ export type CryptoPaymentStatus =
   | 'partially_paid'
   | 'finished'
   | 'failed'
+  | 'refunded'
   | 'expired'
 
 // Snake_case matches Supabase column names — no converter needed
@@ -72,7 +73,7 @@ export type NowPaymentsWebhookPayload = {
 }
 
 // Helius enhanced webhook transaction payload (minimal fields we need)
-export type HeliumTransactionPayload = {
+export type HeliusTransactionPayload = {
   signature: string
   tokenTransfers: {
     mint: string

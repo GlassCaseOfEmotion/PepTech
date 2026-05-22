@@ -11,13 +11,13 @@ type FilterTab = 'all' | 'waiting' | 'confirming' | 'finished' | 'failed'
 const STATUS_LABEL: Record<string, string> = {
   waiting: 'Waiting', confirming: 'Confirming', confirmed: 'Confirmed',
   sending: 'Sending', partially_paid: 'Partial', finished: 'Paid',
-  failed: 'Failed', expired: 'Expired',
+  failed: 'Failed', refunded: 'Refunded', expired: 'Expired',
 }
 
 function statusClass(status: string) {
   if (status === 'finished') return 'pt-pay-status-finished'
   if (status === 'confirming' || status === 'confirmed' || status === 'sending') return 'pt-pay-status-confirming'
-  if (status === 'failed' || status === 'expired') return 'pt-pay-status-failed'
+  if (status === 'failed' || status === 'expired' || status === 'refunded') return 'pt-pay-status-failed'
   return 'pt-pay-status-waiting'
 }
 

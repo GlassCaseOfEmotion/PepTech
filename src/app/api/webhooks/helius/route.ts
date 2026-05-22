@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import type { HeliumTransactionPayload } from '@/types/payments-crypto'
+import type { HeliusTransactionPayload } from '@/types/payments-crypto'
 
 // USDC SPL token mint on Solana mainnet
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const transactions = await request.json() as HeliumTransactionPayload[]
+  const transactions = await request.json() as HeliusTransactionPayload[]
   const supabase = createServiceClient()
 
   for (const tx of transactions) {
