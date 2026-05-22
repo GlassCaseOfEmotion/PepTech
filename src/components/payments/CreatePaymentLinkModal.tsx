@@ -9,37 +9,6 @@ import { getRecentOrders, lookupOrder, createPaymentLink, estimateUsd } from '@/
 import { PAY_CURRENCIES } from '@/lib/payments/nowpayments'
 import { formatAmountCompact, formatAmount } from '@/lib/currency'
 
-function QrPlaceholder({ size = 124 }: { size?: number }) {
-  const cells = 21
-  const cellSize = size / cells
-  const fixedPattern = (i: number, j: number) => {
-    if ((i < 7 && j < 7) || (i < 7 && j > 13) || (i > 13 && j < 7)) {
-      const xi = i > 13 ? i - 14 : i
-      const xj = j > 13 ? j - 14 : j
-      const ii = i > 13 ? xi : (i < 7 ? i : 0)
-      const jj = j > 13 ? xj : (j < 7 ? j : 0)
-      return (ii === 0 || ii === 6 || jj === 0 || jj === 6) ? 1
-           : (ii >= 2 && ii <= 4 && jj >= 2 && jj <= 4) ? 1 : 0
-    }
-    return ((i * 31 + j * 17 + i * j * 3) % 7) < 3 ? 1 : 0
-  }
-  const rects: ReactElement[] = []
-  for (let i = 0; i < cells; i++) {
-    for (let j = 0; j < cells; j++) {
-      if (fixedPattern(i, j)) {
-        rects.push(<rect key={`${i}-${j}`} x={j * cellSize} y={i * cellSize} width={cellSize + 0.3} height={cellSize + 0.3} fill="#111" />)
-      }
-    }
-  }
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <rect width={size} height={size} fill="#fff" />
-      {rects}
-      <rect x={size / 2 - 12} y={size / 2 - 12} width={24} height={24} fill="#fff" />
-      <rect x={size / 2 - 9} y={size / 2 - 9} width={18} height={18} rx={4} fill="oklch(0.20 0.01 100)" />
-    </svg>
-  )
-}
 
 type OrderOption = {
   id: string
@@ -409,8 +378,8 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
             </div>
 
             <h4>QR code</h4>
-            <div style={{ background: 'var(--pt-surface)', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 16, display: 'flex', justifyContent: 'center', opacity: foundOrder ? 1 : 0.35 }}>
-              <QrPlaceholder size={140} />
+            <div style={{ background: 'var(--pt-surface)', border: '0.5px dashed var(--pt-line)', borderRadius: 8, padding: 16, height: 172, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--pt-fg-4)', fontSize: 11.5, textAlign: 'center', lineHeight: 1.5 }}>
+              Generated when you<br />create the link
             </div>
           </>
         )}
