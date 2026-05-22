@@ -28,7 +28,9 @@ export type NowPaymentStatus = {
 }
 
 export async function createNowPayment(input: CreatePaymentInput): Promise<CreatedPayment> {
-  const res = await fetch(`${BASE}/payment`, {
+  // Use /invoice so the customer can choose their own payment currency on the hosted page.
+  // /payment requires pay_currency upfront; /invoice does not.
+  const res = await fetch(`${BASE}/invoice`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey() },
     body: JSON.stringify({
@@ -46,12 +48,12 @@ export async function createNowPayment(input: CreatePaymentInput): Promise<Creat
   }
   const data = await res.json() as {
     id: string
-    payment_url: string
+    invoice_url: string
     expiration_estimate_date: string | null
   }
   return {
     id: data.id,
-    hostedUrl: data.payment_url,
+    hostedUrl: data.invoice_url,
     expiresAt: data.expiration_estimate_date ?? null,
   }
 }
