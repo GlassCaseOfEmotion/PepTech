@@ -152,7 +152,7 @@ export async function lookupOrder(query: string): Promise<{
   }
 }
 
-export async function createPaymentLink(orderId: string, memo?: string): Promise<{
+export async function createPaymentLink(orderId: string, payCurrency: string, memo?: string): Promise<{
   link?: CryptoPaymentLink
   error?: string
 }> {
@@ -202,6 +202,8 @@ export async function createPaymentLink(orderId: string, memo?: string): Promise
     const { createNowPayment } = await import('@/lib/payments/nowpayments')
     const payment = await createNowPayment({
       amountUsd,
+      payCurrency,
+      payoutAddress: wallet.solana_address,
       orderId: order.id,
       orderDescription: memo ?? order.ref_number,
     })

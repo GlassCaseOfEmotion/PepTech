@@ -13,7 +13,8 @@ export async function POST(request: Request) {
   if (!userRow) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
   const tenantId = userRow.tenant_id as string
-  const { order_id } = await request.json() as { order_id: string }
+  const body = await request.json() as { order_id: string; pay_currency?: string }
+  const { order_id } = body
 
   // Verify order belongs to this tenant
   const { data: order } = await supabase
@@ -43,6 +44,8 @@ export async function POST(request: Request) {
   try {
     payment = await createNowPayment({
       amountUsd: Number(order.payment_amount),
+      payCurrency: body.pay_currency ?? 'usdttrc20',
+      payoutAddress: wallet.solana_address,
       orderId: order.id,
       orderDescription: order.ref_number,
     })

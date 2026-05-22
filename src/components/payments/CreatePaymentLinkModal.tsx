@@ -6,6 +6,7 @@ import type { ReactElement } from 'react'
 import { Icons } from '@/lib/icons'
 import QRCode from 'react-qr-code'
 import { getRecentOrders, lookupOrder, createPaymentLink, estimateUsd } from '@/app/payments/actions'
+import { PAY_CURRENCIES } from '@/lib/payments/nowpayments'
 import { formatAmountCompact, formatAmount } from '@/lib/currency'
 
 function QrPlaceholder({ size = 124 }: { size?: number }) {
@@ -64,6 +65,7 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
   const [loadingSearch, setLoadingSearch] = useState(false)
   const [foundOrder, setFoundOrder] = useState<OrderOption | null>(null)
   const [usdEstimate, setUsdEstimate] = useState<number | null>(null)
+  const [payCurrency, setPayCurrency] = useState<string | null>(null)
   const [memo, setMemo] = useState('')
   const [expiry, setExpiry] = useState('24h')
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -134,16 +136,18 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
   function clearOrder() {
     setFoundOrder(null)
     setUsdEstimate(null)
+    setPayCurrency(null)
     setQuery('')
     setMemo('')
     setSubmitError('')
   }
 
   async function handleSubmit() {
-    if (!foundOrder) { setSubmitError('Select an order first'); return }
+    if (!foundOrder)   { setSubmitError('Select an order first'); return }
+    if (!payCurrency)  { setSubmitError('Select a payment currency'); return }
     setSubmitting(true)
     setSubmitError('')
-    const result = await createPaymentLink(foundOrder.id, memo || foundOrder.ref_number)
+    const result = await createPaymentLink(foundOrder.id, payCurrency, memo || foundOrder.ref_number)
     setSubmitting(false)
     if (result.error) { setSubmitError(result.error); return }
     if (result.link) {
@@ -260,6 +264,34 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
           </div>
         </div>
 
+        {/* ── Customer pays in (required) ──────────────────────── */}
+        <div className="pay-comp-section">
+          <h4>Customer pays in</h4>
+          <div className="pay-comp-assets">
+            {PAY_CURRENCIES.map(c => (
+              <button
+                key={c.id}
+                className={`pay-comp-asset${payCurrency === c.id ? ' is-on' : ''}`}
+                onClick={() => setPayCurrency(c.id)}
+              >
+                <span className="check">
+                  {payCurrency === c.id && <Icons.check size={10} />}
+                </span>
+                <span className="info">
+                  <span className="lbl">
+                    {c.label}{' '}
+                    <span style={{ color: 'var(--pt-fg-4)', fontWeight: 400 }}>· {c.chain}</span>
+                  </span>
+                  <span className="meta">{c.fee}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="hint" style={{ marginTop: 6 }}>
+            Ask your customer which they prefer. Funds always settle as USDC to your wallet.
+          </div>
+        </div>
+
         {/* ── Advanced ─────────────────────────────────────────── */}
         <div className="pay-comp-section">
           <button
@@ -272,7 +304,7 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
           </button>
 
           {showAdvanced && (
-            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ marginTop: 14 }}>
               <div className="pay-comp-field">
                 <label>Expires after</label>
                 <div className="pay-comp-segctl">
@@ -282,11 +314,6 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
                 </div>
                 {/* DECISION NEEDED — expiry not yet passed to NOWPayments API (uses their 24h default). Wire validity_time param to make this functional. */}
                 <div className="hint" style={{ marginTop: 5 }}>Not yet wired — defaults to 24h.</div>
-              </div>
-              <div className="pay-comp-field" style={{ fontSize: 11.5, color: 'var(--pt-fg-3)', lineHeight: 1.6 }}>
-                <label>Accepted assets</label>
-                {/* DECISION NEEDED — per-link currency restriction not implemented. NOWPayments accepts all tokens. */}
-                Customer can pay with any crypto (BTC, ETH, USDT, SOL, XMR and 300+ more). Funds settle as USDC.
               </div>
             </div>
           )}
@@ -303,9 +330,9 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
           <button
             className="pt-btn pt-btn-primary"
             onClick={handleSubmit}
-            disabled={submitting || !foundOrder || !!createdLink}
+            disabled={submitting || !foundOrder || !payCurrency || !!createdLink}
           >
-            {submitting ? 'Creating…' : createdLink ? 'Created ✓' : 'Create payment link →'}
+            {submitting ? 'Creating…' : createdLink ? 'Created ✓' : payCurrency ? `Create ${PAY_CURRENCIES.find(c => c.id === payCurrency)?.label ?? ''} payment link →` : 'Select a currency first'}
           </button>
         </div>
       </div>
@@ -363,7 +390,9 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
                   {memo || foundOrder.ref_number}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--pt-fg-4)', marginTop: 8 }}>
-                  Pay with any crypto · settles as USDC
+                  {payCurrency
+                    ? <>Paying with <strong>{PAY_CURRENCIES.find(c => c.id === payCurrency)?.label}</strong> · settles as USDC</>
+                    : 'Select a currency above'}
                 </div>
               </div>
             ) : (

@@ -9,12 +9,14 @@ describe('createNowPayment', () => {
       ok: true,
       json: async () => ({
         id: 'pay_123',
-        invoice_url: 'https://nowpayments.io/payment/?iid=pay_123',
+        payment_url: 'https://nowpayments.io/payment/?iid=pay_123',
         expiration_estimate_date: '2026-05-23T10:00:00Z',
       }),
     }))
     const result = await createNowPayment({
       amountUsd: 150,
+      payCurrency: 'usdttrc20',
+      payoutAddress: 'So1anaAddr1234',
       orderId: 'order-uuid',
       orderDescription: 'A-2001',
     })
@@ -31,6 +33,8 @@ describe('createNowPayment', () => {
     }))
     await expect(createNowPayment({
       amountUsd: 150,
+      payCurrency: 'btc',
+      payoutAddress: 'addr',
       orderId: 'id',
       orderDescription: 'A-1',
     })).rejects.toThrow('NOWPayments error 500')

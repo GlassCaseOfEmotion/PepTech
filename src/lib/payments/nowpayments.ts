@@ -6,6 +6,8 @@ function apiKey() {
 
 export type CreatePaymentInput = {
   amountUsd: number
+  payCurrency: string   // token customer pays in, e.g. 'btc', 'usdttrc20', 'eth'
+  payoutAddress: string // tenant's Solana wallet — receives USDC after conversion
   orderId: string
   orderDescription: string
 }
@@ -27,15 +29,16 @@ export type NowPaymentStatus = {
 }
 
 export async function createNowPayment(input: CreatePaymentInput): Promise<CreatedPayment> {
-  // Use /invoice so the customer can choose their own payment currency on the hosted page.
-  // /payment requires pay_currency upfront; /invoice does not.
-  const res = await fetch(`${BASE}/invoice`, {
+  const res = await fetch(`${BASE}/payment`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey() },
     body: JSON.stringify({
-      price_amount: input.amountUsd,
-      price_currency: 'usd',
-      order_id: input.orderId,
+      price_amount:    input.amountUsd,
+      price_currency:  'usd',
+      pay_currency:    input.payCurrency,
+      payout_currency: 'usdcsol',
+      payout_address:  input.payoutAddress,
+      order_id:        input.orderId,
       order_description: input.orderDescription,
     }),
   })
@@ -45,12 +48,12 @@ export async function createNowPayment(input: CreatePaymentInput): Promise<Creat
   }
   const data = await res.json() as {
     id: string
-    invoice_url: string
+    payment_url: string
     expiration_estimate_date: string | null
   }
   return {
     id: data.id,
-    hostedUrl: data.invoice_url,
+    hostedUrl: data.payment_url,
     expiresAt: data.expiration_estimate_date ?? null,
   }
 }
@@ -65,3 +68,17 @@ export async function getNowPayment(paymentId: string): Promise<NowPaymentStatus
   }
   return res.json() as Promise<NowPaymentStatus>
 }
+
+// Currencies supported for customer payments in v1.
+// NOWPayments pay_currency codes → display info.
+export const PAY_CURRENCIES = [
+  { id: 'usdttrc20', label: 'USDT', chain: 'TRC-20',  fee: '~$1 fee · 1-2 min'  },
+  { id: 'btc',       label: 'BTC',  chain: 'Mainnet', fee: '~$2 fee · ~30 min'  },
+  { id: 'eth',       label: 'ETH',  chain: 'Mainnet', fee: '~$3 fee · ~5 min'   },
+  { id: 'xmr',       label: 'XMR',  chain: 'Mainnet', fee: '~$1 fee · ~20 min'  },
+  { id: 'sol',       label: 'SOL',  chain: 'Mainnet', fee: '~$0 fee · ~30 sec'  },
+  { id: 'usdterc20', label: 'USDT', chain: 'ERC-20',  fee: '~$3 fee · ~5 min'   },
+  { id: 'ltc',       label: 'LTC',  chain: 'Mainnet', fee: '~$0 fee · ~2.5 min' },
+] as const
+
+export type PayCurrencyId = typeof PAY_CURRENCIES[number]['id']
