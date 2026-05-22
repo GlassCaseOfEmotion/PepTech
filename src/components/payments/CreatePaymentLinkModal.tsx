@@ -43,7 +43,6 @@ type FoundOrder = {
   ref_number: string
   payment_amount: number
   customer_name: string | null
-  customer_handle: string | null
 }
 
 type CreatedLink = {
@@ -55,6 +54,7 @@ const EXPIRY_OPTIONS = ['1h', '6h', '24h', '7d', 'never'] as const
 
 export function CreateComposer({ onBack }: { onBack: () => void }) {
   const [orderQuery, setOrderQuery] = useState('')
+  const [orderResults, setOrderResults] = useState<FoundOrder[]>([])
   const [foundOrder, setFoundOrder] = useState<FoundOrder | null>(null)
   const [lookupLoading, setLookupLoading] = useState(false)
   const [lookupError, setLookupError] = useState('')
@@ -68,6 +68,7 @@ export function CreateComposer({ onBack }: { onBack: () => void }) {
 
   async function handleOrderSearch(query: string) {
     setOrderQuery(query)
+    setOrderResults([])
     setFoundOrder(null)
     setLookupError('')
     if (!query.trim()) return
@@ -77,11 +78,17 @@ export function CreateComposer({ onBack }: { onBack: () => void }) {
       const result = await lookupOrder(query)
       setLookupLoading(false)
       if (result.error) { setLookupError(result.error); return }
-      if (!result.orders?.length) { setLookupError('No orders found'); return }
-      const o = result.orders[0]
-      setFoundOrder(o)
-      if (!memo) setMemo(o.ref_number)
-    }, 400)
+      if (!result.orders?.length) { setLookupError('No matching orders'); return }
+      setOrderResults(result.orders)
+      if (result.orders.length === 1) selectOrder(result.orders[0])
+    }, 350)
+  }
+
+  function selectOrder(o: FoundOrder) {
+    setFoundOrder(o)
+    setOrderResults([])
+    setOrderQuery(o.ref_number)
+    if (!memo) setMemo(o.ref_number)
   }
 
   async function handleSubmit() {
@@ -137,20 +144,47 @@ export function CreateComposer({ onBack }: { onBack: () => void }) {
         <div className="pay-comp-section">
           <h4>For</h4>
           <div className="pay-comp-field">
+            <label>Attach to order</label>
+            <div className="pay-comp-input" style={{ borderColor: lookupError ? 'var(--pt-danger)' : foundOrder ? 'var(--pt-accent)' : undefined }}>
+              <Icons.box size={13} />
+              <input
+                value={orderQuery}
+                onChange={e => handleOrderSearch(e.target.value)}
+                placeholder="Type order ref e.g. A-1234…"
+              />
+              {lookupLoading && <span style={{ fontSize: 10, color: 'var(--pt-fg-4)' }}>searching…</span>}
+              {foundOrder && !lookupLoading && <Icons.check size={11} style={{ color: 'var(--pt-ok)' }} />}
+            </div>
+            {lookupError && (
+              <div style={{ fontSize: 11, color: 'var(--pt-danger)', marginTop: 4 }}>{lookupError}</div>
+            )}
+            {orderResults.length > 1 && (
+              <div style={{ border: '0.5px solid var(--pt-line)', borderRadius: 6, marginTop: 4, overflow: 'hidden', background: 'var(--pt-surface)' }}>
+                {orderResults.map(o => (
+                  <button
+                    key={o.id}
+                    onClick={() => selectOrder(o)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 12px', background: 'none', border: 'none', borderTop: '0.5px solid var(--pt-line-soft)', cursor: 'pointer', textAlign: 'left', fontSize: 12 }}
+                  >
+                    <span style={{ fontFamily: 'var(--pt-mono)', fontWeight: 600 }}>#{o.ref_number}</span>
+                    <span style={{ color: 'var(--pt-fg-3)' }}>{o.customer_name ?? '—'}</span>
+                    <span style={{ fontFamily: 'var(--pt-mono)' }}>${o.payment_amount.toFixed(2)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="pay-comp-field">
             <label>Customer</label>
             <div className="pay-comp-input">
               <Icons.user size={13} />
               <input
-                value={foundOrder?.customer_name ?? '—'}
+                value={foundOrder?.customer_name ?? ''}
                 readOnly
+                placeholder="Auto-filled from order"
                 style={{ color: foundOrder?.customer_name ? 'var(--pt-fg)' : 'var(--pt-fg-4)' }}
                 onChange={() => {}}
               />
-              {foundOrder?.customer_handle && (
-                <span style={{ fontFamily: 'var(--pt-mono)', fontSize: 10.5, color: 'var(--pt-fg-4)' }}>
-                  {foundOrder.customer_handle}
-                </span>
-              )}
             </div>
           </div>
           <div className="pay-comp-field">
@@ -162,22 +196,6 @@ export function CreateComposer({ onBack }: { onBack: () => void }) {
                 placeholder="e.g. Reta 10mg ×2"
               />
             </div>
-          </div>
-          <div className="pay-comp-field">
-            <label>Attach to order</label>
-            <div className="pay-comp-input" style={{ borderColor: lookupError ? 'var(--pt-danger)' : undefined }}>
-              <Icons.box size={13} />
-              <input
-                value={orderQuery}
-                onChange={e => handleOrderSearch(e.target.value)}
-                placeholder="Type order ref (e.g. A-2244)…"
-              />
-              {lookupLoading && <span style={{ fontSize: 10, color: 'var(--pt-fg-4)' }}>…</span>}
-              {foundOrder && !lookupLoading && <Icons.check size={11} style={{ color: 'var(--pt-ok)' }} />}
-            </div>
-            {lookupError && (
-              <div style={{ fontSize: 11, color: 'var(--pt-danger)', marginTop: 4 }}>{lookupError}</div>
-            )}
           </div>
         </div>
 

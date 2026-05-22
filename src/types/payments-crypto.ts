@@ -47,7 +47,6 @@ export type CryptoPaymentLinkWithOrder = CryptoPaymentLink & {
     ref_number: string
     customers: {
       display_name: string
-      display_handle: string
     } | null
   } | null
 }

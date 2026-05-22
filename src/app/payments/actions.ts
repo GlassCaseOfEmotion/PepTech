@@ -39,10 +39,7 @@ export async function getPaymentLinks(): Promise<CryptoPaymentLinkWithOrder[]> {
       *,
       orders (
         ref_number,
-        customers (
-          display_name,
-          display_handle
-        )
+        customers ( display_name )
       )
     `)
     .order('created_at', { ascending: false })
@@ -50,7 +47,7 @@ export async function getPaymentLinks(): Promise<CryptoPaymentLinkWithOrder[]> {
 }
 
 export async function lookupOrder(query: string): Promise<{
-  orders?: { id: string; ref_number: string; payment_amount: number; customer_name: string | null; customer_handle: string | null }[]
+  orders?: { id: string; ref_number: string; payment_amount: number; customer_name: string | null }[]
   error?: string
 }> {
   if (!query.trim()) return { orders: [] }
@@ -58,7 +55,7 @@ export async function lookupOrder(query: string): Promise<{
     const { supabase } = await getTenantId()
     const { data, error } = await supabase
       .from('orders')
-      .select('id, ref_number, payment_amount, customers(display_name, display_handle)')
+      .select('id, ref_number, payment_amount, customers(display_name)')
       .ilike('ref_number', `%${query.trim()}%`)
       .limit(5)
     if (error) return { error: error.message }
@@ -68,7 +65,6 @@ export async function lookupOrder(query: string): Promise<{
       ref_number: o.ref_number,
       payment_amount: Number(o.payment_amount),
       customer_name: o.customers?.display_name ?? null,
-      customer_handle: o.customers?.display_handle ?? null,
     }))
     return { orders }
   } catch (e) {

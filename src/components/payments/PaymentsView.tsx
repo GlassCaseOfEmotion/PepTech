@@ -289,7 +289,8 @@ export function PaymentsView({
                       {/* DECISION NEEDED — customer.channel for icon: not stored. Showing name + handle only. */}
                       <div className="pay-tt-cust">
                         <span className="pay-tt-cust-name">{customer?.display_name ?? '—'}</span>
-                        <span className="pay-tt-cust-meta">{customer?.display_handle ?? '—'}</span>
+                        {/* DECISION NEEDED — handle lives on customer_channels, not customers. Join needed for Phase 3. */}
+                        <span className="pay-tt-cust-meta" style={{ color: 'var(--pt-fg-4)' }}>—</span>
                       </div>
                     </td>
                     <td>
