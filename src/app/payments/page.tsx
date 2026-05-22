@@ -4,6 +4,7 @@ import { getServerUser } from '@/lib/supabase/server'
 import { Shell } from '@/components/shell/Shell'
 import { PaymentsView } from '@/components/payments/PaymentsView'
 import { getWallet, getPaymentLinks } from './actions'
+import type { CryptoPaymentLinkWithOrder } from '@/types/payments-crypto'
 
 export default async function PaymentsPage() {
   const user = await getServerUser()

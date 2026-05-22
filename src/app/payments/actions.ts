@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import type { TenantCryptoWallet, CryptoPaymentLink, WalletTransaction } from '@/types/payments-crypto'
+import type { TenantCryptoWallet, CryptoPaymentLink, CryptoPaymentLinkWithOrder, WalletTransaction } from '@/types/payments-crypto'
 
 async function getTenantId() {
   const supabase = await createClient()
@@ -31,23 +31,58 @@ export async function getWallet(): Promise<{
   }
 }
 
-export async function getPaymentLinks(): Promise<CryptoPaymentLink[]> {
+export async function getPaymentLinks(): Promise<CryptoPaymentLinkWithOrder[]> {
   const { supabase } = await getTenantId()
   const { data } = await supabase
     .from('crypto_payment_links')
-    .select('*')
+    .select(`
+      *,
+      orders (
+        ref_number,
+        customers (
+          display_name,
+          display_handle
+        )
+      )
+    `)
     .order('created_at', { ascending: false })
-  return (data ?? []) as CryptoPaymentLink[]
+  return (data ?? []) as unknown as CryptoPaymentLinkWithOrder[]
 }
 
-export async function createPaymentLink(orderId: string): Promise<{
+export async function lookupOrder(query: string): Promise<{
+  orders?: { id: string; ref_number: string; payment_amount: number; customer_name: string | null; customer_handle: string | null }[]
+  error?: string
+}> {
+  if (!query.trim()) return { orders: [] }
+  try {
+    const { supabase } = await getTenantId()
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, ref_number, payment_amount, customers(display_name, display_handle)')
+      .ilike('ref_number', `%${query.trim()}%`)
+      .limit(5)
+    if (error) return { error: error.message }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const orders = (data ?? []).map((o: any) => ({
+      id: o.id,
+      ref_number: o.ref_number,
+      payment_amount: Number(o.payment_amount),
+      customer_name: o.customers?.display_name ?? null,
+      customer_handle: o.customers?.display_handle ?? null,
+    }))
+    return { orders }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
+export async function createPaymentLink(orderId: string, memo?: string): Promise<{
   link?: CryptoPaymentLink
   error?: string
 }> {
   try {
     const { supabase, tenantId } = await getTenantId()
 
-    // Verify order belongs to this tenant
     const { data: order } = await supabase
       .from('orders')
       .select('id, ref_number, payment_amount')
@@ -55,7 +90,6 @@ export async function createPaymentLink(orderId: string): Promise<{
       .single()
     if (!order) return { error: 'Order not found' }
 
-    // Provision wallet lazily
     let wallet = (await supabase
       .from('tenant_crypto_wallets').select('*').eq('tenant_id', tenantId).single()).data
 
@@ -81,20 +115,23 @@ export async function createPaymentLink(orderId: string): Promise<{
       amountUsd: Number(order.payment_amount),
       payoutAddress: wallet.solana_address,
       orderId: order.id,
-      orderDescription: order.ref_number,
+      orderDescription: memo ?? order.ref_number,
     })
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const insertRow: any = {
+      tenant_id: tenantId,
+      order_id: order.id,
+      nowpayments_id: payment.id,
+      hosted_url: payment.hostedUrl,
+      amount_usd: Number(order.payment_amount),
+      payout_address: wallet.solana_address,
+      expires_at: payment.expiresAt,
+      memo: memo ?? order.ref_number,
+    }
     const { data, error } = await supabase
       .from('crypto_payment_links')
-      .insert({
-        tenant_id: tenantId,
-        order_id: order.id,
-        nowpayments_id: payment.id,
-        hosted_url: payment.hostedUrl,
-        amount_usd: Number(order.payment_amount),
-        payout_address: wallet.solana_address,
-        expires_at: payment.expiresAt,
-      })
+      .insert(insertRow)
       .select()
       .single()
 

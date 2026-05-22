@@ -31,6 +31,7 @@ export type CryptoPaymentLink = {
   amount_usd: number
   status: CryptoPaymentStatus
   payout_address: string
+  memo: string | null
   created_at: string
   expires_at: string | null
   confirmed_at: string | null
@@ -38,6 +39,17 @@ export type CryptoPaymentLink = {
   paid_amount: number | null
   usdc_received: number | null
   nowpayments_tx_id: string | null
+}
+
+// Returned by getPaymentLinks — includes joined order + customer data for display
+export type CryptoPaymentLinkWithOrder = CryptoPaymentLink & {
+  orders: {
+    ref_number: string
+    customers: {
+      display_name: string
+      display_handle: string
+    } | null
+  } | null
 }
 
 export type WalletTransaction = {

@@ -1,9 +1,10 @@
 // src/components/payments/CreatePaymentLinkModal.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import type { ReactElement } from 'react'
 import { Icons } from '@/lib/icons'
+import { lookupOrder, createPaymentLink } from '@/app/payments/actions'
 
 function QrPlaceholder({ size = 124 }: { size?: number }) {
   const cells = 21
@@ -37,22 +38,71 @@ function QrPlaceholder({ size = 124 }: { size?: number }) {
   )
 }
 
-type AssetKey = 'USDT' | 'BTC' | 'XMR'
+type FoundOrder = {
+  id: string
+  ref_number: string
+  payment_amount: number
+  customer_name: string | null
+  customer_handle: string | null
+}
 
-const ASSET_OPTIONS: { a: AssetKey; chain: string; net: string }[] = [
-  { a: 'USDT', chain: 'TRC20',   net: '~$1.30 fee · 1-2 min'  },
-  { a: 'BTC',  chain: 'Mainnet', net: '~$2.40 fee · ~30 min'  },
-  { a: 'XMR',  chain: 'Mainnet', net: '~$0.80 fee · ~20 min'  },
-]
+type CreatedLink = {
+  hosted_url: string
+  nowpayments_id: string
+}
 
 const EXPIRY_OPTIONS = ['1h', '6h', '24h', '7d', 'never'] as const
 
 export function CreateComposer({ onBack }: { onBack: () => void }) {
-  const [assets, setAssets] = useState<Record<AssetKey, boolean>>({ USDT: true, BTC: true, XMR: false })
-  const [expiry, setExpiry] = useState<string>('24h')
+  const [orderQuery, setOrderQuery] = useState('')
+  const [foundOrder, setFoundOrder] = useState<FoundOrder | null>(null)
+  const [lookupLoading, setLookupLoading] = useState(false)
+  const [lookupError, setLookupError] = useState('')
+  const [memo, setMemo] = useState('')
+  const [expiry, setExpiry] = useState('24h')
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const [createdLink, setCreatedLink] = useState<CreatedLink | null>(null)
+  const [copied, setCopied] = useState(false)
+  const lookupTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const toggle = (a: AssetKey) => setAssets(s => ({ ...s, [a]: !s[a] }))
-  const selectedAssets = (Object.keys(assets) as AssetKey[]).filter(a => assets[a])
+  async function handleOrderSearch(query: string) {
+    setOrderQuery(query)
+    setFoundOrder(null)
+    setLookupError('')
+    if (!query.trim()) return
+    if (lookupTimer.current) clearTimeout(lookupTimer.current)
+    lookupTimer.current = setTimeout(async () => {
+      setLookupLoading(true)
+      const result = await lookupOrder(query)
+      setLookupLoading(false)
+      if (result.error) { setLookupError(result.error); return }
+      if (!result.orders?.length) { setLookupError('No orders found'); return }
+      const o = result.orders[0]
+      setFoundOrder(o)
+      if (!memo) setMemo(o.ref_number)
+    }, 400)
+  }
+
+  async function handleSubmit() {
+    if (!foundOrder) { setSubmitError('Find an order first'); return }
+    setSubmitting(true)
+    setSubmitError('')
+    const result = await createPaymentLink(foundOrder.id, memo || foundOrder.ref_number)
+    setSubmitting(false)
+    if (result.error) { setSubmitError(result.error); return }
+    if (result.link) {
+      setCreatedLink({ hosted_url: result.link.hosted_url, nowpayments_id: result.link.nowpayments_id })
+    }
+  }
+
+  function copyUrl() {
+    if (!createdLink) return
+    navigator.clipboard.writeText(createdLink.hosted_url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
 
   return (
     <div className="pay-comp">
@@ -67,61 +117,83 @@ export function CreateComposer({ onBack }: { onBack: () => void }) {
         <h2>Request payment</h2>
         <p className="sub">Create a checkout URL. The customer pays in crypto; funds land in your Vault.</p>
 
+        {/* Amount */}
         <div className="pay-comp-section">
           <h4>Amount</h4>
           <div className="pay-comp-input is-amt">
             <span className="cur">$</span>
-            <input defaultValue="330.00" />
+            <input
+              value={foundOrder ? foundOrder.payment_amount.toFixed(2) : ''}
+              readOnly={!!foundOrder}
+              placeholder="0.00"
+              onChange={() => {}}
+            />
             <span className="ccy">USD</span>
           </div>
-          <div className="hint">Rate locked when customer opens link · 15-min quote refresh</div>
+          <div className="hint">Pulled from the order. Rate locked when customer opens link.</div>
         </div>
 
+        {/* For */}
         <div className="pay-comp-section">
           <h4>For</h4>
           <div className="pay-comp-field">
             <label>Customer</label>
             <div className="pay-comp-input">
               <Icons.user size={13} />
-              <input defaultValue="K. (gymrat_84)" />
-              <span style={{ fontFamily: 'var(--pt-mono)', fontSize: 10.5, color: 'var(--pt-fg-4)' }}>+1 ••• 4421 · wa</span>
+              <input
+                value={foundOrder?.customer_name ?? '—'}
+                readOnly
+                style={{ color: foundOrder?.customer_name ? 'var(--pt-fg)' : 'var(--pt-fg-4)' }}
+                onChange={() => {}}
+              />
+              {foundOrder?.customer_handle && (
+                <span style={{ fontFamily: 'var(--pt-mono)', fontSize: 10.5, color: 'var(--pt-fg-4)' }}>
+                  {foundOrder.customer_handle}
+                </span>
+              )}
             </div>
           </div>
           <div className="pay-comp-field">
             <label>Memo (customer sees this)</label>
             <div className="pay-comp-input">
-              <input defaultValue="Reta 10mg ×2 — gymrat_84" />
+              <input
+                value={memo}
+                onChange={e => setMemo(e.target.value)}
+                placeholder="e.g. Reta 10mg ×2"
+              />
             </div>
           </div>
           <div className="pay-comp-field">
-            <label>Attach to order (optional)</label>
-            <div className="pay-comp-input">
+            <label>Attach to order</label>
+            <div className="pay-comp-input" style={{ borderColor: lookupError ? 'var(--pt-danger)' : undefined }}>
               <Icons.box size={13} />
-              <input defaultValue="A-2244 · Reta 10mg ×2" />
-              <Icons.arrowDn size={11} />
+              <input
+                value={orderQuery}
+                onChange={e => handleOrderSearch(e.target.value)}
+                placeholder="Type order ref (e.g. A-2244)…"
+              />
+              {lookupLoading && <span style={{ fontSize: 10, color: 'var(--pt-fg-4)' }}>…</span>}
+              {foundOrder && !lookupLoading && <Icons.check size={11} style={{ color: 'var(--pt-ok)' }} />}
             </div>
+            {lookupError && (
+              <div style={{ fontSize: 11, color: 'var(--pt-danger)', marginTop: 4 }}>{lookupError}</div>
+            )}
           </div>
         </div>
 
+        {/* Accepted assets — informational only, NOWPayments handles currency selection */}
         <div className="pay-comp-section">
           <h4>Accepted assets</h4>
-          <div className="pay-comp-assets">
-            {ASSET_OPTIONS.map(o => (
-              <button
-                key={o.a}
-                className={`pay-comp-asset${assets[o.a] ? ' is-on' : ''}`}
-                onClick={() => toggle(o.a)}
-              >
-                <span className="check">{assets[o.a] && <Icons.check size={10} />}</span>
-                <span className="info">
-                  <span className="lbl">{o.a} <span style={{ color: 'var(--pt-fg-4)', fontWeight: 400 }}>· {o.chain}</span></span>
-                  <span className="meta">{o.net}</span>
-                </span>
-              </button>
-            ))}
+          <div style={{ fontSize: 11.5, color: 'var(--pt-fg-3)', lineHeight: 1.5 }}>
+            {/* DECISION NEEDED — per-link accepted assets not configured in our API call.
+                NOWPayments lets the customer choose any supported currency.
+                To restrict per-link, we'd need to pass a currency list to NOWPayments. */}
+            Customer can pay with any currency NOWPayments supports (BTC, ETH, USDT, SOL, XMR, and 300+ more).
+            Funds always settle as USDC to your wallet.
           </div>
         </div>
 
+        {/* Expires — display-only; NOWPayments default is 24h and not currently overridden */}
         <div className="pay-comp-section">
           <h4>Expires after</h4>
           <div className="pay-comp-segctl">
@@ -129,71 +201,105 @@ export function CreateComposer({ onBack }: { onBack: () => void }) {
               <button key={e} className={expiry === e ? 'is-on' : ''} onClick={() => setExpiry(e)}>{e}</button>
             ))}
           </div>
-          <div className="hint" style={{ marginTop: 6 }}>Unpaid link expires automatically; you can extend anytime.</div>
+          {/* DECISION NEEDED — expiry not yet passed to NOWPayments API (uses their default 24h).
+              To wire: add validity_time param to createNowPayment call. */}
+          <div className="hint" style={{ marginTop: 6 }}>Expiry selection not yet wired — defaults to 24h.</div>
         </div>
 
-        <div className="pay-comp-section">
-          <h4>Advanced</h4>
-          <div className="pay-comp-field">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <label style={{ marginBottom: 0 }}>Auto-settle to cold &gt; $1k</label>
-              <span style={{ width: 32, height: 18, background: 'var(--pt-accent)', borderRadius: 999, position: 'relative', display: 'inline-block' }}>
-                <span style={{ position: 'absolute', right: 2, top: 2, width: 14, height: 14, background: '#fff', borderRadius: '50%' }} />
-              </span>
-            </div>
+        {submitError && (
+          <div style={{ fontSize: 12, color: 'var(--pt-danger)', padding: '8px 10px', background: 'oklch(from var(--pt-danger) l c h / 0.08)', borderRadius: 6, marginTop: 8 }}>
+            {submitError}
           </div>
-          <div className="pay-comp-field">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <label style={{ marginBottom: 0 }}>Notify on open (push)</label>
-              <span style={{ width: 32, height: 18, background: 'var(--pt-accent)', borderRadius: 999, position: 'relative', display: 'inline-block' }}>
-                <span style={{ position: 'absolute', right: 2, top: 2, width: 14, height: 14, background: '#fff', borderRadius: '50%' }} />
-              </span>
-            </div>
-          </div>
-        </div>
+        )}
 
         <div className="pay-comp-cta">
-          <button className="pt-btn pt-btn-ghost">Save as draft</button>
-          <button className="pt-btn pt-btn-primary">Create &amp; send via WhatsApp →</button>
+          <button className="pt-btn pt-btn-ghost" onClick={onBack}>Cancel</button>
+          <button
+            className="pt-btn pt-btn-primary"
+            onClick={handleSubmit}
+            disabled={submitting || !foundOrder || !!createdLink}
+          >
+            {submitting ? 'Creating…' : createdLink ? 'Created ✓' : 'Create payment link →'}
+          </button>
         </div>
       </div>
 
       <div className="pay-comp-pv">
-        <h4>Preview · checkout URL</h4>
-        <div className="pay-comp-url">
-          <Icons.lock size={12} style={{ color: 'var(--pt-ok)' }} />
-          <span className="u">pay.peptech.app/dr_peptide/pl_4Q9F</span>
-          <button>copy</button>
-        </div>
+        {createdLink ? (
+          <>
+            <h4>Link created</h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'var(--pt-ok-soft)', color: 'var(--pt-ok)', borderRadius: 7, fontSize: 12.5, fontWeight: 500 }}>
+              <Icons.check size={14} /> Payment link is live
+            </div>
 
-        <h4>Share via</h4>
-        <div className="pay-comp-send">
-          <button className="pay-comp-send-btn"><Icons.wa size={13} /> WhatsApp</button>
-          <button className="pay-comp-send-btn"><Icons.tg size={13} /> Telegram</button>
-          <button className="pay-comp-send-btn"><Icons.em size={13} /> Email</button>
-          <button className="pay-comp-send-btn"><Icons.doc size={13} /> Copy link</button>
-        </div>
+            <h4>Checkout URL</h4>
+            <div className="pay-comp-url">
+              <Icons.lock size={12} style={{ color: 'var(--pt-ok)' }} />
+              <span className="u">{createdLink.hosted_url}</span>
+              <button onClick={copyUrl}>{copied ? 'Copied!' : 'copy'}</button>
+            </div>
 
-        <h4>QR code</h4>
-        <div style={{ background: 'var(--pt-surface)', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 16, display: 'flex', justifyContent: 'center' }}>
-          <QrPlaceholder size={140} />
-        </div>
+            <h4>Share via</h4>
+            <div className="pay-comp-send">
+              <button className="pay-comp-send-btn"><Icons.wa size={13} /> WhatsApp</button>
+              <button className="pay-comp-send-btn"><Icons.tg size={13} /> Telegram</button>
+              <button className="pay-comp-send-btn"><Icons.em size={13} /> Email</button>
+              <button className="pay-comp-send-btn" onClick={copyUrl}><Icons.doc size={13} /> Copy link</button>
+            </div>
 
-        <h4>What the customer will see</h4>
-        <div style={{ background: 'var(--pt-surface)', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 14 }}>
-          <div style={{ fontSize: 11, color: 'var(--pt-fg-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>dr_peptide requests</div>
-          <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 4 }}>
-            <span style={{ fontFamily: 'var(--pt-mono)', fontSize: 16, color: 'var(--pt-fg-3)' }}>$</span>330.00{' '}
-            <span style={{ fontFamily: 'var(--pt-mono)', fontSize: 12, color: 'var(--pt-fg-3)' }}>USD</span>
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--pt-fg-2)', marginTop: 5 }}>Reta 10mg ×2 — gymrat_84</div>
-          <div style={{ fontSize: 11, color: 'var(--pt-fg-4)', marginTop: 10, display: 'flex', gap: 8 }}>
-            <span>Pay in:</span>
-            {selectedAssets.map(a => (
-              <span key={a} data-asset={a} style={{ fontFamily: 'var(--pt-mono)', fontSize: 9.5, fontWeight: 600 }}>{a}</span>
-            ))}
-          </div>
-        </div>
+            <h4>QR code</h4>
+            <div style={{ background: 'var(--pt-surface)', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 16, display: 'flex', justifyContent: 'center' }}>
+              {/* DECISION NEEDED — QR is a placeholder pattern, not a real QR for the URL.
+                  To make real: install a QR library (e.g. qrcode) and generate from createdLink.hosted_url */}
+              <QrPlaceholder size={140} />
+            </div>
+
+            <div style={{ fontSize: 11, color: 'var(--pt-fg-4)', lineHeight: 1.6 }}>
+              Link ID: <span style={{ fontFamily: 'var(--pt-mono)' }}>{createdLink.nowpayments_id}</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <h4>Preview · checkout URL</h4>
+            <div className="pay-comp-url">
+              <Icons.lock size={12} style={{ color: foundOrder ? 'var(--pt-ok)' : 'var(--pt-fg-4)' }} />
+              <span className="u" style={{ color: foundOrder ? 'var(--pt-fg-2)' : 'var(--pt-fg-4)' }}>
+                {foundOrder ? `pay.peptech.app / pl_…` : 'Select an order to preview URL'}
+              </span>
+            </div>
+
+            <h4>Share via</h4>
+            <div className="pay-comp-send">
+              <button className="pay-comp-send-btn"><Icons.wa size={13} /> WhatsApp</button>
+              <button className="pay-comp-send-btn"><Icons.tg size={13} /> Telegram</button>
+              <button className="pay-comp-send-btn"><Icons.em size={13} /> Email</button>
+              <button className="pay-comp-send-btn"><Icons.doc size={13} /> Copy link</button>
+            </div>
+
+            <h4>QR code</h4>
+            <div style={{ background: 'var(--pt-surface)', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 16, display: 'flex', justifyContent: 'center' }}>
+              <QrPlaceholder size={140} />
+            </div>
+
+            {foundOrder && (
+              <>
+                <h4>What the customer will see</h4>
+                <div style={{ background: 'var(--pt-surface)', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 14 }}>
+                  <div style={{ fontSize: 11, color: 'var(--pt-fg-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Payment request
+                  </div>
+                  <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 4 }}>
+                    <span style={{ fontFamily: 'var(--pt-mono)', fontSize: 16, color: 'var(--pt-fg-3)' }}>$</span>
+                    {foundOrder.payment_amount.toFixed(2)}{' '}
+                    <span style={{ fontFamily: 'var(--pt-mono)', fontSize: 12, color: 'var(--pt-fg-3)' }}>USD</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--pt-fg-2)', marginTop: 5 }}>{memo || foundOrder.ref_number}</div>
+                  <div style={{ fontSize: 11, color: 'var(--pt-fg-4)', marginTop: 10 }}>Pay with any crypto · settles as USDC</div>
+                </div>
+              </>
+            )}
+          </>
+        )}
       </div>
     </div>
   )
