@@ -2,6 +2,7 @@
 'use client'
 
 import type { CSSProperties, ReactElement } from 'react'
+import QRCode from 'react-qr-code'
 import { Icons } from '@/lib/icons'
 import { formatAmount } from '@/lib/currency'
 import type { CryptoPaymentLinkWithOrder, CryptoPaymentStatus } from '@/types/payments-crypto'
@@ -311,9 +312,8 @@ export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWit
 
         <div>
           <h4>QR</h4>
-          <div style={{ background: 'var(--pt-surface)', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 14, display: 'flex', justifyContent: 'center' }}>
-            {/* DECISION NEEDED — placeholder QR, not real. Add qrcode library to generate from hosted_url */}
-            <QrPlaceholder size={130} />
+          <div style={{ background: '#fff', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 14, display: 'flex', justifyContent: 'center' }}>
+            <QRCode value={link.hosted_url} size={130} />
           </div>
         </div>
 

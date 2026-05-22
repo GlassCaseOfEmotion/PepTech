@@ -4,6 +4,7 @@
 import { useState, useRef, useEffect } from 'react'
 import type { ReactElement } from 'react'
 import { Icons } from '@/lib/icons'
+import QRCode from 'react-qr-code'
 import { getRecentOrders, lookupOrder, createPaymentLink, estimateUsd } from '@/app/payments/actions'
 import { formatAmountCompact, formatAmount } from '@/lib/currency'
 
@@ -334,8 +335,8 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
             </div>
 
             <h4>QR code</h4>
-            <div style={{ background: 'var(--pt-surface)', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 16, display: 'flex', justifyContent: 'center' }}>
-              <QrPlaceholder size={140} />
+            <div style={{ background: '#fff', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 16, display: 'flex', justifyContent: 'center' }}>
+              <QRCode value={createdLink.hosted_url} size={140} />
             </div>
 
             <div style={{ fontSize: 11, color: 'var(--pt-fg-4)', lineHeight: 1.6 }}>
