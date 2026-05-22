@@ -3,15 +3,16 @@ import React from 'react'
 interface IconProps {
   size?: number
   className?: string
+  style?: React.CSSProperties
 }
 
-function PtIcon({ d, size = 14, children, className }: { d?: string; size?: number; children?: React.ReactNode; className?: string }) {
+function PtIcon({ d, size = 14, children, className, style }: { d?: string; size?: number; children?: React.ReactNode; className?: string; style?: React.CSSProperties }) {
   return (
     <svg
       width={size} height={size} viewBox="0 0 24 24"
       fill="none" stroke="currentColor" strokeWidth={1.5}
       strokeLinecap="round" strokeLinejoin="round"
-      style={{ flexShrink: 0 }} className={className}
+      style={{ flexShrink: 0, ...style }} className={className}
     >
       {d ? <path d={d} /> : children}
     </svg>
