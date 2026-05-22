@@ -12,6 +12,7 @@ import '../../styles/order-detail.css'
 import '../../styles/agent.css'
 import '../../styles/admin.css'
 import '../../styles/media.css'
+import '../../styles/payments.css'
 
 export const metadata: Metadata = {
   title: 'Peptech',
