@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       agent_messages: {
@@ -336,48 +361,72 @@ export type Database = {
       }
       crypto_payment_links: {
         Row: {
-          id: string
-          tenant_id: string
-          order_id: string
-          nowpayments_id: string
-          hosted_url: string
           amount_usd: number
-          status: string
-          payout_address: string
+          confirmed_at: string | null
           created_at: string
           expires_at: string | null
-          confirmed_at: string | null
-          paid_token: string | null
-          paid_amount: number | null
-          usdc_received: number | null
+          hosted_url: string
+          id: string
+          nowpayments_id: string
           nowpayments_tx_id: string | null
+          order_id: string
+          paid_amount: number | null
+          paid_token: string | null
+          payout_address: string
+          status: string
+          tenant_id: string
+          usdc_received: number | null
         }
         Insert: {
-          id?: string
-          tenant_id: string
-          order_id: string
-          nowpayments_id: string
-          hosted_url: string
           amount_usd: number
-          status?: string
-          payout_address: string
+          confirmed_at?: string | null
           created_at?: string
           expires_at?: string | null
-          confirmed_at?: string | null
-          paid_token?: string | null
-          paid_amount?: number | null
-          usdc_received?: number | null
+          hosted_url: string
+          id?: string
+          nowpayments_id: string
           nowpayments_tx_id?: string | null
+          order_id: string
+          paid_amount?: number | null
+          paid_token?: string | null
+          payout_address: string
+          status?: string
+          tenant_id: string
+          usdc_received?: number | null
         }
         Update: {
-          status?: string
+          amount_usd?: number
           confirmed_at?: string | null
-          paid_token?: string | null
-          paid_amount?: number | null
-          usdc_received?: number | null
+          created_at?: string
+          expires_at?: string | null
+          hosted_url?: string
+          id?: string
+          nowpayments_id?: string
           nowpayments_tx_id?: string | null
+          order_id?: string
+          paid_amount?: number | null
+          paid_token?: string | null
+          payout_address?: string
+          status?: string
+          tenant_id?: string
+          usdc_received?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "crypto_payment_links_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crypto_payment_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customer_channels: {
         Row: {
@@ -802,6 +851,54 @@ export type Database = {
           },
           {
             foreignKeyName: "notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_size: number | null
+          id: string
+          mime_type: string
+          order_id: string
+          storage_path: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_size?: number | null
+          id?: string
+          mime_type: string
+          order_id: string
+          storage_path: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string
+          order_id?: string
+          storage_path?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_attachments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_attachments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1266,28 +1363,41 @@ export type Database = {
       }
       tenant_crypto_wallets: {
         Row: {
-          id: string
-          tenant_id: string
-          privy_wallet_id: string
-          solana_address: string
           balance_usdc: number
           created_at: string
+          id: string
           last_synced_at: string | null
-        }
-        Insert: {
-          id?: string
-          tenant_id: string
           privy_wallet_id: string
           solana_address: string
+          tenant_id: string
+        }
+        Insert: {
           balance_usdc?: number
           created_at?: string
+          id?: string
           last_synced_at?: string | null
+          privy_wallet_id: string
+          solana_address: string
+          tenant_id: string
         }
         Update: {
           balance_usdc?: number
+          created_at?: string
+          id?: string
           last_synced_at?: string | null
+          privy_wallet_id?: string
+          solana_address?: string
+          tenant_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tenant_crypto_wallets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tenant_order_sequences: {
         Row: {
@@ -1445,6 +1555,54 @@ export type Database = {
           },
         ]
       }
+      wallet_transactions: {
+        Row: {
+          amount_usdc: number
+          created_at: string
+          crypto_payment_link_id: string | null
+          id: string
+          solana_tx_signature: string | null
+          source_amount: number | null
+          source_token: string | null
+          tenant_id: string
+        }
+        Insert: {
+          amount_usdc: number
+          created_at?: string
+          crypto_payment_link_id?: string | null
+          id?: string
+          solana_tx_signature?: string | null
+          source_amount?: number | null
+          source_token?: string | null
+          tenant_id: string
+        }
+        Update: {
+          amount_usdc?: number
+          created_at?: string
+          crypto_payment_link_id?: string | null
+          id?: string
+          solana_tx_signature?: string | null
+          source_amount?: number | null
+          source_token?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_crypto_payment_link_id_fkey"
+            columns: ["crypto_payment_link_id"]
+            isOneToOne: false
+            referencedRelation: "crypto_payment_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_transactions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_templates: {
         Row: {
           body: string
@@ -1489,80 +1647,6 @@ export type Database = {
           },
         ]
       }
-      wallet_transactions: {
-        Row: {
-          id: string
-          tenant_id: string
-          crypto_payment_link_id: string | null
-          amount_usdc: number
-          solana_tx_signature: string | null
-          source_token: string | null
-          source_amount: number | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          tenant_id: string
-          crypto_payment_link_id?: string | null
-          amount_usdc: number
-          solana_tx_signature?: string | null
-          source_token?: string | null
-          source_amount?: number | null
-          created_at?: string
-        }
-        Update: {
-          solana_tx_signature?: string | null
-        }
-        Relationships: []
-      }
-      order_attachments: {
-        Row: {
-          id: string
-          tenant_id: string
-          order_id: string
-          storage_path: string
-          file_name: string
-          mime_type: string
-          file_size: number | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          tenant_id: string
-          order_id: string
-          storage_path: string
-          file_name: string
-          mime_type: string
-          file_size?: number | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          tenant_id?: string
-          order_id?: string
-          storage_path?: string
-          file_name?: string
-          mime_type?: string
-          file_size?: number | null
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "order_attachments_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "order_attachments_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       customer_activity: {
@@ -1599,6 +1683,10 @@ export type Database = {
       }
       increment_unread_count: {
         Args: { conv_id: string; tenant: string }
+        Returns: undefined
+      }
+      increment_wallet_balance: {
+        Args: { p_amount: number; p_tenant_id: string }
         Returns: undefined
       }
       next_order_ref: { Args: { p_tenant_id: string }; Returns: string }
@@ -1739,6 +1827,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
