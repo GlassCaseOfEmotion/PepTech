@@ -46,14 +46,17 @@ export async function createNowPayment(input: CreatePaymentInput): Promise<Creat
     const text = await res.text()
     throw new Error(`NOWPayments error ${res.status}: ${text}`)
   }
-  const data = await res.json() as {
-    payment_id: string
-    payment_url: string
-    expiration_estimate_date: string | null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = await res.json() as any
+  // NOWPayments uses payment_id (not id) for /payment responses.
+  // Log the raw shape so we can diagnose if the field name ever changes.
+  const paymentId = data.payment_id ?? data.id
+  if (!paymentId) {
+    throw new Error(`NOWPayments response missing payment_id. Raw: ${JSON.stringify(data)}`)
   }
   return {
-    id: String(data.payment_id),
-    hostedUrl: data.payment_url,
+    id: String(paymentId),
+    hostedUrl: data.payment_url ?? data.invoice_url ?? '',
     expiresAt: data.expiration_estimate_date ?? null,
   }
 }
