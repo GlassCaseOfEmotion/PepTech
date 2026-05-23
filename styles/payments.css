@@ -97,6 +97,20 @@
 .pay-chip:hover { background: var(--pt-surface); }
 .pay-chip.is-on { border-style: solid; background: var(--pt-surface); }
 .pay-chip .v { color: var(--pt-fg); font-weight: 500; }
+.pay-chip-menu {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 50;
+  background: var(--pt-surface); border: 0.5px solid var(--pt-line);
+  border-radius: 7px; padding: 4px; min-width: 120px;
+  display: flex; flex-direction: column; gap: 1px;
+  box-shadow: 0 4px 16px oklch(from var(--pt-fg) l c h / 0.08);
+}
+.pay-chip-menu button {
+  width: 100%; text-align: left; padding: 6px 10px;
+  font-size: 12px; background: none; border: 0; border-radius: 5px;
+  color: var(--pt-fg-2); cursor: pointer; font-family: inherit;
+}
+.pay-chip-menu button:hover { background: var(--pt-surface-2); }
+.pay-chip-menu button.is-on { color: var(--pt-accent-fg); font-weight: 500; }
 
 .pay-tt { width: 100%; border-collapse: collapse; }
 .pay-tt th, .pay-tt td {

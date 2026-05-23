@@ -135,8 +135,30 @@ export function PaymentsView({
   )
   const [selectedId, setSelectedId] = useState<string | null>(initialLinkId ?? null)
   const [tab, setTab] = useState('all')
+  const [search, setSearch]             = useState('')
+  const [dateFilter, setDateFilter]     = useState<'7d' | '30d' | '90d' | 'all'>('all')
+  const [showDateMenu, setShowDateMenu] = useState(false)
 
-  const filtered    = paymentLinks.filter(TAB_FILTERS[tab] ?? (() => true))
+  const DATE_MS: Record<string, number> = {
+    '7d':  7  * 86400000,
+    '30d': 30 * 86400000,
+    '90d': 90 * 86400000,
+    'all': Infinity,
+  }
+
+  const tabFiltered = paymentLinks.filter(TAB_FILTERS[tab] ?? (() => true))
+  const filtered = tabFiltered.filter(l => {
+    const q = search.trim().toLowerCase()
+    if (q) {
+      const customerName = l.orders?.customers?.display_name?.toLowerCase() ?? ''
+      const orderRef     = l.orders?.ref_number?.toLowerCase() ?? ''
+      const memo         = l.memo?.toLowerCase() ?? ''
+      if (!customerName.includes(q) && !orderRef.includes(q) && !memo.includes(q)) return false
+    }
+    const ms = DATE_MS[dateFilter]
+    if (ms !== Infinity && Date.now() - new Date(l.created_at).getTime() > ms) return false
+    return true
+  })
   const selectedLink = paymentLinks.find(l => l.id === selectedId) ?? null
   const kpi         = computeKpis(paymentLinks)
 
@@ -236,10 +258,35 @@ export function PaymentsView({
           <div className="pay-list-toolbar">
             <label className="pay-list-search">
               <Icons.search size={12} />
-              <input placeholder="Search by customer, order, memo…" />
+              <input
+                placeholder="Search by customer, order, memo…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
               <kbd>/</kbd>
             </label>
-            <button className="pay-chip">Created: <span className="v">all time</span> <Icons.arrowDn size={10} /></button>
+            <div style={{ position: 'relative' }}>
+              <button
+                className={`pay-chip${dateFilter !== 'all' ? ' is-on' : ''}`}
+                onClick={() => setShowDateMenu(v => !v)}
+              >
+                Created: <span className="v">{dateFilter === 'all' ? 'all time' : `last ${dateFilter}`}</span>
+                <Icons.arrowDn size={10} />
+              </button>
+              {showDateMenu && (
+                <div className="pay-chip-menu">
+                  {(['7d', '30d', '90d', 'all'] as const).map(opt => (
+                    <button
+                      key={opt}
+                      className={dateFilter === opt ? 'is-on' : ''}
+                      onClick={() => { setDateFilter(opt); setShowDateMenu(false) }}
+                    >
+                      {opt === 'all' ? 'All time' : `Last ${opt}`}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <table className="pay-tt">
             <thead>
