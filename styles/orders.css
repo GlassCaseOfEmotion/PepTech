@@ -216,26 +216,6 @@
 .pt-d-compact .pt-or-board { grid-template-columns: repeat(5, minmax(230px, 1fr)); gap: 10px; padding: 10px 18px; }
 .pt-d-compact .pt-or-card { padding: 8px 9px; gap: 5px; }
 
-/* ─── Order Detail Payment Panel ────────────────────────────────────────── */
-.pt-od-payment-panel {
-  background: var(--pt-surface);
-  border: 0.5px solid var(--pt-line);
-  border-radius: var(--pt-radius);
-  padding: 12px 16px;
-  margin: 0 0 16px;
-}
-.pt-od-payment-hd {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 8px; font-size: 12px; font-weight: 600;
-}
-.pt-od-payment-body { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.pt-od-payment-asset { font-size: 12px; font-weight: 600; }
-.pt-od-payment-addr { font-size: 11px; color: var(--pt-fg-3); }
-.pt-od-confirm-dialog {
-  margin-top: 12px; padding-top: 12px;
-  border-top: 0.5px solid var(--pt-line-soft);
-}
-
 /* ─── Customer Search Dropdown ──────────────────────────────────────────── */
 .pt-co-customer-search { position: relative; }
 .pt-co-customer-selected {

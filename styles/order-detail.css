@@ -380,7 +380,7 @@
 /* ── Payment action banner ──────────────────────────────────────────────── */
 .pt-od-payment-panel {
   border-bottom: 0.5px solid var(--pt-line);
-  padding: 10px 22px 12px 19px;
+  padding: 8px 20px 8px 17px;
   display: flex; flex-direction: column; gap: 0;
 }
 .pt-od-payment-panel.is-awaiting {
@@ -394,7 +394,7 @@
 
 .pt-od-payment-hd {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 14px; padding-bottom: 8px;
+  gap: 14px;
 }
 .pt-od-payment-hd > span {
   font-size: 10px; font-weight: 700;
