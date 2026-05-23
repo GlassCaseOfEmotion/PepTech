@@ -213,10 +213,27 @@ export async function getOrderChannel(orderId: string): Promise<{
   }
 }
 
+export async function markOrderAwaiting(orderId: string): Promise<{ ok: true } | { error: string }> {
+  try {
+    const { supabase } = await getTenantId()
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'awaiting' })
+      .eq('id', orderId)
+      .eq('status', 'created')
+    if (error) return { error: error.message }
+    revalidatePath('/orders')
+    return { ok: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
 export async function sendPaymentLinkToCustomer(
   customerId: string,
   channelType: string,
-  messageText: string
+  messageText: string,
+  orderId?: string
 ): Promise<{ ok: true; conversationId: string } | { error: string }> {
   try {
     // Find or create a conversation for this customer + channel
@@ -240,6 +257,7 @@ export async function sendPaymentLinkToCustomer(
       const body = await res.json().catch(() => ({} as any))
       return { error: (body.error as string) ?? `Send failed (${res.status})` }
     }
+    if (orderId) await markOrderAwaiting(orderId)
     return { ok: true, conversationId }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }

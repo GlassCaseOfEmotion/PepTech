@@ -4,9 +4,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
-import { sendPaymentLinkToCustomer } from '@/app/payments/actions'
+import { sendPaymentLinkToCustomer, markOrderAwaiting } from '@/app/payments/actions'
 
 type SendState = 'idle' | 'confirming' | 'sending' | 'sent' | 'error'
+type CopyState = 'idle' | 'copied' | 'marked'
 
 function channelLabel(type: string | null): string {
   if (type === 'whatsapp') return 'WhatsApp'
@@ -35,16 +36,18 @@ export function PaySendWidget({
   channelType,
   messageText,
   url,
+  orderId,
 }: {
   customerId: string | null
   customerName: string | null
   channelType: string | null
   messageText: string
   url: string
+  orderId?: string
 }) {
   const [state, setState] = useState<SendState>('idle')
   const [errorMsg, setErrorMsg] = useState('')
-  const [copied, setCopied] = useState(false)
+  const [copyState, setCopyState] = useState<CopyState>('idle')
   const [sentConversationId, setSentConversationId] = useState<string | null>(null)
   const router = useRouter()
 
@@ -53,7 +56,7 @@ export function PaySendWidget({
   async function handleSend() {
     if (!customerId || !channelType) return
     setState('sending')
-    const result = await sendPaymentLinkToCustomer(customerId, channelType, messageText)
+    const result = await sendPaymentLinkToCustomer(customerId, channelType, messageText, orderId)
       .catch(e => ({ error: e instanceof Error ? e.message : 'Unknown error' }))
     if ('error' in result) {
       setErrorMsg(friendlyError(result.error))
@@ -66,9 +69,15 @@ export function PaySendWidget({
 
   function copyUrl() {
     navigator.clipboard.writeText(url).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
+      setCopyState('copied')
+      if (!orderId) setTimeout(() => setCopyState('idle'), 1500)
     })
+  }
+
+  async function handleMarkAwaiting() {
+    if (!orderId) return
+    await markOrderAwaiting(orderId)
+    setCopyState('marked')
   }
 
   function goToChat() {
@@ -95,10 +104,22 @@ export function PaySendWidget({
               <span className="label">No channel found for this customer</span>
             </button>
           )}
-          <button className={`pay-comp-snd-copy${copied ? ' copied' : ''}`} onClick={copyUrl}>
-            <Icons.doc size={10} />
-            {copied ? 'Copied!' : 'Copy link'}
-          </button>
+          {copyState === 'idle' && (
+            <button className="pay-comp-snd-copy" onClick={copyUrl}>
+              <Icons.doc size={10} />
+              Copy link
+            </button>
+          )}
+          {copyState === 'copied' && (
+            <button className="pay-comp-snd-copy awaiting" onClick={orderId ? handleMarkAwaiting : undefined}>
+              Mark order as awaiting →
+            </button>
+          )}
+          {copyState === 'marked' && (
+            <button className="pay-comp-snd-copy marked" disabled>
+              ✓ Marked as awaiting
+            </button>
+          )}
         </>
       )}
 
@@ -146,7 +167,7 @@ export function PaySendWidget({
           <div className="pay-comp-snd-confirm-btns">
             <button className="pay-comp-snd-ok" onClick={() => setState('confirming')}>Retry</button>
             <button className="pay-comp-snd-cancel" onClick={copyUrl}>
-              {copied ? 'Copied!' : 'Copy link'}
+              {copyState !== 'idle' ? 'Copied!' : 'Copy link'}
             </button>
           </div>
         </div>

@@ -747,6 +747,9 @@
 }
 .pay-comp-snd-copy:hover { color: var(--pt-fg-2); }
 .pay-comp-snd-copy.copied { color: var(--pt-ok); }
+.pay-comp-snd-copy.awaiting { color: var(--pt-warn); cursor: pointer; }
+.pay-comp-snd-copy.awaiting:hover { color: oklch(from var(--pt-warn) calc(l - 0.05) c h); }
+.pay-comp-snd-copy.marked { color: var(--pt-ok); cursor: default; }
 
 /* Overlay */
 .pay-comp-snd-overlay {
