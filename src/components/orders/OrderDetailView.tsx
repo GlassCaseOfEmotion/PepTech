@@ -149,7 +149,6 @@ export function OrderDetailView({
   }
 
   const showCryptoLinkField =
-    cryptoPaymentLink !== null ||
     order.payment_asset === 'customer_chooses' ||
     CRYPTO_ASSETS.has(order.payment_asset)
 
