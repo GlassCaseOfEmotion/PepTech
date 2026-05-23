@@ -138,7 +138,7 @@ export function CreateComposer({ onBack, baseCurrency = 'USD', initialOrderId }:
     setSubmitting(true)
     setSubmitError('')
     setShowErrorDetails(false)
-    const result = await createPaymentLink(foundOrder.id, payCurrency, memo || foundOrder.ref_number)
+    const result = await createPaymentLink(foundOrder.id, payCurrency, memo || foundOrder.ref_number, expiry)
     setSubmitting(false)
     if (result.error) { setSubmitError(result.error); return }
     if (result.link) {
@@ -306,8 +306,6 @@ export function CreateComposer({ onBack, baseCurrency = 'USD', initialOrderId }:
                     <button key={e} className={expiry === e ? 'is-on' : ''} onClick={() => setExpiry(e)}>{e}</button>
                   ))}
                 </div>
-                {/* DECISION NEEDED — expiry not yet passed to NOWPayments API (uses their 24h default). Wire validity_time param to make this functional. */}
-                <div className="hint" style={{ marginTop: 5 }}>Not yet wired — defaults to 24h.</div>
               </div>
             </div>
           )}
