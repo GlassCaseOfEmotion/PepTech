@@ -4,7 +4,7 @@ import { useState, useTransition, useRef, useEffect, Fragment } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
-import { updateOrderStatus, saveOrderNotes, confirmPayment, packOrder } from '@/app/orders/actions'
+import { updateOrderStatus, saveOrderNotes, confirmPayment, packOrder, sendOrderPaymentDetails } from '@/app/orders/actions'
 import { buildPaymentMessage } from '@/lib/payments'
 import { PAYMENT_LABELS, PAYMENT_BADGE } from '@/types/payments'
 import type { TenantPaymentConfig } from '@/types/payments'
@@ -42,7 +42,11 @@ function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
-export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, customerStats, invoice, attachments, attachmentSignedUrls, attachmentThumbnailUrls, sendConversationId }: {
+export function OrderDetailView({
+  order, events, chatExcerpt, paymentConfigs, customerStats,
+  invoice, attachments, attachmentSignedUrls, attachmentThumbnailUrls,
+  cryptoPaymentLink,
+}: {
   order: DbOrderRow
   events: DbOrderEvent[]
   chatExcerpt: { id: string; direction: string; content: string; sent_at: string }[]
@@ -52,7 +56,13 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
   attachments: OrderAttachment[]
   attachmentSignedUrls: Record<string, string>
   attachmentThumbnailUrls: Record<string, string>
-  sendConversationId: string | null
+  cryptoPaymentLink: {
+    id: string
+    status: string
+    hosted_url: string
+    pay_currency: string | null
+    amount_usd: number
+  } | null
   customerName?: string
 }) {
   const [status, setStatus] = useState(order.status)
@@ -79,6 +89,9 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
   const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const moreMenuRef = useRef<HTMLDivElement>(null)
+  const [sendState, setSendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [sentConvId, setSentConvId] = useState<string | null>(null)
+  const [sendError, setSendError] = useState('')
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -135,18 +148,20 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
     })
   }
 
-  const sendPaymentDetails = () => {
-    const msg = buildPaymentMessage(
-      { ref_number: order.ref_number, payment_amount: order.payment_amount, payment_asset: order.payment_asset, payment_address: order.payment_address },
-      paymentConfigs,
-    )
-    if (!msg) return
-    const encoded = encodeURIComponent(msg)
-    if (order.conversation_id) {
-      router.push(`/inbox?conversation=${order.conversation_id}&prefill=${encoded}`)
+  const isCryptoAsset = !['bank_transfer', 'cash', 'customer_chooses'].includes(order.payment_asset)
+
+  async function handleSendPaymentDetails() {
+    setSendState('sending')
+    setSendError('')
+    const checkoutUrl = isCryptoAsset && cryptoPaymentLink ? cryptoPaymentLink.hosted_url : undefined
+    const result = await sendOrderPaymentDetails(order.id, checkoutUrl)
+      .catch(e => ({ error: e instanceof Error ? e.message : 'Unknown error' }))
+    if ('error' in result) {
+      setSendError(result.error)
+      setSendState('error')
     } else {
-      navigator.clipboard?.writeText(msg)
-      alert('Payment details copied to clipboard (no linked conversation).')
+      setSentConvId(result.conversationId)
+      setSendState('sent')
     }
   }
 
@@ -238,17 +253,32 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
         <div className="pt-od-payment-panel is-awaiting">
           <div className="pt-od-payment-hd">
             <span>Awaiting payment</span>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11 }} onClick={sendPaymentDetails}>
-                <Icons.send size={11} /> Send payment details
-              </button>
-              {order.payment_address && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {sendState === 'idle' && (
+                <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11 }} onClick={handleSendPaymentDetails}>
+                  <Icons.send size={11} /> Send payment details
+                </button>
+              )}
+              {sendState === 'sending' && (
+                <span style={{ fontSize: 11, color: 'var(--pt-fg-3)' }}>Sending…</span>
+              )}
+              {sendState === 'sent' && (
                 <button
                   className="pt-btn pt-btn-ghost"
-                  style={{ fontSize: 11 }}
-                  onClick={() => navigator.clipboard?.writeText(order.payment_address!)}
+                  style={{ fontSize: 11, color: 'var(--pt-ok)' }}
+                  onClick={() => router.push(`/inbox?conversation=${sentConvId}`)}
                 >
-                  Copy address
+                  Sent · Go to chat →
+                </button>
+              )}
+              {sendState === 'error' && (
+                <button
+                  className="pt-btn pt-btn-ghost"
+                  style={{ fontSize: 11, color: 'var(--pt-danger)' }}
+                  onClick={() => setSendState('idle')}
+                  title={sendError}
+                >
+                  Failed · Retry
                 </button>
               )}
               <button className="pt-btn pt-btn-primary" style={{ fontSize: 11 }} onClick={() => setShowConfirmDialog(true)}>
@@ -256,11 +286,37 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
               </button>
             </div>
           </div>
+
           <div className="pt-od-payment-body">
-            <span className="pt-od-payment-asset">{PAYMENT_LABELS[order.payment_asset as keyof typeof PAYMENT_LABELS] ?? order.payment_asset}</span>
-            {order.payment_address && (
+            <span className="pt-od-payment-asset">
+              {PAYMENT_LABELS[order.payment_asset as keyof typeof PAYMENT_LABELS] ?? order.payment_asset}
+            </span>
+
+            {isCryptoAsset && cryptoPaymentLink && (
+              <span style={{
+                fontSize: 11,
+                color: cryptoPaymentLink.status === 'finished' ? 'var(--pt-ok)' : 'var(--pt-fg-3)',
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+              }}>
+                {cryptoPaymentLink.status === 'finished' ? '✓ Confirmed' :
+                 cryptoPaymentLink.status === 'confirming' ? '↻ Confirming' :
+                 '● Waiting for payment'}
+              </span>
+            )}
+            {isCryptoAsset && !cryptoPaymentLink && (
+              <a
+                href="/payments"
+                className="pt-btn pt-btn-ghost"
+                style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+              >
+                <Icons.send size={10} /> Create payment link →
+              </a>
+            )}
+
+            {!isCryptoAsset && order.payment_address && (
               <span className="pt-od-payment-addr mono">{order.payment_address}</span>
             )}
+
             {order.payment_asset === 'customer_chooses' && (
               <span style={{ fontSize: 11, color: 'var(--pt-fg-4)' }}>All configured methods offered</span>
             )}
@@ -270,6 +326,7 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
               </span>
             )}
           </div>
+
           {showConfirmDialog && (
             <div className="pt-od-confirm-dialog">
               {order.payment_asset === 'customer_chooses' && (
@@ -287,7 +344,7 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
               )}
               <div style={{ marginBottom: 10 }}>
                 <label style={{ fontSize: 11, color: 'var(--pt-fg-3)', display: 'block', marginBottom: 4 }}>
-                  Transaction ID (optional — paste from your wallet or block explorer)
+                  Transaction ID (optional)
                 </label>
                 <input
                   className="pt-input mono"
@@ -541,7 +598,7 @@ export function OrderDetailView({ order, events, chatExcerpt, paymentConfigs, cu
           {/* Attachments */}
           <AttachmentsCard
             orderId={order.id}
-            conversationId={sendConversationId}
+            conversationId={order.conversation_id ?? null}
             customerName={order.customers?.display_name ?? 'customer'}
             invoice={currentInvoice}
             initialAttachments={attachments}
