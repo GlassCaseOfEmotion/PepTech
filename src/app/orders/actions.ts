@@ -56,10 +56,11 @@ export async function createOrder(data: {
 
     if (isCrypto && currency !== 'USD') {
       const TTL_MS = 60 * 60 * 1000
+      const asset = data.paymentAsset!
       const { data: cached } = await supabase
         .from('exchange_rates')
         .select('rate, fetched_at')
-        .eq('from_currency', data.paymentAsset)
+        .eq('from_currency', asset)
         .eq('to_currency', currency)
         .single()
 
@@ -68,9 +69,9 @@ export async function createOrder(data: {
       } else {
         try {
           const { fetchAssetToBaseRate } = await import('@/lib/currency')
-          exchangeRate = await fetchAssetToBaseRate(data.paymentAsset, currency)
+          exchangeRate = await fetchAssetToBaseRate(asset, currency)
           await supabase.from('exchange_rates').upsert(
-            { from_currency: data.paymentAsset, to_currency: currency, rate: exchangeRate, fetched_at: new Date().toISOString() },
+            { from_currency: asset, to_currency: currency, rate: exchangeRate, fetched_at: new Date().toISOString() },
             { onConflict: 'from_currency,to_currency' }
           )
         } catch {
@@ -88,7 +89,7 @@ export async function createOrder(data: {
       ref_number: refNumber as string,
       customer_id: data.customerId,
       conversation_id: data.conversationId || null,
-      payment_asset: data.paymentAsset ?? null,
+      payment_asset: data.paymentAsset ?? undefined,
       payment_amount: data.paymentAmount,
       payment_amount_base: data.paymentAmount,
       currency,

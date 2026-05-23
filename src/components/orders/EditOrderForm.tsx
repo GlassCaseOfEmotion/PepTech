@@ -40,7 +40,7 @@ export function EditOrderForm({ order, paymentConfigs, onSuccess, onCancel }: Ed
   const [products, setProducts] = useState<ProductOption[]>([])
   const [quantities, setQuantities] = useState<Record<string, number>>(initQuantities)
   const [unitPrices, setUnitPrices] = useState<Record<string, number>>(initUnitPrices)
-  const [paymentAsset, setPaymentAsset] = useState(order.payment_asset)
+  const [paymentAsset, setPaymentAsset] = useState(order.payment_asset ?? '')
   const [paymentAmount, setPaymentAmount] = useState(order.payment_amount.toString())
   const [paymentAddress, setPaymentAddress] = useState(order.payment_address ?? '')
   const [shippingAddress, setShippingAddress] = useState({
@@ -134,7 +134,7 @@ export function EditOrderForm({ order, paymentConfigs, onSuccess, onCancel }: Ed
 
     // Payment diff
     if (canEditPayment) {
-      if (paymentAsset !== order.payment_asset) data.paymentAsset = paymentAsset
+      if (paymentAsset !== order.payment_asset) data.paymentAsset = paymentAsset ?? undefined
       const parsedAmount = parseFloat(paymentAmount)
       if (!isNaN(parsedAmount) && parsedAmount !== order.payment_amount) data.paymentAmount = parsedAmount
     }

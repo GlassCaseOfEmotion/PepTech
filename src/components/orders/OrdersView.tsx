@@ -82,8 +82,8 @@ function OrderCardUI({ order: o, pulse, onDragStart, onDragEnd, onAdvance, isDra
         {o.items.length > 2 && <span className="pt-cu-item-more">+{o.items.length - 2} more</span>}
       </div>
       <div className="pt-or-card-pay">
-        <span className="pt-pay-asset" data-asset={PAYMENT_BADGE[o.paymentAsset]?.key ?? 'other'}>
-          {PAYMENT_BADGE[o.paymentAsset]?.label ?? o.paymentAsset}
+        <span className="pt-pay-asset" data-asset={PAYMENT_BADGE[o.paymentAsset ?? '']?.key ?? 'other'}>
+          {PAYMENT_BADGE[o.paymentAsset ?? '']?.label ?? o.paymentAsset ?? '—'}
         </span>
         <span className="pt-or-card-amt mono">{formatAmount(o.paymentAmount, o.currency)}</span>
       </div>
