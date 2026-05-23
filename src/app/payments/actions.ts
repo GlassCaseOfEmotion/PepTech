@@ -132,6 +132,33 @@ export async function getRecentOrders(): Promise<{
   }
 }
 
+export async function getOrderById(orderId: string): Promise<{
+  order?: { id: string; ref_number: string; payment_amount: number; currency: string; customer_name: string | null }
+  error?: string
+}> {
+  try {
+    const { supabase } = await getTenantId()
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, ref_number, payment_amount, currency, customers(display_name)')
+      .eq('id', orderId)
+      .maybeSingle()
+    if (error) return { error: error.message }
+    if (!data) return { error: 'Order not found' }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const d = data as any
+    return { order: {
+      id: d.id,
+      ref_number: d.ref_number,
+      payment_amount: Number(d.payment_amount),
+      currency: d.currency ?? 'USD',
+      customer_name: d.customers?.display_name ?? null,
+    }}
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
 export async function lookupOrder(query: string): Promise<{
   orders?: { id: string; ref_number: string; payment_amount: number; currency: string; customer_name: string | null }[]
   error?: string

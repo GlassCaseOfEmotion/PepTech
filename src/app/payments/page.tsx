@@ -8,12 +8,12 @@ import { getWallet, getPaymentLinks, getTenantCurrency } from './actions'
 export default async function PaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ link?: string }>
+  searchParams: Promise<{ link?: string; create?: string }>
 }) {
   const user = await getServerUser()
   if (!user) redirect('/login')
 
-  const { link: initialLinkId } = await searchParams
+  const { link: initialLinkId, create: initialOrderId } = await searchParams
 
   const [{ wallet, recentTransactions }, paymentLinks, baseCurrency] = await Promise.all([
     getWallet(),
@@ -29,6 +29,7 @@ export default async function PaymentsPage({
         paymentLinks={paymentLinks}
         baseCurrency={baseCurrency}
         initialLinkId={initialLinkId ?? null}
+        initialOrderId={initialOrderId ?? null}
       />
     </Shell>
   )

@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from 'react'
 import type { ReactElement } from 'react'
 import { Icons } from '@/lib/icons'
 import QRCode from 'react-qr-code'
-import { getRecentOrders, lookupOrder, createPaymentLink, estimateUsd, getOrderChannel } from '@/app/payments/actions'
+import { getRecentOrders, lookupOrder, getOrderById, createPaymentLink, estimateUsd, getOrderChannel } from '@/app/payments/actions'
 import { PaySendWidget } from './PaySendWidget'
 import { PAY_CURRENCIES } from '@/lib/payments/nowpayments'
 import { formatAmountCompact, formatAmount } from '@/lib/currency'
@@ -27,7 +27,7 @@ type CreatedLink = {
 
 const EXPIRY_OPTIONS = ['1h', '6h', '24h', '7d', 'never'] as const
 
-export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () => void; baseCurrency?: string }) {
+export function CreateComposer({ onBack, baseCurrency = 'USD', initialOrderId }: { onBack: () => void; baseCurrency?: string; initialOrderId?: string }) {
   const [query, setQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [recentOrders, setRecentOrders] = useState<OrderOption[]>([])
@@ -52,6 +52,16 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
   } | null>(null)
   const pickerRef = useRef<HTMLDivElement>(null)
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Pre-select order when deep-linked from order detail page
+  useEffect(() => {
+    if (!initialOrderId) return
+    getOrderById(initialOrderId).then(result => {
+      if (result.order) selectOrder(result.order)
+    })
+  // selectOrder is stable across renders; initialOrderId never changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialOrderId])
 
   // Close dropdown on outside click
   useEffect(() => {

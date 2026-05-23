@@ -121,14 +121,18 @@ export function PaymentsView({
   paymentLinks,
   baseCurrency = 'USD',
   initialLinkId,
+  initialOrderId,
 }: {
   wallet: TenantCryptoWallet | null
   recentTransactions: WalletTransaction[]
   paymentLinks: CryptoPaymentLinkWithOrder[]
   baseCurrency?: string
   initialLinkId?: string | null
+  initialOrderId?: string | null
 }) {
-  const [view, setView] = useState<'list' | 'create' | 'detail'>(initialLinkId ? 'detail' : 'list')
+  const [view, setView] = useState<'list' | 'create' | 'detail'>(
+    initialLinkId ? 'detail' : initialOrderId ? 'create' : 'list'
+  )
   const [selectedId, setSelectedId] = useState<string | null>(initialLinkId ?? null)
   const [tab, setTab] = useState('all')
 
@@ -146,7 +150,7 @@ export function PaymentsView({
   ]
 
   if (view === 'create') {
-    return <CreateComposer onBack={() => setView('list')} baseCurrency={baseCurrency} />
+    return <CreateComposer onBack={() => setView('list')} baseCurrency={baseCurrency} initialOrderId={initialOrderId ?? undefined} />
   }
 
   if (view === 'detail' && selectedLink) {

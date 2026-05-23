@@ -365,7 +365,7 @@ export function OrderDetailView({
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 10 }}>
               {sendState === 'idle' && isCryptoSelected && !cryptoPaymentLink && (
                 <a
-                  href="/payments"
+                  href={`/payments?create=${order.id}`}
                   style={{ fontSize: 11, padding: '0 10px', height: 26, display: 'inline-flex', alignItems: 'center', borderRadius: 5, border: '0.5px solid var(--pt-warn)', background: 'oklch(from var(--pt-warn) l c h / 0.10)', color: 'var(--pt-warn)', textDecoration: 'none', boxSizing: 'border-box' }}
                 >
                   Create payment link →
