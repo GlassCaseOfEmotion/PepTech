@@ -170,10 +170,9 @@ export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWit
   const customer = link.orders?.customers ?? null
 
   // Extract primary channel from extended order data
-  const channels = ((link.orders as any)?.customers?.customer_channels as
-    { channel_type: string; is_primary: boolean }[] | undefined) ?? []
+  const channels = link.orders?.customers?.customer_channels ?? []
   const primaryChannel = channels.find(c => c.is_primary) ?? channels[0] ?? null
-  const conversationId = (link.orders as any)?.conversation_id as string | null ?? null
+  const conversationId = link.orders?.conversation_id ?? null
   const customerName = link.orders?.customers?.display_name ?? null
   const channelType = primaryChannel?.channel_type ?? null
   const shareMessageText = `Hi ${customerName ?? 'there'}! Here's your payment link for ${link.memo ?? link.orders?.ref_number ?? 'your order'}:\n\n${link.hosted_url}`
