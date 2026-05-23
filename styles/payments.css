@@ -112,6 +112,14 @@
 .pay-chip-menu button:hover { background: var(--pt-surface-2); }
 .pay-chip-menu button.is-on { color: var(--pt-accent-fg); font-weight: 500; }
 
+.pay-row-popover {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 50;
+  width: 280px;
+  background: var(--pt-surface); border: 0.5px solid var(--pt-line);
+  border-radius: 8px; padding: 12px;
+  box-shadow: 0 4px 16px oklch(from var(--pt-fg) l c h / 0.08);
+}
+
 .pay-tt { width: 100%; border-collapse: collapse; }
 .pay-tt th, .pay-tt td {
   padding: 9px 14px; text-align: left;

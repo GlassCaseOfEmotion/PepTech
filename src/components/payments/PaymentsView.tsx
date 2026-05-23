@@ -7,6 +7,7 @@ import type { TenantCryptoWallet, CryptoPaymentLinkWithOrder, CryptoPaymentStatu
 import { formatAmountCompact } from '@/lib/currency'
 import { PaymentLinkDetail } from './PaymentLinkDetail'
 import { CreateComposer } from './CreatePaymentLinkModal'
+import { ResendPopover } from './ResendPopover'
 
 // ── Display helpers ──────────────────────────────────────────────────────────
 
@@ -405,7 +406,7 @@ export function PaymentsView({
                           onClick={() => navigator.clipboard.writeText(l.hosted_url)}>
                           <Icons.doc size={12} />
                         </button>
-                        <button className="pay-row-act" title="Resend"><Icons.send size={12} /></button>
+                        <ResendPopover link={l} />
                         <button className="pay-row-act"><Icons.more size={12} /></button>
                       </span>
                     </td>
