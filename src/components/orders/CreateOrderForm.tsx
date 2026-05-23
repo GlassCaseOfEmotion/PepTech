@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createOrder } from '@/app/orders/actions'
-import { PAYMENT_LABELS, PAYMENT_BADGE } from '@/types/payments'
-import type { PaymentType } from '@/types/payments'
 import { formatAmount } from '@/lib/currency'
 
 type ProductOption = {
@@ -23,9 +21,6 @@ interface CreateOrderFormProps {
 export function CreateOrderForm({ customerId, customerName, conversationId, onSuccess, onCancel }: CreateOrderFormProps) {
   const [products, setProducts] = useState<ProductOption[]>([])
   const [quantities, setQuantities] = useState<Record<string, number>>({})
-  const [paymentAsset, setPaymentAsset] = useState('cash')
-  const [paymentAddress, setPaymentAddress] = useState('')
-  const [paymentConfigs, setPaymentConfigs] = useState<{ type: string; wallet_address: string | null; is_active: boolean }[]>([])
   const [address, setAddress] = useState({ ln1: '', ln2: '', city: '', state: '', zip: '' })
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -36,8 +31,6 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
   const [selectedCustomerName, setSelectedCustomerName] = useState(customerName ?? '')
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
   const [baseCurrency, setBaseCurrency]     = useState('USD')
-  const [conversionRate, setConversionRate] = useState<number | null>(null)
-  const [rateLoading, setRateLoading]       = useState(false)
   const customerSearchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -45,15 +38,6 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
       .then(r => r.json())
       .then((data: ProductOption[]) => setProducts(data))
       .catch(() => {/* non-critical */})
-  }, [])
-
-  useEffect(() => {
-    fetch('/api/payments/configs')
-      .then(r => r.json())
-      .then((data: { type: string; wallet_address: string | null; is_active: boolean }[]) => {
-        setPaymentConfigs(data.filter(c => c.is_active))
-      })
-      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -85,20 +69,6 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
       .catch(() => {})
   }, [])
 
-  // Fetch conversion rate when crypto asset selected + base currency is not USD
-  useEffect(() => {
-    const FIAT_ASSETS = new Set(['cash', 'bank_transfer', 'customer_chooses'])
-    if (FIAT_ASSETS.has(paymentAsset) || baseCurrency === 'USD') {
-      setConversionRate(null)
-      return
-    }
-    setRateLoading(true)
-    fetch(`/api/rates?asset=${encodeURIComponent(paymentAsset)}&base=${baseCurrency}`)
-      .then(r => r.json())
-      .then((d: { rate: number }) => { setConversionRate(d.rate); setRateLoading(false) })
-      .catch(() => { setConversionRate(null); setRateLoading(false) })
-  }, [paymentAsset, baseCurrency])
-
   const setQty = (productId: string, qty: number) => {
     setQuantities(prev =>
       qty > 0
@@ -113,18 +83,6 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
   const selectedItems = products.filter(p => (quantities[p.id] ?? 0) > 0)
   const total = selectedItems.reduce((s, p) => s + (quantities[p.id] ?? 0) * p.unit_price, 0)
 
-  const paymentOptions = (() => {
-    const opts: { value: string; label: string }[] = [{ value: 'cash', label: 'Cash' }]
-    for (const c of paymentConfigs) {
-      const label = PAYMENT_LABELS[c.type as PaymentType]
-      if (label && c.type !== 'cash') opts.push({ value: c.type, label })
-    }
-    if (paymentConfigs.filter(c => c.type !== 'cash').length >= 1) {
-      opts.push({ value: 'customer_chooses', label: PAYMENT_LABELS.customer_chooses })
-    }
-    return opts
-  })()
-
   const submit = async () => {
     if (!resolvedCustomerId) { setError('Customer is required'); return }
     if (selectedItems.length === 0) { setError('Add at least one product'); return }
@@ -133,9 +91,7 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
     const result = await createOrder({
       customerId: resolvedCustomerId,
       conversationId,
-      paymentAsset,
       paymentAmount: total,
-      paymentAddress: paymentAddress || undefined,
       shippingAddress: address.ln1 ? { ...address } : undefined,
       notes: notes || undefined,
       items: selectedItems.map(p => ({
@@ -248,53 +204,8 @@ export function CreateOrderForm({ customerId, customerName, conversationId, onSu
         {selectedItems.length > 0 && (
           <div className="pt-co-total">
             <span className="pt-co-total-lbl">{selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''}</span>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-              <span className="mono">{formatAmount(total, baseCurrency)}</span>
-              {conversionRate && total > 0 && (
-                <span style={{ fontSize: 10.5, color: 'var(--pt-fg-4)' }}>
-                  {rateLoading
-                    ? 'fetching rate…'
-                    : `≈ ${(total / conversionRate).toFixed(4).replace(/\.?0+$/, '')} ${PAYMENT_BADGE[paymentAsset]?.label ?? paymentAsset}`}
-                </span>
-              )}
-            </div>
+            <span className="mono">{formatAmount(total, baseCurrency)}</span>
           </div>
-        )}
-      </div>
-
-      {/* Payment */}
-      <div className="pt-co-section">
-        <div className="pt-co-lbl">Payment</div>
-        <div className="pt-co-row">
-          <select
-            className="pt-input"
-            style={{ flex: '0 0 160px' }}
-            value={paymentAsset}
-            onChange={e => {
-              const type = e.target.value
-              setPaymentAsset(type)
-              const cfg = paymentConfigs.find(c => c.type === type)
-              setPaymentAddress(cfg?.wallet_address ?? '')
-            }}
-          >
-            {paymentOptions.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          {paymentAddress && (
-            <input
-              className="pt-input mono"
-              style={{ flex: 1, fontSize: 11 }}
-              value={paymentAddress}
-              readOnly
-              title="Receiving address (auto-filled from your wallet config)"
-            />
-          )}
-        </div>
-        {paymentConfigs.length === 0 && (
-          <p style={{ fontSize: 11, color: 'var(--pt-fg-4)', marginTop: 4 }}>
-            Configure payment methods in Settings → Wallets &amp; Assets
-          </p>
         )}
       </div>
 
