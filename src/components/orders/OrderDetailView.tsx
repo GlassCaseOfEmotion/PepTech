@@ -4,7 +4,7 @@ import { useState, useTransition, useRef, useEffect, Fragment } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
-import { updateOrderStatus, saveOrderNotes, confirmPayment, packOrder, sendOrderPaymentDetails } from '@/app/orders/actions'
+import { updateOrderStatus, saveOrderNotes, confirmPayment, packOrder, sendOrderPaymentDetails, setOrderPaymentMethod } from '@/app/orders/actions'
 import { PAYMENT_LABELS, PAYMENT_BADGE } from '@/types/payments'
 import type { TenantPaymentConfig } from '@/types/payments'
 import type { DbOrderRow, DbOrderEvent, OrderStatus, OrderAttachment } from '@/types/orders'
@@ -13,14 +13,15 @@ import { AttachmentsCard } from './AttachmentsCard'
 import { ShipOrderModal } from './ShipOrderModal'
 import { EditOrderModal } from './EditOrderModal'
 import { formatAmount } from '@/lib/currency'
-import { CRYPTO_ASSETS } from '@/lib/payments'
+import { CRYPTO_ASSETS, buildPaymentMessage } from '@/lib/payments'
 
 const CH_MAP: Record<string, 'wa' | 'tg' | 'em'> = { whatsapp: 'wa', telegram: 'tg', email: 'em' }
 const CH_NAMES: Record<string, string> = { wa: 'WhatsApp', tg: 'Telegram', em: 'Email' }
 const CH_ICONS: Record<string, React.FC<{ size?: number }>> = { wa: Icons.wa, tg: Icons.tg, em: Icons.em }
 
-const STATUS_ORDER: OrderStatus[] = ['awaiting', 'confirming', 'packing', 'shipped', 'delivered']
+const STATUS_ORDER: OrderStatus[] = ['created', 'awaiting', 'confirming', 'packing', 'shipped', 'delivered']
 const STATUS_LABELS: Record<OrderStatus, string> = {
+  created: 'Order created',
   awaiting: 'Awaiting payment', confirming: 'Confirming',
   packing: 'Packing', shipped: 'Shipped', delivered: 'Delivered',
 }
@@ -82,16 +83,16 @@ export function OrderDetailView({
   const router = useRouter()
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [packError, setPackError] = useState('')
-  const [confirmAsset, setConfirmAsset] = useState('')
   const [txHash, setTxHash] = useState('')
   const [confirmError, setConfirmError] = useState('')
   const [showShipModal, setShowShipModal] = useState(false)
   const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const moreMenuRef = useRef<HTMLDivElement>(null)
-  const [sendState, setSendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [sendState, setSendState] = useState<'idle' | 'confirming' | 'sending' | 'sent' | 'error'>('idle')
   const [sentConvId, setSentConvId] = useState<string | null>(null)
   const [sendError, setSendError] = useState('')
+  const [selectedAsset, setSelectedAsset] = useState<string | null>(order.payment_asset ?? null)
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -148,14 +149,12 @@ export function OrderDetailView({
     })
   }
 
-  const showCryptoLinkField =
-    order.payment_asset === 'customer_chooses' ||
-    CRYPTO_ASSETS.has(order.payment_asset)
+  const showCryptoLinkField = CRYPTO_ASSETS.has(order.payment_asset ?? '')
 
   async function handleSendPaymentDetails() {
     setSendState('sending')
     setSendError('')
-    const checkoutUrl = CRYPTO_ASSETS.has(order.payment_asset) && cryptoPaymentLink ? cryptoPaymentLink.hosted_url : undefined
+    const checkoutUrl = CRYPTO_ASSETS.has(order.payment_asset ?? '') && cryptoPaymentLink ? cryptoPaymentLink.hosted_url : undefined
     const result = await sendOrderPaymentDetails(order.id, checkoutUrl)
       .catch(e => ({ error: e instanceof Error ? e.message : 'Unknown error' }))
     if ('error' in result) {
@@ -168,22 +167,39 @@ export function OrderDetailView({
   }
 
   const handleConfirm = () => {
-    if (order.payment_asset === 'customer_chooses' && !confirmAsset) {
-      setConfirmError('Please select the payment method used'); return
-    }
     setConfirmError('')
     startTransition(async () => {
       const result = await confirmPayment(order.id, {
-        actualPaymentAsset: order.payment_asset === 'customer_chooses' ? confirmAsset : undefined,
         txHash: txHash || undefined,
       })
       if ('error' in result) { setConfirmError(result.error); return }
       setStatus('confirming')
       setShowConfirmDialog(false)
       setTxHash('')
-      setConfirmAsset('')
     })
   }
+
+  function handleAssetChange(asset: string) {
+    setSelectedAsset(asset)
+    setOrderPaymentMethod(order.id, asset).catch(() => {})
+  }
+
+  const previewMessage: string = (() => {
+    if (!selectedAsset) return ''
+    if (selectedAsset === 'cash') return 'Cash payment — no message will be sent. The order will move to awaiting payment.'
+    return buildPaymentMessage(
+      {
+        ref_number: order.ref_number,
+        payment_amount: order.payment_amount,
+        payment_asset: selectedAsset,
+        payment_address: paymentConfigs.find(c => c.type === selectedAsset)?.wallet_address ?? null,
+      },
+      paymentConfigs,
+      CRYPTO_ASSETS.has(selectedAsset) && cryptoPaymentLink
+        ? cryptoPaymentLink.hosted_url
+        : undefined,
+    )
+  })()
 
   return (
     <div className="pt-od">
@@ -291,19 +307,6 @@ export function OrderDetailView({
 
           {showConfirmDialog && (
             <div className="pt-od-confirm-dialog">
-              {order.payment_asset === 'customer_chooses' && (
-                <div style={{ marginBottom: 10 }}>
-                  <label style={{ fontSize: 11, color: 'var(--pt-fg-3)', display: 'block', marginBottom: 4 }}>
-                    Which method did they use?
-                  </label>
-                  <select className="pt-input" style={{ fontSize: 12 }} value={confirmAsset} onChange={e => setConfirmAsset(e.target.value)}>
-                    <option value="">Select…</option>
-                    {paymentConfigs.filter(c => c.type !== 'cash' && c.type !== 'customer_chooses').map(c => (
-                      <option key={c.type} value={c.type}>{PAYMENT_LABELS[c.type as keyof typeof PAYMENT_LABELS] ?? c.type}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
               <div style={{ marginBottom: 10 }}>
                 <label style={{ fontSize: 11, color: 'var(--pt-fg-3)', display: 'block', marginBottom: 4 }}>
                   Transaction ID (optional)
@@ -327,6 +330,154 @@ export function OrderDetailView({
               </div>
             </div>
           )}
+        </div>
+      )}
+      {/* Payment panel — created status (payment setup step) */}
+      {status === 'created' && (
+        <div className="pt-od-payment-panel is-setup">
+          <div className="pt-od-payment-hd">
+            <span>Payment setup</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '10px 0 4px' }}>
+
+            {/* Method dropdown — autosaves on change */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 11, color: 'var(--pt-fg-3)', width: 80, flexShrink: 0 }}>Method</span>
+              <select
+                className="pt-input"
+                style={{ fontSize: 12, flex: 1, maxWidth: 200 }}
+                value={selectedAsset ?? ''}
+                onChange={e => handleAssetChange(e.target.value)}
+              >
+                <option value="" disabled>Select method…</option>
+                <option value="cash">Cash</option>
+                {paymentConfigs
+                  .filter(c => c.is_active && c.type !== 'cash')
+                  .map(c => (
+                    <option key={c.type} value={c.type}>
+                      {PAYMENT_LABELS[c.type as keyof typeof PAYMENT_LABELS] ?? c.type}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Crypto link row — only when a crypto asset is selected */}
+            {selectedAsset !== null && CRYPTO_ASSETS.has(selectedAsset) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 11, color: 'var(--pt-fg-3)', width: 80, flexShrink: 0 }}>Crypto link</span>
+                {cryptoPaymentLink ? (
+                  <a
+                    href={`/payments?link=${cryptoPaymentLink.id}`}
+                    style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '0.5px solid var(--pt-cool)', background: 'var(--pt-cool-soft)', color: 'var(--pt-cool)', textDecoration: 'none', display: 'inline-block' }}
+                  >
+                    View in Payments →
+                  </a>
+                ) : (
+                  <a
+                    href="/payments"
+                    style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '0.5px solid var(--pt-cool)', background: 'var(--pt-cool-soft)', color: 'var(--pt-cool)', textDecoration: 'none', display: 'inline-block' }}
+                  >
+                    Create payment link →
+                  </a>
+                )}
+              </div>
+            )}
+
+            {/* Send state machine */}
+            {sendState === 'idle' && (
+              <div>
+                <button
+                  className="pt-btn pt-btn-ghost"
+                  style={{ fontSize: 11 }}
+                  disabled={!selectedAsset}
+                  onClick={() => setSendState('confirming')}
+                >
+                  <Icons.send size={11} /> Send payment details
+                </button>
+              </div>
+            )}
+
+            {sendState === 'confirming' && (
+              <div style={{ borderRadius: 6, border: '0.5px solid var(--pt-line)', padding: '12px 14px', background: 'var(--pt-surface)', marginTop: 4 }}>
+                <div style={{ fontSize: 11, color: 'var(--pt-fg-3)', marginBottom: 8 }}>Preview message</div>
+                <div style={{ whiteSpace: 'pre-wrap', fontSize: 12, color: 'var(--pt-fg-2)', background: 'var(--pt-bg-2)', borderRadius: 4, padding: '8px 10px', marginBottom: 10 }}>
+                  {previewMessage || 'No message to send for this method.'}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    className="pt-btn pt-btn-primary"
+                    style={{ fontSize: 11 }}
+                    disabled={!selectedAsset}
+                    onClick={async () => {
+                      setSendState('sending')
+                      setSendError('')
+                      const checkoutUrl = selectedAsset && CRYPTO_ASSETS.has(selectedAsset) && cryptoPaymentLink
+                        ? cryptoPaymentLink.hosted_url
+                        : undefined
+                      const result = await sendOrderPaymentDetails(order.id, checkoutUrl)
+                        .catch(e => ({ error: e instanceof Error ? e.message : 'Unknown error' }))
+                      if ('error' in result) {
+                        setSendError(result.error)
+                        setSendState('error')
+                      } else {
+                        setSentConvId(result.conversationId)
+                        setSendState('sent')
+                        router.refresh()
+                      }
+                    }}
+                  >
+                    Send
+                  </button>
+                  <button
+                    className="pt-btn pt-btn-ghost"
+                    style={{ fontSize: 11 }}
+                    onClick={() => setSendState('idle')}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {sendState === 'sending' && (
+              <div style={{ paddingTop: 4 }}>
+                <div style={{ fontSize: 11, color: 'var(--pt-fg-3)', marginBottom: 6 }}>Sending…</div>
+                <div className="pt-pac-progressbar"><div className="pt-pac-progressbar-fill" /></div>
+              </div>
+            )}
+
+            {sendState === 'sent' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4 }}>
+                <span style={{ fontSize: 11, color: 'var(--pt-ok)' }}>✓ Sent!</span>
+                <button
+                  className="pt-btn pt-btn-ghost"
+                  style={{ fontSize: 11 }}
+                  onClick={() => sentConvId ? router.push(`/inbox?conversation=${sentConvId}`) : router.push('/inbox')}
+                >
+                  Go to chat →
+                </button>
+              </div>
+            )}
+
+            {sendState === 'error' && (
+              <div style={{ paddingTop: 4 }}>
+                <p style={{ fontSize: 11, color: 'var(--pt-danger)', margin: '0 0 6px' }}>{sendError || 'Send failed'}</p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11 }} onClick={() => setSendState('confirming')}>
+                    Retry
+                  </button>
+                  <button
+                    className="pt-btn pt-btn-ghost"
+                    style={{ fontSize: 11 }}
+                    onClick={() => sentConvId ? router.push(`/inbox?conversation=${sentConvId}`) : router.push('/inbox')}
+                  >
+                    Open chat
+                  </button>
+                </div>
+              </div>
+            )}
+
+          </div>
         </div>
       )}
       {/* Payment panel — confirmed with tx hash */}
@@ -416,7 +567,7 @@ export function OrderDetailView({
             <header className="pt-card-hd">
               <div>
                 <h3>Payment</h3>
-                <p>{order.payment_asset === 'cash' ? 'Cash on delivery' : PAYMENT_LABELS[order.payment_asset as keyof typeof PAYMENT_LABELS] ?? order.payment_asset}</p>
+                <p>{!order.payment_asset ? 'Not set yet' : order.payment_asset === 'cash' ? 'Cash on delivery' : PAYMENT_LABELS[order.payment_asset as keyof typeof PAYMENT_LABELS] ?? order.payment_asset}</p>
               </div>
               <span className={`pt-od-pay-status pt-od-pay-${status}`}>
                 {status === 'awaiting' ? 'Awaiting' : status === 'confirming' ? 'Confirming' : 'Settled'}
@@ -427,8 +578,8 @@ export function OrderDetailView({
                 <div>
                   <div className="pt-od-pay-lbl">Asset</div>
                   <div className="pt-od-pay-val">
-                    <span className="pt-pay-asset" data-asset={PAYMENT_BADGE[order.payment_asset]?.key ?? 'other'}>
-                      {PAYMENT_BADGE[order.payment_asset]?.label ?? order.payment_asset}
+                    <span className="pt-pay-asset" data-asset={order.payment_asset ? (PAYMENT_BADGE[order.payment_asset]?.key ?? 'other') : 'none'}>
+                      {order.payment_asset ? (PAYMENT_BADGE[order.payment_asset]?.label ?? order.payment_asset) : '—'}
                     </span>
                     <span className="mono" style={{ marginLeft: 8 }}>{formatAmount(order.payment_amount, order.currency ?? 'USD')}</span>
                   </div>
@@ -481,7 +632,7 @@ export function OrderDetailView({
               <div>
                 <h3>Shipping</h3>
                 <p>
-                  {status === 'awaiting' || status === 'confirming'
+                  {status === 'awaiting' || status === 'confirming' || status === 'created'
                     ? 'Will pack once payment confirms'
                     : status === 'packing' ? 'Packing'
                     : status === 'shipped' ? `In transit · ${order.carrier ?? ''}`.trim()
