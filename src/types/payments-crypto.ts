@@ -44,6 +44,7 @@ export type CryptoPaymentLink = {
   paid_amount: number | null
   usdc_received: number | null
   nowpayments_tx_id: string | null
+  sent_via: string | null
 }
 
 // Returned by getPaymentLinks — includes joined order + customer + channel data

@@ -317,6 +317,7 @@ export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWit
               url={link.hosted_url}
               orderId={link.order_id}
               orderStatus={link.orders?.status}
+              linkId={link.id}
             />
           </div>
         </div>

@@ -38,6 +38,7 @@ export function PaySendWidget({
   url,
   orderId,
   orderStatus,
+  linkId,
 }: {
   customerId: string | null
   customerName: string | null
@@ -46,6 +47,7 @@ export function PaySendWidget({
   url: string
   orderId?: string
   orderStatus?: string
+  linkId?: string
 }) {
   const [state, setState] = useState<SendState>('idle')
   const [errorMsg, setErrorMsg] = useState('')
@@ -58,7 +60,7 @@ export function PaySendWidget({
   async function handleSend() {
     if (!customerId || !channelType) return
     setState('sending')
-    const result = await sendPaymentLinkToCustomer(customerId, channelType, messageText, orderId)
+    const result = await sendPaymentLinkToCustomer(customerId, channelType, messageText, orderId, linkId)
       .catch(e => ({ error: e instanceof Error ? e.message : 'Unknown error' }))
     if ('error' in result) {
       setErrorMsg(friendlyError(result.error))

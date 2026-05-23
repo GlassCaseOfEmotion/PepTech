@@ -306,8 +306,12 @@ export function PaymentsView({
                     </td>
                     <td><span className={`pay-state is-${state}`}>{stateLbl}</span></td>
                     <td>
-                      {/* DECISION NEEDED — sent via: not tracked. Show dash until we add sent_via column. */}
-                      <span style={{ color: 'var(--pt-fg-4)' }}>—</span>
+                      {l.sent_via
+                        ? <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: 'var(--pt-fg-2)' }}>
+                            <ChannelIcon ch={l.sent_via === 'whatsapp' ? 'wa' : l.sent_via === 'telegram' ? 'tg' : l.sent_via === 'email' ? 'em' : ''} />
+                            {l.sent_via === 'whatsapp' ? 'WhatsApp' : l.sent_via === 'telegram' ? 'Telegram' : l.sent_via === 'email' ? 'Email' : l.sent_via}
+                          </span>
+                        : <span style={{ color: 'var(--pt-fg-4)' }}>—</span>}
                     </td>
                     <td className="r">
                       <span className={`pay-expires${expState === 'soon' ? ' is-soon' : expState === 'gone' ? ' is-gone' : ''}`}>

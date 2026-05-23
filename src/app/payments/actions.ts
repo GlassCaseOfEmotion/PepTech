@@ -234,7 +234,8 @@ export async function sendPaymentLinkToCustomer(
   customerId: string,
   channelType: string,
   messageText: string,
-  orderId?: string
+  orderId?: string,
+  linkId?: string
 ): Promise<{ ok: true; conversationId: string } | { error: string }> {
   try {
     // Find or create a conversation for this customer + channel
@@ -259,6 +260,15 @@ export async function sendPaymentLinkToCustomer(
       return { error: (body.error as string) ?? `Send failed (${res.status})` }
     }
     if (orderId) await markOrderAwaiting(orderId)
+    if (linkId) {
+      const { supabase, tenantId } = await getTenantId()
+      const { error: sentViaErr } = await supabase.from('crypto_payment_links')
+        .update({ sent_via: channelType })
+        .eq('id', linkId)
+        .eq('tenant_id', tenantId)
+      if (sentViaErr) console.error('[sent_via update]', sentViaErr)
+      revalidatePath('/payments')
+    }
     return { ok: true, conversationId }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }

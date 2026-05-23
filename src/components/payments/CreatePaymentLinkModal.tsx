@@ -374,6 +374,7 @@ export function CreateComposer({ onBack, baseCurrency = 'USD', initialOrderId }:
               messageText={`Hi ${orderChannel?.customerName ?? foundOrder?.customer_name ?? 'there'}! Here's your payment link for ${(memo || foundOrder?.ref_number) ?? 'your order'}:\n\n${createdLink.hosted_url}`}
               url={createdLink.hosted_url}
               orderId={foundOrder?.id}
+              linkId={createdLink.id}
             />
 
             <h4>QR code</h4>
