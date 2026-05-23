@@ -8,7 +8,7 @@ interface OrderPaymentInfo {
   payment_address: string | null
 }
 
-const CRYPTO_ASSETS = new Set([
+export const CRYPTO_ASSETS = new Set([
   'usdt_trc20', 'usdt_erc20', 'btc', 'eth', 'usdc_erc20', 'ltc', 'xmr', 'sol',
 ])
 
