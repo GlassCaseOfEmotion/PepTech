@@ -40,12 +40,13 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
 
   const orderRow = order as unknown as DbOrderRow
 
-  // Parallel: customer stats + invoice + attachments + customer's latest conversation
+  // Parallel: customer stats + invoice + attachments + customer's latest conversation + crypto payment link
   const [
     { count: customerOrderCount, data: latestOrders },
     { data: invoiceRow },
     { data: attachmentsRaw },
     { data: customerConv },
+    { data: cryptoLinkRaw },
   ] = await Promise.all([
     supabase
       .from('orders')
@@ -70,10 +71,23 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
       .order('last_message_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from('crypto_payment_links')
+      .select('id, status, hosted_url, pay_currency, amount_usd, created_at')
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
 
-  // Prefer the order's direct conversation link; fall back to customer's most recent conversation
-  const sendConversationId = orderRow.conversation_id ?? customerConv?.id ?? null
+  type CryptoLinkSummary = {
+    id: string
+    status: string
+    hosted_url: string
+    pay_currency: string | null
+    amount_usd: number
+  } | null
+  const cryptoPaymentLink = cryptoLinkRaw as CryptoLinkSummary
 
   const customerStats = {
     orderCount: customerOrderCount ?? 0,
@@ -135,7 +149,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
         attachments={attachments}
         attachmentSignedUrls={attachmentSignedUrls}
         attachmentThumbnailUrls={attachmentThumbnailUrls}
-        sendConversationId={sendConversationId}
+        cryptoPaymentLink={cryptoPaymentLink}
       />
     </Shell>
   )
