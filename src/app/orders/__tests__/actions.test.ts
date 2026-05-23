@@ -66,19 +66,19 @@ describe('buildAssignments', () => {
   it('returns error naming one insufficient product', () => {
     const batchMap = new Map<string, string | null>([['i1', 'b1'], ['i2', null]])
     const result = buildAssignments(items, batchMap)
-    expect(result).toEqual({ error: 'Insufficient stock: Retatrutide 10mg' })
+    expect(result).toEqual({ error: 'Cannot pack — Retatrutide 10mg' })
   })
 
   it('returns error naming all insufficient products', () => {
     const batchMap = new Map<string, string | null>([['i1', null], ['i2', null]])
     const result = buildAssignments(items, batchMap)
-    expect(result).toEqual({ error: 'Insufficient stock: BPC-157 5mg, Retatrutide 10mg' })
+    expect(result).toEqual({ error: 'Cannot pack — BPC-157 5mg; Retatrutide 10mg' })
   })
 
   it('returns error when item is missing from batchMap entirely', () => {
     const batchMap = new Map<string, string | null>([['i1', 'b1']])
     const result = buildAssignments(items, batchMap)
-    expect(result).toEqual({ error: 'Insufficient stock: Retatrutide 10mg' })
+    expect(result).toEqual({ error: 'Cannot pack — Retatrutide 10mg' })
   })
 })
 
@@ -101,7 +101,7 @@ describe('packOrder prerequisites', () => {
       [{ id: 'i1', productName: 'Widget', qty: 3 }],
       new Map([['i1', null]]),
     )
-    expect(result).toEqual({ error: 'Insufficient stock: Widget' })
+    expect(result).toEqual({ error: 'Cannot pack — Widget' })
   })
 })
 

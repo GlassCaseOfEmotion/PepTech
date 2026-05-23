@@ -18,7 +18,6 @@ async function getTenantId() {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  created: 'Order created',
   awaiting: 'Awaiting payment', confirming: 'Confirming',
   packing: 'Packing', shipped: 'Shipped', delivered: 'Delivered',
 }
@@ -137,6 +136,15 @@ export async function setOrderPaymentMethod(
 ): Promise<{ ok: true } | { error: string }> {
   try {
     const { supabase, tenantId } = await getTenantId()
+    // Verify order is still in 'created' status
+    const { data: existing } = await supabase
+      .from('orders')
+      .select('status')
+      .eq('id', orderId)
+      .maybeSingle()
+    if (!existing || existing.status !== 'created') {
+      return { error: 'Payment method can only be changed before the order is sent' }
+    }
     const { data: config } = await supabase
       .from('tenant_payment_configs')
       .select('wallet_address')
