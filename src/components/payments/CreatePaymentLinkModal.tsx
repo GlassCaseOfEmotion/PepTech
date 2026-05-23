@@ -46,7 +46,7 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
   const [createdLink, setCreatedLink] = useState<CreatedLink | null>(null)
   const [copied, setCopied] = useState(false)
   const [orderChannel, setOrderChannel] = useState<{
-    conversationId: string | null
+    customerId: string | null
     channelType: string | null
     customerName: string | null
   } | null>(null)
@@ -352,7 +352,7 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
 
             <h4>Send to customer</h4>
             <PaySendWidget
-              conversationId={orderChannel?.conversationId ?? null}
+              customerId={orderChannel?.customerId ?? null}
               customerName={orderChannel?.customerName ?? foundOrder?.customer_name ?? null}
               channelType={orderChannel?.channelType ?? null}
               messageText={`Hi ${orderChannel?.customerName ?? foundOrder?.customer_name ?? 'there'}! Here's your payment link for ${(memo || foundOrder?.ref_number) ?? 'your order'}:\n\n${createdLink.hosted_url}`}

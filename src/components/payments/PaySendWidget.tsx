@@ -30,13 +30,13 @@ function friendlyError(msg: string): string {
 }
 
 export function PaySendWidget({
-  conversationId,
+  customerId,
   customerName,
   channelType,
   messageText,
   url,
 }: {
-  conversationId: string | null
+  customerId: string | null
   customerName: string | null
   channelType: string | null
   messageText: string
@@ -45,19 +45,21 @@ export function PaySendWidget({
   const [state, setState] = useState<SendState>('idle')
   const [errorMsg, setErrorMsg] = useState('')
   const [copied, setCopied] = useState(false)
+  const [sentConversationId, setSentConversationId] = useState<string | null>(null)
   const router = useRouter()
 
-  const canSend = !!conversationId
+  const canSend = !!(customerId && channelType)
 
   async function handleSend() {
-    if (!conversationId) return
+    if (!customerId || !channelType) return
     setState('sending')
-    const result = await sendPaymentLinkToCustomer(conversationId, messageText)
+    const result = await sendPaymentLinkToCustomer(customerId, channelType, messageText)
       .catch(e => ({ error: e instanceof Error ? e.message : 'Unknown error' }))
     if ('error' in result) {
       setErrorMsg(friendlyError(result.error))
       setState('error')
     } else {
+      setSentConversationId(result.conversationId)
       setState('sent')
     }
   }
@@ -70,7 +72,7 @@ export function PaySendWidget({
   }
 
   function goToChat() {
-    if (conversationId) router.push(`/inbox?conversation=${conversationId}`)
+    if (sentConversationId) router.push(`/inbox?conversation=${sentConversationId}`)
     else router.push('/inbox')
   }
 
@@ -90,7 +92,7 @@ export function PaySendWidget({
           ) : (
             <button className="pay-comp-snd-primary" style={{ opacity: 0.45 }} disabled>
               <Icons.send size={13} />
-              <span className="label">No conversation linked</span>
+              <span className="label">No channel found for this customer</span>
             </button>
           )}
           <button className={`pay-comp-snd-copy${copied ? ' copied' : ''}`} onClick={copyUrl}>

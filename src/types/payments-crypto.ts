@@ -50,8 +50,8 @@ export type CryptoPaymentLink = {
 export type CryptoPaymentLinkWithOrder = CryptoPaymentLink & {
   orders: {
     ref_number: string
-    conversation_id: string | null
     customers: {
+      id: string
       display_name: string
       customer_channels: { channel_type: string; is_primary: boolean }[]
     } | null
