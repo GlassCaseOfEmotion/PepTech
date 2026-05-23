@@ -307,14 +307,17 @@ export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWit
 
       <div className="pay-detail-side">
         <div>
-          <PaySendWidget
-            customerId={customerId}
-            customerName={customerName}
-            channelType={channelType}
-            messageText={shareMessageText}
-            url={link.hosted_url}
-            orderId={link.order_id}
-          />
+          <h4>Checkout URL</h4>
+          <div className="pay-detail-side-url">
+            <PaySendWidget
+              customerId={customerId}
+              customerName={customerName}
+              channelType={channelType}
+              messageText={shareMessageText}
+              url={link.hosted_url}
+              orderId={link.order_id}
+            />
+          </div>
         </div>
 
         <div>
