@@ -346,7 +346,15 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
             <h4>Checkout URL</h4>
             <div className="pay-comp-url">
               <Icons.lock size={12} style={{ color: 'var(--pt-ok)' }} />
-              <span className="u">{createdLink.hosted_url}</span>
+              <a
+                className="u"
+                href={createdLink.hosted_url}
+                target="_blank"
+                rel="noreferrer"
+                style={{ flex: 1, color: 'var(--pt-accent-fg)', textDecoration: 'none', fontSize: 11, fontFamily: 'var(--pt-mono)' }}
+              >
+                Open link ↗
+              </a>
               <button onClick={copyUrl}>{copied ? 'Copied!' : 'copy'}</button>
             </div>
 

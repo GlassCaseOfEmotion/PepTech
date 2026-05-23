@@ -726,10 +726,7 @@
 /* ─── Smart send widget (PaySendWidget) ──────────────────────────────────── */
 /* Animations reuse ptPacSpring and ptPacProgress from peptech.css */
 
-.pay-comp-snd {
-  position: relative;
-  min-height: 72px;
-}
+.pay-comp-snd { display: flex; flex-direction: column; }
 .pay-comp-snd-primary {
   width: 100%;
   display: flex; align-items: center; gap: 9px;
@@ -753,7 +750,6 @@
 
 /* Overlay */
 .pay-comp-snd-overlay {
-  position: absolute; inset: 0;
   background: var(--pt-surface); border: 0.5px solid var(--pt-line);
   border-radius: 8px;
   display: flex; flex-direction: column; align-items: center;
