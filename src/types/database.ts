@@ -373,6 +373,7 @@ export type Database = {
           paid_amount: number | null
           paid_token: string | null
           payout_address: string
+          sent_via: string | null
           status: string
           tenant_id: string
           usdc_received: number | null
@@ -390,6 +391,7 @@ export type Database = {
           paid_amount?: number | null
           paid_token?: string | null
           payout_address: string
+          sent_via?: string | null
           status?: string
           tenant_id: string
           usdc_received?: number | null
@@ -407,6 +409,7 @@ export type Database = {
           paid_amount?: number | null
           paid_token?: string | null
           payout_address?: string
+          sent_via?: string | null
           status?: string
           tenant_id?: string
           usdc_received?: number | null
