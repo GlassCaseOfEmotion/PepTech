@@ -381,8 +381,7 @@ export function OrderDetailView({
               )}
               {sendState === 'idle' && selectedAsset && (!isCryptoSelected || cryptoPaymentLink) && (
                 <button
-                  className="pt-btn pt-btn-primary"
-                  style={{ fontSize: 11 }}
+                  style={{ fontSize: 11, padding: '0 10px', height: 26, display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 5, border: '0.5px solid var(--pt-warn)', background: 'oklch(from var(--pt-warn) l c h / 0.16)', color: 'var(--pt-warn)', cursor: 'pointer', boxSizing: 'border-box', fontFamily: 'inherit', fontWeight: 500 }}
                   onClick={() => setSendState('confirming')}
                 >
                   <Icons.send size={11} /> Send payment details
