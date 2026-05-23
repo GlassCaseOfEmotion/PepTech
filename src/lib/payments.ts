@@ -8,9 +8,14 @@ interface OrderPaymentInfo {
   payment_address: string | null
 }
 
+const CRYPTO_ASSETS = new Set([
+  'usdt_trc20', 'usdt_erc20', 'btc', 'eth', 'usdc_erc20', 'ltc', 'xmr', 'sol',
+])
+
 export function buildPaymentMessage(
   order: OrderPaymentInfo,
   configs: TenantPaymentConfig[],
+  checkoutUrl?: string,
 ): string {
   if (order.payment_asset === 'cash') return ''
 
@@ -50,9 +55,16 @@ export function buildPaymentMessage(
     return `${header}\n\n${lines.join('\n')}`
   }
 
-  if (!order.payment_address) {
-    return `${header}\n\nPayment details unavailable — contact the operator.`
+  if (CRYPTO_ASSETS.has(order.payment_asset)) {
+    const label = PAYMENT_LABELS[order.payment_asset as PaymentType] ?? order.payment_asset
+    if (checkoutUrl) {
+      return `${header}\n\nPay with ${label} via secure checkout:\n${checkoutUrl}`
+    }
+    if (!order.payment_address) {
+      return `${header}\n\nPayment details unavailable — contact the operator.`
+    }
+    return `${header}\n\n${label}: ${order.payment_address}\n\nPlease send the exact amount shown on the invoice.`
   }
-  const label = PAYMENT_LABELS[order.payment_asset as PaymentType] ?? order.payment_asset
-  return `${header}\n\n${label}: ${order.payment_address}\n\nPlease send the exact amount shown on the invoice.`
+
+  return `${header}\n\nPayment details unavailable — contact the operator.`
 }
