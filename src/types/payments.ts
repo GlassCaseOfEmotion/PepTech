@@ -42,7 +42,7 @@ export const PAYMENT_BADGE: Record<string, { label: string; key: string }> = {
   Other: { label: 'Other', key: 'other' },
 }
 
-// Ordered list shown in dropdowns and config UI (excludes cash + customer_chooses)
+// Ordered list shown in dropdowns and config UI (excludes cash)
 export const PAYMENT_METHODS: PaymentType[] = [
   'usdt_trc20', 'usdt_erc20', 'btc', 'eth', 'usdc_erc20', 'ltc', 'xmr', 'sol', 'bank_transfer',
 ]
