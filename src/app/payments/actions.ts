@@ -230,6 +230,23 @@ export async function markOrderAwaiting(orderId: string): Promise<{ ok: true } |
   }
 }
 
+export async function cancelPaymentLink(linkId: string): Promise<{ ok: true } | { error: string }> {
+  try {
+    const { supabase, tenantId } = await getTenantId()
+    const { error } = await supabase
+      .from('crypto_payment_links')
+      .update({ status: 'expired' })
+      .eq('id', linkId)
+      .eq('tenant_id', tenantId)
+      .in('status', ['waiting'])  // only cancel if still waiting; ignore if already progressed
+    if (error) return { error: error.message }
+    revalidatePath('/payments')
+    return { ok: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
 export async function sendPaymentLinkToCustomer(
   customerId: string,
   channelType: string,

@@ -2,7 +2,9 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
+import { cancelPaymentLink } from '@/app/payments/actions'
 import type { TenantCryptoWallet, CryptoPaymentLinkWithOrder, CryptoPaymentStatus, WalletTransaction } from '@/types/payments-crypto'
 import { formatAmountCompact } from '@/lib/currency'
 import { PaymentLinkDetail } from './PaymentLinkDetail'
@@ -162,6 +164,7 @@ export function PaymentsView({
   initialLinkId?: string | null
   initialOrderId?: string | null
 }) {
+  const router = useRouter()
   const [view, setView] = useState<'list' | 'create' | 'detail'>(
     initialLinkId ? 'detail' : initialOrderId ? 'create' : 'list'
   )
@@ -170,6 +173,8 @@ export function PaymentsView({
   const [search, setSearch]             = useState('')
   const [dateFilter, setDateFilter]     = useState<'7d' | '30d' | '90d' | 'all'>('all')
   const [showDateMenu, setShowDateMenu] = useState(false)
+  const [cancelId,   setCancelId]   = useState<string | null>(null)
+  const [cancelling, setCancelling] = useState(false)
 
   const DATE_MS: Record<string, number> = {
     '7d':  7  * 86400000,
@@ -407,7 +412,39 @@ export function PaymentsView({
                           <Icons.doc size={12} />
                         </button>
                         <ResendPopover link={l} />
-                        <button className="pay-row-act"><Icons.more size={12} /></button>
+                        {cancelId === l.id ? (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <button
+                              className="pay-row-act"
+                              style={{ color: 'var(--pt-danger)', fontSize: 10, padding: '0 4px', width: 'auto' }}
+                              disabled={cancelling}
+                              onClick={async e => {
+                                e.stopPropagation()
+                                setCancelling(true)
+                                await cancelPaymentLink(l.id)
+                                setCancelling(false)
+                                setCancelId(null)
+                                router.refresh()
+                              }}
+                            >
+                              {cancelling ? '…' : 'Confirm'}
+                            </button>
+                            <button
+                              className="pay-row-act"
+                              onClick={e => { e.stopPropagation(); setCancelId(null) }}
+                            >
+                              <Icons.x size={10} />
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            className="pay-row-act"
+                            title="Cancel link"
+                            onClick={e => { e.stopPropagation(); setCancelId(l.id) }}
+                          >
+                            <Icons.more size={12} />
+                          </button>
+                        )}
                       </span>
                     </td>
                   </tr>
