@@ -343,143 +343,130 @@ export function OrderDetailView({
       {status === 'created' && (
         <div className="pt-od-payment-panel is-setup">
           <div className="pt-od-payment-hd">
-            <span>Payment setup</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '10px 0 4px' }}>
-
-            {/* Method dropdown — autosaves on change */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 11, color: 'var(--pt-fg-3)', width: 80, flexShrink: 0 }}>Method</span>
-              <select
-                className="pt-input"
-                style={{ fontSize: 12, flex: 1, maxWidth: 200 }}
-                value={selectedAsset ?? ''}
-                onChange={e => handleAssetChange(e.target.value)}
-              >
-                <option value="" disabled>Select method…</option>
-                <option value="cash">Cash</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="crypto">Crypto</option>
-              </select>
-            </div>
-
-            {/* Crypto link row — only when crypto is selected */}
-            {isCryptoSelected && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 11, color: 'var(--pt-fg-3)', width: 80, flexShrink: 0 }}>Crypto link</span>
-                {cryptoPaymentLink ? (
-                  <a
-                    href={`/payments?link=${cryptoPaymentLink.id}`}
-                    style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '0.5px solid var(--pt-cool)', background: 'var(--pt-cool-soft)', color: 'var(--pt-cool)', textDecoration: 'none', display: 'inline-block' }}
+            {/* Left: label + method badges */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span>Payment setup</span>
+              <div className="pt-od-method-badges">
+                {([
+                  { value: 'cash',         label: 'Cash' },
+                  { value: 'bank_transfer', label: 'Bank Transfer' },
+                  { value: 'crypto',        label: 'Crypto' },
+                ] as const).map(opt => (
+                  <button
+                    key={opt.value}
+                    className={`pt-od-method-badge ${selectedAsset === opt.value ? 'is-active' : ''}`}
+                    onClick={() => { if (sendState === 'idle') handleAssetChange(opt.value) }}
                   >
-                    View in Payments →
-                  </a>
-                ) : (
-                  <a
-                    href="/payments"
-                    style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '0.5px solid var(--pt-cool)', background: 'var(--pt-cool-soft)', color: 'var(--pt-cool)', textDecoration: 'none', display: 'inline-block' }}
-                  >
-                    Create payment link →
-                  </a>
-                )}
+                    {opt.label}
+                  </button>
+                ))}
               </div>
-            )}
-
-            {/* Send state machine */}
-            {sendState === 'idle' && (
-              <div>
+            </div>
+            {/* Right: action area */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {sendState === 'idle' && isCryptoSelected && !cryptoPaymentLink && (
+                <a
+                  href="/payments"
+                  style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '0.5px solid var(--pt-cool)', background: 'var(--pt-cool-soft)', color: 'var(--pt-cool)', textDecoration: 'none' }}
+                >
+                  Create payment link →
+                </a>
+              )}
+              {sendState === 'idle' && isCryptoSelected && cryptoPaymentLink && (
+                <a
+                  href={`/payments?link=${cryptoPaymentLink.id}`}
+                  style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '0.5px solid var(--pt-line)', color: 'var(--pt-fg-3)', textDecoration: 'none' }}
+                >
+                  View link
+                </a>
+              )}
+              {sendState === 'idle' && selectedAsset && (!isCryptoSelected || cryptoPaymentLink) && (
                 <button
                   className="pt-btn pt-btn-ghost"
                   style={{ fontSize: 11 }}
-                  disabled={!selectedAsset || (isCryptoSelected && !cryptoPaymentLink)}
                   onClick={() => setSendState('confirming')}
                 >
                   <Icons.send size={11} /> Send payment details
                 </button>
-              </div>
-            )}
-
-            {sendState === 'confirming' && (
-              <div style={{ borderRadius: 6, border: '0.5px solid var(--pt-line)', padding: '12px 14px', background: 'var(--pt-surface)', marginTop: 4 }}>
-                <div style={{ fontSize: 11, color: 'var(--pt-fg-3)', marginBottom: 8 }}>Preview message</div>
-                <div style={{ whiteSpace: 'pre-wrap', fontSize: 12, color: 'var(--pt-fg-2)', background: 'var(--pt-bg-2)', borderRadius: 4, padding: '8px 10px', marginBottom: 10 }}>
-                  {previewMessage || 'No message to send for this method.'}
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    className="pt-btn pt-btn-primary"
-                    style={{ fontSize: 11 }}
-                    disabled={!selectedAsset}
-                    onClick={async () => {
-                      setSendState('sending')
-                      setSendError('')
-                      const checkoutUrl = isCryptoSelected && cryptoPaymentLink
-                        ? cryptoPaymentLink.hosted_url
-                        : undefined
-                      const result = await sendOrderPaymentDetails(order.id, checkoutUrl)
-                        .catch(e => ({ error: e instanceof Error ? e.message : 'Unknown error' }))
-                      if ('error' in result) {
-                        setSendError(result.error)
-                        setSendState('error')
-                      } else {
-                        setSentConvId(result.conversationId)
-                        setSendState('sent')
-                        router.refresh()
-                      }
-                    }}
-                  >
-                    Send
-                  </button>
-                  <button
-                    className="pt-btn pt-btn-ghost"
-                    style={{ fontSize: 11 }}
-                    onClick={() => setSendState('idle')}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {sendState === 'sending' && (
-              <div style={{ paddingTop: 4 }}>
-                <div style={{ fontSize: 11, color: 'var(--pt-fg-3)', marginBottom: 6 }}>Sending…</div>
-                <div className="pt-pac-progressbar"><div className="pt-pac-progressbar-fill" /></div>
-              </div>
-            )}
-
-            {sendState === 'sent' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4 }}>
-                <span style={{ fontSize: 11, color: 'var(--pt-ok)' }}>✓ Sent!</span>
-                <button
-                  className="pt-btn pt-btn-ghost"
-                  style={{ fontSize: 11 }}
-                  onClick={() => sentConvId ? router.push(`/inbox?conversation=${sentConvId}`) : router.push('/inbox')}
-                >
-                  Go to chat →
-                </button>
-              </div>
-            )}
-
-            {sendState === 'error' && (
-              <div style={{ paddingTop: 4 }}>
-                <p style={{ fontSize: 11, color: 'var(--pt-danger)', margin: '0 0 6px' }}>{sendError || 'Send failed'}</p>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11 }} onClick={() => setSendState('confirming')}>
-                    Retry
-                  </button>
+              )}
+              {sendState === 'sending' && (
+                <span style={{ fontSize: 11, color: 'var(--pt-fg-3)' }}>Sending…</span>
+              )}
+              {sendState === 'sent' && (
+                <>
+                  <span style={{ fontSize: 11, color: 'var(--pt-ok)' }}>✓ Sent!</span>
                   <button
                     className="pt-btn pt-btn-ghost"
                     style={{ fontSize: 11 }}
                     onClick={() => sentConvId ? router.push(`/inbox?conversation=${sentConvId}`) : router.push('/inbox')}
                   >
-                    Open chat
+                    Go to chat →
                   </button>
-                </div>
-              </div>
-            )}
-
+                </>
+              )}
+              {sendState === 'error' && (
+                <button
+                  className="pt-btn pt-btn-ghost"
+                  style={{ fontSize: 11, color: 'var(--pt-danger)' }}
+                  title={sendError}
+                  onClick={() => setSendState('confirming')}
+                >
+                  Failed · Retry
+                </button>
+              )}
+              {sendState === 'confirming' && (
+                <button
+                  className="pt-btn pt-btn-ghost"
+                  style={{ fontSize: 11 }}
+                  onClick={() => setSendState('idle')}
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Confirming: preview expands below the strip */}
+          {sendState === 'confirming' && (
+            <div style={{ borderRadius: 6, border: '0.5px solid var(--pt-line)', padding: '12px 14px', background: 'var(--pt-surface)', marginTop: 8 }}>
+              <div style={{ fontSize: 11, color: 'var(--pt-fg-3)', marginBottom: 8 }}>Preview message</div>
+              <div style={{ whiteSpace: 'pre-wrap', fontSize: 12, color: 'var(--pt-fg-2)', background: 'var(--pt-bg-2)', borderRadius: 4, padding: '8px 10px', marginBottom: 10 }}>
+                {previewMessage || 'No message to send for this method.'}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="pt-btn pt-btn-primary"
+                  style={{ fontSize: 11 }}
+                  onClick={async () => {
+                    setSendState('sending')
+                    setSendError('')
+                    const checkoutUrl = isCryptoSelected && cryptoPaymentLink
+                      ? cryptoPaymentLink.hosted_url
+                      : undefined
+                    const result = await sendOrderPaymentDetails(order.id, checkoutUrl)
+                      .catch(e => ({ error: e instanceof Error ? e.message : 'Unknown error' }))
+                    if ('error' in result) {
+                      setSendError(result.error)
+                      setSendState('error')
+                    } else {
+                      setSentConvId(result.conversationId)
+                      setSendState('sent')
+                      router.refresh()
+                    }
+                  }}
+                >
+                  Send
+                </button>
+                <button
+                  className="pt-btn pt-btn-ghost"
+                  style={{ fontSize: 11 }}
+                  onClick={() => setSendState('idle')}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
       {/* Payment panel — confirmed with tx hash */}
