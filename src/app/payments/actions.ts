@@ -92,6 +92,7 @@ export async function getPaymentLinks(): Promise<CryptoPaymentLinkWithOrder[]> {
       *,
       orders (
         ref_number,
+        status,
         conversation_id,
         customers (
           id,

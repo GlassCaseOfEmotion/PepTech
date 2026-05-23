@@ -37,6 +37,7 @@ export function PaySendWidget({
   messageText,
   url,
   orderId,
+  orderStatus,
 }: {
   customerId: string | null
   customerName: string | null
@@ -44,6 +45,7 @@ export function PaySendWidget({
   messageText: string
   url: string
   orderId?: string
+  orderStatus?: string
 }) {
   const [state, setState] = useState<SendState>('idle')
   const [errorMsg, setErrorMsg] = useState('')
@@ -67,10 +69,12 @@ export function PaySendWidget({
     }
   }
 
+  const canMarkAwaiting = !!orderId && (!orderStatus || orderStatus === 'created')
+
   function copyUrl() {
     navigator.clipboard.writeText(url).then(() => {
       setCopyState('copied')
-      if (!orderId) setTimeout(() => setCopyState('idle'), 1500)
+      if (!canMarkAwaiting) setTimeout(() => setCopyState('idle'), 1500)
     })
   }
 
@@ -111,7 +115,7 @@ export function PaySendWidget({
             </button>
           )}
           {copyState === 'copied' && (
-            <button className="pay-comp-snd-copy awaiting" onClick={orderId ? handleMarkAwaiting : undefined}>
+            <button className="pay-comp-snd-copy awaiting" onClick={canMarkAwaiting ? handleMarkAwaiting : undefined}>
               Mark order as awaiting →
             </button>
           )}
