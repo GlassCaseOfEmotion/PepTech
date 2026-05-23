@@ -583,10 +583,9 @@ export async function sendOrderPaymentDetails(
       .eq('id', orderId)
       .single()
     if (!order) return { error: 'Order not found' }
-    if (!(order as any).payment_asset) return { error: 'No payment method selected for this order' }
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const d = order as any
+    if (!d.payment_asset) return { error: 'No payment method selected for this order' }
     const channels: { channel_type: string; is_primary: boolean }[] = d.customers?.customer_channels ?? []
     const primary = channels.find((c: { channel_type: string; is_primary: boolean }) => c.is_primary) ?? channels[0] ?? null
     if (!primary) return { error: 'Customer has no messaging channel' }
@@ -614,7 +613,7 @@ export async function sendOrderPaymentDetails(
       checkoutUrl,
     )
     if (!msg) {
-      if ((order as any).status === 'created') {
+      if (d.status === 'created') {
         await supabase.from('orders').update({ status: 'awaiting' }).eq('id', orderId)
         revalidatePath(`/orders/${orderId}`)
       }
@@ -638,7 +637,7 @@ export async function sendOrderPaymentDetails(
       return { error: (body.error as string) ?? `Send failed (${res.status})` }
     }
 
-    if ((order as any).status === 'created') {
+    if (d.status === 'created') {
       await supabase.from('orders').update({ status: 'awaiting' }).eq('id', orderId)
       revalidatePath(`/orders/${orderId}`)
     }
