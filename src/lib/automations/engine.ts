@@ -18,6 +18,35 @@ type RunResult = {
 }
 
 // ---------------------------------------------------------------------------
+// Context label
+// ---------------------------------------------------------------------------
+
+// Resolves a human-friendly label for a run (customer display_name, falling
+// back to order ref_number) so the approval queue can show who the run is for.
+export async function resolveContextLabel(
+  context: Pick<Context, 'customerId' | 'orderId'>,
+  supabase: SupabaseClient<Database>,
+): Promise<string | null> {
+  if (context.customerId) {
+    const { data } = await supabase
+      .from('customers')
+      .select('display_name')
+      .eq('id', context.customerId)
+      .maybeSingle()
+    if (data?.display_name) return data.display_name
+  }
+  if (context.orderId) {
+    const { data } = await supabase
+      .from('orders')
+      .select('ref_number')
+      .eq('id', context.orderId)
+      .maybeSingle()
+    if (data?.ref_number) return `#${data.ref_number}`
+  }
+  return null
+}
+
+// ---------------------------------------------------------------------------
 // Condition evaluation
 // ---------------------------------------------------------------------------
 
@@ -296,6 +325,9 @@ export async function runAutomationsForEvent(
       })
     : automations
 
+  // Resolve once per event so all candidate automations share the lookup
+  const contextLabel = await resolveContextLabel(context, supabase)
+
   for (const rawAuto of candidates) {
     const automation = rawAuto as unknown as Automation
 
@@ -312,7 +344,7 @@ export async function runAutomationsForEvent(
           tenant_id: tenantId,
           state: 'skip',
           context_ref: context.customerId ?? context.orderId ?? null,
-          context_label: null,
+          context_label: contextLabel,
           action_summary: 'Conditions not met',
           action_payload: null,
         })
@@ -366,7 +398,7 @@ export async function runAutomationsForEvent(
         tenant_id: tenantId,
         state: result.state,
         context_ref: context.customerId ?? context.orderId ?? null,
-        context_label: null,
+        context_label: contextLabel,
         action_summary: result.action_summary,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         action_payload: result.action_payload as any,
@@ -379,7 +411,7 @@ export async function runAutomationsForEvent(
           tenant_id: tenantId,
           state: 'err',
           context_ref: context.customerId ?? context.orderId ?? null,
-          context_label: null,
+          context_label: contextLabel,
           action_summary: err instanceof Error ? err.message : String(err),
           action_payload: null,
         })

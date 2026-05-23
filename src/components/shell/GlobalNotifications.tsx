@@ -95,9 +95,58 @@ export function GlobalNotifications() {
       })
       .subscribe()
 
+    const automationQueueChannel = supabase
+      .channel('global:automation-queue')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'automation_runs',
+      }, (payload) => {
+        const raw = payload.new as {
+          id: string
+          state: string
+          automation_id: string
+          context_label: string | null
+        }
+        if (raw.state !== 'queued') return
+        if (!tryNotify(raw.id)) return
+
+        playChime()
+
+        const item: NotificationItem = {
+          id: raw.id,
+          type: 'warn',
+          title: 'Message awaiting review',
+          body: raw.context_label
+            ? `Automation drafted a reply to ${raw.context_label}`
+            : 'Automation drafted a reply',
+          href: '/automations',
+          at: Date.now(),
+        }
+        window.dispatchEvent(new CustomEvent('pt:notification', { detail: item }))
+
+        // Enrich title with the automation name once we look it up
+        void (async () => {
+          try {
+            const { data: auto } = await supabase
+              .from('automations')
+              .select('name')
+              .eq('id', raw.automation_id)
+              .single()
+            if (auto?.name) {
+              window.dispatchEvent(new CustomEvent('pt:notification:update', {
+                detail: { id: raw.id, title: `${auto.name} · awaiting review` },
+              }))
+            }
+          } catch { /* non-fatal — notification already showing */ }
+        })()
+      })
+      .subscribe()
+
     return () => {
       supabase.removeChannel(messagesChannel)
       supabase.removeChannel(orderEventsChannel)
+      supabase.removeChannel(automationQueueChannel)
     }
   }, [supabase])
 

@@ -1,5 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/server'
-import { evaluateCondition, executeAction } from '@/lib/automations/engine'
+import { evaluateCondition, executeAction, resolveContextLabel } from '@/lib/automations/engine'
 import type { Automation, Condition } from '@/types/automations'
 
 export const dynamic = 'force-dynamic'
@@ -144,6 +144,7 @@ async function processSchedulePerCustomer(
       conversationId: conv?.id ?? undefined,
       automationId: automation.id,
     }
+    const contextLabel = await resolveContextLabel({ customerId }, supabase)
 
     // send_dm requires a conversation — skip customers who have none
     if (automation.action_type === 'send_dm' && !context.conversationId) {
@@ -152,7 +153,7 @@ async function processSchedulePerCustomer(
         tenant_id: automation.tenant_id,
         state: 'skip',
         context_ref: customerId,
-        context_label: null,
+        context_label: contextLabel,
         action_summary: 'No conversation — skipped',
         action_payload: null,
       })
@@ -172,7 +173,7 @@ async function processSchedulePerCustomer(
           tenant_id: automation.tenant_id,
           state: 'skip',
           context_ref: customerId,
-          context_label: null,
+          context_label: contextLabel,
           action_summary: 'Conditions not met',
           action_payload: null,
         })
@@ -186,7 +187,7 @@ async function processSchedulePerCustomer(
         tenant_id: automation.tenant_id,
         state: result.state,
         context_ref: customerId,
-        context_label: null,
+        context_label: contextLabel,
         action_summary: result.action_summary,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         action_payload: result.action_payload as any,
@@ -200,7 +201,7 @@ async function processSchedulePerCustomer(
           tenant_id: automation.tenant_id,
           state: 'err',
           context_ref: customerId,
-          context_label: null,
+          context_label: contextLabel,
           action_summary: err instanceof Error ? err.message : String(err),
           action_payload: null,
         })
@@ -359,6 +360,7 @@ async function processProtocolProgressAutomations(
 
       try {
         const context = { customerId: customer.customer_id, automationId: automation.id }
+        const contextLabel = await resolveContextLabel({ customerId: customer.customer_id }, supabase)
         const conditions = (automation.conditions ?? []) as Condition[]
         const condResults = await Promise.all(
           conditions.map(c => evaluateCondition(c, context, supabase)),
@@ -371,7 +373,7 @@ async function processProtocolProgressAutomations(
             tenant_id: automation.tenant_id,
             state: 'skip',
             context_ref: customer.customer_id,
-            context_label: null,
+            context_label: contextLabel,
             action_summary: 'Conditions not met',
             action_payload: null,
           })
@@ -386,7 +388,7 @@ async function processProtocolProgressAutomations(
           tenant_id: automation.tenant_id,
           state: result.state,
           context_ref: customer.customer_id,
-          context_label: null,
+          context_label: contextLabel,
           action_summary: result.action_summary,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           action_payload: result.action_payload as any,
@@ -474,10 +476,17 @@ async function processScheduledRuns(
 
       // Execute the action
       const result = await executeAction(automation, ctx, supabase)
+      // Replace the "fires <date>" label with the customer/order label now that
+      // the run has fired — the approval queue reads this field.
+      const contextLabel = await resolveContextLabel(
+        { customerId: ctx.customerId, orderId: ctx.orderId },
+        supabase,
+      )
       await supabase.from('automation_runs')
         .update({
           state: result.state,
           action_summary: result.action_summary,
+          context_label: contextLabel,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           ...(result.action_payload ? { action_payload: result.action_payload as any } : {}),
         })
