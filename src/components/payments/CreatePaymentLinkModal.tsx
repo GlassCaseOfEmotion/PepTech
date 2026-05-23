@@ -5,7 +5,8 @@ import { useState, useRef, useEffect } from 'react'
 import type { ReactElement } from 'react'
 import { Icons } from '@/lib/icons'
 import QRCode from 'react-qr-code'
-import { getRecentOrders, lookupOrder, createPaymentLink, estimateUsd } from '@/app/payments/actions'
+import { getRecentOrders, lookupOrder, createPaymentLink, estimateUsd, getOrderChannel } from '@/app/payments/actions'
+import { PaySendWidget } from './PaySendWidget'
 import { PAY_CURRENCIES } from '@/lib/payments/nowpayments'
 import { formatAmountCompact, formatAmount } from '@/lib/currency'
 
@@ -19,6 +20,7 @@ type OrderOption = {
 }
 
 type CreatedLink = {
+  id: string
   hosted_url: string
   nowpayments_id: string
 }
@@ -43,6 +45,11 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
   const [showErrorDetails, setShowErrorDetails] = useState(false)
   const [createdLink, setCreatedLink] = useState<CreatedLink | null>(null)
   const [copied, setCopied] = useState(false)
+  const [orderChannel, setOrderChannel] = useState<{
+    conversationId: string | null
+    channelType: string | null
+    customerName: string | null
+  } | null>(null)
   const pickerRef = useRef<HTMLDivElement>(null)
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -93,6 +100,8 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
     setQuery('')
     setSearchResults([])
     if (!memo) setMemo(o.ref_number)
+    setOrderChannel(null)
+    getOrderChannel(o.id).then(ch => setOrderChannel(ch))
     // Fetch live USD estimate for non-USD orders
     if (o.currency !== 'USD') {
       estimateUsd(o.payment_amount, o.currency).then(r => {
@@ -110,6 +119,7 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
     setQuery('')
     setMemo('')
     setSubmitError('')
+    setOrderChannel(null)
   }
 
   async function handleSubmit() {
@@ -122,7 +132,11 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
     setSubmitting(false)
     if (result.error) { setSubmitError(result.error); return }
     if (result.link) {
-      setCreatedLink({ hosted_url: result.link.hosted_url, nowpayments_id: result.link.nowpayments_id })
+      setCreatedLink({
+        id: result.link.id,
+        hosted_url: result.link.hosted_url,
+        nowpayments_id: result.link.nowpayments_id,
+      })
     }
   }
 
@@ -336,13 +350,14 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
               <button onClick={copyUrl}>{copied ? 'Copied!' : 'copy'}</button>
             </div>
 
-            <h4>Share via</h4>
-            <div className="pay-comp-send">
-              <button className="pay-comp-send-btn"><Icons.wa size={13} /> WhatsApp</button>
-              <button className="pay-comp-send-btn"><Icons.tg size={13} /> Telegram</button>
-              <button className="pay-comp-send-btn"><Icons.em size={13} /> Email</button>
-              <button className="pay-comp-send-btn" onClick={copyUrl}><Icons.doc size={13} /> Copy link</button>
-            </div>
+            <h4>Send to customer</h4>
+            <PaySendWidget
+              conversationId={orderChannel?.conversationId ?? null}
+              customerName={orderChannel?.customerName ?? foundOrder?.customer_name ?? null}
+              channelType={orderChannel?.channelType ?? null}
+              messageText={`Hi ${orderChannel?.customerName ?? foundOrder?.customer_name ?? 'there'}! Here's your payment link for ${(memo || foundOrder?.ref_number) ?? 'your order'}:\n\n${createdLink.hosted_url}`}
+              url={createdLink.hosted_url}
+            />
 
             <h4>QR code</h4>
             <div style={{ background: '#fff', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 16, display: 'flex', justifyContent: 'center' }}>
@@ -384,12 +399,12 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
               </div>
             )}
 
-            <h4>Share via</h4>
-            <div className="pay-comp-send" style={{ opacity: foundOrder ? 1 : 0.4 }}>
-              <button className="pay-comp-send-btn" disabled={!foundOrder}><Icons.wa size={13} /> WhatsApp</button>
-              <button className="pay-comp-send-btn" disabled={!foundOrder}><Icons.tg size={13} /> Telegram</button>
-              <button className="pay-comp-send-btn" disabled={!foundOrder}><Icons.em size={13} /> Email</button>
-              <button className="pay-comp-send-btn" disabled={!foundOrder}><Icons.doc size={13} /> Copy link</button>
+            <h4>Send to customer</h4>
+            <div style={{ opacity: 0.35, pointerEvents: 'none' }}>
+              <button className="pay-comp-snd-primary" disabled>
+                <Icons.send size={13} />
+                <span className="label">Available after creating the link</span>
+              </button>
             </div>
 
             <h4>QR code</h4>
