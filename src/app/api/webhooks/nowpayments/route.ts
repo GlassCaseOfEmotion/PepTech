@@ -47,6 +47,28 @@ export async function POST(request: Request) {
     .update({ status: payload.payment_status })
     .eq('id', link.id)
 
+  // Payment detected on-chain (not yet fully settled) → awaiting → confirming
+  const PAYMENT_DETECTED = ['confirming', 'confirmed', 'sending', 'partially_paid']
+  if (PAYMENT_DETECTED.includes(payload.payment_status)) {
+    const { data: advanced } = await supabase.from('orders')
+      .update({ status: 'confirming' })
+      .eq('id', link.order_id)
+      .eq('status', 'awaiting')
+      .select('id, tenant_id')
+      .maybeSingle()
+
+    if (advanced) {
+      await supabase.from('order_events').insert({
+        tenant_id: advanced.tenant_id,
+        order_id: advanced.id,
+        actor: 'system',
+        action: 'Payment detected',
+        note: `${payload.pay_currency.toUpperCase()} transaction seen on-chain — awaiting confirmations`,
+      })
+    }
+    return NextResponse.json({ ok: true })
+  }
+
   // Only do ledger writes on 'finished'
   if (payload.payment_status !== 'finished') {
     return NextResponse.json({ ok: true })
@@ -59,7 +81,7 @@ export async function POST(request: Request) {
 
   const usdcReceived = payload.outcome_amount ?? payload.actually_paid
 
-  // Confirm the payment link
+  // Confirm the payment link with final amounts
   await supabase.from('crypto_payment_links').update({
     status: 'finished',
     confirmed_at: new Date().toISOString(),
@@ -84,7 +106,7 @@ export async function POST(request: Request) {
     p_amount: usdcReceived,
   })
 
-  // Update order: normalise pay_currency to order system format
+  // Update order with confirmed payment details
   const normalisedAsset = normalisePayCurrency(payload.pay_currency)
   await supabase.from('orders')
     .update({
@@ -94,11 +116,12 @@ export async function POST(request: Request) {
     })
     .eq('id', link.order_id)
 
-  // Auto-advance order from awaiting to confirming (idempotent: only fires if still awaiting)
+  // Payment settled → advance order to packing
+  // Handles both confirming→packing (normal) and awaiting→packing (if confirming webhook was missed)
   const { data: advanced } = await supabase.from('orders')
-    .update({ status: 'confirming' })
+    .update({ status: 'packing' })
     .eq('id', link.order_id)
-    .eq('status', 'awaiting')
+    .in('status', ['awaiting', 'confirming'])
     .select('id, tenant_id')
     .maybeSingle()
 
@@ -107,8 +130,8 @@ export async function POST(request: Request) {
       tenant_id: advanced.tenant_id,
       order_id: advanced.id,
       actor: 'system',
-      action: 'Payment confirmed',
-      note: `${normalisedAsset.toUpperCase()} payment received via NOWPayments`,
+      action: 'Payment settled',
+      note: `${normalisedAsset.toUpperCase()} payment settled — ${usdcReceived} USDC received`,
     })
   }
 
