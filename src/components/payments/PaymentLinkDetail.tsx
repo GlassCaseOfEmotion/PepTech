@@ -192,7 +192,6 @@ export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWit
             >
               ← Back
             </button>
-            <div className="id">{link.nowpayments_id}</div>
             <div className="amt" style={{ marginTop: 10 }}>
               {/* Show tenant's currency as primary amount */}
               {link.amount_base && link.base_currency !== 'USD'
@@ -201,7 +200,7 @@ export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWit
             </div>
             {link.base_currency !== 'USD' && (
               <div style={{ fontSize: 11.5, color: 'var(--pt-fg-4)', marginTop: 3, fontFamily: 'var(--pt-mono)' }}>
-                ≈ ${link.amount_usd.toFixed(2)} USD · sent to NOWPayments
+                ≈ ${link.amount_usd.toFixed(2)} USD · sent to payment gateway
               </div>
             )}
             <div style={{ fontSize: 12.5, color: 'var(--pt-fg-3)', marginTop: 6 }}>
