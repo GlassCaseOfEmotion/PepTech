@@ -3,6 +3,21 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { verifyNowPaymentsSignature } from '@/lib/payments/hmac'
 import type { NowPaymentsWebhookPayload } from '@/types/payments-crypto'
 
+// Map NOWPayments pay_currency codes to the order system's payment_asset codes
+const NP_TO_ASSET: Record<string, string> = {
+  usdttrc20: 'usdt_trc20',
+  usdterc20: 'usdt_erc20',
+  btc:       'btc',
+  eth:       'eth',
+  ltc:       'ltc',
+  xmr:       'xmr',
+  sol:       'sol',
+}
+
+function normalisePayCurrency(code: string): string {
+  return NP_TO_ASSET[code.toLowerCase()] ?? code
+}
+
 export async function POST(request: Request) {
   const body = await request.text()
   const signature = request.headers.get('x-nowpayments-sig') ?? ''
@@ -23,11 +38,10 @@ export async function POST(request: Request) {
     .single()
 
   if (!link) {
-    // Unknown payment — return 200 so NOWPayments doesn't retry indefinitely
     return NextResponse.json({ ok: true })
   }
 
-  // Always update status
+  // Always update crypto_payment_links status
   await supabase
     .from('crypto_payment_links')
     .update({ status: payload.payment_status })
@@ -70,14 +84,33 @@ export async function POST(request: Request) {
     p_amount: usdcReceived,
   })
 
-  // Update order payment fields
+  // Update order: normalise pay_currency to order system format
+  const normalisedAsset = normalisePayCurrency(payload.pay_currency)
   await supabase.from('orders')
     .update({
-      payment_asset: payload.pay_currency,
+      payment_asset: normalisedAsset,
       payment_amount: payload.pay_amount,
       tx_hash: payload.payment_id,
     })
     .eq('id', link.order_id)
+
+  // Auto-advance order from awaiting to confirming (idempotent: only fires if still awaiting)
+  const { data: advanced } = await supabase.from('orders')
+    .update({ status: 'confirming' })
+    .eq('id', link.order_id)
+    .eq('status', 'awaiting')
+    .select('id, tenant_id')
+    .maybeSingle()
+
+  if (advanced) {
+    await supabase.from('order_events').insert({
+      tenant_id: advanced.tenant_id,
+      order_id: advanced.id,
+      actor: 'system',
+      action: 'Payment confirmed',
+      note: `${normalisedAsset.toUpperCase()} payment received via NOWPayments`,
+    })
+  }
 
   return NextResponse.json({ ok: true })
 }
