@@ -383,6 +383,11 @@
   padding: 8px 20px 8px 17px;
   display: flex; flex-direction: column; gap: 0;
 }
+.pt-od-payment-panel.is-setup {
+  background: oklch(from var(--pt-cool) l c h / 0.06);
+  box-shadow: inset 3px 0 0 var(--pt-cool);
+}
+.is-setup .pt-od-payment-hd > span { color: var(--pt-cool); }
 .pt-od-payment-panel.is-awaiting {
   background: var(--pt-warn-soft);
   box-shadow: inset 3px 0 0 var(--pt-warn);

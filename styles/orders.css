@@ -49,6 +49,7 @@
 }
 .pt-or-col-titlewrap { display: flex; align-items: center; gap: 7px; }
 .pt-or-col-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pt-fg-4); flex-shrink: 0; }
+.pt-or-dot-created    { background: var(--pt-fg-3); }
 .pt-or-dot-awaiting   { background: var(--pt-fg-4); }
 .pt-or-dot-confirming { background: var(--pt-warn); }
 .pt-or-dot-packing    { background: var(--pt-cool); }

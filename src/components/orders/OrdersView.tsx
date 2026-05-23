@@ -12,6 +12,7 @@ import { formatAmount } from '@/lib/currency'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 const COLUMNS: { id: OrderStatus; label: string; caption: string }[] = [
+  { id: 'created',    label: 'Created',           caption: 'Payment method not set yet' },
   { id: 'awaiting',   label: 'Awaiting payment', caption: 'Invoice sent · waiting for tx' },
   { id: 'confirming', label: 'Confirming',        caption: 'Tx seen · waiting for confirms' },
   { id: 'packing',    label: 'Packing',           caption: 'Paid · ready to ship' },
