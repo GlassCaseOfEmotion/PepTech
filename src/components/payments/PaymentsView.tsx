@@ -172,7 +172,6 @@ export function PaymentsView({
   initialLinkId?: string | null
   initialOrderId?: string | null
 }) {
-  const router = useRouter()
   const [view, setView] = useState<'list' | 'create' | 'detail'>(
     initialLinkId ? 'detail' : initialOrderId ? 'create' : 'list'
   )
