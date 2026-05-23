@@ -93,6 +93,37 @@ function computeKpis(links: CryptoPaymentLinkWithOrder[]) {
   return { outstanding, activeCount: active.length, confirmingCount: confirming.length, settled7dAmt, settled7dCount: settled7d.length, conversion, medianMins }
 }
 
+// ── CSV export ───────────────────────────────────────────────────────────────
+
+function exportCsv(links: CryptoPaymentLinkWithOrder[], currency: string) {
+  const header = ['ID','Customer','Order','Memo','Amount','Currency','Status','Paid with','Sent via','Created','Expires']
+  const rows = links.map(l => [
+    l.nowpayments_id,
+    l.orders?.customers?.display_name ?? '',
+    l.orders?.ref_number ?? '',
+    l.memo ?? '',
+    String(l.amount_base ?? l.amount_usd),
+    l.base_currency ?? currency,
+    l.status,
+    l.paid_token ?? '',
+    l.sent_via ?? '',
+    l.created_at,
+    l.expires_at ?? '',
+  ])
+  const csv = [header, ...rows]
+    .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+    .join('\n')
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `payments-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
 // ── Tab definitions ──────────────────────────────────────────────────────────
 
 const TAB_FILTERS: Record<string, (l: CryptoPaymentLinkWithOrder) => boolean> = {
@@ -195,7 +226,9 @@ export function PaymentsView({
           </p>
         </div>
         <div className="pay-page-hd-actions">
-          <button className="pt-btn pt-btn-ghost"><Icons.doc size={12} /> Export</button>
+          <button className="pt-btn pt-btn-ghost" onClick={() => exportCsv(filtered, baseCurrency)}>
+            <Icons.doc size={12} /> Export
+          </button>
           <button className="pt-btn pt-btn-primary" onClick={() => setView('create')}>
             <Icons.plus size={12} /> Request payment
           </button>
