@@ -2,6 +2,7 @@
 'use client'
 
 import type { CSSProperties, ReactElement } from 'react'
+import { useRouter } from 'next/navigation'
 import QRCode from 'react-qr-code'
 import { Icons } from '@/lib/icons'
 import { formatAmount } from '@/lib/currency'
@@ -164,10 +165,12 @@ function TlIcon({ icon, variant }: { icon: keyof typeof Icons; variant: TlVarian
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWithOrder; onBack: () => void }) {
+  const router   = useRouter()
   const steps    = getProgressSteps(link.status, link)
   const timeline = getTimeline(link)
   const orderRef = link.orders?.ref_number ?? null
   const customer = link.orders?.customers ?? null
+  const conversationId = link.orders?.conversation_id ?? null
 
   // Extract primary channel from extended order data
   const channels = link.orders?.customers?.customer_channels ?? []
@@ -305,17 +308,14 @@ export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWit
 
       <div className="pay-detail-side">
         <div>
-          <h4>Checkout URL</h4>
-          <div className="pay-detail-side-url">
-            <div className="url">{link.hosted_url}</div>
-            <PaySendWidget
-              customerId={customerId}
-              customerName={customerName}
-              channelType={channelType}
-              messageText={shareMessageText}
-              url={link.hosted_url}
-            />
-          </div>
+          <PaySendWidget
+            customerId={customerId}
+            customerName={customerName}
+            channelType={channelType}
+            messageText={shareMessageText}
+            url={link.hosted_url}
+            orderId={link.order_id}
+          />
         </div>
 
         <div>
@@ -323,13 +323,24 @@ export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWit
           <div style={{ background: '#fff', border: '0.5px solid var(--pt-line)', borderRadius: 8, padding: 14, display: 'flex', justifyContent: 'center' }}>
             <QRCode value={link.hosted_url} size={130} />
           </div>
+          <div style={{ fontSize: 10, color: 'var(--pt-fg-4)', fontFamily: 'var(--pt-mono)', marginTop: 8, wordBreak: 'break-all', lineHeight: 1.5 }}>
+            {link.hosted_url}
+          </div>
         </div>
 
         <div>
           <h4>Linked records</h4>
           <div className="pay-detail-side-actions">
-            {orderRef && <button><Icons.box size={12} /> Order #{orderRef}</button>}
-            {customer && <button><Icons.user size={12} /> {customer.display_name} — open thread</button>}
+            {orderRef && (
+              <button onClick={() => router.push(`/orders/${link.order_id}`)}>
+                <Icons.box size={12} /> Order #{orderRef}
+              </button>
+            )}
+            {customer && (
+              <button onClick={() => conversationId ? router.push(`/inbox?conversation=${conversationId}`) : router.push('/inbox')}>
+                <Icons.user size={12} /> {customer.display_name} — open thread
+              </button>
+            )}
             {link.status === 'finished' && (
               <button><Icons.vault size={12} /> Vault tx — settled</button>
             )}
