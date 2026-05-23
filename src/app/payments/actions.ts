@@ -199,6 +199,10 @@ export async function createPaymentLink(orderId: string, payCurrency: string, me
 
     if (!wallet) return { error: 'Could not provision wallet' }
 
+    const linkId = crypto.randomUUID()
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://peptech.app'
+    const hostedUrl = `${appUrl}/pay/${linkId}`
+
     const { createNowPayment } = await import('@/lib/payments/nowpayments')
     const payment = await createNowPayment({
       amountUsd,
@@ -210,16 +214,20 @@ export async function createPaymentLink(orderId: string, payCurrency: string, me
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const insertRow: any = {
+      id: linkId,
       tenant_id: tenantId,
       order_id: order.id,
       nowpayments_id: payment.id,
-      hosted_url: payment.hostedUrl,
+      hosted_url: hostedUrl,
       amount_usd: amountUsd,
       amount_base: amountBase,
       base_currency: orderCurrency,
       payout_address: wallet.solana_address,
       expires_at: payment.expiresAt,
       memo: memo ?? order.ref_number,
+      pay_address: payment.payAddress || null,
+      pay_currency: payment.payCurrency || null,
+      pay_amount_crypto: payment.payCryptoAmount || null,
     }
     const { data, error } = await supabase
       .from('crypto_payment_links')
