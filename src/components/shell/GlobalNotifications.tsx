@@ -9,7 +9,7 @@ export function GlobalNotifications() {
   const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
-    const channel = supabase
+    const messagesChannel = supabase
       .channel('global:inbound-messages')
       .on('postgres_changes', {
         event: 'INSERT',
@@ -54,7 +54,51 @@ export function GlobalNotifications() {
       })
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    const orderEventsChannel = supabase
+      .channel('global:order-events')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'order_events',
+      }, (payload) => {
+        const raw = payload.new as { id: string; order_id: string; actor: string; action: string; note: string }
+        if (raw.actor !== 'system') return
+        if (!['Payment detected', 'Payment settled'].includes(raw.action)) return
+
+        playChime()
+
+        const item: NotificationItem = {
+          id: raw.id,
+          type: 'payment',
+          title: raw.action,
+          body: raw.note ?? '',
+          href: `/orders/${raw.order_id}`,
+          at: Date.now(),
+        }
+        window.dispatchEvent(new CustomEvent('pt:notification', { detail: item }))
+
+        // Enrich title with order ref number asynchronously
+        void (async () => {
+          try {
+            const { data: order } = await supabase
+              .from('orders')
+              .select('ref_number')
+              .eq('id', raw.order_id)
+              .single()
+            if (order?.ref_number) {
+              window.dispatchEvent(new CustomEvent('pt:notification:update', {
+                detail: { id: raw.id, title: `${raw.action} · #${order.ref_number}` },
+              }))
+            }
+          } catch { /* non-fatal — notification already showing */ }
+        })()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(messagesChannel)
+      supabase.removeChannel(orderEventsChannel)
+    }
   }, [supabase])
 
   return null
