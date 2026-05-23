@@ -2,8 +2,11 @@
 
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { cookies } from 'next/headers'
 import { buildAssignments } from './utils'
 import { runAutomationsForEvent } from '@/lib/automations/engine'
+import { buildPaymentMessage } from '@/lib/payments'
+import type { TenantPaymentConfig } from '@/types/payments'
 
 async function getTenantId() {
   const supabase = await createClient()
@@ -526,6 +529,73 @@ export async function updateOrder(
     revalidatePath('/orders')
     revalidatePath(`/orders/${orderId}`)
     return { success: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
+export async function sendOrderPaymentDetails(
+  orderId: string,
+  checkoutUrl?: string,
+): Promise<{ ok: true; conversationId: string } | { error: string }> {
+  try {
+    const { supabase } = await getTenantId()
+
+    const { data: order } = await supabase
+      .from('orders')
+      .select('id, ref_number, payment_asset, payment_amount, payment_address, customer_id, customers(display_name, customer_channels(channel_type, is_primary))')
+      .eq('id', orderId)
+      .single()
+    if (!order) return { error: 'Order not found' }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const d = order as any
+    const channels: { channel_type: string; is_primary: boolean }[] = d.customers?.customer_channels ?? []
+    const primary = channels.find((c: { channel_type: string; is_primary: boolean }) => c.is_primary) ?? channels[0] ?? null
+    if (!primary) return { error: 'Customer has no messaging channel' }
+
+    // Find or create a conversation for this customer + channel
+    const { createOrFindConversation } = await import('@/app/inbox/actions')
+    const convResult = await createOrFindConversation(d.customer_id, primary.channel_type)
+    if ('error' in convResult) return { error: convResult.error }
+
+    // Fetch tenant payment configs for message composition
+    const { data: configsRaw } = await supabase
+      .from('tenant_payment_configs')
+      .select('*')
+      .eq('is_active', true)
+    const configs = (configsRaw ?? []) as TenantPaymentConfig[]
+
+    const msg = buildPaymentMessage(
+      {
+        ref_number: d.ref_number,
+        payment_amount: d.payment_amount,
+        payment_asset: d.payment_asset,
+        payment_address: d.payment_address,
+      },
+      configs,
+      checkoutUrl,
+    )
+    if (!msg) return { error: 'No payment message to send (cash orders cannot be sent)' }
+
+    // Send via /api/send
+    const cookieStore = await cookies()
+    const cookieHeader = cookieStore.getAll()
+      .map(({ name, value }) => `${name}=${value}`)
+      .join('; ')
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    const res = await fetch(`${baseUrl}/api/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: cookieHeader },
+      body: JSON.stringify({ conversationId: convResult.conversationId, content: msg }),
+    })
+    if (!res.ok) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const body = await res.json().catch(() => ({} as any))
+      return { error: (body.error as string) ?? `Send failed (${res.status})` }
+    }
+
+    return { ok: true, conversationId: convResult.conversationId }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }
   }
