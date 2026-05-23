@@ -71,7 +71,7 @@ export function PaySendWidget({
     }
   }
 
-  const canMarkAwaiting = !!orderId && (!orderStatus || orderStatus === 'created')
+  const canMarkAwaiting = !!orderId && orderStatus === 'created'
 
   function copyUrl() {
     navigator.clipboard.writeText(url).then(() => {

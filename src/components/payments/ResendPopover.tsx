@@ -1,13 +1,16 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Icons } from '@/lib/icons'
 import type { CryptoPaymentLinkWithOrder } from '@/types/payments-crypto'
 import { PaySendWidget } from './PaySendWidget'
 
 export function ResendPopover({ link, onOpen }: { link: CryptoPaymentLinkWithOrder; onOpen?: () => void }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [open, setOpen]   = useState(false)
+  const [pos, setPos]     = useState({ top: 0, right: 0 })
+  const btnRef            = useRef<HTMLButtonElement>(null)
+  const popRef            = useRef<HTMLDivElement>(null)
 
   const customer     = link.orders?.customers
   const channels     = customer?.customer_channels ?? []
@@ -20,23 +23,37 @@ export function ResendPopover({ link, onOpen }: { link: CryptoPaymentLinkWithOrd
   useEffect(() => {
     if (!open) return
     function handler(e: MouseEvent) {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+      if (
+        !btnRef.current?.contains(e.target as Node) &&
+        !popRef.current?.contains(e.target as Node)
+      ) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
+  function handleToggle(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
+      onOpen?.()
+    }
+    setOpen(v => !v)
+  }
+
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <button
-        className="pay-row-act"
-        title="Resend"
-        onClick={e => { e.stopPropagation(); if (!open) onOpen?.(); setOpen(v => !v) }}
-      >
+    <>
+      <button ref={btnRef} className="pay-row-act" title="Resend" onClick={handleToggle}>
         <Icons.send size={12} />
       </button>
-      {open && (
-        <div className="pay-row-popover" onClick={e => e.stopPropagation()}>
+      {open && createPortal(
+        <div
+          ref={popRef}
+          className="pay-row-popover"
+          style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 200 }}
+          onClick={e => e.stopPropagation()}
+        >
           <PaySendWidget
             customerId={customerId}
             customerName={customerName}
@@ -47,8 +64,9 @@ export function ResendPopover({ link, onOpen }: { link: CryptoPaymentLinkWithOrd
             orderStatus={link.orders?.status}
             linkId={link.id}
           />
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   )
 }

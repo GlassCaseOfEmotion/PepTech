@@ -852,3 +852,31 @@
 .pay-comp-snd-err-msg {
   font-size: 11px; color: var(--pt-fg-3); text-align: center; line-height: 1.45;
 }
+
+/* ── Cancel popover ─────────────────────────────────────────────────────────── */
+.pay-cancel-popover {
+  background: var(--pt-surface); border: 0.5px solid var(--pt-line);
+  border-radius: 7px; padding: 4px; min-width: 130px;
+  box-shadow: 0 4px 16px oklch(from var(--pt-fg) l c h / 0.08);
+}
+.pay-cancel-option {
+  width: 100%; text-align: left; padding: 6px 10px;
+  font-size: 12px; background: none; border: 0; border-radius: 5px;
+  color: var(--pt-danger); cursor: pointer; font-family: inherit;
+  display: flex; align-items: center; gap: 6px;
+}
+.pay-cancel-option:hover { background: var(--pt-surface-2); }
+.pay-cancel-confirm {
+  padding: 8px 10px; display: flex; flex-direction: column; gap: 8px;
+}
+.pay-cancel-confirm > span { font-size: 12px; color: var(--pt-fg-2); white-space: nowrap; }
+.pay-cancel-btns { display: flex; gap: 6px; justify-content: flex-end; }
+.pay-cancel-btns button {
+  font-size: 11px; padding: 4px 10px; border-radius: 5px;
+  border: 0.5px solid var(--pt-line); background: var(--pt-surface-2);
+  color: var(--pt-fg-2); cursor: pointer; font-family: inherit;
+}
+.pay-cancel-btns button.is-danger {
+  background: var(--pt-danger); color: #fff; border-color: transparent;
+}
+.pay-cancel-btns button:disabled { opacity: 0.5; cursor: not-allowed; }

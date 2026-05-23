@@ -2,14 +2,13 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
-import { cancelPaymentLink } from '@/app/payments/actions'
 import type { TenantCryptoWallet, CryptoPaymentLinkWithOrder, CryptoPaymentStatus, WalletTransaction } from '@/types/payments-crypto'
 import { formatAmountCompact } from '@/lib/currency'
 import { PaymentLinkDetail } from './PaymentLinkDetail'
 import { CreateComposer } from './CreatePaymentLinkModal'
 import { ResendPopover } from './ResendPopover'
+import { CancelPopover } from './CancelPopover'
 
 // ── Display helpers ──────────────────────────────────────────────────────────
 
@@ -182,8 +181,7 @@ export function PaymentsView({
   const [search, setSearch]             = useState('')
   const [dateFilter, setDateFilter]     = useState<'7d' | '30d' | '90d' | 'all'>('all')
   const [showDateMenu, setShowDateMenu] = useState(false)
-  const [cancelId,   setCancelId]   = useState<string | null>(null)
-  const [cancelling, setCancelling] = useState(false)
+  const [copiedRowId, setCopiedRowId] = useState<string | null>(null)
 
   const tabFiltered = paymentLinks.filter(TAB_FILTERS[tab] ?? (() => true))
   const filtered = tabFiltered.filter(l => {
@@ -248,7 +246,7 @@ export function PaymentsView({
           <button
             key={t.id}
             className={`pay-tab${tab === t.id ? ' is-on' : ''}`}
-            onClick={() => { setTab(t.id); setCancelId(null) }}
+            onClick={() => setTab(t.id)}
           >
             {t.label} <span className="pay-tab-num">{t.count}</span>
           </button>
@@ -408,45 +406,21 @@ export function PaymentsView({
                     </td>
                     <td>
                       <span className="pay-row-acts" onClick={e => e.stopPropagation()}>
-                        <button className="pay-row-act" title="Copy URL"
-                          onClick={() => navigator.clipboard.writeText(l.hosted_url)}>
-                          <Icons.doc size={12} />
+                        <button
+                          className="pay-row-act"
+                          title="Copy URL"
+                          onClick={() => {
+                            const id = l.id
+                            navigator.clipboard.writeText(l.hosted_url)
+                            setCopiedRowId(id)
+                            setTimeout(() => setCopiedRowId(cur => cur === id ? null : cur), 1500)
+                          }}
+                        >
+                          {copiedRowId === l.id ? <Icons.check size={12} /> : <Icons.doc size={12} />}
                         </button>
-                        <ResendPopover key={cancelId ?? 'none'} link={l} onOpen={() => setCancelId(null)} />
+                        <ResendPopover link={l} />
                         {!['expired', 'failed', 'finished', 'refunded'].includes(l.status) && (
-                          cancelId === l.id ? (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <button
-                                className="pay-row-act"
-                                style={{ color: 'var(--pt-danger)', fontSize: 10, padding: '0 4px', width: 'auto' }}
-                                disabled={cancelling}
-                                onClick={async e => {
-                                  e.stopPropagation()
-                                  setCancelling(true)
-                                  await cancelPaymentLink(l.id)
-                                  setCancelling(false)
-                                  setCancelId(null)
-                                  router.refresh()
-                                }}
-                              >
-                                {cancelling ? '…' : 'Confirm'}
-                              </button>
-                              <button
-                                className="pay-row-act"
-                                onClick={e => { e.stopPropagation(); setCancelId(null) }}
-                              >
-                                <Icons.x size={10} />
-                              </button>
-                            </span>
-                          ) : (
-                            <button
-                              className="pay-row-act"
-                              title="Cancel link"
-                              onClick={e => { e.stopPropagation(); setCancelId(l.id) }}
-                            >
-                              <Icons.more size={12} />
-                            </button>
-                          )
+                          <CancelPopover link={l} />
                         )}
                       </span>
                     </td>
