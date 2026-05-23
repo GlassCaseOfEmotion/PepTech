@@ -22,25 +22,6 @@ export function buildPaymentMessage(
   const amount = `$${order.payment_amount.toFixed(2)}`
   const header = `Payment details for order ${order.ref_number} · ${amount}`
 
-  if (order.payment_asset === 'customer_chooses') {
-    const active = configs.filter(c => c.is_active && c.type !== 'cash')
-    const lines = active.map(c => {
-      if (c.type === 'bank_transfer') {
-        const parts: string[] = []
-        if (c.account_name) parts.push(c.account_name)
-        if (c.account_number) parts.push(c.account_number)
-        if (c.sort_code) parts.push(`Sort: ${c.sort_code}`)
-        else if (c.iban) parts.push(`IBAN: ${c.iban}`)
-        parts.push(`Ref: ${order.ref_number}`)
-        return `Bank Transfer: ${parts.join(' · ')}`
-      }
-      return `${PAYMENT_LABELS[c.type as PaymentType] ?? c.type}: ${c.wallet_address}`
-    })
-    const hasBankTransfer = active.some(c => c.type === 'bank_transfer')
-    const note = hasBankTransfer ? '\n\nPlease include the reference number for bank transfers.' : ''
-    return `${header}\n\n${lines.join('\n')}${note}`
-  }
-
   if (order.payment_asset === 'bank_transfer') {
     const cfg = configs.find(c => c.type === 'bank_transfer')
     if (!cfg) return `${header}\n\nBank transfer — contact us for details.`
