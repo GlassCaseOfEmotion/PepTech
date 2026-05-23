@@ -342,32 +342,31 @@ export function OrderDetailView({
       {/* Payment panel — created status (payment setup step) */}
       {status === 'created' && (
         <div className="pt-od-payment-panel is-setup">
-          <div className="pt-od-payment-hd">
-            {/* Left: label + method badges */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span>Payment setup</span>
-              <div className="pt-od-method-badges">
-                {([
-                  { value: 'cash',         label: 'Cash' },
-                  { value: 'bank_transfer', label: 'Bank Transfer' },
-                  { value: 'crypto',        label: 'Crypto' },
-                ] as const).map(opt => (
-                  <button
-                    key={opt.value}
-                    className={`pt-od-method-badge ${selectedAsset === opt.value ? 'is-active' : ''}`}
-                    onClick={() => { if (sendState === 'idle') handleAssetChange(opt.value) }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+          <div className="pt-od-payment-hd" style={{ justifyContent: 'flex-start', gap: 0 }}>
+            {/* Label */}
+            <span style={{ marginRight: 20 }}>Payment setup</span>
+            {/* Method badges */}
+            <div className="pt-od-method-badges">
+              {([
+                { value: 'cash',          label: 'Cash' },
+                { value: 'bank_transfer', label: 'Bank Transfer' },
+                { value: 'crypto',        label: 'Crypto' },
+              ] as const).map(opt => (
+                <button
+                  key={opt.value}
+                  className={`pt-od-method-badge ${selectedAsset === opt.value ? 'is-active' : ''}`}
+                  onClick={() => { if (sendState === 'idle') handleAssetChange(opt.value) }}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
-            {/* Right: action area */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* Action area — sits right after the last badge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 10 }}>
               {sendState === 'idle' && isCryptoSelected && !cryptoPaymentLink && (
                 <a
                   href="/payments"
-                  style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '0.5px solid var(--pt-cool)', background: 'var(--pt-cool-soft)', color: 'var(--pt-cool)', textDecoration: 'none' }}
+                  style={{ fontSize: 11, padding: '0 10px', height: 26, display: 'inline-flex', alignItems: 'center', borderRadius: 5, border: '0.5px solid var(--pt-cool)', background: 'var(--pt-cool-soft)', color: 'var(--pt-cool)', textDecoration: 'none', boxSizing: 'border-box' }}
                 >
                   Create payment link →
                 </a>
@@ -375,14 +374,14 @@ export function OrderDetailView({
               {sendState === 'idle' && isCryptoSelected && cryptoPaymentLink && (
                 <a
                   href={`/payments?link=${cryptoPaymentLink.id}`}
-                  style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '0.5px solid var(--pt-line)', color: 'var(--pt-fg-3)', textDecoration: 'none' }}
+                  style={{ fontSize: 11, padding: '0 10px', height: 26, display: 'inline-flex', alignItems: 'center', borderRadius: 5, border: '0.5px solid var(--pt-line)', color: 'var(--pt-fg-3)', textDecoration: 'none', boxSizing: 'border-box' }}
                 >
                   View link
                 </a>
               )}
               {sendState === 'idle' && selectedAsset && (!isCryptoSelected || cryptoPaymentLink) && (
                 <button
-                  className="pt-btn pt-btn-ghost"
+                  className="pt-btn pt-btn-primary"
                   style={{ fontSize: 11 }}
                   onClick={() => setSendState('confirming')}
                 >
