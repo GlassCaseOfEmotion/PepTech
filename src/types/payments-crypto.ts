@@ -34,6 +34,9 @@ export type CryptoPaymentLink = {
   status: CryptoPaymentStatus
   payout_address: string
   memo: string | null
+  pay_address: string | null        // blockchain address for customer to send crypto to
+  pay_currency: string | null       // crypto code, e.g. 'btc', 'usdttrc20'
+  pay_amount_crypto: number | null  // exact crypto amount locked at creation time
   created_at: string
   expires_at: string | null
   confirmed_at: string | null
@@ -93,4 +96,21 @@ export type HeliusTransactionPayload = {
     toUserAccount: string
     tokenAmount: number
   }[]
+}
+
+// Public data returned by GET /api/pay/[id] — no sensitive fields (no tenant_id, no payout_address)
+export type CheckoutData = {
+  id: string
+  status: CryptoPaymentStatus
+  amount_usd: number
+  amount_base: number | null
+  base_currency: string
+  memo: string | null
+  pay_address: string | null
+  pay_currency: string | null
+  pay_amount_crypto: number | null
+  expires_at: string | null
+  confirmed_at: string | null
+  tenant_name: string
+  order_ref: string
 }
