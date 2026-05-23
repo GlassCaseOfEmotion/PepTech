@@ -16,6 +16,9 @@ export type CreatedPayment = {
   id: string
   hostedUrl: string
   expiresAt: string | null
+  payAddress: string
+  payCurrency: string
+  payCryptoAmount: number
 }
 
 export type NowPaymentStatus = {
@@ -55,10 +58,16 @@ export async function createNowPayment(input: CreatePaymentInput): Promise<Creat
   if (!paymentId) {
     throw new Error(`NOWPayments response missing payment_id. Raw: ${JSON.stringify(data)}`)
   }
+  // /payment endpoint does not return a payment_url — construct the hosted viewer URL from the id.
+  const hostedUrl = data.payment_url ?? data.invoice_url
+    ?? `https://nowpayments.io/payment/?iid=${paymentId}`
   return {
     id: String(paymentId),
-    hostedUrl: data.payment_url ?? data.invoice_url ?? '',
+    hostedUrl,
     expiresAt: data.expiration_estimate_date ?? null,
+    payAddress: String(data.pay_address ?? ''),
+    payCurrency: String(data.pay_currency ?? input.payCurrency),
+    payCryptoAmount: Number(data.pay_amount ?? 0),
   }
 }
 
