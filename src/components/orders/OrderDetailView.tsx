@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
 import { updateOrderStatus, saveOrderNotes, confirmPayment, packOrder, sendOrderPaymentDetails } from '@/app/orders/actions'
-import { buildPaymentMessage } from '@/lib/payments'
 import { PAYMENT_LABELS, PAYMENT_BADGE } from '@/types/payments'
 import type { TenantPaymentConfig } from '@/types/payments'
 import type { DbOrderRow, DbOrderEvent, OrderStatus, OrderAttachment } from '@/types/orders'
@@ -266,7 +265,7 @@ export function OrderDetailView({
                 <button
                   className="pt-btn pt-btn-ghost"
                   style={{ fontSize: 11, color: 'var(--pt-ok)' }}
-                  onClick={() => router.push(`/inbox?conversation=${sentConvId}`)}
+                  onClick={() => sentConvId ? router.push(`/inbox?conversation=${sentConvId}`) : router.push('/inbox')}
                 >
                   Sent · Go to chat →
                 </button>
