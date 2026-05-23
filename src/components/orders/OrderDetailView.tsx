@@ -292,15 +292,19 @@ export function OrderDetailView({
             </span>
 
             {isCryptoAsset && cryptoPaymentLink && (
-              <span style={{
-                fontSize: 11,
-                color: cryptoPaymentLink.status === 'finished' ? 'var(--pt-ok)' : 'var(--pt-fg-3)',
-                display: 'inline-flex', alignItems: 'center', gap: 4,
-              }}>
+              <a
+                href="/payments"
+                style={{
+                  fontSize: 11,
+                  color: cryptoPaymentLink.status === 'finished' ? 'var(--pt-ok)' : 'var(--pt-fg-3)',
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  textDecoration: 'none',
+                }}
+              >
                 {cryptoPaymentLink.status === 'finished' ? '✓ Confirmed' :
                  cryptoPaymentLink.status === 'confirming' ? '↻ Confirming' :
-                 '● Waiting for payment'}
-              </span>
+                 '● Waiting for payment'} →
+              </a>
             )}
             {isCryptoAsset && !cryptoPaymentLink && (
               <a
