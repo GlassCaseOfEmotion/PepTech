@@ -174,7 +174,6 @@ export function PaymentsView({
         </div>
         <div className="pay-page-hd-actions">
           <button className="pt-btn pt-btn-ghost"><Icons.doc size={12} /> Export</button>
-          <button className="pt-btn pt-btn-ghost"><Icons.send size={12} /> Send reminder · {kpi.activeCount}</button>
           <button className="pt-btn pt-btn-primary" onClick={() => setView('create')}>
             <Icons.plus size={12} /> Request payment
           </button>
@@ -191,9 +190,6 @@ export function PaymentsView({
             {t.label} <span className="pay-tab-num">{t.count}</span>
           </button>
         ))}
-        <button className="pay-tab" style={{ marginLeft: 'auto', borderBottom: 'none' }}>
-          <Icons.gear size={12} /> Checkout settings
-        </button>
       </div>
 
       <div className="pay-strip">
@@ -240,20 +236,14 @@ export function PaymentsView({
           <div className="pay-list-toolbar">
             <label className="pay-list-search">
               <Icons.search size={12} />
-              <input placeholder="Search by link id, customer, order…" />
+              <input placeholder="Search by customer, order, memo…" />
               <kbd>/</kbd>
             </label>
-            <button className="pay-chip is-on">State: <span className="v">any</span> <Icons.arrowDn size={10} /></button>
-            <button className="pay-chip">Asset: <span className="v">any</span> <Icons.arrowDn size={10} /></button>
-            {/* DECISION NEEDED — "Channel" filter: channel not tracked per link. Show filter UI only. */}
-            <button className="pay-chip">Channel: <span className="v">any</span> <Icons.arrowDn size={10} /></button>
-            <button className="pay-chip">Created: <span className="v">last 30d</span> <Icons.arrowDn size={10} /></button>
-            <button className="pay-chip"><Icons.plus size={11} /> Add filter</button>
+            <button className="pay-chip">Created: <span className="v">all time</span> <Icons.arrowDn size={10} /></button>
           </div>
           <table className="pay-tt">
             <thead>
               <tr>
-                <th style={{ width: 32 }}><input type="checkbox" /></th>
                 <th>Link</th>
                 <th>Customer</th>
                 <th>Order</th>
@@ -269,7 +259,7 @@ export function PaymentsView({
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={10} style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--pt-fg-4)', fontSize: '12.5px' }}>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--pt-fg-4)', fontSize: '12.5px' }}>
                     {paymentLinks.length === 0 ? 'No payment links yet — click "Request payment" to create one' : 'No links match this filter'}
                   </td>
                 </tr>
@@ -288,7 +278,6 @@ export function PaymentsView({
                     className={selectedId === l.id ? 'is-selected' : ''}
                     onClick={() => { setSelectedId(l.id); setView('detail') }}
                   >
-                    <td><input type="checkbox" onClick={e => e.stopPropagation()} /></td>
                     <td>
                       <div className="pay-tt-link">
                         <div className="pay-tt-link-mark"><Icons.wallet size={13} /></div>
@@ -299,12 +288,7 @@ export function PaymentsView({
                       </div>
                     </td>
                     <td>
-                      {/* DECISION NEEDED — customer.channel for icon: not stored. Showing name + handle only. */}
-                      <div className="pay-tt-cust">
-                        <span className="pay-tt-cust-name">{customer?.display_name ?? '—'}</span>
-                        {/* DECISION NEEDED — handle lives on customer_channels, not customers. Join needed for Phase 3. */}
-                        <span className="pay-tt-cust-meta" style={{ color: 'var(--pt-fg-4)' }}>—</span>
-                      </div>
+                      <span className="pay-tt-cust-name">{customer?.display_name ?? '—'}</span>
                     </td>
                     <td>
                       {orderRef
