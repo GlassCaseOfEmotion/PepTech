@@ -9,7 +9,6 @@ export type PaymentType =
   | 'sol'
   | 'bank_transfer'
   | 'cash'
-  | 'customer_chooses'
 
 export const PAYMENT_LABELS: Record<PaymentType, string> = {
   usdt_trc20:       'USDT (TRC20)',
@@ -22,7 +21,6 @@ export const PAYMENT_LABELS: Record<PaymentType, string> = {
   sol:              'SOL',
   bank_transfer:    'Bank Transfer',
   cash:             'Cash',
-  customer_chooses: 'Customer chooses',
 }
 
 // Short label + CSS data-asset key for coloured badges
@@ -36,7 +34,6 @@ export const PAYMENT_BADGE: Record<string, { label: string; key: string }> = {
   xmr:              { label: 'XMR',   key: 'xmr'   },
   sol:              { label: 'SOL',   key: 'sol'   },
   bank_transfer:    { label: 'Bank',  key: 'bank'  },
-  customer_chooses: { label: 'Multi', key: 'multi' },
   cash:             { label: 'Cash',  key: 'cash'  },
   // legacy casing
   USDT:  { label: 'USDT',  key: 'usdt'  },

@@ -1,4 +1,4 @@
-﻿export type OrderStatus = 'awaiting' | 'confirming' | 'packing' | 'shipped' | 'delivered'
+﻿export type OrderStatus = 'created' | 'awaiting' | 'confirming' | 'packing' | 'shipped' | 'delivered'
 
 export type ShippingAddress = {
   ln1: string
@@ -15,7 +15,7 @@ export type DbOrderRow = {
   customer_id: string
   conversation_id: string | null
   status: OrderStatus
-  payment_asset: string
+  payment_asset: string | null
   payment_amount: number
   currency: string
   exchange_rate: number | null
@@ -62,7 +62,7 @@ export type OrderCard = {
   channel: 'wa' | 'tg' | 'em'
   handle: string
   status: OrderStatus
-  paymentAsset: string
+  paymentAsset: string | null
   paymentAmount: number
   currency: string
   conversationId: string | null
@@ -113,7 +113,7 @@ export function dbOrderToCard(o: DbOrderRow): OrderCard {
     channel,
     handle: primaryChannel?.display_handle ?? '',
     status: o.status,
-    paymentAsset: o.payment_asset,
+    paymentAsset: o.payment_asset ?? null,
     paymentAmount: o.payment_amount,
     currency: o.currency ?? 'USD',
     conversationId: o.conversation_id,
