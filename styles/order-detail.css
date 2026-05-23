@@ -407,6 +407,16 @@
   color: var(--pt-fg);
   border-color: oklch(from var(--pt-fg) l c h / 0.18);
 }
+.is-setup .pt-od-method-badge {
+  background: oklch(from var(--pt-fg) l c h / 0.07);
+  border-color: oklch(from var(--pt-fg) l c h / 0.20);
+  color: var(--pt-fg-2);
+}
+.is-setup .pt-od-method-badge:hover {
+  background: oklch(from var(--pt-fg) l c h / 0.13);
+  border-color: oklch(from var(--pt-fg) l c h / 0.28);
+  color: var(--pt-fg);
+}
 .pt-od-method-badge.is-active {
   background: oklch(from var(--pt-warn) l c h / 0.14);
   border-color: oklch(from var(--pt-warn) l c h / 0.5);
