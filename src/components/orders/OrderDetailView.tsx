@@ -551,72 +551,6 @@ export function OrderDetailView({
             </div>
           </section>
 
-          {/* Payment */}
-          <section className="pt-card">
-            <header className="pt-card-hd">
-              <div>
-                <h3>Payment</h3>
-                <p>{!order.payment_asset ? 'Not set yet' : order.payment_asset === 'cash' ? 'Cash on delivery' : PAYMENT_LABELS[order.payment_asset as keyof typeof PAYMENT_LABELS] ?? order.payment_asset}</p>
-              </div>
-              {status !== 'created' && (
-                <span className={`pt-od-pay-status pt-od-pay-${status}`}>
-                  {status === 'awaiting' ? 'Awaiting' : status === 'confirming' ? 'Confirming' : 'Settled'}
-                </span>
-              )}
-            </header>
-            <div className="pt-card-body">
-              <div className="pt-od-pay-grid">
-                <div>
-                  <div className="pt-od-pay-lbl">Asset</div>
-                  <div className="pt-od-pay-val">
-                    <span className="pt-pay-asset" data-asset={order.payment_asset ? (PAYMENT_BADGE[order.payment_asset]?.key ?? 'other') : 'none'}>
-                      {order.payment_asset ? (PAYMENT_BADGE[order.payment_asset]?.label ?? order.payment_asset) : '—'}
-                    </span>
-                    <span className="mono" style={{ marginLeft: 8 }}>{formatAmount(order.payment_amount, order.currency ?? 'USD')}</span>
-                  </div>
-                </div>
-                {order.payment_address && (
-                  <div>
-                    <div className="pt-od-pay-lbl">Receiving address</div>
-                    <div className="pt-od-pay-val mono">{order.payment_address}</div>
-                  </div>
-                )}
-                {order.tx_hash && (
-                  <div>
-                    <div className="pt-od-pay-lbl">Tx hash</div>
-                    <div className="pt-od-pay-val mono">{order.tx_hash}</div>
-                  </div>
-                )}
-                <div>
-                  <div className="pt-od-pay-lbl">Reference</div>
-                  <div className="pt-od-pay-val mono">PT-{order.ref_number}</div>
-                </div>
-                {showCryptoLinkField && (
-                  <div>
-                    <div className="pt-od-pay-lbl">Crypto link</div>
-                    <div className="pt-od-pay-val">
-                      {cryptoPaymentLink ? (
-                        <a
-                          href={`/payments?link=${cryptoPaymentLink.id}`}
-                          style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '0.5px solid var(--pt-cool)', background: 'var(--pt-cool-soft)', color: 'var(--pt-cool)', textDecoration: 'none', display: 'inline-block' }}
-                        >
-                          View in Payments →
-                        </a>
-                      ) : (
-                        <a
-                          href="/payments"
-                          style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '0.5px solid var(--pt-cool)', background: 'var(--pt-cool-soft)', color: 'var(--pt-cool)', textDecoration: 'none', display: 'inline-block' }}
-                        >
-                          Create payment link →
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-
           {/* Shipping */}
           <section className="pt-card">
             <header className="pt-card-hd">
@@ -685,6 +619,72 @@ export function OrderDetailView({
 
         {/* Right rail */}
         <aside className="pt-od-rail">
+          {/* Payment */}
+          <section className="pt-card">
+            <header className="pt-card-hd">
+              <div>
+                <h3>Payment</h3>
+                <p>{!order.payment_asset ? 'Not set yet' : order.payment_asset === 'cash' ? 'Cash on delivery' : PAYMENT_LABELS[order.payment_asset as keyof typeof PAYMENT_LABELS] ?? order.payment_asset}</p>
+              </div>
+              {status !== 'created' && (
+                <span className={`pt-od-pay-status pt-od-pay-${status}`}>
+                  {status === 'awaiting' ? 'Awaiting' : status === 'confirming' ? 'Confirming' : 'Settled'}
+                </span>
+              )}
+            </header>
+            <div className="pt-card-body">
+              <div className="pt-od-pay-grid">
+                <div>
+                  <div className="pt-od-pay-lbl">Asset</div>
+                  <div className="pt-od-pay-val">
+                    <span className="pt-pay-asset" data-asset={order.payment_asset ? (PAYMENT_BADGE[order.payment_asset]?.key ?? 'other') : 'none'}>
+                      {order.payment_asset ? (PAYMENT_BADGE[order.payment_asset]?.label ?? order.payment_asset) : '—'}
+                    </span>
+                    <span className="mono" style={{ marginLeft: 8 }}>{formatAmount(order.payment_amount, order.currency ?? 'USD')}</span>
+                  </div>
+                </div>
+                {order.payment_address && (
+                  <div>
+                    <div className="pt-od-pay-lbl">Receiving address</div>
+                    <div className="pt-od-pay-val mono">{order.payment_address}</div>
+                  </div>
+                )}
+                {order.tx_hash && (
+                  <div>
+                    <div className="pt-od-pay-lbl">Tx hash</div>
+                    <div className="pt-od-pay-val mono">{order.tx_hash}</div>
+                  </div>
+                )}
+                <div>
+                  <div className="pt-od-pay-lbl">Reference</div>
+                  <div className="pt-od-pay-val mono">PT-{order.ref_number}</div>
+                </div>
+                {showCryptoLinkField && (
+                  <div>
+                    <div className="pt-od-pay-lbl">Crypto link</div>
+                    <div className="pt-od-pay-val">
+                      {cryptoPaymentLink ? (
+                        <a
+                          href={`/payments?link=${cryptoPaymentLink.id}`}
+                          style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '0.5px solid var(--pt-cool)', background: 'var(--pt-cool-soft)', color: 'var(--pt-cool)', textDecoration: 'none', display: 'inline-block' }}
+                        >
+                          View in Payments →
+                        </a>
+                      ) : (
+                        <a
+                          href="/payments"
+                          style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '0.5px solid var(--pt-cool)', background: 'var(--pt-cool-soft)', color: 'var(--pt-cool)', textDecoration: 'none', display: 'inline-block' }}
+                        >
+                          Create payment link →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
           {/* Customer */}
           {order.customers && (
             <section className="pt-card">
