@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { createOrFindConversation } from '@/app/inbox/actions'
 import type { AutoState, AutomationWithRuns, TriggerType, ActionType, Condition, Automation, QueuedRun } from '@/types/automations'
 
 async function getTenantId() {
@@ -153,10 +154,35 @@ export async function approveAndSendQueuedRun(runId: string, overrideMessage?: s
     if (fetchError || !run) return { error: 'Queued run not found' }
 
     const payload = run.action_payload as Record<string, unknown> | null
-    const conversationId = payload?.conversationId as string | undefined
+    let conversationId = payload?.conversationId as string | undefined
+    const customerId = payload?.customerId as string | undefined
     const message = overrideMessage?.trim() || (payload?.message as string | undefined)
 
-    if (!conversationId || !message) return { error: 'Run payload missing conversationId or message' }
+    if (!message) return { error: 'Run payload missing message' }
+
+    // Order-triggered automations queue runs without a conversationId — resolve
+    // the customer's primary channel and find/create a conversation now.
+    if (!conversationId) {
+      if (!customerId) return { error: 'Run payload missing conversationId or customerId' }
+      const { data: primary } = await supabase
+        .from('customer_channels')
+        .select('channel_type')
+        .eq('customer_id', customerId)
+        .order('is_primary', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (!primary) return { error: 'No messaging handle on file for this customer' }
+      const found = await createOrFindConversation(customerId, primary.channel_type)
+      if ('error' in found) return { error: found.error }
+      conversationId = found.conversationId
+
+      // Persist on the run so subsequent retries / "Open chat" can use it
+      await supabase
+        .from('automation_runs')
+        .update({ action_payload: { ...(payload ?? {}), conversationId } })
+        .eq('id', runId)
+        .eq('tenant_id', tenantId)
+    }
 
     const cookieStore = await cookies()
     const cookieHeader = cookieStore.getAll()
