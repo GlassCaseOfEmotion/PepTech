@@ -80,12 +80,6 @@ function buildInvoicePaymentMethods(
 ): InvoicePaymentMethod[] {
   if (order.payment_asset === 'cash') return []
 
-  if (order.payment_asset === 'customer_chooses') {
-    return configs
-      .filter(c => c.is_active && c.type !== 'cash')
-      .map(c => configToInvoiceMethod(c, order.ref_number))
-  }
-
   if (order.payment_asset === 'bank_transfer') {
     const cfg = configs.find(c => c.type === 'bank_transfer')
     if (!cfg) return [{ label: 'Bank Transfer', reference: order.ref_number }]

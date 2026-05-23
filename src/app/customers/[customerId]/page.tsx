@@ -46,7 +46,6 @@ const PAY_BADGE: Record<string, { label: string; key: string }> = {
   ltc:              { label: 'LTC',   key: 'ltc'   },
   xmr:              { label: 'XMR',   key: 'xmr'   },
   bank_transfer:    { label: 'Bank',  key: 'bank'  },
-  customer_chooses: { label: 'Multi', key: 'multi' },
   cash:             { label: 'Cash',  key: 'cash'  },
   USDT:             { label: 'USDT',  key: 'usdt'  },
   BTC:              { label: 'BTC',   key: 'btc'   },

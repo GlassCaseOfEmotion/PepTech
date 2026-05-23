@@ -91,9 +91,6 @@ export function EditOrderForm({ order, paymentConfigs, onSuccess, onCancel }: Ed
       const label = PAYMENT_LABELS[c.type as PaymentType]
       if (label && c.type !== 'cash') opts.push({ value: c.type, label })
     }
-    if (paymentConfigs.filter(c => c.type !== 'cash').length >= 1) {
-      opts.push({ value: 'customer_chooses', label: PAYMENT_LABELS.customer_chooses })
-    }
     return opts
   })()
 

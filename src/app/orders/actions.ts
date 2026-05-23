@@ -18,6 +18,7 @@ async function getTenantId() {
 }
 
 const STATUS_LABELS: Record<string, string> = {
+  created: 'Order created',
   awaiting: 'Awaiting payment', confirming: 'Confirming',
   packing: 'Packing', shipped: 'Shipped', delivered: 'Delivered',
 }
@@ -482,7 +483,7 @@ export async function updateOrder(
     let newExchangeRate: number | undefined
     if (data.paymentAsset !== undefined || data.paymentAmount !== undefined) {
       const effectiveAsset = data.paymentAsset ?? current.payment_asset
-      const FIAT_ASSETS = new Set(['cash', 'bank_transfer', 'customer_chooses'])
+      const FIAT_ASSETS = new Set(['cash', 'bank_transfer'])
       if (!FIAT_ASSETS.has(effectiveAsset) && current.currency !== 'USD') {
         const TTL_MS = 60 * 60 * 1000
         const { data: cached } = await supabase

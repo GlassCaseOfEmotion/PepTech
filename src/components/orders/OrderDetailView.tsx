@@ -163,6 +163,7 @@ export function OrderDetailView({
     } else {
       setSentConvId(result.conversationId)
       setSendState('sent')
+      router.refresh()
     }
   }
 
@@ -569,9 +570,11 @@ export function OrderDetailView({
                 <h3>Payment</h3>
                 <p>{!order.payment_asset ? 'Not set yet' : order.payment_asset === 'cash' ? 'Cash on delivery' : PAYMENT_LABELS[order.payment_asset as keyof typeof PAYMENT_LABELS] ?? order.payment_asset}</p>
               </div>
-              <span className={`pt-od-pay-status pt-od-pay-${status}`}>
-                {status === 'awaiting' ? 'Awaiting' : status === 'confirming' ? 'Confirming' : 'Settled'}
-              </span>
+              {status !== 'created' && (
+                <span className={`pt-od-pay-status pt-od-pay-${status}`}>
+                  {status === 'awaiting' ? 'Awaiting' : status === 'confirming' ? 'Confirming' : 'Settled'}
+                </span>
+              )}
             </header>
             <div className="pt-card-body">
               <div className="pt-od-pay-grid">
