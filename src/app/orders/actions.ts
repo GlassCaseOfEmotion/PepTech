@@ -18,6 +18,7 @@ async function getTenantId() {
 }
 
 const STATUS_LABELS: Record<string, string> = {
+  created: 'Order created',
   awaiting: 'Awaiting payment', confirming: 'Confirming',
   packing: 'Packing', shipped: 'Shipped', delivered: 'Delivered',
 }
@@ -25,7 +26,7 @@ const STATUS_LABELS: Record<string, string> = {
 export async function createOrder(data: {
   customerId: string
   conversationId?: string
-  paymentAsset: string
+  paymentAsset?: string
   paymentAmount: number
   paymentAddress?: string
   shippingAddress?: { ln1: string; ln2?: string; city: string; state: string; zip: string }
@@ -49,8 +50,8 @@ export async function createOrder(data: {
     const currency = tenantRow?.base_currency ?? 'USD'
 
     // For crypto payments with non-USD base currency, fetch and cache exchange rate
-    const FIAT_ASSETS = new Set(['cash', 'bank_transfer', 'customer_chooses'])
-    const isCrypto = !FIAT_ASSETS.has(data.paymentAsset)
+    const FIAT_ASSETS = new Set(['cash', 'bank_transfer'])
+    const isCrypto = !!data.paymentAsset && !FIAT_ASSETS.has(data.paymentAsset)
     let exchangeRate: number | null = null
 
     if (isCrypto && currency !== 'USD') {
@@ -87,7 +88,7 @@ export async function createOrder(data: {
       ref_number: refNumber as string,
       customer_id: data.customerId,
       conversation_id: data.conversationId || null,
-      payment_asset: data.paymentAsset,
+      payment_asset: data.paymentAsset ?? null,
       payment_amount: data.paymentAmount,
       payment_amount_base: data.paymentAmount,
       currency,
@@ -125,6 +126,32 @@ export async function createOrder(data: {
     revalidatePath('/orders')
     revalidatePath('/customers', 'layout')
     return { success: true, orderId: order.id, refNumber: order.ref_number }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
+export async function setOrderPaymentMethod(
+  orderId: string,
+  asset: string,
+): Promise<{ ok: true } | { error: string }> {
+  try {
+    const { supabase, tenantId } = await getTenantId()
+    const { data: config } = await supabase
+      .from('tenant_payment_configs')
+      .select('wallet_address')
+      .eq('tenant_id', tenantId)
+      .eq('type', asset)
+      .eq('is_active', true)
+      .maybeSingle()
+    const { error } = await supabase
+      .from('orders')
+      .update({ payment_asset: asset, payment_address: config?.wallet_address ?? null })
+      .eq('id', orderId)
+      .eq('tenant_id', tenantId)
+    if (error) return { error: error.message }
+    revalidatePath(`/orders/${orderId}`)
+    return { ok: true }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }
   }
@@ -543,10 +570,11 @@ export async function sendOrderPaymentDetails(
 
     const { data: order } = await supabase
       .from('orders')
-      .select('id, ref_number, payment_asset, payment_amount, payment_address, customer_id, customers(display_name, customer_channels(channel_type, is_primary))')
+      .select('id, ref_number, status, payment_asset, payment_amount, payment_address, customer_id, customers(display_name, customer_channels(channel_type, is_primary))')
       .eq('id', orderId)
       .single()
     if (!order) return { error: 'Order not found' }
+    if (!(order as any).payment_asset) return { error: 'No payment method selected for this order' }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const d = order as any
@@ -576,7 +604,13 @@ export async function sendOrderPaymentDetails(
       configs,
       checkoutUrl,
     )
-    if (!msg) return { error: 'No payment message to send (cash orders cannot be sent)' }
+    if (!msg) {
+      if ((order as any).status === 'created') {
+        await supabase.from('orders').update({ status: 'awaiting' }).eq('id', orderId)
+        revalidatePath(`/orders/${orderId}`)
+      }
+      return { ok: true, conversationId: convResult.conversationId }
+    }
 
     // Send via /api/send
     const cookieStore = await cookies()
@@ -595,6 +629,10 @@ export async function sendOrderPaymentDetails(
       return { error: (body.error as string) ?? `Send failed (${res.status})` }
     }
 
+    if ((order as any).status === 'created') {
+      await supabase.from('orders').update({ status: 'awaiting' }).eq('id', orderId)
+      revalidatePath(`/orders/${orderId}`)
+    }
     return { ok: true, conversationId: convResult.conversationId }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }

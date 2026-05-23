@@ -1,5 +1,12 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { buildAssignments } from '../utils'
+
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: vi.fn(),
+  createServiceClient: vi.fn(),
+}))
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
+vi.mock('next/headers', () => ({ cookies: vi.fn(() => ({ getAll: () => [] })) }))
 
 function validateOrderItems(items: { productId: string; qty: number; unitPriceSnapshot: number }[]): string | null {
   if (items.length === 0) return 'Order must have at least one item'
@@ -105,5 +112,12 @@ describe('payment_amount_base invariant', () => {
     const paymentAmount = 150
     const paymentAmountBase = paymentAmount
     expect(paymentAmountBase).toBe(paymentAmount)
+  })
+})
+
+describe('setOrderPaymentMethod', () => {
+  it('is exported from actions', async () => {
+    const mod = await import('@/app/orders/actions')
+    expect(typeof mod.setOrderPaymentMethod).toBe('function')
   })
 })
