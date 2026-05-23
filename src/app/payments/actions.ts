@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { cookies } from 'next/headers'
 import type { TenantCryptoWallet, CryptoPaymentLink, CryptoPaymentLinkWithOrder, WalletTransaction } from '@/types/payments-crypto'
 import { fetchFiatRate } from '@/lib/currency'
 
@@ -90,7 +91,11 @@ export async function getPaymentLinks(): Promise<CryptoPaymentLinkWithOrder[]> {
       *,
       orders (
         ref_number,
-        customers ( display_name )
+        conversation_id,
+        customers (
+          display_name,
+          customer_channels ( channel_type, is_primary )
+        )
       )
     `)
     .order('created_at', { ascending: false })
@@ -147,6 +152,66 @@ export async function lookupOrder(query: string): Promise<{
       customer_name: o.customers?.display_name ?? null,
     }))
     return { orders }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
+export async function getOrderChannel(orderId: string): Promise<{
+  conversationId: string | null
+  channelType: string | null
+  customerName: string | null
+}> {
+  try {
+    const { supabase } = await getTenantId()
+    const { data } = await supabase
+      .from('orders')
+      .select('conversation_id, customers(display_name, customer_channels(channel_type, is_primary))')
+      .eq('id', orderId)
+      .single()
+    if (!data) return { conversationId: null, channelType: null, customerName: null }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const d = data as any
+    const channels: { channel_type: string; is_primary: boolean }[] = d.customers?.customer_channels ?? []
+    const primary = channels.find((c: { channel_type: string; is_primary: boolean }) => c.is_primary) ?? channels[0] ?? null
+    return {
+      conversationId: d.conversation_id ?? null,
+      channelType: primary?.channel_type ?? null,
+      customerName: d.customers?.display_name ?? null,
+    }
+  } catch {
+    return { conversationId: null, channelType: null, customerName: null }
+  }
+}
+
+export async function sendPaymentLinkToCustomer(
+  conversationId: string,
+  messageText: string
+): Promise<{ ok: true } | { error: string }> {
+  try {
+    const { supabase } = await getTenantId()
+    // Verify the conversation belongs to this tenant (RLS enforces this)
+    const { data: conv } = await supabase
+      .from('conversations').select('id').eq('id', conversationId).single()
+    if (!conv) return { error: 'Conversation not found' }
+
+    const cookieStore = await cookies()
+    const cookieHeader = cookieStore.getAll()
+      .map(({ name, value }) => `${name}=${value}`)
+      .join('; ')
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+
+    const res = await fetch(`${baseUrl}/api/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: cookieHeader },
+      body: JSON.stringify({ conversationId, content: messageText }),
+    })
+    if (!res.ok) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const body = await res.json().catch(() => ({} as any))
+      return { error: (body.error as string) ?? `Send failed (${res.status})` }
+    }
+    return { ok: true }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }
   }
