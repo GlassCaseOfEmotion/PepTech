@@ -120,14 +120,16 @@ export function PaymentsView({
   recentTransactions: _transactions,
   paymentLinks,
   baseCurrency = 'USD',
+  initialLinkId,
 }: {
   wallet: TenantCryptoWallet | null
   recentTransactions: WalletTransaction[]
   paymentLinks: CryptoPaymentLinkWithOrder[]
   baseCurrency?: string
+  initialLinkId?: string | null
 }) {
-  const [view, setView] = useState<'list' | 'create' | 'detail'>('list')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [view, setView] = useState<'list' | 'create' | 'detail'>(initialLinkId ? 'detail' : 'list')
+  const [selectedId, setSelectedId] = useState<string | null>(initialLinkId ?? null)
   const [tab, setTab] = useState('all')
 
   const filtered    = paymentLinks.filter(TAB_FILTERS[tab] ?? (() => true))
