@@ -38,7 +38,7 @@ describe('buildPaymentMessage', () => {
     expect(result).toContain('Payment details unavailable')
   })
 
-  it('does not contain all methods for any input (customer_chooses branch removed)', () => {
+  it('crypto order without checkout URL shows wallet address', () => {
     const result = buildPaymentMessage(
       { ref_number: 'PT-A-1', payment_amount: 100, payment_asset: 'usdt_trc20', payment_address: 'TXxx' },
       configs,
@@ -56,16 +56,6 @@ describe('buildPaymentMessage', () => {
     expect(result).toContain('https://peptech.app/pay/abc-123')
     expect(result).toContain('USDT (TRC20)')
     expect(result).not.toContain('TQrZ...')
-  })
-
-  it('builds crypto checkout message when URL provided', () => {
-    const result = buildPaymentMessage(
-      { ref_number: 'PT-A-1', payment_amount: 100, payment_asset: 'usdt_trc20', payment_address: 'TXxx' },
-      configs,
-      'https://pay.example.com/123',
-    )
-    expect(result).toContain('https://pay.example.com/123')
-    expect(result).not.toContain('TXxx')
   })
 
   it('falls back to raw address for crypto when no checkout URL', () => {
