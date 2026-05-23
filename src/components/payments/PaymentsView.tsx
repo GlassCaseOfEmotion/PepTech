@@ -248,7 +248,7 @@ export function PaymentsView({
                 <th>Customer</th>
                 <th>Order</th>
                 <th className="r">Amount</th>
-                <th>Accepts</th>
+                <th>Paid with</th>
                 <th>State</th>
                 {/* DECISION NEEDED — "Sent via": channel not tracked. Showing dash until tracked. */}
                 <th>Sent via</th>
@@ -282,8 +282,8 @@ export function PaymentsView({
                       <div className="pay-tt-link">
                         <div className="pay-tt-link-mark"><Icons.wallet size={13} /></div>
                         <div>
-                          <div className="pay-tt-link-id">{l.nowpayments_id}</div>
-                          <div className="pay-tt-link-note">{l.memo ?? orderRef ?? '—'}</div>
+                          <div className="pay-tt-link-id">{l.memo ?? (orderRef ? `Order #${orderRef}` : l.nowpayments_id)}</div>
+                          <div className="pay-tt-link-note">{new Date(l.created_at).toLocaleDateString()}</div>
                         </div>
                       </div>
                     </td>
