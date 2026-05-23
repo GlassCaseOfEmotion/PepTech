@@ -46,12 +46,14 @@ export type CryptoPaymentLink = {
   nowpayments_tx_id: string | null
 }
 
-// Returned by getPaymentLinks — includes joined order + customer data for display
+// Returned by getPaymentLinks — includes joined order + customer + channel data
 export type CryptoPaymentLinkWithOrder = CryptoPaymentLink & {
   orders: {
     ref_number: string
+    conversation_id: string | null
     customers: {
       display_name: string
+      customer_channels: { channel_type: string; is_primary: boolean }[]
     } | null
   } | null
 }
