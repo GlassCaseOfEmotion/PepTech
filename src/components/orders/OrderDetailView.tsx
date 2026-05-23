@@ -149,12 +149,13 @@ export function OrderDetailView({
     })
   }
 
-  const showCryptoLinkField = CRYPTO_ASSETS.has(order.payment_asset ?? '')
+  const isCryptoSelected = selectedAsset === 'crypto' || CRYPTO_ASSETS.has(selectedAsset ?? '')
+  const showCryptoLinkField = order.payment_asset === 'crypto' || CRYPTO_ASSETS.has(order.payment_asset ?? '')
 
   async function handleSendPaymentDetails() {
     setSendState('sending')
     setSendError('')
-    const checkoutUrl = selectedAsset && CRYPTO_ASSETS.has(selectedAsset) && cryptoPaymentLink ? cryptoPaymentLink.hosted_url : undefined
+    const checkoutUrl = isCryptoSelected && cryptoPaymentLink ? cryptoPaymentLink.hosted_url : undefined
     const result = await sendOrderPaymentDetails(order.id, checkoutUrl)
       .catch(e => ({ error: e instanceof Error ? e.message : 'Unknown error' }))
     if ('error' in result) {
@@ -188,6 +189,11 @@ export function OrderDetailView({
   const previewMessage: string = (() => {
     if (!selectedAsset) return ''
     if (selectedAsset === 'cash') return 'Cash payment — no message will be sent. The order will move to awaiting payment.'
+    if (selectedAsset === 'crypto') {
+      if (!cryptoPaymentLink) return 'Create a payment link first — the checkout URL will be included in the message.'
+      const amount = `$${order.payment_amount.toFixed(2)}`
+      return `Payment details for order ${order.ref_number} · ${amount}\n\nPay with crypto via secure checkout:\n${cryptoPaymentLink.hosted_url}`
+    }
     return buildPaymentMessage(
       {
         ref_number: order.ref_number,
@@ -352,18 +358,13 @@ export function OrderDetailView({
               >
                 <option value="" disabled>Select method…</option>
                 <option value="cash">Cash</option>
-                {paymentConfigs
-                  .filter(c => c.is_active && c.type !== 'cash')
-                  .map(c => (
-                    <option key={c.type} value={c.type}>
-                      {PAYMENT_LABELS[c.type as keyof typeof PAYMENT_LABELS] ?? c.type}
-                    </option>
-                  ))}
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="crypto">Crypto</option>
               </select>
             </div>
 
-            {/* Crypto link row — only when a crypto asset is selected */}
-            {selectedAsset !== null && CRYPTO_ASSETS.has(selectedAsset) && (
+            {/* Crypto link row — only when crypto is selected */}
+            {isCryptoSelected && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 11, color: 'var(--pt-fg-3)', width: 80, flexShrink: 0 }}>Crypto link</span>
                 {cryptoPaymentLink ? (
@@ -390,7 +391,7 @@ export function OrderDetailView({
                 <button
                   className="pt-btn pt-btn-ghost"
                   style={{ fontSize: 11 }}
-                  disabled={!selectedAsset}
+                  disabled={!selectedAsset || (isCryptoSelected && !cryptoPaymentLink)}
                   onClick={() => setSendState('confirming')}
                 >
                   <Icons.send size={11} /> Send payment details
@@ -412,7 +413,7 @@ export function OrderDetailView({
                     onClick={async () => {
                       setSendState('sending')
                       setSendError('')
-                      const checkoutUrl = selectedAsset && CRYPTO_ASSETS.has(selectedAsset) && cryptoPaymentLink
+                      const checkoutUrl = isCryptoSelected && cryptoPaymentLink
                         ? cryptoPaymentLink.hosted_url
                         : undefined
                       const result = await sendOrderPaymentDetails(order.id, checkoutUrl)
