@@ -6,6 +6,7 @@ import QRCode from 'react-qr-code'
 import { Icons } from '@/lib/icons'
 import { formatAmount } from '@/lib/currency'
 import type { CryptoPaymentLinkWithOrder, CryptoPaymentStatus } from '@/types/payments-crypto'
+import { PaySendWidget } from './PaySendWidget'
 
 function QrPlaceholder({ size = 124 }: { size?: number }) {
   const cells = 21
@@ -168,6 +169,15 @@ export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWit
   const orderRef = link.orders?.ref_number ?? null
   const customer = link.orders?.customers ?? null
 
+  // Extract primary channel from extended order data
+  const channels = ((link.orders as any)?.customers?.customer_channels as
+    { channel_type: string; is_primary: boolean }[] | undefined) ?? []
+  const primaryChannel = channels.find(c => c.is_primary) ?? channels[0] ?? null
+  const conversationId = (link.orders as any)?.conversation_id as string | null ?? null
+  const customerName = link.orders?.customers?.display_name ?? null
+  const channelType = primaryChannel?.channel_type ?? null
+  const shareMessageText = `Hi ${customerName ?? 'there'}! Here's your payment link for ${link.memo ?? link.orders?.ref_number ?? 'your order'}:\n\n${link.hosted_url}`
+
   return (
     <div className="pay-detail">
       <div className="pay-detail-main">
@@ -299,14 +309,13 @@ export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWit
           <h4>Checkout URL</h4>
           <div className="pay-detail-side-url">
             <div className="url">{link.hosted_url}</div>
-            <div className="pay-detail-share">
-              <button onClick={() => navigator.clipboard.writeText(link.hosted_url)}>
-                <Icons.doc size={11} /> Copy
-              </button>
-              <button><Icons.wa size={11} style={{ color: 'var(--pt-wa)' }} /> WhatsApp</button>
-              <button><Icons.tg size={11} style={{ color: 'var(--pt-tg)' }} /> Telegram</button>
-              <button><Icons.em size={11} /> Email</button>
-            </div>
+            <PaySendWidget
+              conversationId={conversationId}
+              customerName={customerName}
+              channelType={channelType}
+              messageText={shareMessageText}
+              url={link.hosted_url}
+            />
           </div>
         </div>
 
