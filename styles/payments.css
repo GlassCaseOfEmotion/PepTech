@@ -722,3 +722,112 @@
   font-size: 12px; color: var(--pt-fg-3);
   background: oklch(0.985 0.002 100); border-top: 0.5px solid var(--pt-line-soft);
 }
+
+/* ─── Smart send widget (PaySendWidget) ──────────────────────────────────── */
+/* Animations reuse ptPacSpring and ptPacProgress from peptech.css */
+
+.pay-comp-snd {
+  position: relative;
+  min-height: 72px;
+}
+.pay-comp-snd-primary {
+  width: 100%;
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 14px;
+  background: var(--pt-fg); color: var(--pt-bg);
+  border: 0; border-radius: 8px;
+  font-size: 12.5px; font-weight: 500; font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.pay-comp-snd-primary:hover { opacity: 0.82; }
+.pay-comp-snd-primary .label { flex: 1; text-align: left; }
+.pay-comp-snd-copy {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  width: 100%; margin-top: 7px;
+  padding: 0; background: none; border: 0;
+  font-size: 11px; color: var(--pt-fg-4); cursor: pointer; font-family: inherit;
+}
+.pay-comp-snd-copy:hover { color: var(--pt-fg-2); }
+.pay-comp-snd-copy.copied { color: var(--pt-ok); }
+
+/* Overlay */
+.pay-comp-snd-overlay {
+  position: absolute; inset: 0;
+  background: var(--pt-surface); border: 0.5px solid var(--pt-line);
+  border-radius: 8px;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 8px;
+  padding: 12px 14px;
+  animation: paySndIn 0.16s ease both;
+}
+@keyframes paySndIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.pay-comp-snd-confirm-lbl {
+  font-size: 11.5px; font-weight: 500; color: var(--pt-fg-2); text-align: center;
+  line-height: 1.3;
+}
+.pay-comp-snd-confirm-msg {
+  font-size: 11px; color: var(--pt-fg-3);
+  background: var(--pt-surface-2); border: 0.5px solid var(--pt-line);
+  border-radius: 5px; padding: 6px 8px;
+  line-height: 1.45; width: 100%; text-align: left;
+  white-space: pre-line;
+}
+.pay-comp-snd-confirm-btns { display: flex; gap: 6px; width: 100%; }
+.pay-comp-snd-ok {
+  flex: 1; padding: 7px 0;
+  background: var(--pt-fg); color: var(--pt-bg);
+  border: 0; border-radius: 6px;
+  font-size: 12px; font-weight: 500; font-family: inherit; cursor: pointer;
+}
+.pay-comp-snd-ok:hover { opacity: 0.85; }
+.pay-comp-snd-cancel {
+  padding: 7px 12px;
+  background: none; border: 0.5px solid var(--pt-line); border-radius: 6px;
+  font-size: 12px; color: var(--pt-fg-3); font-family: inherit; cursor: pointer;
+}
+.pay-comp-snd-cancel:hover { background: var(--pt-surface-2); }
+
+/* Progress bar — reuses ptPacProgress keyframe */
+.pay-comp-snd-progress {
+  width: 64px; height: 2.5px;
+  background: var(--pt-line); border-radius: 999px; overflow: hidden;
+}
+.pay-comp-snd-progress-fill {
+  height: 100%; width: 35%;
+  background: var(--pt-fg); border-radius: 999px;
+  animation: ptPacProgress 1.3s ease-in-out infinite;
+}
+
+/* Sent — reuses ptPacSpring keyframe */
+.pay-comp-snd-check {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--pt-ok-soft); color: var(--pt-ok);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700;
+  animation: ptPacSpring 400ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.pay-comp-snd-goto {
+  padding: 5px 14px;
+  background: none; border: 0.5px solid var(--pt-line); border-radius: 6px;
+  font-size: 11.5px; color: var(--pt-fg-3); font-family: inherit; cursor: pointer;
+  transition: background 120ms, transform 120ms;
+  animation: paySndIn 0.3s 0.25s ease both;
+}
+.pay-comp-snd-goto:hover { background: var(--pt-surface-2); transform: translateX(1px); }
+
+/* Error */
+.pay-comp-snd-err-icon {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: oklch(from var(--pt-danger) l c h / 0.1); color: var(--pt-danger);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  animation: ptPacSpring 300ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.pay-comp-snd-err-msg {
+  font-size: 11px; color: var(--pt-fg-3); text-align: center; line-height: 1.45;
+}
