@@ -227,11 +227,16 @@ export async function createPaymentLink(orderId: string, payCurrency: string, me
       .select()
       .single()
 
-    if (error) return { error: error.message }
+    if (error) {
+      console.error('[createPaymentLink] DB insert failed:', error.message)
+      return { error: error.message }
+    }
 
     revalidatePath('/payments')
     return { link: data as CryptoPaymentLink }
   } catch (e) {
-    return { error: e instanceof Error ? e.message : 'Unknown error' }
+    const msg = e instanceof Error ? e.message : 'Unknown error'
+    console.error('[createPaymentLink] Unhandled error:', msg)
+    return { error: msg }
   }
 }

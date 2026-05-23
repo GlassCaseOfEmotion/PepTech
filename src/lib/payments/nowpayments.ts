@@ -44,6 +44,7 @@ export async function createNowPayment(input: CreatePaymentInput): Promise<Creat
   })
   if (!res.ok) {
     const text = await res.text()
+    console.error('[NOWPayments] createNowPayment failed', res.status, text)
     throw new Error(`NOWPayments error ${res.status}: ${text}`)
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

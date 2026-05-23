@@ -40,6 +40,7 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [showErrorDetails, setShowErrorDetails] = useState(false)
   const [createdLink, setCreatedLink] = useState<CreatedLink | null>(null)
   const [copied, setCopied] = useState(false)
   const pickerRef = useRef<HTMLDivElement>(null)
@@ -116,6 +117,7 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
     if (!payCurrency)  { setSubmitError('Select a payment currency'); return }
     setSubmitting(true)
     setSubmitError('')
+    setShowErrorDetails(false)
     const result = await createPaymentLink(foundOrder.id, payCurrency, memo || foundOrder.ref_number)
     setSubmitting(false)
     if (result.error) { setSubmitError(result.error); return }
@@ -288,8 +290,21 @@ export function CreateComposer({ onBack, baseCurrency = 'USD' }: { onBack: () =>
         </div>
 
         {submitError && (
-          <div style={{ fontSize: 12, color: 'var(--pt-danger)', padding: '8px 10px', background: 'oklch(from var(--pt-danger) l c h / 0.08)', borderRadius: 6, marginTop: 4 }}>
-            {submitError}
+          <div style={{ padding: '10px 12px', background: 'oklch(from var(--pt-danger) l c h / 0.07)', border: '0.5px solid oklch(from var(--pt-danger) l c h / 0.25)', borderRadius: 7, marginTop: 4 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--pt-danger)' }}>
+              Couldn&apos;t create payment link — please try again in a moment.
+            </div>
+            <button
+              onClick={() => setShowErrorDetails(s => !s)}
+              style={{ marginTop: 5, background: 'none', border: 'none', padding: 0, fontSize: 11, color: 'var(--pt-fg-4)', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              {showErrorDetails ? 'Hide details ↑' : 'Show details ↓'}
+            </button>
+            {showErrorDetails && (
+              <div style={{ marginTop: 6, padding: '6px 8px', background: 'oklch(from var(--pt-danger) l c h / 0.06)', borderRadius: 4, fontFamily: 'var(--pt-mono)', fontSize: 10.5, color: 'var(--pt-fg-3)', lineHeight: 1.5, wordBreak: 'break-all' }}>
+                {submitError}
+              </div>
+            )}
           </div>
         )}
 
