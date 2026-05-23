@@ -5,7 +5,7 @@ import { Icons } from '@/lib/icons'
 import type { CryptoPaymentLinkWithOrder } from '@/types/payments-crypto'
 import { PaySendWidget } from './PaySendWidget'
 
-export function ResendPopover({ link }: { link: CryptoPaymentLinkWithOrder }) {
+export function ResendPopover({ link, onOpen }: { link: CryptoPaymentLinkWithOrder; onOpen?: () => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -31,7 +31,7 @@ export function ResendPopover({ link }: { link: CryptoPaymentLinkWithOrder }) {
       <button
         className="pay-row-act"
         title="Resend"
-        onClick={e => { e.stopPropagation(); setOpen(v => !v) }}
+        onClick={e => { e.stopPropagation(); if (!open) onOpen?.(); setOpen(v => !v) }}
       >
         <Icons.send size={12} />
       </button>

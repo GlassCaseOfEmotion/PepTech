@@ -127,6 +127,15 @@ function exportCsv(links: CryptoPaymentLinkWithOrder[], currency: string) {
   URL.revokeObjectURL(url)
 }
 
+// ── Date filter ms lookup ────────────────────────────────────────────────────
+
+const DATE_MS: Record<string, number> = {
+  '7d':  7  * 86400000,
+  '30d': 30 * 86400000,
+  '90d': 90 * 86400000,
+  'all': Infinity,
+}
+
 // ── Tab definitions ──────────────────────────────────────────────────────────
 
 const TAB_FILTERS: Record<string, (l: CryptoPaymentLinkWithOrder) => boolean> = {
@@ -175,13 +184,6 @@ export function PaymentsView({
   const [showDateMenu, setShowDateMenu] = useState(false)
   const [cancelId,   setCancelId]   = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
-
-  const DATE_MS: Record<string, number> = {
-    '7d':  7  * 86400000,
-    '30d': 30 * 86400000,
-    '90d': 90 * 86400000,
-    'all': Infinity,
-  }
 
   const tabFiltered = paymentLinks.filter(TAB_FILTERS[tab] ?? (() => true))
   const filtered = tabFiltered.filter(l => {
@@ -246,7 +248,7 @@ export function PaymentsView({
           <button
             key={t.id}
             className={`pay-tab${tab === t.id ? ' is-on' : ''}`}
-            onClick={() => setTab(t.id)}
+            onClick={() => { setTab(t.id); setCancelId(null) }}
           >
             {t.label} <span className="pay-tab-num">{t.count}</span>
           </button>
@@ -336,7 +338,6 @@ export function PaymentsView({
                 <th className="r">Amount</th>
                 <th>Paid with</th>
                 <th>State</th>
-                {/* DECISION NEEDED — "Sent via": channel not tracked. Showing dash until tracked. */}
                 <th>Sent via</th>
                 <th className="r">Expires</th>
                 <th style={{ width: 90 }}></th>
@@ -411,39 +412,41 @@ export function PaymentsView({
                           onClick={() => navigator.clipboard.writeText(l.hosted_url)}>
                           <Icons.doc size={12} />
                         </button>
-                        <ResendPopover link={l} />
-                        {cancelId === l.id ? (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <ResendPopover key={cancelId ?? 'none'} link={l} onOpen={() => setCancelId(null)} />
+                        {!['expired', 'failed', 'finished', 'refunded'].includes(l.status) && (
+                          cancelId === l.id ? (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <button
+                                className="pay-row-act"
+                                style={{ color: 'var(--pt-danger)', fontSize: 10, padding: '0 4px', width: 'auto' }}
+                                disabled={cancelling}
+                                onClick={async e => {
+                                  e.stopPropagation()
+                                  setCancelling(true)
+                                  await cancelPaymentLink(l.id)
+                                  setCancelling(false)
+                                  setCancelId(null)
+                                  router.refresh()
+                                }}
+                              >
+                                {cancelling ? '…' : 'Confirm'}
+                              </button>
+                              <button
+                                className="pay-row-act"
+                                onClick={e => { e.stopPropagation(); setCancelId(null) }}
+                              >
+                                <Icons.x size={10} />
+                              </button>
+                            </span>
+                          ) : (
                             <button
                               className="pay-row-act"
-                              style={{ color: 'var(--pt-danger)', fontSize: 10, padding: '0 4px', width: 'auto' }}
-                              disabled={cancelling}
-                              onClick={async e => {
-                                e.stopPropagation()
-                                setCancelling(true)
-                                await cancelPaymentLink(l.id)
-                                setCancelling(false)
-                                setCancelId(null)
-                                router.refresh()
-                              }}
+                              title="Cancel link"
+                              onClick={e => { e.stopPropagation(); setCancelId(l.id) }}
                             >
-                              {cancelling ? '…' : 'Confirm'}
+                              <Icons.more size={12} />
                             </button>
-                            <button
-                              className="pay-row-act"
-                              onClick={e => { e.stopPropagation(); setCancelId(null) }}
-                            >
-                              <Icons.x size={10} />
-                            </button>
-                          </span>
-                        ) : (
-                          <button
-                            className="pay-row-act"
-                            title="Cancel link"
-                            onClick={e => { e.stopPropagation(); setCancelId(l.id) }}
-                          >
-                            <Icons.more size={12} />
-                          </button>
+                          )
                         )}
                       </span>
                     </td>
