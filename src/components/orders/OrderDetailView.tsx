@@ -13,6 +13,7 @@ import { AttachmentsCard } from './AttachmentsCard'
 import { ShipOrderModal } from './ShipOrderModal'
 import { EditOrderModal } from './EditOrderModal'
 import { formatAmount } from '@/lib/currency'
+import { CRYPTO_ASSETS } from '@/lib/payments'
 
 const CH_MAP: Record<string, 'wa' | 'tg' | 'em'> = { whatsapp: 'wa', telegram: 'tg', email: 'em' }
 const CH_NAMES: Record<string, string> = { wa: 'WhatsApp', tg: 'Telegram', em: 'Email' }
@@ -147,12 +148,15 @@ export function OrderDetailView({
     })
   }
 
-  const isCryptoAsset = !['bank_transfer', 'cash', 'customer_chooses'].includes(order.payment_asset)
+  const showCryptoLinkField =
+    cryptoPaymentLink !== null ||
+    order.payment_asset === 'customer_chooses' ||
+    CRYPTO_ASSETS.has(order.payment_asset)
 
   async function handleSendPaymentDetails() {
     setSendState('sending')
     setSendError('')
-    const checkoutUrl = isCryptoAsset && cryptoPaymentLink ? cryptoPaymentLink.hosted_url : undefined
+    const checkoutUrl = CRYPTO_ASSETS.has(order.payment_asset) && cryptoPaymentLink ? cryptoPaymentLink.hosted_url : undefined
     const result = await sendOrderPaymentDetails(order.id, checkoutUrl)
       .catch(e => ({ error: e instanceof Error ? e.message : 'Unknown error' }))
     if ('error' in result) {
@@ -284,50 +288,6 @@ export function OrderDetailView({
                 Mark as received
               </button>
             </div>
-          </div>
-
-          <div className="pt-od-payment-body">
-            <span className="pt-od-payment-asset">
-              {PAYMENT_LABELS[order.payment_asset as keyof typeof PAYMENT_LABELS] ?? order.payment_asset}
-            </span>
-
-            {isCryptoAsset && cryptoPaymentLink && (
-              <a
-                href="/payments"
-                style={{
-                  fontSize: 11,
-                  color: cryptoPaymentLink.status === 'finished' ? 'var(--pt-ok)' : 'var(--pt-fg-3)',
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  textDecoration: 'none',
-                }}
-              >
-                {cryptoPaymentLink.status === 'finished' ? '✓ Confirmed' :
-                 cryptoPaymentLink.status === 'confirming' ? '↻ Confirming' :
-                 '● Waiting for payment'} →
-              </a>
-            )}
-            {isCryptoAsset && !cryptoPaymentLink && (
-              <a
-                href="/payments"
-                className="pt-btn pt-btn-ghost"
-                style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-              >
-                <Icons.send size={10} /> Create payment link →
-              </a>
-            )}
-
-            {!isCryptoAsset && order.payment_address && (
-              <span className="pt-od-payment-addr mono">{order.payment_address}</span>
-            )}
-
-            {order.payment_asset === 'customer_chooses' && (
-              <span style={{ fontSize: 11, color: 'var(--pt-fg-4)' }}>All configured methods offered</span>
-            )}
-            {order.exchange_rate && (
-              <span style={{ fontSize: 11, color: 'var(--pt-fg-4)' }}>
-                rate: 1 {PAYMENT_BADGE[order.payment_asset]?.key?.toUpperCase() ?? order.payment_asset} = {formatAmount(order.exchange_rate, order.currency ?? 'USD')}
-              </span>
-            )}
           </div>
 
           {showConfirmDialog && (
@@ -490,6 +450,28 @@ export function OrderDetailView({
                   <div className="pt-od-pay-lbl">Reference</div>
                   <div className="pt-od-pay-val mono">PT-{order.ref_number}</div>
                 </div>
+                {showCryptoLinkField && (
+                  <div>
+                    <div className="pt-od-pay-lbl">Crypto link</div>
+                    <div className="pt-od-pay-val">
+                      {cryptoPaymentLink ? (
+                        <a
+                          href={`/payments?link=${cryptoPaymentLink.id}`}
+                          style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '0.5px solid var(--pt-cool)', background: 'var(--pt-cool-soft)', color: 'var(--pt-cool)', textDecoration: 'none', display: 'inline-block' }}
+                        >
+                          View in Payments →
+                        </a>
+                      ) : (
+                        <a
+                          href="/payments"
+                          style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '0.5px solid var(--pt-cool)', background: 'var(--pt-cool-soft)', color: 'var(--pt-cool)', textDecoration: 'none', display: 'inline-block' }}
+                        >
+                          Create payment link →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </section>
