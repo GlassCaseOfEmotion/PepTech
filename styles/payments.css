@@ -571,3 +571,154 @@
 .pay-comp-adv-toggle:hover { color: var(--pt-fg-3); }
 .pay-comp-adv-toggle svg { transition: transform 0.15s; }
 .pay-comp-adv-toggle.is-open svg { transform: rotate(180deg); }
+
+/* ─── Customer-facing checkout page ──────────────────────────────────────── */
+.pay-cust-frame {
+  width: 100%; height: 100%;
+  background:
+    radial-gradient(ellipse at 30% -20%, oklch(0.95 0.04 var(--pt-accent-h)) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 110%, oklch(0.94 0.03 240) 0%, transparent 50%),
+    oklch(0.97 0.003 100);
+  padding: 36px;
+  display: grid; place-items: center;
+  min-height: 100dvh;
+}
+.pay-cust-card {
+  width: 100%; max-width: 480px;
+  background: oklch(1 0 0);
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 0.5px oklch(0.85 0.005 100),
+    0 24px 48px -16px oklch(0.5 0.02 100 / 0.18),
+    0 4px 12px -2px oklch(0.5 0.02 100 / 0.08);
+  overflow: hidden;
+}
+.pay-cust-hd {
+  padding: 22px 24px 16px;
+  border-bottom: 0.5px solid var(--pt-line-soft);
+  display: flex; align-items: center; gap: 12px;
+}
+.pay-cust-hd-mark {
+  width: 36px; height: 36px; border-radius: 9px;
+  background: var(--pt-fg); color: var(--pt-bg);
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.pay-cust-hd-name { font-size: 15px; font-weight: 600; letter-spacing: -0.012em; }
+.pay-cust-hd-sub { font-size: 11.5px; color: var(--pt-fg-3); margin-top: 1px; font-family: var(--pt-mono); }
+.pay-cust-hd-sec {
+  margin-left: auto;
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; color: var(--pt-fg-3); font-family: var(--pt-mono);
+}
+.pay-cust-hd-sec svg { color: var(--pt-ok); }
+
+.pay-cust-amt-block { padding: 22px 24px 14px; }
+.pay-cust-amt-lbl {
+  font-size: 11px; color: var(--pt-fg-3);
+  text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500;
+}
+.pay-cust-amt {
+  font-size: 38px; font-weight: 600; letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums; margin-top: 6px; line-height: 1;
+}
+.pay-cust-amt .cur {
+  font-family: var(--pt-mono); font-size: 22px; color: var(--pt-fg-3); font-weight: 500;
+  margin-right: 4px;
+}
+.pay-cust-amt-desc { font-size: 12.5px; color: var(--pt-fg-2); margin-top: 8px; }
+
+.pay-cust-pay-block {
+  padding: 16px 24px 18px;
+  background: oklch(0.985 0.002 100);
+  border-top: 0.5px solid var(--pt-line-soft);
+}
+.pay-cust-pay-lbl {
+  font-size: 11px; color: var(--pt-fg-3);
+  text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500;
+  margin-bottom: 12px;
+}
+.pay-cust-qr-row {
+  display: grid; grid-template-columns: 124px 1fr; gap: 14px; align-items: center;
+}
+.pay-cust-qr {
+  width: 124px; height: 124px;
+  background: oklch(1 0 0);
+  border: 0.5px solid var(--pt-line); border-radius: 8px;
+  overflow: hidden; display: grid; place-items: center;
+}
+.pay-cust-addr-block { min-width: 0; }
+.pay-cust-addr-lbl {
+  font-size: 10.5px; color: var(--pt-fg-4);
+  text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; margin-bottom: 4px;
+}
+.pay-cust-addr {
+  font-family: var(--pt-mono); font-size: 11.5px;
+  background: oklch(1 0 0); border: 0.5px solid var(--pt-line);
+  border-radius: 5px; padding: 7px 9px;
+  word-break: break-all; line-height: 1.4; color: var(--pt-fg);
+}
+.pay-cust-copy-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 6px;
+}
+.pay-cust-copy-row button {
+  background: oklch(1 0 0); border: 0.5px solid var(--pt-line); border-radius: 5px;
+  padding: 5px 8px; font-size: 11px; font-family: inherit;
+  color: var(--pt-fg-2); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+}
+.pay-cust-copy-row button:hover { background: var(--pt-surface-2); }
+.pay-cust-copy-row button.copied { color: var(--pt-ok); border-color: var(--pt-ok); }
+
+.pay-cust-amt-crypto {
+  margin-top: 12px;
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 8px 11px;
+  background: oklch(1 0 0); border: 0.5px solid var(--pt-line); border-radius: 6px;
+  font-family: var(--pt-mono); font-size: 11.5px; color: var(--pt-fg-2);
+}
+.pay-cust-amt-crypto b { color: var(--pt-fg); font-weight: 600; font-size: 13px; }
+.pay-cust-amt-crypto .live {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: var(--pt-fg-4);
+}
+.pay-cust-amt-crypto .live::before {
+  content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--pt-ok);
+  animation: payPulse 1.6s ease-in-out infinite;
+}
+
+.pay-cust-status {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-radius: 8px; margin-top: 14px; font-size: 12px;
+}
+.pay-cust-status.waiting  { background: var(--pt-cool-soft); color: var(--pt-cool); }
+.pay-cust-status.confirming { background: oklch(0.97 0.02 80); color: oklch(0.5 0.12 80); }
+.pay-cust-status.finished { background: var(--pt-ok-soft); color: var(--pt-ok); }
+.pay-cust-status.expired  { background: var(--pt-warn-soft); color: var(--pt-warn); }
+.pay-cust-status.failed   { background: var(--pt-err-soft); color: var(--pt-err); }
+.pay-cust-status .ic {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: oklch(from currentColor l c h / 0.18);
+  display: grid; place-items: center; flex-shrink: 0;
+}
+.pay-cust-status b { display: block; font-size: 12.5px; font-weight: 600; }
+.pay-cust-status .meta { font-size: 11px; opacity: 0.8; margin-top: 1px; }
+
+.pay-cust-timer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 16px; border-top: 0.5px solid var(--pt-line-soft);
+  font-size: 11px; color: var(--pt-fg-3); background: oklch(1 0 0);
+}
+.pay-cust-timer .clk { font-family: var(--pt-mono); font-weight: 600; color: var(--pt-fg); }
+
+.pay-cust-ft {
+  padding: 14px 24px; font-size: 10.5px; color: var(--pt-fg-4);
+  text-align: center; background: var(--pt-bg-side); border-top: 0.5px solid var(--pt-line-soft);
+}
+.pay-cust-ft a { color: var(--pt-fg-3); text-decoration: none; }
+.pay-cust-ft .powered { display: inline-flex; align-items: center; gap: 4px; }
+
+.pay-cust-no-addr {
+  padding: 20px 24px; text-align: center;
+  font-size: 12px; color: var(--pt-fg-3);
+  background: oklch(0.985 0.002 100); border-top: 0.5px solid var(--pt-line-soft);
+}
