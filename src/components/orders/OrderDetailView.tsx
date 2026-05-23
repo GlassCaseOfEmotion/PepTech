@@ -154,7 +154,7 @@ export function OrderDetailView({
   async function handleSendPaymentDetails() {
     setSendState('sending')
     setSendError('')
-    const checkoutUrl = CRYPTO_ASSETS.has(order.payment_asset ?? '') && cryptoPaymentLink ? cryptoPaymentLink.hosted_url : undefined
+    const checkoutUrl = selectedAsset && CRYPTO_ASSETS.has(selectedAsset) && cryptoPaymentLink ? cryptoPaymentLink.hosted_url : undefined
     const result = await sendOrderPaymentDetails(order.id, checkoutUrl)
       .catch(e => ({ error: e instanceof Error ? e.message : 'Unknown error' }))
     if ('error' in result) {
