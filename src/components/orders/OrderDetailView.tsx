@@ -670,7 +670,7 @@ export function OrderDetailView({
                         </a>
                       ) : (
                         <a
-                          href="/payments"
+                          href={`/payments?create=${order.id}`}
                           style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '0.5px solid var(--pt-cool)', background: 'var(--pt-cool-soft)', color: 'var(--pt-cool)', textDecoration: 'none', display: 'inline-block' }}
                         >
                           Create payment link →
