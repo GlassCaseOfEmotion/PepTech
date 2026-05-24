@@ -11,6 +11,9 @@ import { CustomerDetailBody } from '@/components/customers/CustomerDetailBody'
 import { computeSupply } from '@/types/protocols'
 import { formatAmount } from '@/lib/currency'
 import type { ProductProtocol, CustomerProtocolOverride, CycleEntry } from '@/types/protocols'
+import { ConvertToCustomerButton } from '@/components/contacts/ConvertToCustomerButton'
+import { AcquisitionSourceCard } from '@/components/contacts/AcquisitionSourceCard'
+import type { AcquisitionSource } from '@/app/contacts/actions'
 
 const CH_LABEL: Record<string, string> = { whatsapp: 'WhatsApp', telegram: 'Telegram', email: 'Email' }
 const CH_KEY: Record<string, string> = { whatsapp: 'wa', telegram: 'tg', email: 'em' }
@@ -118,7 +121,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
   const [{ data: customer }, { data: notes }, { data: orders }, { data: tenantRow }, { data: activityRaw }, { data: conversation }, { data: automationRunsRaw }] = await Promise.all([
     supabase
       .from('customers')
-      .select('id, display_name, trust_score, ltv, created_at, customer_channels(channel_type, display_handle, is_primary), customer_tags(tag)')
+      .select('id, display_name, trust_score, ltv, created_at, lifecycle_stage, acquisition_source, acquisition_source_note, referred_by_customer_id, converted_at, customer_channels(channel_type, display_handle, is_primary), customer_tags(tag)')
       .eq('id', customerId)
       .single(),
     supabase
@@ -164,6 +167,8 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
   const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
   const activity = (activityRaw ?? []) as ActivityItem[]
   const automationRuns = (automationRunsRaw ?? []) as AutomationRunRow[]
+  const lifecycleStage = (customer.lifecycle_stage as 'lead' | 'customer' | null) ?? 'customer'
+  const isLead = lifecycleStage === 'lead'
 
   const primary = customer.customer_channels?.find(c => c.is_primary) ?? customer.customer_channels?.[0]
   const chKey = primary ? CH_KEY[primary.channel_type] ?? 'wa' : 'wa'
@@ -283,10 +288,12 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
               </div>
               {/* Mobile hero stats — hidden on desktop via CSS */}
               <div className="pt-cu-hd-mobile-stats">
-                <div className="pt-cu-hd-stat">
-                  <strong>{formatAmount(customer.ltv, baseCurrency)}</strong>
-                  <span>LTV</span>
-                </div>
+                {!isLead && (
+                  <div className="pt-cu-hd-stat">
+                    <strong>{formatAmount(customer.ltv, baseCurrency)}</strong>
+                    <span>LTV</span>
+                  </div>
+                )}
                 <div className="pt-cu-hd-stat">
                   <strong>{orders?.length ?? 0}</strong>
                   <span>Orders</span>
@@ -298,10 +305,12 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
               </div>
             </div>
             {/* Trust pill — hidden on desktop via CSS, shown mobile top-right */}
-            <div className="pt-cu-hd-trust-pill">
-              <div className="pt-cu-hd-trust-num">{customer.trust_score}</div>
-              <div className="pt-cu-hd-trust-lbl">Trust</div>
-            </div>
+            {!isLead && (
+              <div className="pt-cu-hd-trust-pill">
+                <div className="pt-cu-hd-trust-num">{customer.trust_score}</div>
+                <div className="pt-cu-hd-trust-lbl">Trust</div>
+              </div>
+            )}
           </div>
           <div className="pt-cu-hd-actions">
             <AddNoteHeaderButton />
@@ -313,6 +322,9 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
               <ChIcon size={12} /> Message
             </Link>
             <CustomerNewOrderButton customerId={customer.id} customerName={customer.display_name} />
+            {isLead && (
+              <ConvertToCustomerButton customerId={customer.id} currentStage="lead" />
+            )}
           </div>
         </div>
 
@@ -320,18 +332,22 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
 
           {/* ── Stats strip ── */}
           <div className="pt-cu-strip">
-            <div className="pt-cu-stat">
-              <div className="lbl">LTV</div>
-              <div className="val mono">{formatAmount(customer.ltv, baseCurrency)}</div>
-            </div>
+            {!isLead && (
+              <div className="pt-cu-stat">
+                <div className="lbl">LTV</div>
+                <div className="val mono">{formatAmount(customer.ltv, baseCurrency)}</div>
+              </div>
+            )}
             <div className="pt-cu-stat">
               <div className="lbl">Orders</div>
               <div className="val mono">{totalOrders}</div>
             </div>
-            <div className="pt-cu-stat">
-              <div className="lbl">Avg order</div>
-              <div className="val mono">{formatAmount(avgOrder, baseCurrency)}</div>
-            </div>
+            {!isLead && (
+              <div className="pt-cu-stat">
+                <div className="lbl">Avg order</div>
+                <div className="val mono">{formatAmount(avgOrder, baseCurrency)}</div>
+              </div>
+            )}
             <div className="pt-cu-stat">
               <div className="lbl">Last order</div>
               <div className="val">{lastOrderDate}</div>
@@ -340,11 +356,22 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
               <div className="lbl">Channel</div>
               <div className="val pt-cu-stat-ch"><ChIcon size={11} /> {chLabel}</div>
             </div>
-            <div className={`pt-cu-stat pt-cu-trust pt-trust-${trustCls}`}>
-              <div className="lbl">Trust</div>
-              <div className="val mono">{customer.trust_score}<span>/100</span></div>
-            </div>
+            {!isLead && (
+              <div className={`pt-cu-stat pt-cu-trust pt-trust-${trustCls}`}>
+                <div className="lbl">Trust</div>
+                <div className="val mono">{customer.trust_score}<span>/100</span></div>
+              </div>
+            )}
           </div>
+
+          {isLead && (
+            <AcquisitionSourceCard
+              customerId={customer.id}
+              initialSource={(customer.acquisition_source as AcquisitionSource | null) ?? null}
+              initialNote={(customer.acquisition_source_note as string | null) ?? null}
+              initialReferredBy={(customer.referred_by_customer_id as string | null) ?? null}
+            />
+          )}
 
           <CustomerDetailBody
             orders={
@@ -395,9 +422,9 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                 </div>
               </section>
             }
-            cycles={<ActiveCyclesCard cycles={cycles} customerId={customer.id} />}
+            cycles={isLead ? undefined : <ActiveCyclesCard cycles={cycles} customerId={customer.id} />}
             notes={<CustomerNoteCard customerId={customer.id} initialNotes={notes ?? []} />}
-            trust={
+            trust={isLead ? undefined : (
               <section className="pt-card">
                 <header className="pt-card-hd">
                   <div><h3>Trust score</h3><p>Starts at 70 · grows with history</p></div>
@@ -427,27 +454,37 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                   </ul>
                 </div>
               </section>
-            }
+            )}
             details={
-              <section className="pt-card">
-                <header className="pt-card-hd"><div><h3>Details</h3></div></header>
-                <div className="pt-card-body" style={{ padding: 0 }}>
-                  <dl className="pt-cu-dl">
-                    <dt>Tags</dt>
-                    <CustomerTagsField customerId={customer.id} initialTags={tags} />
-                    <dt>Address</dt>
-                    <dd>{fmtAddr ?? <span style={{ color: 'var(--pt-fg-4)', fontSize: 12 }}>None on file</span>}</dd>
-                    <dt>Pay methods</dt>
-                    <dd>
-                      {payMethods.length > 0
-                        ? <ul className="pt-cu-pay-list">{payMethods.map(p => <li key={p} className="mono">{p}</li>)}</ul>
-                        : <span style={{ color: 'var(--pt-fg-4)', fontSize: 12 }}>None</span>}
-                    </dd>
-                    <dt>Joined</dt>
-                    <dd>{joined}</dd>
-                  </dl>
-                </div>
-              </section>
+              <>
+                <section className="pt-card">
+                  <header className="pt-card-hd"><div><h3>Details</h3></div></header>
+                  <div className="pt-card-body" style={{ padding: 0 }}>
+                    <dl className="pt-cu-dl">
+                      <dt>Tags</dt>
+                      <CustomerTagsField customerId={customer.id} initialTags={tags} />
+                      <dt>Address</dt>
+                      <dd>{fmtAddr ?? <span style={{ color: 'var(--pt-fg-4)', fontSize: 12 }}>None on file</span>}</dd>
+                      <dt>Pay methods</dt>
+                      <dd>
+                        {payMethods.length > 0
+                          ? <ul className="pt-cu-pay-list">{payMethods.map(p => <li key={p} className="mono">{p}</li>)}</ul>
+                          : <span style={{ color: 'var(--pt-fg-4)', fontSize: 12 }}>None</span>}
+                      </dd>
+                      <dt>Joined</dt>
+                      <dd>{joined}</dd>
+                    </dl>
+                  </div>
+                </section>
+                {!isLead && (
+                  <AcquisitionSourceCard
+                    customerId={customer.id}
+                    initialSource={(customer.acquisition_source as AcquisitionSource | null) ?? null}
+                    initialNote={(customer.acquisition_source_note as string | null) ?? null}
+                    initialReferredBy={(customer.referred_by_customer_id as string | null) ?? null}
+                  />
+                )}
+              </>
             }
             activity={
               <section className="pt-card">
