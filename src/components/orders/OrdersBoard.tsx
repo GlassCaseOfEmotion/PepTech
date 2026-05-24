@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Icons } from '@/lib/icons'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PAYMENT_BADGE } from '@/types/payments'
 import type { OrderCard, OrderStatus } from '@/types/orders'
 import { formatAmount } from '@/lib/currency'
+import { CH_ICONS, NEXT_STATUS, NEXT_LABEL, initials } from './ordersHelpers'
 
 export const COLUMNS: { id: OrderStatus; label: string; caption: string }[] = [
   { id: 'created',    label: 'Created',           caption: 'Payment method not set yet' },
@@ -16,29 +16,10 @@ export const COLUMNS: { id: OrderStatus; label: string; caption: string }[] = [
   { id: 'delivered',  label: 'Delivered',         caption: 'Closed' },
 ]
 
-const CH_ICONS: Record<string, React.FC<{ size?: number }>> = { wa: Icons.wa, tg: Icons.tg, em: Icons.em }
-
-const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
-  confirming: 'packing',
-  packing: 'shipped',
-  shipped: 'delivered',
-}
-
-const NEXT_LABEL: Partial<Record<OrderStatus, string>> = {
-  confirming: 'Confirm payment →',
-  packing: 'Mark packed →',
-  shipped: 'Mark delivered →',
-}
-
 function fmtAge(minsAgo: number) {
   if (minsAgo < 60) return `${minsAgo}m`
   if (minsAgo < 1440) return `${Math.floor(minsAgo / 60)}h`
   return `${Math.floor(minsAgo / 1440)}d`
-}
-
-function initials(name: string) {
-  const up = name.match(/[A-Z]/g)
-  return (up && up.length >= 2 ? up.slice(0, 2) : [name[0] ?? '?']).join('')
 }
 
 function OrderCardUI({ order: o, pulse, onDragStart, onDragEnd, onAdvance, isDragging, onClick }: {

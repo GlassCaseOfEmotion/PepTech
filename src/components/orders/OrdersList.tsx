@@ -1,12 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { Icons } from '@/lib/icons'
 import { PAYMENT_BADGE } from '@/types/payments'
 import type { OrderCard, OrderStatus } from '@/types/orders'
 import { formatAmount } from '@/lib/currency'
-
-const CH_ICONS: Record<string, React.FC<{ size?: number }>> = { wa: Icons.wa, tg: Icons.tg, em: Icons.em }
+import { CH_ICONS, NEXT_STATUS, NEXT_LABEL, initials } from './ordersHelpers'
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
   created:    'Created',
@@ -15,23 +13,6 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   packing:    'Packing',
   shipped:    'Shipped',
   delivered:  'Delivered',
-}
-
-const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
-  confirming: 'packing',
-  packing: 'shipped',
-  shipped: 'delivered',
-}
-
-const NEXT_LABEL: Partial<Record<OrderStatus, string>> = {
-  confirming: 'Confirm payment →',
-  packing: 'Mark packed →',
-  shipped: 'Mark delivered →',
-}
-
-function initials(name: string) {
-  const up = name.match(/[A-Z]/g)
-  return (up && up.length >= 2 ? up.slice(0, 2) : [name[0] ?? '?']).join('')
 }
 
 function fmtAge(iso: string): string {
