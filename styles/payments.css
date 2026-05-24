@@ -229,6 +229,7 @@
   padding: 22px;
   min-height: 0;
   overflow: auto;
+  display: flex; flex-direction: column;
 }
 .pay-comp-side h2 { font-size: 17px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.015em; }
 .pay-comp-side .sub { font-size: 12px; color: var(--pt-fg-3); margin-bottom: 20px; }
@@ -317,11 +318,38 @@
 }
 .pay-comp-segctl button.is-on { background: var(--pt-surface); color: var(--pt-fg); font-weight: 500; box-shadow: 0 0 0 0.5px var(--pt-line); }
 
-.pay-comp-cta {
-  margin-top: 18px;
-  display: flex; gap: 8px;
+.pay-comp-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 0.5px solid var(--pt-line-soft);
 }
-.pay-comp-cta .pt-btn-primary { flex: 1; height: 38px; font-size: 13px; }
+.pay-comp-nav-back {
+  appearance: none; border: 0; background: none; padding: 0;
+  font-family: inherit; font-size: 12px; color: var(--pt-fg-3);
+  cursor: pointer; line-height: 1;
+}
+.pay-comp-nav-back:hover { color: var(--pt-fg); }
+.pay-comp-nav-create {
+  appearance: none;
+  background: var(--pt-fg); color: var(--pt-bg);
+  border: 0; border-radius: 6px;
+  font-family: inherit; font-size: 12px; font-weight: 500;
+  padding: 0 11px; height: 28px; cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.12s;
+}
+.pay-comp-nav-create:hover:not(:disabled) { opacity: 0.82; }
+.pay-comp-nav-create:disabled { opacity: 0.38; cursor: not-allowed; }
+
+.pay-comp-cta {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 0.5px solid var(--pt-line-soft);
+  display: flex; gap: 8px; align-items: center;
+}
+.pay-comp-cta .pt-btn { height: 36px; }
+.pay-comp-cta .pt-btn-primary { flex: 1; font-size: 12.5px; white-space: nowrap; }
 
 /* preview pane on the right */
 .pay-comp-pv {

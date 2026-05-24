@@ -189,27 +189,18 @@ export function CreateComposer({ onBack, baseCurrency = 'USD', initialOrderId }:
   return (
     <div className="pay-comp">
       <div className="pay-comp-side">
-        <button
-          className="pt-btn pt-btn-ghost"
-          onClick={onBack}
-          style={{ padding: '3px 8px', fontSize: 11, marginBottom: 14 }}
-        >
-          ← Back
-        </button>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
-          <div>
-            <h2 style={{ margin: 0 }}>Request payment</h2>
-            <p className="sub" style={{ marginTop: 3, marginBottom: 0 }}>Pick an order — the customer pays in crypto, you get USDC.</p>
-          </div>
+        <div className="pay-comp-nav">
+          <button className="pay-comp-nav-back" onClick={onBack}>← Back</button>
           <button
-            className="pt-btn pt-btn-primary"
+            className="pay-comp-nav-create"
             onClick={handleSubmit}
             disabled={submitting || !foundOrder || !payCurrency || !!createdLink}
-            style={{ fontSize: 12, flexShrink: 0, marginTop: 2 }}
           >
             {submitting ? 'Creating…' : createdLink ? 'Created ✓' : 'Create link →'}
           </button>
         </div>
+        <h2>Request payment</h2>
+        <p className="sub">Pick an order — the customer pays in crypto, you get USDC.</p>
 
         {/* ── Order picker ─────────────────────────────────────── */}
         <div className="pay-comp-section">
