@@ -220,6 +220,8 @@
 /* Orders list view ─────────────────────────────────── */
 
 .pt-or-list-wrap {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
   padding: 14px 22px 22px;
 }
 
@@ -227,14 +229,12 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
-  background: var(--pt-surface);
-  border: 0.5px solid var(--pt-line);
-  border-radius: 8px;
-  overflow: hidden;
 }
 
 .pt-or-list thead {
-  background: oklch(from var(--pt-fg) l c h / 0.03);
+  position: sticky; top: 0;
+  background: var(--pt-bg);
+  z-index: 1;
 }
 
 .pt-or-list th {
@@ -266,13 +266,9 @@
 
 .pt-or-list-row td {
   padding: 10px 12px;
-  border-bottom: 0.5px solid var(--pt-line);
+  border-bottom: 0.5px solid var(--pt-line-soft);
   vertical-align: middle;
   color: var(--pt-fg);
-}
-
-.pt-or-list-row:last-child td {
-  border-bottom: none;
 }
 
 .pt-or-list-row:hover {
