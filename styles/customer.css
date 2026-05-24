@@ -389,3 +389,23 @@
   .pt-cu-hd-trust-pill   { display: none !important; }
 }
 
+/* ── Row leaving animation (lifecycle stage change) ─────────────────────── */
+@keyframes ptRowLeaving {
+  0%   { opacity: 1; background-color: var(--pt-ok-soft); }
+  70%  { opacity: 1; background-color: var(--pt-ok-soft); }
+  100% { opacity: 0; background-color: transparent; }
+}
+.pt-row-leaving td { background-color: transparent !important; }
+.pt-row-leaving {
+  animation: ptRowLeaving 850ms ease-out forwards;
+  pointer-events: none;
+}
+.pt-row-success {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--pt-ok);
+  font-size: 11px;
+  font-weight: 500;
+}
+

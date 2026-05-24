@@ -48,9 +48,11 @@ function fmtAge(iso: string): string {
 interface Props {
   leads: Lead[]
   recentConvByCustomer: Record<string, { channelType: string; lastMessageAt: string | null }>
+  leavingIds?: Set<string>
+  onRowConverted?: (customerId: string, newStage: 'lead' | 'customer') => void
 }
 
-export function LeadsTable({ leads, recentConvByCustomer }: Props) {
+export function LeadsTable({ leads, recentConvByCustomer, leavingIds, onRowConverted }: Props) {
   if (leads.length === 0) {
     return (
       <div className="pt-grid" style={{ gridTemplateColumns: '1fr' }}>
@@ -91,8 +93,9 @@ export function LeadsTable({ leads, recentConvByCustomer }: Props) {
                 const chKey = channelType ? (CH_KEY[channelType] ?? null) : null
                 const Icon = channelType ? CH_ICONS[channelType] : null
                 const lastMsg = recentConv?.lastMessageAt ?? null
+                const isLeaving = leavingIds?.has(l.id) ?? false
                 return (
-                  <tr key={l.id}>
+                  <tr key={l.id} className={isLeaving ? 'pt-row-leaving' : undefined}>
                     <td>
                       <div className="pt-cl-cust">
                         <div className="pt-thread-av" data-channel={chKey ?? 'wa'}>
@@ -105,6 +108,11 @@ export function LeadsTable({ leads, recentConvByCustomer }: Props) {
                           <Link href={`/customers/${l.id}`} className="pt-link">
                             {l.display_name}
                           </Link>
+                          {isLeaving && (
+                            <span className="pt-row-success">
+                              <Icons.check size={12} /> Marked as customer
+                            </span>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -118,7 +126,13 @@ export function LeadsTable({ leads, recentConvByCustomer }: Props) {
                     <td>{l.acquisition_source ? SOURCE_LABEL[l.acquisition_source] : <span className="pt-cl-no-supply">—</span>}</td>
                     <td className="pt-cl-last-order">{fmtAge(l.created_at)}</td>
                     <td className="pt-cl-last-order">{lastMsg ? fmtAge(lastMsg) : <span className="pt-cl-no-supply">—</span>}</td>
-                    <td><RowMenu customerId={l.id} currentStage="lead" /></td>
+                    <td>
+                      <RowMenu
+                        customerId={l.id}
+                        currentStage="lead"
+                        onSuccess={(stage) => onRowConverted?.(l.id, stage)}
+                      />
+                    </td>
                   </tr>
                 )
               })}

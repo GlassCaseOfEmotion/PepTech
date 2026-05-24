@@ -46,6 +46,8 @@ interface Props {
   hasChannels?: boolean
   onClearFilters?: () => void
   totalCount?: number
+  leavingIds?: Set<string>
+  onRowConverted?: (customerId: string, newStage: 'lead' | 'customer') => void
 }
 
 export function CustomersTable({
@@ -56,6 +58,8 @@ export function CustomersTable({
   hasChannels = false,
   onClearFilters,
   totalCount,
+  leavingIds,
+  onRowConverted,
 }: Props) {
   const router = useRouter()
 
@@ -176,9 +180,10 @@ export function CustomersTable({
                 const tags = c.customer_tags.map(t => t.tag)
                 const supply = supplyStatuses[c.id]
                 const stats = orderStats[c.id]
+                const isLeaving = leavingIds?.has(c.id) ?? false
 
                 return (
-                  <tr key={c.id} onClick={() => router.push(`/customers/${c.id}`)}>
+                  <tr key={c.id} className={isLeaving ? 'pt-row-leaving' : undefined} onClick={() => router.push(`/customers/${c.id}`)}>
                     <td>
                       <div className="pt-cl-cust">
                         <div className="pt-thread-av" data-channel={chKey}>
@@ -191,6 +196,11 @@ export function CustomersTable({
                           {tags.includes('new')     && <span className="pt-tag pt-tag-new">new</span>}
                           {tags.includes('repeat')  && !tags.includes('vip') && <span className="pt-tag pt-tag-soft">repeat</span>}
                           {tags.includes('payment') && <span className="pt-tag pt-tag-warn">payment</span>}
+                          {isLeaving && (
+                            <span className="pt-row-success">
+                              <Icons.check size={12} /> Marked as lead
+                            </span>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -234,7 +244,11 @@ export function CustomersTable({
                         >
                           Message
                         </Link>
-                        <RowMenu customerId={c.id} currentStage="customer" />
+                        <RowMenu
+                          customerId={c.id}
+                          currentStage="customer"
+                          onSuccess={(stage) => onRowConverted?.(c.id, stage)}
+                        />
                       </div>
                     </td>
                   </tr>

@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation'
 import { setLifecycleStage } from '@/app/contacts/actions'
 import { useToast, Toast } from '@/components/ui/Toast'
 
-export function RowMenu({ customerId, currentStage }: {
+export function RowMenu({ customerId, currentStage, onSuccess }: {
   customerId: string
   currentStage: 'lead' | 'customer'
+  onSuccess?: (newStage: 'lead' | 'customer') => void
 }) {
   const [pending, setPending] = useState(false)
   const router = useRouter()
@@ -26,7 +27,11 @@ export function RowMenu({ customerId, currentStage }: {
       showToast(result.error, 'err')
       return
     }
-    router.refresh()
+    if (onSuccess) {
+      onSuccess(targetStage)
+    } else {
+      router.refresh()
+    }
   }
 
   return (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Icons } from '@/lib/icons'
 import { LeadsTable } from './LeadsTable'
 import { CustomersTable } from './CustomersTable'
@@ -41,16 +41,23 @@ export function ContactsListView({
   hasChannels = false,
   recentConvByCustomer,
 }: Props) {
+  const [localContacts, setLocalContacts]   = useState(customers)
+  const [leavingIds, setLeavingIds]         = useState<Set<string>>(new Set())
   const [tab, setTab]                       = useState<'leads' | 'customers'>('leads')
   const [search, setSearch]                 = useState('')
   const [channelFilter, setChannelFilter]   = useState<string | null>(null)
   const [tagFilter, setTagFilter]           = useState<string | null>(null)
   const [noSourceOnly, setNoSourceOnly]     = useState(false)
 
+  // Resync local contacts if the server prop changes (e.g. after router.refresh from another tab)
+  useEffect(() => {
+    setLocalContacts(customers)
+  }, [customers])
+
   // Counts for filter pills — scoped to the active tab's lifecycle stage (unfiltered)
   const { chCounts, tagCounts, tabBaseCount } = useMemo(() => {
     const isLeadsTab = tab === 'leads'
-    const base = customers.filter(c =>
+    const base = localContacts.filter(c =>
       isLeadsTab ? c.lifecycle_stage === 'lead' : c.lifecycle_stage === 'customer'
     )
     const ch: Record<string, number> = { whatsapp: 0, telegram: 0, email: 0 }
@@ -66,11 +73,11 @@ export function ContactsListView({
       if (s === 'low' || s === 'critical') tag.low_supply++
     }
     return { chCounts: ch, tagCounts: tag, tabBaseCount: base.length }
-  }, [customers, tab, supplyStatuses])
+  }, [localContacts, tab, supplyStatuses])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
-    return customers.filter(c => {
+    return localContacts.filter(c => {
       if (q) {
         const handle = c.customer_channels.find(ch => ch.is_primary)?.display_handle ?? ''
         if (!c.display_name.toLowerCase().includes(q) && !handle.toLowerCase().includes(q)) return false
@@ -90,11 +97,27 @@ export function ContactsListView({
       }
       return true
     })
-  }, [customers, search, channelFilter, tagFilter, supplyStatuses])
+  }, [localContacts, search, channelFilter, tagFilter, supplyStatuses])
 
   const leads  = filtered.filter(c => c.lifecycle_stage === 'lead'
     && (!noSourceOnly || c.acquisition_source === null))
   const buyers = filtered.filter(c => c.lifecycle_stage === 'customer')
+
+  function handleRowConverted(customerId: string, newStage: 'lead' | 'customer') {
+    setLeavingIds(prev => new Set(prev).add(customerId))
+
+    // After fade completes, flip lifecycle_stage and clear leaving state
+    setTimeout(() => {
+      setLocalContacts(prev => prev.map(c =>
+        c.id === customerId ? { ...c, lifecycle_stage: newStage } : c
+      ))
+      setLeavingIds(prev => {
+        const next = new Set(prev)
+        next.delete(customerId)
+        return next
+      })
+    }, 850) // 600ms success badge visible + 250ms fade
+  }
 
   function clearFilters() {
     setSearch('')
@@ -108,7 +131,7 @@ export function ContactsListView({
       <div className="pt-page-hd">
         <div>
           <h1>Contacts</h1>
-          <p>{customers.length} contacts across all channels</p>
+          <p>{localContacts.length} contacts across all channels</p>
         </div>
         <div className="pt-page-actions">
           <div className="pt-or-search">
@@ -195,7 +218,12 @@ export function ContactsListView({
       </div>
 
       {tab === 'leads' ? (
-        <LeadsTable leads={leads} recentConvByCustomer={recentConvByCustomer} />
+        <LeadsTable
+          leads={leads}
+          recentConvByCustomer={recentConvByCustomer}
+          leavingIds={leavingIds}
+          onRowConverted={handleRowConverted}
+        />
       ) : (
         <CustomersTable
           customers={buyers}
@@ -204,7 +232,9 @@ export function ContactsListView({
           baseCurrency={baseCurrency}
           hasChannels={hasChannels}
           onClearFilters={clearFilters}
-          totalCount={customers.filter(c => c.lifecycle_stage === 'customer').length}
+          totalCount={localContacts.filter(c => c.lifecycle_stage === 'customer').length}
+          leavingIds={leavingIds}
+          onRowConverted={handleRowConverted}
         />
       )}
     </div>
