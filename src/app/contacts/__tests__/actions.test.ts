@@ -130,7 +130,8 @@ describe('setLifecycleStage', () => {
 
 describe('setAcquisitionSource', () => {
   it('writes the source and optional referred_by_customer_id', async () => {
-    const supabase = makeMockClient({ tenantId: 't1' })
+    const updateCalls: unknown[] = []
+    const supabase = makeMockClient({ tenantId: 't1', updateCalls })
     vi.mocked(createClient).mockResolvedValue(supabase as never)
     vi.mocked(getServerUser).mockResolvedValue({ id: 'u1' } as never)
 
@@ -141,6 +142,11 @@ describe('setAcquisitionSource', () => {
 
     expect(result).toEqual({ success: true })
     expect(supabase.from).toHaveBeenCalledWith('customers')
+    expect(updateCalls[0]).toMatchObject({
+      acquisition_source: 'referral',
+      referred_by_customer_id: 'cust-2',
+      acquisition_source_note: null,
+    })
   })
 
   it('rejects invalid source values', async () => {
@@ -165,12 +171,28 @@ describe('setAcquisitionSource', () => {
   })
 
   it('allows clearing the source by passing null', async () => {
-    const supabase = makeMockClient({ tenantId: 't1' })
+    const updateCalls: unknown[] = []
+    const supabase = makeMockClient({ tenantId: 't1', updateCalls })
     vi.mocked(createClient).mockResolvedValue(supabase as never)
     vi.mocked(getServerUser).mockResolvedValue({ id: 'u1' } as never)
 
     const result = await setAcquisitionSource('cust-1', { source: null })
 
     expect(result).toEqual({ success: true })
+    expect(updateCalls[0]).toMatchObject({
+      acquisition_source: null,
+      referred_by_customer_id: null,
+      acquisition_source_note: null,
+    })
+  })
+
+  it('returns error when not authenticated', async () => {
+    const supabase = makeMockClient({ tenantId: 't1' })
+    vi.mocked(createClient).mockResolvedValue(supabase as never)
+    vi.mocked(getServerUser).mockResolvedValue(null)
+
+    const result = await setAcquisitionSource('cust-1', { source: 'referral' })
+
+    expect(result).toEqual({ error: 'Unauthorized' })
   })
 })
