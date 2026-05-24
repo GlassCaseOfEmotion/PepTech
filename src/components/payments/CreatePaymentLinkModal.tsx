@@ -42,9 +42,11 @@ function useCountdown(expiresAt: string | null) {
 
 function formatCountdown(secs: number): string {
   if (secs <= 0) return 'expired'
-  const h = Math.floor(secs / 3600)
+  const d = Math.floor(secs / 86400)
+  const h = Math.floor((secs % 86400) / 3600)
   const m = Math.floor((secs % 3600) / 60)
   const s = secs % 60
+  if (d > 0) return `${d}d ${h}h`
   if (h > 0) return `${h}h ${m}m`
   if (m > 0) return `${m}m ${s}s`
   return `${s}s`
@@ -194,8 +196,20 @@ export function CreateComposer({ onBack, baseCurrency = 'USD', initialOrderId }:
         >
           ← Back
         </button>
-        <h2>Request payment</h2>
-        <p className="sub">Pick an order — the customer pays in crypto, you get USDC.</p>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
+          <div>
+            <h2 style={{ margin: 0 }}>Request payment</h2>
+            <p className="sub" style={{ marginTop: 3, marginBottom: 0 }}>Pick an order — the customer pays in crypto, you get USDC.</p>
+          </div>
+          <button
+            className="pt-btn pt-btn-primary"
+            onClick={handleSubmit}
+            disabled={submitting || !foundOrder || !payCurrency || !!createdLink}
+            style={{ fontSize: 12, flexShrink: 0, marginTop: 2 }}
+          >
+            {submitting ? 'Creating…' : createdLink ? 'Created ✓' : 'Create link →'}
+          </button>
+        </div>
 
         {/* ── Order picker ─────────────────────────────────────── */}
         <div className="pay-comp-section">
@@ -307,10 +321,6 @@ export function CreateComposer({ onBack, baseCurrency = 'USD', initialOrderId }:
           <div className="hint" style={{ marginTop: 6 }}>
             Ask your customer which they prefer. Funds always settle as USDC to your wallet.
           </div>
-        </div>
-
-        {/* ── Advanced ─────────────────────────────────────────── */}
-        <div className="pay-comp-section">
         </div>
 
         {submitError && (
