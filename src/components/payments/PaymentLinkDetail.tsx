@@ -2,11 +2,13 @@
 'use client'
 
 import type { CSSProperties, ReactElement } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import QRCode from 'react-qr-code'
 import { Icons } from '@/lib/icons'
 import { formatAmount } from '@/lib/currency'
 import type { CryptoPaymentLinkWithOrder, CryptoPaymentStatus } from '@/types/payments-crypto'
+import { cancelPaymentLink } from '@/app/payments/actions'
 import { PaySendWidget } from './PaySendWidget'
 
 function QrPlaceholder({ size = 124 }: { size?: number }) {
@@ -180,6 +182,23 @@ export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWit
   const channelType = primaryChannel?.channel_type ?? null
   const shareMessageText = `Hi ${customerName ?? 'there'}! Here's your payment link for ${link.memo ?? link.orders?.ref_number ?? 'your order'}:\n\n${link.hosted_url}`
 
+  const sendRef = useRef<HTMLDivElement>(null)
+  const [sendHighlight, setSendHighlight] = useState(false)
+  const [cancelPhase, setCancelPhase] = useState<'idle' | 'confirming' | 'busy'>('idle')
+
+  function handleResend() {
+    sendRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    setSendHighlight(true)
+    setTimeout(() => setSendHighlight(false), 1400)
+  }
+
+  async function handleCancel() {
+    setCancelPhase('busy')
+    await cancelPaymentLink(link.id)
+    setCancelPhase('idle')
+    router.refresh()
+  }
+
   return (
     <div className="pay-detail">
       <div className="pay-detail-main">
@@ -306,9 +325,9 @@ export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWit
       </div>
 
       <div className="pay-detail-side">
-        <div>
+        <div ref={sendRef}>
           <h4>Checkout URL</h4>
-          <div className="pay-detail-side-url">
+          <div className={`pay-detail-side-url${sendHighlight ? ' pay-detail-side-url--highlight' : ''}`}>
             <PaySendWidget
               customerId={customerId}
               customerName={customerName}
@@ -354,11 +373,29 @@ export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWit
         <div>
           <h4>Actions</h4>
           <div className="pay-detail-side-actions">
-            {/* DECISION NEEDED — resend, extend, cancel, refund: API calls not yet implemented */}
-            <button><Icons.send size={12} /> Resend reminder</button>
-            <button><Icons.clock size={12} /> Extend expiry · +24h</button>
-            <button className="is-danger"><Icons.x size={12} /> Cancel link</button>
-            <button className="is-danger"><Icons.rotate size={12} /> Refund (after settle)</button>
+            <button onClick={handleResend}>
+              <Icons.send size={12} /> Resend reminder
+            </button>
+            {link.status === 'waiting' && cancelPhase === 'idle' && (
+              <button className="is-danger" onClick={() => setCancelPhase('confirming')}>
+                <Icons.x size={12} /> Cancel link
+              </button>
+            )}
+            {link.status === 'waiting' && cancelPhase === 'confirming' && (
+              <div className="pay-detail-cancel-confirm">
+                <span>Cancel this link?</span>
+                <div className="pay-detail-cancel-btns">
+                  <button onClick={() => setCancelPhase('idle')}>Keep it</button>
+                  <button className="is-danger" onClick={handleCancel}>Confirm</button>
+                </div>
+              </div>
+            )}
+            {link.status === 'waiting' && cancelPhase === 'busy' && (
+              <button className="is-danger" disabled>Cancelling…</button>
+            )}
+            <button disabled style={{ opacity: 0.4, cursor: 'default' }}>
+              <Icons.rotate size={12} /> Refund · coming soon
+            </button>
           </div>
         </div>
 

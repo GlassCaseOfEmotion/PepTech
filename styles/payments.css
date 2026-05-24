@@ -502,6 +502,25 @@
 }
 .pay-detail-share button:hover { background: var(--pt-surface-2); }
 
+.pay-detail-side-url--highlight {
+  outline: 2px solid var(--pt-cool);
+  outline-offset: 2px;
+}
+.pay-detail-cancel-confirm {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 12px; border: 0.5px solid var(--pt-line);
+  border-radius: 7px; background: var(--pt-surface); font-size: 12px;
+}
+.pay-detail-cancel-btns { display: flex; gap: 6px; }
+.pay-detail-cancel-btns button {
+  flex: 1; height: 30px; padding: 0; font-size: 12px;
+  border-radius: 6px; border: 0.5px solid var(--pt-line);
+  background: var(--pt-surface); color: var(--pt-fg); cursor: pointer;
+  font-family: inherit;
+}
+.pay-detail-cancel-btns button:hover { background: var(--pt-surface-2); }
+.pay-detail-cancel-btns button.is-danger { color: var(--pt-danger); }
+
 .pay-detail-side-actions { display: flex; flex-direction: column; gap: 6px; }
 .pay-detail-side-actions button {
   display: flex; align-items: center; gap: 8px;
