@@ -95,6 +95,7 @@ function IxThread({ t, active, onClick }: { t: InboxThread; active: boolean; onC
         </div>
         <div className="pt-ixt-row3">
           {t.status === 'snoozed'       && <span className="pt-tag pt-tag-soft pt-tag-snoozed">⏰ snoozed</span>}
+          {t.lifecycleStage === 'lead'  && <span className="pt-tag pt-tag-lead">Lead</span>}
           {t.tags.includes('vip')      && <span className="pt-tag pt-tag-vip">VIP</span>}
           {t.tags.includes('new')      && <span className="pt-tag pt-tag-new">new</span>}
           {t.tags.includes('waitlist') && <span className="pt-tag">waitlist</span>}

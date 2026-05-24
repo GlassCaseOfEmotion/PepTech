@@ -1,3 +1,6 @@
+// NOTE: This component is not used by the live inbox.
+// The live thread rendering lives in InboxView.tsx (IxThread).
+// Keep this file in sync with IxThread, or remove both this and ThreadList.tsx.
 import { ChannelIcon } from '@/lib/icons'
 import { initials, fmtTime } from '@/types/inbox'
 import type { ConversationWithCustomer } from '@/types/inbox'

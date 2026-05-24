@@ -162,7 +162,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
       .limit(20),
   ])
 
-  if (!customer) redirect('/customers')
+  if (!customer) redirect('/contacts')
 
   const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
   const activity = (activityRaw ?? []) as ActivityItem[]
@@ -263,12 +263,12 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
   ]
 
   return (
-    <Shell section="Customers">
+    <Shell section="Contacts">
       <div className="pt-cu">
 
         {/* ── Header ── */}
         <div className="pt-cu-hd">
-          <Link href="/customers" className="pt-ix-back" title="Back">
+          <Link href="/contacts" className="pt-ix-back" title="Back">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 6l-6 6 6 6"/>
             </svg>

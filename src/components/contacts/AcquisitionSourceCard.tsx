@@ -41,6 +41,18 @@ export function AcquisitionSourceCard({ customerId, initialSource, initialNote, 
     })
   }
 
+  function pickSource(s: AcquisitionSource | null) {
+    setSource(s)
+    // Defer save for 'other' until note is typed and blurred
+    if (s === 'other') return
+    save(s)
+  }
+
+  function saveOther() {
+    if (!note.trim()) return
+    save('other')
+  }
+
   return (
     <section className="pt-card">
       <header className="pt-card-hd">
@@ -54,10 +66,7 @@ export function AcquisitionSourceCard({ customerId, initialSource, initialNote, 
               type="button"
               className={`pt-chip${source === s ? ' is-on' : ''}`}
               disabled={pending}
-              onClick={() => {
-                setSource(s)
-                save(s)
-              }}
+              onClick={() => pickSource(s)}
             >
               {SOURCE_LABELS[s]}
             </button>
@@ -86,7 +95,7 @@ export function AcquisitionSourceCard({ customerId, initialSource, initialNote, 
             style={{ marginTop: 8, width: '100%', boxSizing: 'border-box' }}
             value={note}
             onChange={e => setNote(e.target.value)}
-            onBlur={() => save('other')}
+            onBlur={saveOther}
           />
         )}
         {source === 'referral' && (
