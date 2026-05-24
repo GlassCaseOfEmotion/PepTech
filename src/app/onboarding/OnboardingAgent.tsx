@@ -182,6 +182,79 @@ function applyToolOutputsToState(
   return next
 }
 
+/**
+ * Inline clickable chips for closed-enum questions. Renders below the agent's
+ * question text when the agent calls present_choices. Click (single) or
+ * Submit (multi) sends the selection back as a normal user message — the
+ * agent handles it the same as a typed reply.
+ */
+function ChoicePicker({
+  prompt,
+  options,
+  multi,
+  status,
+  onSubmit,
+}: {
+  prompt: string
+  options: string[]
+  multi: boolean
+  status: 'idle' | 'submitted'
+  onSubmit: (label: string) => void
+}) {
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const submitted = status === 'submitted'
+
+  function toggle(opt: string) {
+    if (submitted) return
+    if (multi) {
+      setSelected(prev => {
+        const next = new Set(prev)
+        if (next.has(opt)) next.delete(opt); else next.add(opt)
+        return next
+      })
+    } else {
+      onSubmit(opt)
+    }
+  }
+
+  function submitMulti() {
+    if (submitted || selected.size === 0) return
+    onSubmit([...selected].join(', '))
+  }
+
+  return (
+    <div className={`pt-choices${submitted ? ' is-submitted' : ''}`}>
+      {prompt && <div className="pt-choices-prompt">{prompt}</div>}
+      <div className="pt-choices-row">
+        {options.map(opt => {
+          const isSelected = selected.has(opt)
+          return (
+            <button
+              key={opt}
+              type="button"
+              className={`pt-choice-chip${isSelected ? ' is-selected' : ''}`}
+              onClick={() => toggle(opt)}
+              disabled={submitted}
+            >
+              {opt}
+            </button>
+          )
+        })}
+      </div>
+      {multi && !submitted && (
+        <button
+          type="button"
+          className="pt-choices-submit"
+          onClick={submitMulti}
+          disabled={selected.size === 0}
+        >
+          Continue with {selected.size} selected →
+        </button>
+      )}
+    </div>
+  )
+}
+
 function Check() {
   return (
     <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -213,6 +286,7 @@ export function OnboardingAgent({
   } | null>(null)
   const [uploading, setUploading] = useState(false)
   const [proposalStatus, setProposalStatus] = useState<Record<string, 'idle' | 'importing' | 'done' | 'cancelled'>>({})
+  const [choiceStatus, setChoiceStatus] = useState<Record<string, 'idle' | 'submitted'>>({})
   const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const msgsRef = useRef<HTMLDivElement>(null)
@@ -447,6 +521,11 @@ export function OnboardingAgent({
     setProposalStatus(s => ({ ...s, [toolCallId]: 'cancelled' }))
   }, [])
 
+  const handleChoiceSubmit = useCallback((toolCallId: string, label: string) => {
+    setChoiceStatus(s => ({ ...s, [toolCallId]: 'submitted' }))
+    void send(label)
+  }, [send])
+
   const confirm = useCallback(async (toolCallId: string, confirmed: boolean) => {
     if (!pendingConfirm || !sessionId) return
     setConfirming(true)
@@ -642,6 +721,19 @@ export function OnboardingAgent({
                         businessType={(state.business_type as 'peptides' | 'nootropics' | 'sarms' | 'general' | null) ?? null}
                         onImport={rows => handleProposalImport(tc.id, result, rows)}
                         onCancel={() => handleProposalCancel(tc.id)}
+                      />
+                    )
+                  }
+                  if (tc.name === 'present_choices' && tc.status === 'complete' && tc.output && typeof tc.output === 'object') {
+                    const out = tc.output as { prompt: string; options: string[]; multi?: boolean }
+                    return (
+                      <ChoicePicker
+                        key={tc.id}
+                        prompt={out.prompt}
+                        options={out.options ?? []}
+                        multi={!!out.multi}
+                        status={choiceStatus[tc.id] ?? 'idle'}
+                        onSubmit={(label) => handleChoiceSubmit(tc.id, label)}
                       />
                     )
                   }

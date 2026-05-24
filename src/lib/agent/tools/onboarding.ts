@@ -369,8 +369,48 @@ export const completeOnboarding: AgentTool = {
   },
 }
 
+export const presentChoices: AgentTool = {
+  name: 'present_choices',
+  description: [
+    'Render a set of clickable chip choices for the user to pick from. Use this WHENEVER you ask a closed-enum question — instead of listing the options as text in your reply.',
+    '',
+    'When to use:',
+    '  - "Which currency?" — options: ["USD","EUR","GBP","AUD","SGD","IDR","MYR","THB"], multi: false',
+    '  - "What kind of products?" — options: ["peptides","nootropics","sarms","general"], multi: false',
+    '  - "Which channels?" — options: ["WhatsApp","Telegram","Email"], multi: true',
+    '',
+    'How it flows: you call this tool with the prompt + options. The UI renders the chips inline below your message. When the user clicks (single-select) or clicks Submit (multi-select), their selection arrives as a normal user message in the next turn — handle it the same way you would handle a typed response.',
+    '',
+    'Rules:',
+    '  - Prompt should be one short sentence ("Which currency for orders?"), NOT a verbose recap of the question.',
+    '  - Options are user-facing labels — capitalise nicely (e.g. "WhatsApp" not "whatsapp", "Peptides" not "peptides"). The downstream save_* tools accept canonical lowercase values; you do the mapping when calling the actual save tool.',
+    '  - Keep the chip set short — 4–8 options ideal. For long lists (timezones, countries), ask as free text instead.',
+    '  - Always still ALSO accept typed responses — chips are an accelerator, not the only path.',
+  ].join('\n'),
+  requiresConfirmation: false,
+  inputSchema: {
+    type: 'object',
+    required: ['prompt', 'options'],
+    properties: {
+      prompt:  { type: 'string', description: 'Short question shown above the chips. One sentence.' },
+      options: { type: 'array', items: { type: 'string' }, description: 'User-facing labels for each chip. 4–8 ideal.' },
+      multi:   { type: 'boolean', description: 'true for multi-select (chips toggle, then Submit). false (default) for single-select (click sends immediately).' },
+    },
+  },
+  async execute(raw) {
+    const input = raw as { prompt: string; options: string[]; multi?: boolean }
+    // No-op server side. The output is consumed by the UI to render chips.
+    return {
+      prompt:  typeof input.prompt === 'string' ? input.prompt.trim().slice(0, 200) : '',
+      options: Array.isArray(input.options) ? input.options.map(o => String(o).slice(0, 60)).filter(Boolean).slice(0, 12) : [],
+      multi:   !!input.multi,
+    }
+  },
+}
+
 export const ONBOARDING_TOOLS: AgentTool[] = [
   readOnboardingState,
+  presentChoices,
   saveProfile,
   saveBusinessType,
   saveCurrency,

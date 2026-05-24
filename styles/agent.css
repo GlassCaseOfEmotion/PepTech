@@ -508,6 +508,82 @@
 }
 .pt-agent-md tr:nth-child(even) td { background: oklch(from var(--pt-surface-2) l c h / 0.5); }
 
+/* ─── Inline choice chips (present_choices tool output) ─────────────────── */
+.pt-choices {
+  margin: 6px 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: pt-choices-in 0.22s ease-out both;
+}
+@keyframes pt-choices-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: none; }
+}
+.pt-choices-prompt {
+  font-size: 11.5px;
+  color: var(--pt-fg-4);
+  letter-spacing: 0.01em;
+}
+.pt-choices-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pt-choice-chip {
+  padding: 7px 14px;
+  background: var(--pt-surface);
+  border: 1px solid var(--pt-line);
+  border-radius: 999px;
+  color: var(--pt-fg);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.14s ease, background 0.14s ease, color 0.14s ease, transform 0.06s ease-out;
+}
+.pt-choice-chip:hover:not(:disabled) {
+  border-color: var(--pt-accent);
+  background: var(--pt-accent-soft);
+}
+.pt-choice-chip:active:not(:disabled) { transform: translateY(1px); }
+.pt-choice-chip.is-selected {
+  background: var(--pt-accent);
+  color: var(--pt-accent-fg);
+  border-color: var(--pt-accent);
+}
+.pt-choice-chip.is-selected:hover:not(:disabled) {
+  filter: brightness(1.04);
+}
+.pt-choice-chip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.pt-choices.is-submitted .pt-choice-chip:not(.is-selected) {
+  opacity: 0.35;
+}
+
+.pt-choices-submit {
+  align-self: flex-start;
+  padding: 6px 12px;
+  background: var(--pt-accent);
+  color: var(--pt-accent-fg);
+  border: 0;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: filter 0.14s ease, transform 0.06s ease-out, background 0.14s;
+}
+.pt-choices-submit:hover:not(:disabled) { filter: brightness(1.06); }
+.pt-choices-submit:active:not(:disabled) { transform: translateY(1px); }
+.pt-choices-submit:disabled {
+  background: oklch(from var(--pt-fg) l c h / 0.07);
+  color: var(--pt-fg-4);
+  cursor: not-allowed;
+}
+
 /* ─── Catalog proposal card ──────────────────────────────────────────────── */
 .pt-proposal {
   margin-top: 8px;
