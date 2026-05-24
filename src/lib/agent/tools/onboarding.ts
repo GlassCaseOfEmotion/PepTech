@@ -278,7 +278,7 @@ export const extractCatalog: AgentTool = {
     '',
     'WHEN TO CALL THIS TOOL: When the user\'s message contains a "[uploaded: <filename> (file_ref=<ref>)]" hint, pass that file_ref to this tool.',
     '',
-    'IMPORTANT — extraction takes ~10 seconds. BEFORE calling extract_catalog, write one short reassuring sentence in plain text so the user isn\'t left waiting in silence (e.g. "Got it — reading through your price list now…" or "Nice — let me pull the products out for you."). Then call the tool in the same response.',
+    'IMPORTANT — extraction can take a minute or two on a large PDF. BEFORE calling extract_catalog, write one short reassuring sentence in plain text that ALSO primes the user that it may take a moment (e.g. "Got it — reading through your price list now. This can take a minute or two on a big list, hang tight." or "Lovely. Let me pull the products out for you — this may take a moment, please wait."). Then call the tool in the same response.',
     '',
     'AFTER IT RETURNS: The UI renders the extracted products as an editable proposal card BELOW your follow-up message. Write a brief, confident one-sentence follow-up like "Done — 24 products extracted. Review them below and hit Import when they look right." DO NOT list the products in chat — the proposal card shows them.',
     '',
