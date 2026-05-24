@@ -6,19 +6,11 @@ import { Icons } from '@/lib/icons'
 import { updateOrderStatus } from '@/app/orders/actions'
 import { CreateOrderModal } from './CreateOrderModal'
 import { ShipOrderModal } from './ShipOrderModal'
-import { OrdersBoard } from './OrdersBoard'
+import { OrdersBoard, COLUMNS } from './OrdersBoard'
 import type { OrderCard, OrderStatus } from '@/types/orders'
 import { formatAmount } from '@/lib/currency'
 import { EmptyState } from '@/components/ui/EmptyState'
 
-const COLUMNS: { id: OrderStatus; label: string; caption: string }[] = [
-  { id: 'created',    label: 'Created',           caption: 'Payment method not set yet' },
-  { id: 'awaiting',   label: 'Awaiting payment', caption: 'Invoice sent · waiting for tx' },
-  { id: 'confirming', label: 'Confirming',        caption: 'Tx seen · waiting for confirms' },
-  { id: 'packing',    label: 'Packing',           caption: 'Paid · ready to ship' },
-  { id: 'shipped',    label: 'Shipped',           caption: 'In transit' },
-  { id: 'delivered',  label: 'Delivered',         caption: 'Closed' },
-]
 
 export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
   const router = useRouter()

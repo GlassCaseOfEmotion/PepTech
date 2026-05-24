@@ -7,7 +7,7 @@ import { PAYMENT_BADGE } from '@/types/payments'
 import type { OrderCard, OrderStatus } from '@/types/orders'
 import { formatAmount } from '@/lib/currency'
 
-const COLUMNS: { id: OrderStatus; label: string; caption: string }[] = [
+export const COLUMNS: { id: OrderStatus; label: string; caption: string }[] = [
   { id: 'created',    label: 'Created',           caption: 'Payment method not set yet' },
   { id: 'awaiting',   label: 'Awaiting payment',  caption: 'Invoice sent · waiting for tx' },
   { id: 'confirming', label: 'Confirming',        caption: 'Tx seen · waiting for confirms' },
