@@ -94,4 +94,44 @@ describe('OrdersList', () => {
     // no rows
     expect(screen.queryByText('Test Customer')).not.toBeInTheDocument()
   })
+
+  it('sorts by Amount when the Amount header is clicked', () => {
+    render(
+      <OrdersList
+        orders={[
+          { ...baseOrder, id: 'a', customerName: 'Alice', paymentAmount: 300 },
+          { ...baseOrder, id: 'b', customerName: 'Bob',   paymentAmount: 100 },
+          { ...baseOrder, id: 'c', customerName: 'Cara',  paymentAmount: 200 },
+        ]}
+        onAdvance={vi.fn()}
+        onOpen={vi.fn()}
+      />
+    )
+    // Default direction for Amount is 'desc' — first click sorts high→low
+    fireEvent.click(screen.getByRole('button', { name: /amount/i }))
+    let names = screen.getAllByText(/^(Alice|Bob|Cara)$/).map(el => el.textContent)
+    expect(names).toEqual(['Alice', 'Cara', 'Bob'])
+
+    // Second click on the same column flips direction → low→high
+    fireEvent.click(screen.getByRole('button', { name: /amount/i }))
+    names = screen.getAllByText(/^(Alice|Bob|Cara)$/).map(el => el.textContent)
+    expect(names).toEqual(['Bob', 'Cara', 'Alice'])
+  })
+
+  it('sorts by Customer name when the Customer header is clicked', () => {
+    render(
+      <OrdersList
+        orders={[
+          { ...baseOrder, id: 'a', customerName: 'Charlie' },
+          { ...baseOrder, id: 'b', customerName: 'Alice' },
+          { ...baseOrder, id: 'c', customerName: 'Bob' },
+        ]}
+        onAdvance={vi.fn()}
+        onOpen={vi.fn()}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /customer/i }))
+    const names = screen.getAllByText(/^(Alice|Bob|Charlie)$/).map(el => el.textContent)
+    expect(names).toEqual(['Alice', 'Bob', 'Charlie'])
+  })
 })

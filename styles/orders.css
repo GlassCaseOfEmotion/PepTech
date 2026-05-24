@@ -219,6 +219,10 @@
 
 /* Orders list view ─────────────────────────────────── */
 
+.pt-or-list-wrap {
+  padding: 14px 22px 22px;
+}
+
 .pt-or-list {
   width: 100%;
   border-collapse: collapse;
@@ -236,11 +240,24 @@
 .pt-or-list th {
   text-align: left;
   font-weight: 500;
-  font-size: 11px;
-  color: var(--pt-fg-3);
+  font-size: 10px;
+  color: var(--pt-fg-4);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   padding: 8px 12px;
   border-bottom: 0.5px solid var(--pt-line);
 }
+
+.pt-or-list-col-hd {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font: inherit; color: inherit;
+  text-transform: inherit; letter-spacing: inherit;
+  display: inline-flex; align-items: center; gap: 3px;
+  transition: color 0.1s;
+}
+.pt-or-list-col-hd:hover { color: var(--pt-fg-2); }
+.pt-or-list-col-hd.is-sorted { color: var(--pt-fg); }
+.pt-or-list-sort-arr { font-size: 9px; opacity: 0.8; }
 
 .pt-or-list th.r,
 .pt-or-list td.r {
