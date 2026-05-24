@@ -373,7 +373,7 @@
   grid-template-columns: 1fr 380px;
 }
 .pay-detail-main {
-  padding: 24px 28px;
+  padding: 24px 22px;
   overflow-y: auto;
 }
 .pay-detail-hd {
