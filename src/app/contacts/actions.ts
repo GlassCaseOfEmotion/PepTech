@@ -59,3 +59,47 @@ export async function setLifecycleStage(
     return { error: e instanceof Error ? e.message : 'Unknown error' }
   }
 }
+
+export type AcquisitionSource = 'referral' | 'community' | 'group_chat' | 'direct' | 'other'
+
+const VALID_SOURCES: AcquisitionSource[] = ['referral', 'community', 'group_chat', 'direct', 'other']
+
+export async function setAcquisitionSource(
+  customerId: string,
+  input: {
+    source: AcquisitionSource | null
+    referredByCustomerId?: string | null
+    note?: string | null
+  },
+): Promise<{ success: true } | { error: string }> {
+  if (input.source !== null && !VALID_SOURCES.includes(input.source)) {
+    return { error: 'Invalid acquisition source' }
+  }
+  if (input.source === 'other' && !input.note?.trim()) {
+    return { error: 'Note required when source is "other"' }
+  }
+  try {
+    const { supabase, tenantId } = await getTenantId()
+
+    type CustomerUpdate = Database['public']['Tables']['customers']['Update']
+    const update: Pick<CustomerUpdate, 'acquisition_source' | 'acquisition_source_note' | 'referred_by_customer_id'> = {
+      acquisition_source: input.source,
+      acquisition_source_note: input.note?.trim() || null,
+      referred_by_customer_id: input.source === 'referral' ? (input.referredByCustomerId ?? null) : null,
+    }
+
+    const { error } = await supabase
+      .from('customers')
+      .update(update)
+      .eq('tenant_id', tenantId)
+      .eq('id', customerId)
+
+    if (error) return { error: error.message }
+
+    revalidatePath('/contacts')
+    revalidatePath(`/customers/${customerId}`)
+    return { success: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}

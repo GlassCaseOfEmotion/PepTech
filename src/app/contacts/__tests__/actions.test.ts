@@ -11,7 +11,7 @@ vi.mock('react', async (importOriginal) => {
   return { ...actual, cache: (fn: unknown) => fn }
 })
 
-import { setLifecycleStage } from '../actions'
+import { setLifecycleStage, setAcquisitionSource } from '../actions'
 import { createClient, getServerUser } from '@/lib/supabase/server'
 
 function makeMockClient(opts: {
@@ -125,5 +125,52 @@ describe('setLifecycleStage', () => {
     const result = await setLifecycleStage('cust-1', 'churned')
 
     expect(result).toEqual({ error: 'Invalid lifecycle stage' })
+  })
+})
+
+describe('setAcquisitionSource', () => {
+  it('writes the source and optional referred_by_customer_id', async () => {
+    const supabase = makeMockClient({ tenantId: 't1' })
+    vi.mocked(createClient).mockResolvedValue(supabase as never)
+    vi.mocked(getServerUser).mockResolvedValue({ id: 'u1' } as never)
+
+    const result = await setAcquisitionSource('cust-1', {
+      source: 'referral',
+      referredByCustomerId: 'cust-2',
+    })
+
+    expect(result).toEqual({ success: true })
+    expect(supabase.from).toHaveBeenCalledWith('customers')
+  })
+
+  it('rejects invalid source values', async () => {
+    const supabase = makeMockClient({ tenantId: 't1' })
+    vi.mocked(createClient).mockResolvedValue(supabase as never)
+    vi.mocked(getServerUser).mockResolvedValue({ id: 'u1' } as never)
+
+    // @ts-expect-error — testing runtime validation
+    const result = await setAcquisitionSource('cust-1', { source: 'paid_ads' })
+
+    expect(result).toEqual({ error: 'Invalid acquisition source' })
+  })
+
+  it('requires a note when source is "other"', async () => {
+    const supabase = makeMockClient({ tenantId: 't1' })
+    vi.mocked(createClient).mockResolvedValue(supabase as never)
+    vi.mocked(getServerUser).mockResolvedValue({ id: 'u1' } as never)
+
+    const result = await setAcquisitionSource('cust-1', { source: 'other', note: '' })
+
+    expect(result).toEqual({ error: 'Note required when source is "other"' })
+  })
+
+  it('allows clearing the source by passing null', async () => {
+    const supabase = makeMockClient({ tenantId: 't1' })
+    vi.mocked(createClient).mockResolvedValue(supabase as never)
+    vi.mocked(getServerUser).mockResolvedValue({ id: 'u1' } as never)
+
+    const result = await setAcquisitionSource('cust-1', { source: null })
+
+    expect(result).toEqual({ success: true })
   })
 })
