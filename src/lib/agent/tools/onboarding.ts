@@ -9,9 +9,27 @@ const VALID_TIMEZONES = new Set([
   'Pacific/Honolulu','America/Anchorage','America/Los_Angeles','America/Denver',
   'America/Chicago','America/New_York','America/Sao_Paulo','Europe/London',
   'Europe/Amsterdam','Europe/Lisbon','Europe/Istanbul','Asia/Dubai',
-  'Asia/Karachi','Asia/Kolkata','Asia/Bangkok','Asia/Singapore',
-  'Asia/Shanghai','Asia/Tokyo','Australia/Sydney','Pacific/Auckland','UTC',
+  'Asia/Karachi','Asia/Kolkata','Asia/Bangkok','Asia/Jakarta','Asia/Makassar',
+  'Asia/Singapore','Asia/Shanghai','Asia/Tokyo','Australia/Sydney',
+  'Pacific/Auckland','UTC',
 ])
+
+// Deprecated IANA aliases — accepted on input, canonicalised before lookup so we
+// don't reject valid zones that models commonly emit from older training data.
+const TIMEZONE_ALIASES: Record<string, string> = {
+  'Asia/Ujung_Pandang':  'Asia/Makassar',
+  'Asia/Saigon':         'Asia/Ho_Chi_Minh',
+  'Asia/Calcutta':       'Asia/Kolkata',
+  'Asia/Katmandu':       'Asia/Kathmandu',
+  'Asia/Rangoon':        'Asia/Yangon',
+  'Europe/Kiev':         'Europe/Kyiv',
+  'America/Buenos_Aires':'America/Argentina/Buenos_Aires',
+  'Pacific/Truk':        'Pacific/Chuuk',
+}
+
+function canonicalTimezone(tz: string): string {
+  return TIMEZONE_ALIASES[tz] ?? tz
+}
 
 async function currentUserId(supabase: AgentSupabase): Promise<string> {
   const { data } = await supabase.auth.getUser()
@@ -34,10 +52,15 @@ export const readOnboardingState: AgentTool = {
       supabase.from('products').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
     ])
 
+    // Defaults present at signup that should NOT count as "answered":
+    //  - tenants.base_currency defaults to 'USD'
+    //  - tenants.timezone defaults to 'UTC'
+    //  - users.display_name is now null at signup (older tenants may have an
+    //    email-prefix value — treated as answered for them).
     const profileDone = !!user?.display_name
     const businessTypeDone = !!tenant?.business_type
-    const currencyDone = !!tenant?.base_currency
-    const timezoneAsked = !!tenant?.timezone && tenant.timezone !== 'UTC'
+    const currencyAnswered = !!tenant?.base_currency && tenant.base_currency !== 'USD'
+    const timezoneAnswered = !!tenant?.timezone && tenant.timezone !== 'UTC'
     const catalogDone = (productCount ?? 0) > 0
     const channelsDone = (tenant?.intended_channels?.length ?? 0) > 0
     const complete = !!tenant?.onboarded_at
@@ -53,10 +76,13 @@ export const readOnboardingState: AgentTool = {
       steps: {
         profile: profileDone,
         business_type: businessTypeDone,
-        currency: currencyDone,
+        currency: currencyAnswered,
         catalog: catalogDone,
         channels: channelsDone,
-        timezone_asked: timezoneAsked,
+        // Explicit "asked" signals for fields whose columns have non-null defaults.
+        // The agent should keep asking until these flip true even if the column already has a value.
+        timezone_asked: timezoneAnswered,
+        currency_asked: currencyAnswered,
       },
       complete,
     }
@@ -85,8 +111,10 @@ export const saveProfile: AgentTool = {
       updates.display_name = name
     }
     if (typeof input.timezone === 'string' && input.timezone.trim()) {
-      if (!VALID_TIMEZONES.has(input.timezone)) throw new Error(`Unknown timezone "${input.timezone}". Use an IANA zone like "Asia/Singapore".`)
-      tz = input.timezone
+      const requested = input.timezone.trim()
+      const canonical = canonicalTimezone(requested)
+      if (!VALID_TIMEZONES.has(canonical)) throw new Error(`Unknown timezone "${requested}". Use an IANA zone like "Asia/Singapore".`)
+      tz = canonical
       updates.timezone = tz
     }
     if (!name && !tz) throw new Error('Provide display_name and/or timezone — at least one is required.')

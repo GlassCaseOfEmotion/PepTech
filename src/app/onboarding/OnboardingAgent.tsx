@@ -59,7 +59,9 @@ function deriveSteps(state: OnboardingState) {
   return {
     profile:       !!state.display_name,
     business_type: !!state.business_type,
-    currency:      !!state.base_currency,
+    // Currency and timezone columns have non-null defaults (USD / UTC); treat
+    // those default values as "not answered yet" to match the agent's flags.
+    currency:      !!state.base_currency && state.base_currency !== 'USD',
     catalog:       (state.product_count ?? 0) > 0,
     channels:      (state.intended_channels?.length ?? 0) > 0,
   }
@@ -425,7 +427,7 @@ export function OnboardingAgent({
           </div>
 
           <div className="ob-chapter">
-            <div className="ob-ch-tag">Agent · v0.1</div>
+            <div className="ob-ch-tag">Agent · v0.2</div>
             <h2 className="ob-ch-title">
               <span>Your store,</span>
               <span>your way.</span>
@@ -495,9 +497,6 @@ export function OnboardingAgent({
               padding: '8px 4px 16px',
             }}
           >
-            {messages.length === 0 && streaming && (
-              <div className="pt-agent-typing"><span /><span /><span /></div>
-            )}
             {messages.map(m => (
               <div key={m.id} className={`pt-agent-chat-msg pt-agent-chat-msg-${m.role}`}>
                 {m.role === 'assistant' && m.streaming && !m.text ? (

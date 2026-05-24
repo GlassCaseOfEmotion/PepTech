@@ -34,7 +34,7 @@ function buildOnboardingSystem() {
 
 The five steps are: profile (display name + timezone), business_type, currency, catalog, channels. You can do them in any order the user prefers, but the natural order is the one listed.
 
-At the start of EVERY conversation — including the very first turn — call read_onboarding_state first to find out what is already done, then pick up from there. Never ask for information that is already saved. Note: timezone defaults to UTC before the user answers, so if steps.timezone_asked is false you still need to ask for their timezone even though tenant.timezone is populated.
+At the start of EVERY conversation — including the very first turn — call read_onboarding_state first to find out what is already done, then pick up from there. Never ask for information that is already saved. Two important defaults to know about: timezone defaults to "UTC" and currency defaults to "USD" before the user has answered, so if steps.timezone_asked or steps.currency_asked is false you MUST still ask the user — don't assume the populated column means they answered. For profile, steps.profile is reliable: if it's false, introduce yourself and ask their name; if it's true, greet them by name.
 
 Style:
 - Warm but efficient. Don't over-explain. One or two short sentences per turn.
@@ -287,6 +287,8 @@ export async function executeAgentTurn(
   send({ type: 'done', sessionId })
 }
 
+const MAX_CONTINUATION_DEPTH = 6
+
 async function continueTurn(
   history: ChatCompletionMessageParam[],
   sessionId: string,
@@ -295,9 +297,73 @@ async function continueTurn(
   client: OpenAI,
   send: (e: SseEvent) => void,
   mode: AgentMode,
+  depth: number = 0,
 ) {
-  const { text } = await streamCompletion(client, history, send, mode)
-  await saveAssistantMessage(sessionId, tenantId, text || null, [], supabase)
+  if (depth >= MAX_CONTINUATION_DEPTH) {
+    await saveAssistantMessage(sessionId, tenantId, '⚠ I got stuck after too many follow-up steps. Please try again.', [], supabase)
+    return
+  }
+
+  const { text, toolCalls } = await streamCompletion(client, history, send, mode)
+
+  // If the model produced text only, we're done with this turn.
+  if (toolCalls.length === 0) {
+    await saveAssistantMessage(sessionId, tenantId, text || null, [], supabase)
+    return
+  }
+
+  // Execute non-confirm tools; surface mode-restricted/unknown calls as tool errors.
+  const allowedNames = new Set(toolsForMode(mode).map(t => t.name))
+  for (const tc of toolCalls) {
+    if (!allowedNames.has(tc.name)) {
+      tc.output = { error: `Tool ${tc.name} is not available in this mode` }
+      tc.status = 'complete'
+      continue
+    }
+    const tool = TOOL_MAP[tc.name]
+    if (!tool) continue
+    if (!tool.requiresConfirmation) {
+      try {
+        tc.output = await tool.execute(tc.input, supabase, tenantId)
+        tc.status = 'complete'
+      } catch (e) {
+        tc.output = { error: e instanceof Error ? e.message : 'Tool error' }
+        tc.status = 'complete'
+      }
+    }
+  }
+
+  const pendingWrites = toolCalls.filter(tc => tc.status === 'pending')
+
+  if (pendingWrites.length > 0) {
+    // A confirm-required tool was requested mid-continuation — surface the card and stop.
+    const messageId = await saveAssistantMessage(sessionId, tenantId, text || null, toolCalls, supabase)
+    send({ type: 'confirm', toolCalls: pendingWrites, messageId: messageId ?? '' })
+    return
+  }
+
+  // All tools resolved — persist, notify, and recurse so the model can produce
+  // its follow-up text or chain another tool.
+  await saveAssistantMessage(sessionId, tenantId, text || null, toolCalls, supabase)
+  send({ type: 'tool_use', toolCalls })
+
+  const assistantMsg: ChatCompletionMessageParam = {
+    role: 'assistant',
+    content: text || null,
+    tool_calls: toolCalls.map(tc => ({
+      id: tc.id, type: 'function' as const,
+      function: { name: tc.name, arguments: JSON.stringify(tc.input) },
+    })),
+  }
+  const toolResultMsgs: ChatCompletionMessageParam[] = toolCalls.map(tc => ({
+    role: 'tool' as const,
+    tool_call_id: tc.id,
+    content: JSON.stringify(tc.output),
+  }))
+  const nextHistory = [...history, assistantMsg, ...toolResultMsgs]
+
+  send({ type: 'new_turn' })
+  await continueTurn(nextHistory, sessionId, tenantId, supabase, client, send, mode, depth + 1)
 }
 
 export async function confirmToolCall(

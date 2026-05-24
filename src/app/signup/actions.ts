@@ -44,13 +44,15 @@ export async function signupAction(formData: FormData) {
     return redirect('/signup?error=Could+not+create+workspace')
   }
 
-  // 3. Create user record linked to tenant
+  // 3. Create user record linked to tenant.
+  // display_name is intentionally left null so the onboarding agent (or wizard)
+  // can ask for it explicitly — otherwise the agent sees a populated value and
+  // skips the introduction.
   const { error: userError } = await service.from('users').insert({
     id: authData.user.id,
     tenant_id: tenant.id,
     role: 'owner',
     email,
-    display_name: email.split('@')[0],
   })
 
   if (userError) {
