@@ -615,15 +615,21 @@ export function OnboardingAgent({
           >
             {messages.map(m => (
               <div key={m.id} className={`pt-agent-chat-msg pt-agent-chat-msg-${m.role}`}>
-                {m.role === 'assistant' && m.streaming && !m.text ? (
-                  <div className="pt-agent-typing"><span /><span /><span /></div>
-                ) : m.text ? (
+                {m.text && (
                   <div className="pt-agent-chat-text">
                     {m.role === 'assistant'
                       ? <div className="pt-agent-md"><ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown></div>
                       : m.text}
                   </div>
-                ) : null}
+                )}
+                {m.role === 'assistant' && m.streaming && (
+                  // Keep the typing indicator alive even after text has streamed in,
+                  // so long-running tools (extract_catalog can take ~3min on Gemini Pro)
+                  // don't leave the chat looking frozen.
+                  <div className={`pt-agent-typing${m.text ? ' pt-agent-typing-inline' : ''}`}>
+                    <span /><span /><span />
+                  </div>
+                )}
                 {m.toolCalls?.map(tc => {
                   if (tc.name === 'extract_catalog' && tc.status === 'complete' && tc.output && typeof tc.output === 'object' && !('error' in tc.output)) {
                     const result = tc.output as ExtractionResult
@@ -662,6 +668,15 @@ export function OnboardingAgent({
             )}
             <div ref={bottomRef} aria-hidden style={{ height: 1 }} />
           </div>
+
+          {/* Activity strip — a thin sweep line shown while the turn is in
+              flight. The agent's long tools (extract_catalog ~10–200s on
+              Gemini Pro) used to leave the chat looking frozen between the
+              pre-tool ack and the proposal card; this gives unmistakable
+              visual feedback that work is happening. */}
+          {(streaming || confirming) && (
+            <div className="pt-agent-activity" role="status" aria-label="Working" />
+          )}
 
           <div style={{ flexShrink: 0, padding: '8px 0 20px' }}>
             <div

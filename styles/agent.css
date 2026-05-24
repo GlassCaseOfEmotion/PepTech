@@ -203,6 +203,50 @@
   30% { transform: translateY(-5px); }
 }
 
+/* Inline variant — sits under streamed text on a bubble that's still waiting
+   on a tool. Smaller, slightly inset so it reads as "still working" rather
+   than a new message. */
+.pt-agent-typing.pt-agent-typing-inline {
+  padding: 0 14px 10px;
+  gap: 3px;
+}
+.pt-agent-typing.pt-agent-typing-inline span {
+  width: 4px; height: 4px;
+  opacity: 0.6;
+}
+
+/* Activity strip pinned just above the composer while a turn is in flight.
+   A thin accent-colored sweep that runs left-to-right indefinitely; gives the
+   chat a constant "still working" pulse during long tool runs. */
+.pt-agent-activity {
+  position: relative;
+  height: 2px;
+  margin: 0 4px 6px;
+  background: oklch(from var(--pt-fg) l c h / 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.pt-agent-activity::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 28%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--pt-accent) 50%,
+    transparent 100%
+  );
+  border-radius: 999px;
+  transform: translateX(-100%);
+  animation: pt-agent-activity-sweep 1.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+@keyframes pt-agent-activity-sweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(460%); }
+}
+
 .pt-agent-chat-input-row {
   display: flex; align-items: flex-end; gap: 8px;
   padding: 12px 20px 16px;
