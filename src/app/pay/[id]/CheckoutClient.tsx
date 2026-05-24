@@ -53,6 +53,7 @@ export function CheckoutClient({ initial }: { initial: CheckoutData }) {
   const [data, setData] = useState<CheckoutData>(initial)
   const [copied, setCopied] = useState(false)
   const countdown = useCountdown(data.expires_at)
+  const timedOut = countdown === 'Expired'
 
   const poll = useCallback(async () => {
     try {
@@ -63,10 +64,10 @@ export function CheckoutClient({ initial }: { initial: CheckoutData }) {
   }, [data.id])
 
   useEffect(() => {
-    if (!PENDING.includes(data.status)) return
+    if (!PENDING.includes(data.status) || timedOut) return
     const id = setInterval(poll, 5000)
     return () => clearInterval(id)
-  }, [data.status, poll])
+  }, [data.status, timedOut, poll])
 
   const copyAddress = async () => {
     if (!data.pay_address) return
@@ -82,8 +83,10 @@ export function CheckoutClient({ initial }: { initial: CheckoutData }) {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const sc = statusClass(data.status)
-  const cfg = STATUS_CONFIG[data.status] ?? STATUS_CONFIG.waiting
+  const isDead = DEAD.includes(data.status) || timedOut
+  const effectiveStatus = timedOut && !DEAD.includes(data.status) ? 'expired' : data.status
+  const sc = statusClass(effectiveStatus)
+  const cfg = STATUS_CONFIG[effectiveStatus] ?? STATUS_CONFIG.waiting
 
   return (
     <div className="pay-cust-frame">
@@ -128,8 +131,8 @@ export function CheckoutClient({ initial }: { initial: CheckoutData }) {
           )}
         </div>
 
-        {/* Payment block — hidden for dead statuses to prevent accidental sends */}
-        {DEAD.includes(data.status) ? (
+        {/* Payment block — hidden once expired (by time or status) to prevent accidental sends */}
+        {isDead ? (
           <div className="pay-cust-dead">
             <div className="pay-cust-dead-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
