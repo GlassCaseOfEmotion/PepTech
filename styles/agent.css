@@ -226,6 +226,189 @@
   height: 38px; width: 38px; padding: 0; display: grid; place-items: center; flex-shrink: 0;
 }
 
+/* ─── Onboarding composer (pt-composer-*) ────────────────────────────────
+   A polished, auto-grow chat composer used by the onboarding agent.
+   Rounded container owns the look; the textarea inside is borderless.
+   Subtle focus ring + drag-over state use the design-system accent vars
+   so the component adapts to all themes (light/dim/dark) automatically. */
+
+.pt-composer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 10px 8px;
+  background: var(--pt-surface);
+  border: 1px solid var(--pt-line);
+  border-radius: var(--pt-radius-lg, 12px);
+  box-shadow:
+    0 1px 0 oklch(from var(--pt-fg) l c h / 0.04) inset,
+    0 12px 28px -22px oklch(0 0 0 / 0.45);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+.pt-composer:focus-within {
+  border-color: var(--pt-accent);
+  box-shadow:
+    0 1px 0 oklch(from var(--pt-fg) l c h / 0.04) inset,
+    0 12px 28px -22px oklch(0 0 0 / 0.45),
+    0 0 0 4px var(--pt-accent-soft);
+}
+.pt-composer.is-drag {
+  border-color: var(--pt-accent);
+  background: var(--pt-accent-soft);
+}
+
+.pt-composer-textarea {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  resize: none;
+  font: inherit;
+  color: var(--pt-fg);
+  font-size: 14px;
+  line-height: 1.55;
+  padding: 6px 6px 0;
+  min-height: 28px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.pt-composer-textarea::placeholder { color: var(--pt-fg-4); }
+.pt-composer-textarea:disabled { opacity: 0.55; cursor: progress; }
+
+.pt-composer-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 2px 0;
+}
+.pt-composer-actions-right { margin-left: auto; display: inline-flex; gap: 10px; align-items: center; }
+.pt-composer-hint {
+  font-size: 11px;
+  letter-spacing: 0.01em;
+  color: var(--pt-fg-4);
+}
+.pt-composer-hint kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid var(--pt-line);
+  border-bottom-width: 1.5px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 10px;
+  color: var(--pt-fg-3);
+  background: var(--pt-surface-2);
+}
+
+.pt-composer-icon-btn {
+  width: 30px; height: 30px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--pt-fg-3);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.pt-composer-icon-btn:hover:not(:disabled) {
+  background: oklch(from var(--pt-fg) l c h / 0.06);
+  color: var(--pt-fg);
+}
+.pt-composer-icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.pt-composer-send {
+  height: 30px;
+  min-width: 30px;
+  padding: 0 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px;
+  background: var(--pt-accent);
+  color: var(--pt-accent-fg);
+  border: 0;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 0.12s, transform 0.06s ease-out, opacity 0.12s, filter 0.12s;
+}
+.pt-composer-send:hover:not(:disabled) { filter: brightness(1.04); }
+.pt-composer-send:active:not(:disabled) { transform: translateY(1px); }
+.pt-composer-send:disabled {
+  background: oklch(from var(--pt-fg) l c h / 0.07);
+  color: var(--pt-fg-4);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.pt-composer-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.pt-composer-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 6px 5px 8px;
+  background: var(--pt-surface-2);
+  border: 1px solid var(--pt-line);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--pt-fg);
+  max-width: 100%;
+  animation: pt-composer-chip-in 0.18s ease-out both;
+}
+@keyframes pt-composer-chip-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: none; }
+}
+.pt-composer-chip-icon {
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--pt-accent-soft);
+  color: var(--pt-accent);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.pt-composer-chip-name {
+  font-weight: 500;
+  max-width: 220px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pt-composer-chip-remove {
+  margin-left: 2px;
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--pt-fg-3);
+  font-size: 14px; line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.pt-composer-chip-remove:hover {
+  background: oklch(from var(--pt-fg) l c h / 0.06);
+  color: var(--pt-fg);
+}
+
+.pt-composer-uploading {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 12px 6px 10px;
+  border-radius: 999px;
+  background: var(--pt-surface-2);
+  border: 1px solid var(--pt-line);
+  font-size: 12px;
+  color: var(--pt-fg-3);
+}
+.pt-composer-uploading-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--pt-accent);
+  animation: pt-composer-pulse 1.2s ease-in-out infinite;
+}
+@keyframes pt-composer-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50%      { opacity: 1;   transform: scale(1); }
+}
+
 /* ─── Markdown rendering inside agent bubbles ─────────────────────────────── */
 .pt-agent-md { display: block; }
 .pt-agent-md p { margin: 0 0 0.5em; }

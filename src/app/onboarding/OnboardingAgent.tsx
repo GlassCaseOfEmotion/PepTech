@@ -192,14 +192,25 @@ export function OnboardingAgent({
   } | null>(null)
   const [uploading, setUploading] = useState(false)
   const [proposalStatus, setProposalStatus] = useState<Record<string, 'idle' | 'importing' | 'done' | 'cancelled'>>({})
+  const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const msgsRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const sentOpenerRef = useRef(false)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages, streaming, confirming, pendingConfirm])
+
+  // Auto-grow the textarea so the composer container expands with the message,
+  // up to the CSS max-height. Resetting to 'auto' first lets it shrink too.
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 220)}px`
+  }, [input])
 
   const finishIfComplete = useCallback((toolCalls: ToolCall[]) => {
     if (toolCalls.some(tc => tc.name === 'complete_onboarding' && tc.status === 'complete')) {
@@ -583,45 +594,44 @@ export function OnboardingAgent({
             <div ref={bottomRef} aria-hidden style={{ height: 1 }} />
           </div>
 
-          <div
-            onDragOver={e => { e.preventDefault() }}
-            onDrop={e => {
-              e.preventDefault()
-              const file = e.dataTransfer.files?.[0]
-              if (file) void uploadFile(file)
-            }}
-            style={{
-              flexShrink: 0,
-              padding: '12px 0 20px',
-              background: 'var(--pt-bg)',
-              borderTop: '1px solid rgba(255,255,255,0.04)',
-            }}
-          >
-            {stagedFile && (
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '6px 10px', marginBottom: 8,
-                background: 'var(--pt-bg-2)', borderRadius: 999, fontSize: 12,
-              }}>
-                <span>📎 {stagedFile.filename}</span>
-                <button
-                  onClick={() => setStagedFile(null)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', opacity: 0.6 }}
-                  aria-label="Remove attachment"
-                >×</button>
-              </div>
-            )}
-            <div className="pt-agent-chat-input-row" style={{ marginTop: 0 }}>
-              <button
-                type="button"
-                className="pt-btn pt-btn-ghost"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading || streaming || confirming}
-                title="Attach a price list"
-                style={{ height: 36, width: 36, padding: 0 }}
-              >
-                <Icons.paperclip size={14} />
-              </button>
+          <div style={{ flexShrink: 0, padding: '8px 0 20px' }}>
+            <div
+              className={`pt-composer${dragOver ? ' is-drag' : ''}`}
+              onDragOver={e => { e.preventDefault() }}
+              onDragEnter={e => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={e => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragOver(false)
+              }}
+              onDrop={e => {
+                e.preventDefault()
+                setDragOver(false)
+                const file = e.dataTransfer.files?.[0]
+                if (file) void uploadFile(file)
+              }}
+            >
+              {(uploading || stagedFile) && (
+                <div className="pt-composer-chip-row">
+                  {uploading && (
+                    <div className="pt-composer-uploading">
+                      <span className="pt-composer-uploading-dot" />
+                      Uploading…
+                    </div>
+                  )}
+                  {!uploading && stagedFile && (
+                    <div className="pt-composer-chip">
+                      <span className="pt-composer-chip-icon">PDF</span>
+                      <span className="pt-composer-chip-name">{stagedFile.filename}</span>
+                      <button
+                        type="button"
+                        className="pt-composer-chip-remove"
+                        onClick={() => setStagedFile(null)}
+                        aria-label="Remove attachment"
+                      >×</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <input
                 ref={fileInputRef}
                 type="file"
@@ -634,8 +644,17 @@ export function OnboardingAgent({
                 }}
               />
               <textarea
-                className="pt-agent-chat-textarea"
-                placeholder={uploading ? 'Uploading…' : stagedFile ? 'Add a message (optional)…' : 'Type your reply…'}
+                ref={textareaRef}
+                className="pt-composer-textarea"
+                placeholder={
+                  uploading
+                    ? 'Uploading your file…'
+                    : stagedFile
+                      ? 'Add a note, or just hit send to extract this catalogue.'
+                      : dragOver
+                        ? 'Drop your file here…'
+                        : 'Reply to the assistant, or drop in your price list (PDF, image, or paste).'
+                }
                 rows={1}
                 value={input}
                 onChange={e => setInput(e.target.value)}
@@ -646,13 +665,36 @@ export function OnboardingAgent({
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send() } }}
                 disabled={streaming || confirming}
               />
-              <button
-                className="pt-btn pt-btn-primary pt-agent-send-btn"
-                onClick={() => void send()}
-                disabled={(!input.trim() && !stagedFile) || streaming || confirming || uploading}
-              >
-                <Icons.send size={13} />
-              </button>
+
+              <div className="pt-composer-actions">
+                <button
+                  type="button"
+                  className="pt-composer-icon-btn"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading || streaming || confirming}
+                  title="Attach a price list — PDF, image, or paste"
+                  aria-label="Attach a price list"
+                >
+                  <Icons.paperclip size={14} />
+                </button>
+
+                <div className="pt-composer-actions-right">
+                  <span className="pt-composer-hint">
+                    {input.trim() || stagedFile
+                      ? <><kbd>↵</kbd> to send · <kbd>Shift</kbd>+<kbd>↵</kbd> for newline</>
+                      : <>Drag · Paste · Type</>}
+                  </span>
+                  <button
+                    type="button"
+                    className="pt-composer-send"
+                    onClick={() => void send()}
+                    disabled={(!input.trim() && !stagedFile) || streaming || confirming || uploading}
+                    aria-label="Send"
+                  >
+                    <Icons.send size={12} />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
