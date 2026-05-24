@@ -177,6 +177,7 @@ export function OnboardingAgent({
   const [streaming, setStreaming] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [pendingConfirm, setPendingConfirm] = useState<{ messageId: string; toolCalls: ToolCall[] } | null>(null)
+  const [completing, setCompleting] = useState(false)
   const msgsRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const sentOpenerRef = useRef(false)
@@ -184,6 +185,42 @@ export function OnboardingAgent({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages, streaming, confirming, pendingConfirm])
+
+  const finishIfComplete = useCallback((toolCalls: ToolCall[]) => {
+    if (toolCalls.some(tc => tc.name === 'complete_onboarding' && tc.status === 'complete')) {
+      setCompleting(true)
+      setTimeout(() => router.push('/'), 1500)
+    }
+  }, [router])
+
+  const mergeResolvedToolCalls = useCallback((resolved: ToolCall[]) => {
+    // Update existing bubbles that already contain these tool calls (by id) so
+    // pending confirm cards flip to "Done"/"Skipped". If no bubble has the id,
+    // attach the resolved call(s) to the last assistant bubble (or create one).
+    setMessages(prev => {
+      const resolvedById = new Map(resolved.map(tc => [tc.id, tc]))
+      const updated = prev.map(m => {
+        if (!m.toolCalls?.length) return m
+        let touched = false
+        const next = m.toolCalls.map(tc => {
+          const r = resolvedById.get(tc.id)
+          if (r) { resolvedById.delete(tc.id); touched = true; return r }
+          return tc
+        })
+        return touched ? { ...m, toolCalls: next } : m
+      })
+      const leftovers = Array.from(resolvedById.values()).filter(tc => !SILENT_TOOLS.has(tc.name))
+      if (leftovers.length === 0) return updated
+      const lastIdx = [...updated].reverse().findIndex(m => m.role === 'assistant')
+      if (lastIdx === -1) {
+        return [...updated, { id: `a-${Date.now()}`, role: 'assistant', text: '', toolCalls: leftovers, streaming: false }]
+      }
+      const realIdx = updated.length - 1 - lastIdx
+      const last = updated[realIdx]
+      const merged = { ...last, toolCalls: [...(last.toolCalls ?? []), ...leftovers], streaming: false }
+      return [...updated.slice(0, realIdx), merged, ...updated.slice(realIdx + 1)]
+    })
+  }, [])
 
   const appendAssistantDelta = useCallback((delta: string) => {
     setMessages(prev => {
@@ -222,18 +259,8 @@ export function OnboardingAgent({
         ]),
         onToolUse: (toolCalls) => {
           setState(prev => applyToolOutputsToState(prev, toolCalls))
-          const visible = toolCalls.filter(tc => !SILENT_TOOLS.has(tc.name))
-          if (visible.length > 0) {
-            setMessages(prev => {
-              const last = prev[prev.length - 1]
-              if (last?.role === 'assistant') return [...prev.slice(0, -1), { ...last, toolCalls: visible, streaming: false }]
-              return [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: '', toolCalls: visible, streaming: false }]
-            })
-          }
-          // If onboarding just completed, push to dashboard
-          if (toolCalls.some(tc => tc.name === 'complete_onboarding' && tc.status === 'complete')) {
-            setTimeout(() => router.push('/'), 800)
-          }
+          mergeResolvedToolCalls(toolCalls)
+          finishIfComplete(toolCalls)
         },
         onConfirm: (toolCalls, messageId) => {
           setMessages(prev => {
@@ -257,7 +284,7 @@ export function OnboardingAgent({
       setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${e instanceof Error ? e.message : 'Error'}` }])
       setStreaming(false)
     }
-  }, [input, streaming, sessionId, appendAssistantDelta, router])
+  }, [input, streaming, sessionId, appendAssistantDelta, mergeResolvedToolCalls, finishIfComplete])
 
   const confirm = useCallback(async (toolCallId: string, confirmed: boolean) => {
     if (!pendingConfirm || !sessionId) return
@@ -280,9 +307,8 @@ export function OnboardingAgent({
         ]),
         onToolUse: (toolCalls) => {
           setState(prev => applyToolOutputsToState(prev, toolCalls))
-          if (toolCalls.some(tc => tc.name === 'complete_onboarding' && tc.status === 'complete')) {
-            setTimeout(() => router.push('/'), 800)
-          }
+          mergeResolvedToolCalls(toolCalls)
+          finishIfComplete(toolCalls)
         },
         onConfirm: () => {},
         onDone: () => { setConfirming(false); setMessages(prev => prev.map(m => ({ ...m, streaming: false }))) },
@@ -295,7 +321,7 @@ export function OnboardingAgent({
       setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${e instanceof Error ? e.message : 'Error'}` }])
       setConfirming(false)
     }
-  }, [pendingConfirm, sessionId, appendAssistantDelta, router])
+  }, [pendingConfirm, sessionId, appendAssistantDelta, mergeResolvedToolCalls, finishIfComplete])
 
   // Auto-send a silent opener so the agent runs read_onboarding_state and greets us
   useEffect(() => {
@@ -369,8 +395,22 @@ export function OnboardingAgent({
         </div>
       </aside>
 
-      {/* ── Right panel: chat ── */}
+      {/* ── Right panel: chat (or completion overlay) ── */}
       <main className="ob-right">
+        {completing && (
+          <div className="ob-step ob-completing" key="done">
+            <div className="ob-completing-ring">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                <circle cx="24" cy="24" r="21" stroke="var(--pt-ok)" strokeWidth="1.5" opacity="0.25"/>
+                <circle cx="24" cy="24" r="21" stroke="var(--pt-ok)" strokeWidth="2" strokeDasharray="132" strokeDashoffset="0"/>
+                <polyline points="14,24 20,30 34,17" stroke="var(--pt-ok)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <h2 className="ob-completing-h">You&apos;re all set!</h2>
+            <p className="ob-completing-p">Taking you to your dashboard…</p>
+          </div>
+        )}
+        {!completing && (
         <div className="ob-step" style={{ maxWidth: 720, width: '100%', display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div className="ob-step-hd" style={{ marginBottom: 16 }}>
             <h2 className="ob-step-title">Let&apos;s get {businessName || 'your store'} set up</h2>
@@ -444,6 +484,7 @@ export function OnboardingAgent({
             </button>
           </div>
         </div>
+        )}
       </main>
     </div>
   )

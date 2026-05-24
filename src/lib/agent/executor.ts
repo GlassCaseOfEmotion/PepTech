@@ -335,6 +335,10 @@ export async function confirmToolCall(
     .update({ tool_calls: toolCalls as unknown as import('@/types/database').Json })
     .eq('id', messageId)
 
+  // Let the client see the resolved tool call (status: complete | rejected) so it
+  // can react to terminal tools like complete_onboarding before the follow-up message.
+  send({ type: 'tool_use', toolCalls })
+
   const history = await loadHistory(sessionId, supabase)
   const client = createClient()
   send({ type: 'new_turn' })
