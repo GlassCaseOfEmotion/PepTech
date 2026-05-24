@@ -99,15 +99,18 @@ export async function seedCatalog(
     }
   }
 
-  // Seed a starter batch (10 units) for every product — non-fatal if it fails
+  // Seed a starter batch (10 units) for every product — non-fatal but logged.
+  // batches.batch_number is UNIQUE per tenant, so each product needs a distinct
+  // SEED- batch number; suffix with sku.
   if (inserted && inserted.length > 0) {
     const batchRows = inserted.map(p => ({
       tenant_id: c.tenantId,
       product_id: p.id,
-      batch_number: 'SEED-001',
+      batch_number: `SEED-${p.sku}`,
       stock: 10,
     }))
-    await c.supabase.from('batches').insert(batchRows).then(() => {})
+    const { error: batchErr } = await c.supabase.from('batches').insert(batchRows)
+    if (batchErr) console.error('[seedCatalog] batches insert failed', { message: batchErr.message, count: batchRows.length })
   }
 
   return { count: inserted?.length ?? rows.length }

@@ -255,12 +255,14 @@ export const seedCatalogPreset: AgentTool = {
       }
     }
 
-    // starter batches, non-fatal
+    // Starter batches, non-fatal but logged. batch_number must be unique per
+    // tenant (DB constraint), so suffix with SKU rather than 'SEED-001' for all.
     if (inserted && inserted.length > 0) {
       const batchRows = inserted.map(p => ({
-        tenant_id: tenantId, product_id: p.id, batch_number: 'SEED-001', stock: 10,
+        tenant_id: tenantId, product_id: p.id, batch_number: `SEED-${p.sku}`, stock: 10,
       }))
-      await supabase.from('batches').insert(batchRows).then(() => {})
+      const { error: batchErr } = await supabase.from('batches').insert(batchRows)
+      if (batchErr) console.error('[seed_catalog_preset] batches insert failed', { message: batchErr.message, count: batchRows.length })
     }
 
     return { count: inserted?.length ?? rows.length }
@@ -269,7 +271,21 @@ export const seedCatalogPreset: AgentTool = {
 
 export const extractCatalog: AgentTool = {
   name: 'extract_catalog',
-  description: 'Extract products from a price list the user has uploaded. Pass the file_ref returned by the upload step. The result is rendered as an editable proposal card the user can review before importing — do NOT verbalise the full list back to the user; the UI shows it.',
+  description: [
+    'Extract products from a price list the user has uploaded (PDF, screenshot, or pasted text).',
+    '',
+    'WHEN TO INVITE UPLOAD: At the catalog step, ask the user to share their price list. They can drag the file into the composer, click the paperclip, or paste it — invite broadly ("Drag in your price list — PDF, screenshot, or pasted text all work.").',
+    '',
+    'WHEN TO CALL THIS TOOL: When the user\'s message contains a "[uploaded: <filename> (file_ref=<ref>)]" hint, pass that file_ref to this tool.',
+    '',
+    'IMPORTANT — extraction takes ~10 seconds. BEFORE calling extract_catalog, write one short reassuring sentence in plain text so the user isn\'t left waiting in silence (e.g. "Got it — reading through your price list now…" or "Nice — let me pull the products out for you."). Then call the tool in the same response.',
+    '',
+    'AFTER IT RETURNS: The UI renders the extracted products as an editable proposal card BELOW your follow-up message. Write a brief, confident one-sentence follow-up like "Done — 24 products extracted. Review them below and hit Import when they look right." DO NOT list the products in chat — the proposal card shows them.',
+    '',
+    'AFTER IMPORT: The client will send you a synthetic message confirming the import — react briefly (one sentence) and move on to the next step (channels).',
+    '',
+    'FALLBACK: If the user says they don\'t have a price list or want to skip, offer seed_catalog_preset instead — a starter product list for their business type that they can edit later.',
+  ].join('\n'),
   requiresConfirmation: false,
   inputSchema: {
     type: 'object',

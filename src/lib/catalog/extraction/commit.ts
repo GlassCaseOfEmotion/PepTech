@@ -58,12 +58,14 @@ export async function commitExtractedCatalog(params: CommitParams): Promise<{ co
   if (insertErr || !inserted) throw new Error(insertErr?.message ?? 'Failed to insert products')
 
   // Match returned product ids back to their per-row stock (by sku, since order
-  // is not guaranteed across the round-trip).
+  // is not guaranteed across the round-trip). batch_number is unique per tenant
+  // (DB-level constraint), so we suffix with the SKU to avoid collisions when
+  // seeding multiple products in one go — SEED-RETA-10, SEED-BPC157-5, etc.
   const stockBySku = new Map(rowsWithSkus.map(r => [r.sku, r.stock]))
   const batchRows = inserted.map(p => ({
     tenant_id:    tenantId,
     product_id:   p.id,
-    batch_number: 'SEED-001',
+    batch_number: `SEED-${p.sku}`,
     stock:        stockBySku.get(p.sku) ?? 10,
   }))
   if (batchRows.length > 0) {
