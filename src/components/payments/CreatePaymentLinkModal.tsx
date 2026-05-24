@@ -23,6 +23,31 @@ type CreatedLink = {
   id: string
   hosted_url: string
   nowpayments_id: string
+  expires_at: string | null
+}
+
+function useCountdown(expiresAt: string | null) {
+  const [secsLeft, setSecsLeft] = useState<number | null>(() =>
+    expiresAt ? Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)) : null
+  )
+  useEffect(() => {
+    if (!expiresAt) return
+    const tick = () => setSecsLeft(Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)))
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [expiresAt])
+  return secsLeft
+}
+
+function formatCountdown(secs: number): string {
+  if (secs <= 0) return 'expired'
+  const h = Math.floor(secs / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  const s = secs % 60
+  if (h > 0) return `${h}h ${m}m`
+  if (m > 0) return `${m}m ${s}s`
+  return `${s}s`
 }
 
 export function CreateComposer({ onBack, baseCurrency = 'USD', initialOrderId }: { onBack: () => void; baseCurrency?: string; initialOrderId?: string }) {
@@ -41,6 +66,7 @@ export function CreateComposer({ onBack, baseCurrency = 'USD', initialOrderId }:
   const [showErrorDetails, setShowErrorDetails] = useState(false)
   const [createdLink, setCreatedLink] = useState<CreatedLink | null>(null)
   const [copied, setCopied] = useState(false)
+  const secsLeft = useCountdown(createdLink?.expires_at ?? null)
   const [orderChannel, setOrderChannel] = useState<{
     customerId: string | null
     channelType: string | null
@@ -142,6 +168,7 @@ export function CreateComposer({ onBack, baseCurrency = 'USD', initialOrderId }:
         id: result.link.id,
         hosted_url: result.link.hosted_url,
         nowpayments_id: result.link.nowpayments_id,
+        expires_at: result.link.expires_at ?? null,
       })
     }
   }
@@ -322,8 +349,21 @@ export function CreateComposer({ onBack, baseCurrency = 'USD', initialOrderId }:
         {createdLink ? (
           <>
             <h4>Link created</h4>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'var(--pt-ok-soft)', color: 'var(--pt-ok)', borderRadius: 7, fontSize: 12.5, fontWeight: 500 }}>
-              <Icons.check size={14} /> Payment link is live
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: 'var(--pt-ok-soft)', color: 'var(--pt-ok)', borderRadius: 7, fontSize: 12.5, fontWeight: 500 }}>
+                <Icons.check size={14} /> Payment link is live
+              </div>
+              {secsLeft !== null && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '9px 12px', borderRadius: 7, fontSize: 12.5, fontWeight: 500,
+                  background: secsLeft <= 0 ? 'oklch(from var(--pt-danger) l c h / 0.08)' : secsLeft < 300 ? 'oklch(from var(--pt-danger) l c h / 0.08)' : 'var(--pt-warn-soft)',
+                  color: secsLeft < 300 ? 'var(--pt-danger)' : 'var(--pt-warn)',
+                }}>
+                  <Icons.clock size={13} />
+                  {secsLeft <= 0 ? 'Link has expired' : <>Expires in <span style={{ fontFamily: 'var(--pt-mono)', marginLeft: 3 }}>{formatCountdown(secsLeft)}</span></>}
+                </div>
+              )}
             </div>
 
             <h4>Checkout URL</h4>
