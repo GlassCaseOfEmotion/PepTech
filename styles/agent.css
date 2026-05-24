@@ -271,3 +271,28 @@
   color: var(--pt-fg-2); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
 }
 .pt-agent-md tr:nth-child(even) td { background: oklch(from var(--pt-surface-2) l c h / 0.5); }
+
+/* ─── Catalog proposal card ──────────────────────────────────────────────── */
+.pt-proposal {
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--pt-border, rgba(255,255,255,0.08));
+  border-radius: 10px;
+  background: var(--pt-bg-2, rgba(255,255,255,0.02));
+  font-size: 13px;
+}
+.pt-proposal-hd { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 10px; }
+.pt-proposal-cur { opacity: 0.7; }
+.pt-proposal-hint { margin-left: auto; opacity: 0.5; font-size: 11px; }
+.pt-proposal-group { margin-top: 10px; }
+.pt-proposal-group-hd { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.6; padding: 6px 4px; }
+.pt-proposal-table { width: 100%; border-collapse: collapse; }
+.pt-proposal-table th { text-align: left; font-weight: 500; opacity: 0.55; padding: 4px 6px; font-size: 11px; }
+.pt-proposal-table td { padding: 2px 6px; border-top: 1px solid var(--pt-border, rgba(255,255,255,0.05)); }
+.pt-proposal-cell { width: 100%; background: transparent; border: 0; color: inherit; font-size: 13px; padding: 4px 0; }
+.pt-proposal-cell:focus { outline: 1px solid var(--pt-accent, #6aa); border-radius: 4px; }
+.pt-proposal-rm { background: none; border: 0; color: inherit; opacity: 0.4; cursor: pointer; font-size: 16px; }
+.pt-proposal-rm:hover { opacity: 1; color: var(--pt-danger, #d66); }
+.pt-proposal-notes { margin-top: 12px; font-size: 12px; opacity: 0.75; }
+.pt-proposal-foot { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+.pt-proposal-done, .pt-proposal-cancelled { margin-top: 8px; padding: 10px 12px; border-radius: 8px; background: var(--pt-bg-2, rgba(255,255,255,0.04)); font-size: 13px; }
