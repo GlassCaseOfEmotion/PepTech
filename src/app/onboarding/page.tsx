@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient, getServerUser } from '@/lib/supabase/server'
-import { OnboardingWizard } from './OnboardingWizard'
+import { OnboardingShell } from './OnboardingShell'
 
 export default async function OnboardingPage() {
   const user = await getServerUser()
@@ -14,7 +14,7 @@ export default async function OnboardingPage() {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('business_type, base_currency, onboarded_at, name, timezone')
+    .select('business_type, base_currency, onboarded_at, name, timezone, intended_channels')
     .eq('id', userRow.tenant_id)
     .single()
 
@@ -29,7 +29,7 @@ export default async function OnboardingPage() {
   if ((productCount ?? 0) > 0) initialStep = 4
 
   return (
-    <OnboardingWizard
+    <OnboardingShell
       initialStep={initialStep}
       initialBusinessType={tenant?.business_type ?? null}
       initialCurrency={tenant?.base_currency ?? 'USD'}
@@ -37,6 +37,7 @@ export default async function OnboardingPage() {
       businessName={tenant?.name ?? 'Your Business'}
       displayName={userRow?.display_name ?? ''}
       initialTimezone={tenant?.timezone ?? 'UTC'}
+      initialChannels={tenant?.intended_channels ?? []}
     />
   )
 }

@@ -1,0 +1,437 @@
+'use client'
+
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { Icons } from '@/lib/icons'
+import type { SseEvent, ToolCall } from '@/lib/agent/types'
+
+interface OnboardingState {
+  display_name: string | null
+  timezone: string | null
+  business_type: string | null
+  base_currency: string | null
+  intended_channels: string[]
+  product_count: number
+  complete: boolean
+}
+
+interface DisplayMsg {
+  id: string
+  role: 'user' | 'assistant'
+  text: string
+  streaming?: boolean
+  toolCalls?: ToolCall[]
+}
+
+const STEP_LABELS = ['Profile', 'Business', 'Currency', 'Catalog', 'Channels']
+
+function summariseToolCall(name: string, input: Record<string, unknown>): string {
+  switch (name) {
+    case 'read_onboarding_state':  return 'Checked your progress'
+    case 'save_profile':           return `Saved profile — ${input.display_name ?? ''}, ${input.timezone ?? ''}`
+    case 'save_business_type':     return `Set business type — ${input.business_type ?? ''}`
+    case 'save_currency':          return `Set currency — ${input.currency ?? ''}`
+    case 'save_channel_intent': {
+      const ch = Array.isArray(input.channels) ? (input.channels as string[]).join(', ') : ''
+      return `Saved channels — ${ch}`
+    }
+    case 'seed_catalog_preset':    return 'Seed starter catalog from preset list'
+    case 'extract_catalog':        return 'Extract products from upload (coming soon)'
+    case 'complete_onboarding':    return 'Finish onboarding and go to dashboard'
+    default: return name.replace(/_/g, ' ')
+  }
+}
+
+function deriveSteps(state: OnboardingState) {
+  return {
+    profile:       !!state.display_name,
+    business_type: !!state.business_type,
+    currency:      !!state.base_currency,
+    catalog:       (state.product_count ?? 0) > 0,
+    channels:      (state.intended_channels?.length ?? 0) > 0,
+  }
+}
+
+function readSseStream(
+  response: Response,
+  handlers: {
+    onDelta: (delta: string) => void
+    onNewTurn: () => void
+    onToolUse: (toolCalls: ToolCall[]) => void
+    onConfirm: (toolCalls: ToolCall[], messageId: string) => void
+    onDone: (sessionId: string) => void
+    onError: (msg: string) => void
+  },
+) {
+  const reader = response.body!.getReader()
+  const decoder = new TextDecoder()
+  let buf = ''
+  const pump = async () => {
+    const { done, value } = await reader.read()
+    if (done) return
+    buf += decoder.decode(value, { stream: true })
+    const lines = buf.split('\n')
+    buf = lines.pop() ?? ''
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue
+      try {
+        const event = JSON.parse(line.slice(6)) as SseEvent
+        if (event.type === 'text')     handlers.onDelta(event.delta)
+        if (event.type === 'new_turn') handlers.onNewTurn()
+        if (event.type === 'tool_use') handlers.onToolUse(event.toolCalls)
+        if (event.type === 'confirm')  handlers.onConfirm(event.toolCalls, event.messageId)
+        if (event.type === 'done')     handlers.onDone(event.sessionId)
+        if (event.type === 'error')    handlers.onError(event.message)
+      } catch { /* ignore */ }
+    }
+    await pump()
+  }
+  pump().catch(e => handlers.onError(e.message))
+}
+
+function applyToolOutputsToState(
+  prev: OnboardingState,
+  toolCalls: ToolCall[],
+): OnboardingState {
+  let next = { ...prev }
+  for (const tc of toolCalls) {
+    if (tc.status !== 'complete') continue
+    const out = tc.output as Record<string, unknown> | null
+    if (!out || typeof out !== 'object') continue
+    switch (tc.name) {
+      case 'save_profile':
+        if (typeof out.display_name === 'string') next.display_name = out.display_name
+        if (typeof out.timezone === 'string')     next.timezone = out.timezone
+        break
+      case 'save_business_type':
+        if (typeof out.business_type === 'string') next.business_type = out.business_type
+        break
+      case 'save_currency':
+        if (typeof out.currency === 'string') next.base_currency = out.currency
+        break
+      case 'save_channel_intent':
+        if (Array.isArray(out.channels)) next.intended_channels = out.channels as string[]
+        break
+      case 'seed_catalog_preset':
+        if (typeof out.count === 'number') next.product_count = out.count
+        break
+      case 'complete_onboarding':
+        next.complete = !!out.complete
+        break
+      case 'read_onboarding_state': {
+        // Authoritative refresh
+        const dn = out.display_name
+        const tz = out.timezone
+        const bt = out.business_type
+        const bc = out.base_currency
+        const ic = out.intended_channels
+        const pc = out.product_count
+        next = {
+          display_name:      typeof dn === 'string' ? dn : null,
+          timezone:          typeof tz === 'string' ? tz : null,
+          business_type:     typeof bt === 'string' ? bt : null,
+          base_currency:     typeof bc === 'string' ? bc : null,
+          intended_channels: Array.isArray(ic) ? (ic as string[]) : [],
+          product_count:     typeof pc === 'number' ? pc : 0,
+          complete:          !!out.complete,
+        }
+        break
+      }
+    }
+  }
+  return next
+}
+
+function Check() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+      <polyline points="1.5,5 4,7.5 8.5,2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+export function OnboardingAgent({
+  initialState,
+  businessName,
+  onSwitchToClassic,
+}: {
+  initialState: OnboardingState
+  businessName: string
+  onSwitchToClassic: () => void
+}) {
+  const router = useRouter()
+  const [state, setState] = useState<OnboardingState>(initialState)
+  const [messages, setMessages] = useState<DisplayMsg[]>([])
+  const [input, setInput] = useState('')
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [streaming, setStreaming] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [pendingConfirm, setPendingConfirm] = useState<{ messageId: string; toolCalls: ToolCall[] } | null>(null)
+  const msgsRef = useRef<HTMLDivElement>(null)
+  const sentOpenerRef = useRef(false)
+
+  useEffect(() => {
+    msgsRef.current?.scrollTo({ top: msgsRef.current.scrollHeight, behavior: 'smooth' })
+  }, [messages])
+
+  const appendAssistantDelta = useCallback((delta: string) => {
+    setMessages(prev => {
+      const last = prev[prev.length - 1]
+      if (last?.role === 'assistant' && !last.toolCalls) {
+        return [...prev.slice(0, -1), { ...last, text: last.text + delta, streaming: true }]
+      }
+      return [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: delta, streaming: true }]
+    })
+  }, [])
+
+  const send = useCallback(async (override?: string, opts: { hideUserMessage?: boolean } = {}) => {
+    const text = (override ?? input).trim()
+    if (!text || streaming) return
+    if (!override) setInput('')
+    setStreaming(true)
+    setPendingConfirm(null)
+
+    if (!opts.hideUserMessage) {
+      setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user', text }])
+    }
+
+    try {
+      const res = await fetch('/api/agent/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, message: text, mode: 'onboarding' }),
+      })
+      if (!res.ok) throw new Error('Request failed')
+
+      readSseStream(res, {
+        onDelta: appendAssistantDelta,
+        onNewTurn: () => setMessages(prev => [
+          ...prev.map(m => ({ ...m, streaming: false })),
+          { id: `a-${Date.now()}`, role: 'assistant', text: '', streaming: true },
+        ]),
+        onToolUse: (toolCalls) => {
+          setState(prev => applyToolOutputsToState(prev, toolCalls))
+          setMessages(prev => {
+            const last = prev[prev.length - 1]
+            if (last?.role === 'assistant') return [...prev.slice(0, -1), { ...last, toolCalls, streaming: false }]
+            return [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: '', toolCalls, streaming: false }]
+          })
+          // If onboarding just completed, push to dashboard
+          if (toolCalls.some(tc => tc.name === 'complete_onboarding' && tc.status === 'complete')) {
+            setTimeout(() => router.push('/'), 800)
+          }
+        },
+        onConfirm: (toolCalls, messageId) => {
+          setMessages(prev => {
+            const last = prev[prev.length - 1]
+            if (last?.role === 'assistant') return [...prev.slice(0, -1), { ...last, toolCalls, streaming: false }]
+            return [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: '', toolCalls, streaming: false }]
+          })
+          setPendingConfirm({ messageId, toolCalls })
+        },
+        onDone: (newSid) => {
+          setSessionId(newSid)
+          setStreaming(false)
+          setMessages(prev => prev.map(m => ({ ...m, streaming: false })))
+        },
+        onError: (msg) => {
+          setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${msg}` }])
+          setStreaming(false)
+        },
+      })
+    } catch (e) {
+      setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${e instanceof Error ? e.message : 'Error'}` }])
+      setStreaming(false)
+    }
+  }, [input, streaming, sessionId, appendAssistantDelta, router])
+
+  const confirm = useCallback(async (toolCallId: string, confirmed: boolean) => {
+    if (!pendingConfirm || !sessionId) return
+    setConfirming(true)
+    setPendingConfirm(null)
+
+    try {
+      const res = await fetch('/api/agent/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, messageId: pendingConfirm.messageId, toolCallId, confirmed }),
+      })
+      if (!res.ok) throw new Error('Confirm failed')
+
+      readSseStream(res, {
+        onDelta: appendAssistantDelta,
+        onNewTurn: () => setMessages(prev => [
+          ...prev.map(m => ({ ...m, streaming: false })),
+          { id: `a-${Date.now()}`, role: 'assistant', text: '', streaming: true },
+        ]),
+        onToolUse: (toolCalls) => {
+          setState(prev => applyToolOutputsToState(prev, toolCalls))
+          if (toolCalls.some(tc => tc.name === 'complete_onboarding' && tc.status === 'complete')) {
+            setTimeout(() => router.push('/'), 800)
+          }
+        },
+        onConfirm: () => {},
+        onDone: () => { setConfirming(false); setMessages(prev => prev.map(m => ({ ...m, streaming: false }))) },
+        onError: (msg) => {
+          setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${msg}` }])
+          setConfirming(false)
+        },
+      })
+    } catch (e) {
+      setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${e instanceof Error ? e.message : 'Error'}` }])
+      setConfirming(false)
+    }
+  }, [pendingConfirm, sessionId, appendAssistantDelta, router])
+
+  // Auto-send a silent opener so the agent runs read_onboarding_state and greets us
+  useEffect(() => {
+    if (sentOpenerRef.current) return
+    sentOpenerRef.current = true
+    void send('Hi — I just landed on the onboarding page.', { hideUserMessage: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const steps = deriveSteps(state)
+  const stepValues = [steps.profile, steps.business_type, steps.currency, steps.catalog, steps.channels]
+  const doneCount = stepValues.filter(Boolean).length
+
+  return (
+    <div className="ob-shell">
+
+      {/* ── Left panel ── */}
+      <aside className="ob-left" aria-hidden="false">
+        <div className="ob-glows">
+          <div className="ob-glow ob-glow-a" />
+          <div className="ob-glow ob-glow-b" />
+        </div>
+        <div className="ob-dots" />
+        <div className="ob-left-inner">
+
+          <div className="ob-logo">
+            <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
+              <polygon points="11,1.5 20,6.5 20,15.5 11,20.5 2,15.5 2,6.5" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+              <circle cx="11" cy="11" r="2.5" fill="currentColor"/>
+              <line x1="11" y1="4" x2="11" y2="8.5" stroke="currentColor" strokeWidth="1.2" opacity="0.4"/>
+              <line x1="11" y1="13.5" x2="11" y2="18" stroke="currentColor" strokeWidth="1.2" opacity="0.4"/>
+            </svg>
+            <span>Peptech</span>
+          </div>
+
+          <div className="ob-chapter">
+            <div className="ob-ch-tag">Agent · v0.1</div>
+            <h2 className="ob-ch-title">
+              <span>Your store,</span>
+              <span>your way.</span>
+            </h2>
+            <p className="ob-ch-sub">{doneCount} of {STEP_LABELS.length} steps done. Chat with the assistant to set everything up.</p>
+          </div>
+
+          <nav className="ob-stepper">
+            {STEP_LABELS.map((label, idx) => {
+              const done = stepValues[idx]
+              const n = idx + 1
+              return (
+                <div key={label} className={`ob-si${done ? ' done' : ''}${!done && stepValues.slice(0, idx).every(Boolean) ? ' active' : ''}`}>
+                  <div className="ob-si-dot">
+                    {done ? <Check /> : <span>{n}</span>}
+                  </div>
+                  <span className="ob-si-label">{label}</span>
+                  {idx < STEP_LABELS.length - 1 && <div className="ob-si-line" />}
+                </div>
+              )
+            })}
+          </nav>
+
+          <div style={{ marginTop: 'auto', paddingTop: 24 }}>
+            <button
+              className="ob-btn ob-btn-ghost"
+              style={{ fontSize: 12, opacity: 0.7 }}
+              onClick={onSwitchToClassic}
+            >
+              ← Use classic step-by-step instead
+            </button>
+          </div>
+
+        </div>
+      </aside>
+
+      {/* ── Right panel: chat ── */}
+      <main className="ob-right">
+        <div className="ob-step" style={{ maxWidth: 720, width: '100%', display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div className="ob-step-hd" style={{ marginBottom: 16 }}>
+            <h2 className="ob-step-title">Let&apos;s get {businessName || 'your store'} set up</h2>
+            <p className="ob-step-sub">Just chat — the assistant will walk you through each step. You can answer in any order.</p>
+          </div>
+
+          <div
+            ref={msgsRef}
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+              padding: '8px 4px 16px',
+            }}
+          >
+            {messages.length === 0 && streaming && (
+              <div className="pt-agent-typing"><span /><span /><span /></div>
+            )}
+            {messages.map(m => (
+              <div key={m.id} className={`pt-agent-chat-msg pt-agent-chat-msg-${m.role}`}>
+                {m.role === 'assistant' && m.streaming && !m.text ? (
+                  <div className="pt-agent-typing"><span /><span /><span /></div>
+                ) : m.text ? (
+                  <div className="pt-agent-chat-text">
+                    {m.role === 'assistant'
+                      ? <div className="pt-agent-md"><ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown></div>
+                      : m.text}
+                  </div>
+                ) : null}
+                {m.toolCalls?.map(tc => (
+                  <div key={tc.id} className={`pt-agent-confirm ${tc.status !== 'pending' ? 'is-resolved' : ''}`}>
+                    <div className="pt-agent-confirm-summary">{summariseToolCall(tc.name, tc.input)}</div>
+                    {tc.status === 'pending' && (
+                      <div className="pt-agent-confirm-btns">
+                        <button className="pt-btn pt-btn-primary" style={{ height: 30, fontSize: 12.5 }} onClick={() => confirm(tc.id, true)} disabled={confirming}>Confirm</button>
+                        <button className="pt-btn pt-btn-ghost"   style={{ height: 30, fontSize: 12.5 }} onClick={() => confirm(tc.id, false)} disabled={confirming}>Cancel</button>
+                      </div>
+                    )}
+                    {tc.status === 'complete' && <div className="pt-agent-confirm-done"><Icons.check size={11} /> Done</div>}
+                    {tc.status === 'rejected' && <div className="pt-agent-confirm-skip">Skipped</div>}
+                  </div>
+                ))}
+              </div>
+            ))}
+            {(streaming || confirming) && !messages.some(m => m.role === 'assistant' && m.streaming) && (
+              <div className="pt-agent-chat-msg pt-agent-chat-msg-assistant">
+                <div className="pt-agent-typing"><span /><span /><span /></div>
+              </div>
+            )}
+          </div>
+
+          <div className="pt-agent-chat-input-row" style={{ marginTop: 12 }}>
+            <textarea
+              className="pt-agent-chat-textarea"
+              placeholder="Type your reply…"
+              rows={1}
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send() } }}
+              disabled={streaming || confirming}
+            />
+            <button
+              className="pt-btn pt-btn-primary pt-agent-send-btn"
+              onClick={() => void send()}
+              disabled={!input.trim() || streaming || confirming}
+            >
+              <Icons.send size={13} />
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}

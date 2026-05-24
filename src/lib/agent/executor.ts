@@ -1,14 +1,18 @@
 import OpenAI from 'openai'
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
-import { OPENAI_TOOLS, TOOL_MAP } from './tools/index'
+import { TOOL_MAP, toolsForMode, openAiToolsForMode, type AgentMode } from './tools/index'
 import type { AgentSupabase, SseEvent, ToolCall, AgentMessage } from './types'
 
 const MODEL = process.env.OPENROUTER_MODEL ?? 'google/gemini-flash-2.5'
 
-function buildSystem() {
+function dateLine() {
   const now = new Date()
   const dateStr = now.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
   const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })
+  return `Current date and time: ${dateStr}, ${timeStr}.`
+}
+
+function buildOpsSystem() {
   return `You are the Peptech business assistant — a knowledgeable and proactive agent for a peptide supplier's CRM.
 You help the operator run their business: querying data, creating orders, tracking customers, and surfacing insights.
 Be helpful and conversational, but keep responses focused. Use numbers and specifics when summarising data — don't pad with filler.
@@ -22,7 +26,36 @@ Always hyperlink platform artifacts using markdown when you reference them:
 - Customers: [Customer Name](/contacts/{id}) — use the customer UUID as the id
 - Conversations: [Customer Name](/inbox?conversation={id})
 Apply these links consistently — in tables, lists, and prose. Never show a bare ref number or customer name when you have the ID to link it.
-Current date and time: ${dateStr}, ${timeStr}.`
+${dateLine()}`
+}
+
+function buildOnboardingSystem() {
+  return `You are the Peptech onboarding assistant. Your job is to walk a brand-new tenant through setting up their account through natural conversation. You replace a five-step form wizard.
+
+The five steps are: profile (display name + timezone), business_type, currency, catalog, channels. You can do them in any order the user prefers, but the natural order is the one listed.
+
+At the start of EVERY conversation — including the very first turn — call read_onboarding_state first to find out what is already done, then pick up from there. Never ask for information that is already saved.
+
+Style:
+- Warm but efficient. Don't over-explain. One or two short sentences per turn.
+- Greet by first name once you have it. Their email or business name may give you a hint to suggest.
+- Before calling a tool that writes data, write one short sentence telling the user what you're about to do (e.g. "Saving that now." or "Setting your currency to GBP.").
+- Don't ask the user to verbally confirm write actions — the UI handles confirmation cards. Just call the tool.
+- If the user gives a city or country instead of a timezone, infer the IANA zone yourself (e.g. "Bangkok" → "Asia/Bangkok", "London" → "Europe/London"). Don't ask them to look it up.
+- Channel intent is just a selection of which channels they plan to use later. Don't try to actually connect them in this conversation — connection happens in Settings.
+- The catalog step in this version (v0.1) is limited: you can offer seed_catalog_preset (a starter list for their business type) or let them skip and add products later. The full "upload your price list and I'll extract it" experience is coming in the next release — you can mention it's coming but don't promise it now.
+- After all required steps are done, call complete_onboarding to send them to the dashboard.
+
+Valid values:
+- business_type: peptides, nootropics, sarms, general
+- currency: USD, EUR, GBP, AUD, SGD, IDR, MYR, THB
+- channels: whatsapp, telegram, email
+
+${dateLine()}`
+}
+
+function buildSystem(mode: AgentMode) {
+  return mode === 'onboarding' ? buildOnboardingSystem() : buildOpsSystem()
 }
 
 function createClient() {
@@ -108,11 +141,12 @@ async function streamCompletion(
   client: OpenAI,
   history: ChatCompletionMessageParam[],
   send: (e: SseEvent) => void,
+  mode: AgentMode,
 ): Promise<{ text: string; toolCalls: ToolCall[] }> {
   const stream = await client.chat.completions.create({
     model: MODEL,
-    messages: [{ role: 'system', content: buildSystem() }, ...history],
-    tools: OPENAI_TOOLS,
+    messages: [{ role: 'system', content: buildSystem(mode) }, ...history],
+    tools: openAiToolsForMode(mode),
     stream: true,
   })
 
@@ -154,6 +188,15 @@ async function streamCompletion(
   return { text: textAccum, toolCalls }
 }
 
+async function modeForSession(sessionId: string, supabase: AgentSupabase): Promise<AgentMode> {
+  const { data } = await supabase
+    .from('agent_sessions')
+    .select('trigger')
+    .eq('id', sessionId)
+    .single()
+  return data?.trigger === 'onboarding' ? 'onboarding' : 'ops'
+}
+
 export async function executeAgentTurn(
   sessionId: string,
   userMessage: string,
@@ -164,6 +207,7 @@ export async function executeAgentTurn(
   const encoder = new TextEncoder()
   const send = (e: SseEvent) => controller.enqueue(encoder.encode(encodeEvent(e)))
   const client = createClient()
+  const mode = await modeForSession(sessionId, supabase)
 
   await saveUserMessage(sessionId, tenantId, userMessage, supabase)
   let history = await loadHistory(sessionId, supabase)
@@ -171,10 +215,17 @@ export async function executeAgentTurn(
     history = [{ role: 'user', content: userMessage }]
   }
 
-  const { text, toolCalls } = await streamCompletion(client, history, send)
+  const { text, toolCalls } = await streamCompletion(client, history, send, mode)
 
-  // Execute read tools silently
+  // Restrict tool calls to those available in this mode (defensive — model shouldn't call others)
+  const allowedNames = new Set(toolsForMode(mode).map(t => t.name))
+
   for (const tc of toolCalls) {
+    if (!allowedNames.has(tc.name)) {
+      tc.output = { error: `Tool ${tc.name} is not available in this mode` }
+      tc.status = 'complete'
+      continue
+    }
     const tool = TOOL_MAP[tc.name]
     if (!tool) continue
     if (!tool.requiresConfirmation) {
@@ -211,7 +262,7 @@ export async function executeAgentTurn(
     const nextHistory = [...history, assistantMsg, ...toolResultMsgs]
 
     send({ type: 'new_turn' })
-    await continueTurn(nextHistory, sessionId, tenantId, supabase, client, send)
+    await continueTurn(nextHistory, sessionId, tenantId, supabase, client, send, mode)
     send({ type: 'done', sessionId })
     return
   }
@@ -234,8 +285,9 @@ async function continueTurn(
   supabase: AgentSupabase,
   client: OpenAI,
   send: (e: SseEvent) => void,
+  mode: AgentMode,
 ) {
-  const { text } = await streamCompletion(client, history, send)
+  const { text } = await streamCompletion(client, history, send, mode)
   await saveAssistantMessage(sessionId, tenantId, text || null, [], supabase)
 }
 
@@ -250,6 +302,7 @@ export async function confirmToolCall(
 ) {
   const encoder = new TextEncoder()
   const send = (e: SseEvent) => controller.enqueue(encoder.encode(encodeEvent(e)))
+  const mode = await modeForSession(sessionId, supabase)
 
   const { data: msg } = await supabase
     .from('agent_messages')
@@ -284,6 +337,6 @@ export async function confirmToolCall(
   const history = await loadHistory(sessionId, supabase)
   const client = createClient()
   send({ type: 'new_turn' })
-  await continueTurn(history, sessionId, tenantId, supabase, client, send)
+  await continueTurn(history, sessionId, tenantId, supabase, client, send, mode)
   send({ type: 'done', sessionId })
 }

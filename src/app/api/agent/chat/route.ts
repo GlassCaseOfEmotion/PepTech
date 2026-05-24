@@ -6,7 +6,9 @@ export async function POST(request: Request) {
   const user = await getServerUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { sessionId, message } = await request.json() as { sessionId?: string; message?: string }
+  const { sessionId, message, mode } = await request.json() as {
+    sessionId?: string; message?: string; mode?: 'ops' | 'onboarding'
+  }
   if (!message?.trim()) return NextResponse.json({ error: 'message required' }, { status: 400 })
 
   const supabase = await createClient()
@@ -17,9 +19,10 @@ export async function POST(request: Request) {
   // Create or reuse session
   let sid = sessionId
   if (!sid) {
+    const trigger = mode === 'onboarding' ? 'onboarding' : 'user'
     const { data: session } = await supabase
       .from('agent_sessions')
-      .insert({ tenant_id: tenantId, trigger: 'user' })
+      .insert({ tenant_id: tenantId, trigger })
       .select('id')
       .single()
     sid = session?.id
