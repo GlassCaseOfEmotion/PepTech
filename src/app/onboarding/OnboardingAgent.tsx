@@ -178,6 +178,11 @@ export function OnboardingAgent({
   const [confirming, setConfirming] = useState(false)
   const [pendingConfirm, setPendingConfirm] = useState<{ messageId: string; toolCalls: ToolCall[] } | null>(null)
   const [completing, setCompleting] = useState(false)
+  const [stagedFile, setStagedFile] = useState<{
+    file_ref: string; filename: string; mime_type: string
+  } | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const msgsRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const sentOpenerRef = useRef(false)
@@ -232,6 +237,25 @@ export function OnboardingAgent({
     })
   }, [])
 
+  const uploadFile = useCallback(async (file: File) => {
+    setUploading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/onboarding/upload', { method: 'POST', body: form })
+      if (!res.ok) {
+        const { error } = await res.json() as { error?: string }
+        throw new Error(error ?? 'Upload failed')
+      }
+      const data = await res.json() as { file_ref: string; filename: string; mime_type: string }
+      setStagedFile(data)
+    } catch (e) {
+      setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${e instanceof Error ? e.message : 'Upload error'}` }])
+    } finally {
+      setUploading(false)
+    }
+  }, [])
+
   const send = useCallback(async (override?: string, opts: { hideUserMessage?: boolean } = {}) => {
     const text = (override ?? input).trim()
     if (!text || streaming) return
@@ -244,10 +268,16 @@ export function OnboardingAgent({
     }
 
     try {
+      const sendingAttachment = stagedFile
       const res = await fetch('/api/agent/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, message: text, mode: 'onboarding' }),
+        body: JSON.stringify({
+          sessionId,
+          message: text,
+          mode: 'onboarding',
+          attachments: stagedFile ? [stagedFile] : [],
+        }),
       })
       if (!res.ok) throw new Error('Request failed')
 
@@ -274,6 +304,7 @@ export function OnboardingAgent({
           setSessionId(newSid)
           setStreaming(false)
           setMessages(prev => prev.map(m => ({ ...m, streaming: false })))
+          if (sendingAttachment) setStagedFile(null)
         },
         onError: (msg) => {
           setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${msg}` }])
@@ -284,7 +315,7 @@ export function OnboardingAgent({
       setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${e instanceof Error ? e.message : 'Error'}` }])
       setStreaming(false)
     }
-  }, [input, streaming, sessionId, appendAssistantDelta, mergeResolvedToolCalls, finishIfComplete])
+  }, [input, streaming, sessionId, stagedFile, appendAssistantDelta, mergeResolvedToolCalls, finishIfComplete])
 
   const confirm = useCallback(async (toolCallId: string, confirmed: boolean) => {
     if (!pendingConfirm || !sessionId) return
@@ -465,23 +496,71 @@ export function OnboardingAgent({
             <div ref={bottomRef} aria-hidden style={{ height: 1 }} />
           </div>
 
-          <div className="pt-agent-chat-input-row" style={{ marginTop: 12 }}>
-            <textarea
-              className="pt-agent-chat-textarea"
-              placeholder="Type your reply…"
-              rows={1}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send() } }}
-              disabled={streaming || confirming}
-            />
-            <button
-              className="pt-btn pt-btn-primary pt-agent-send-btn"
-              onClick={() => void send()}
-              disabled={!input.trim() || streaming || confirming}
-            >
-              <Icons.send size={13} />
-            </button>
+          <div
+            onDragOver={e => { e.preventDefault() }}
+            onDrop={e => {
+              e.preventDefault()
+              const file = e.dataTransfer.files?.[0]
+              if (file) void uploadFile(file)
+            }}
+          >
+            {stagedFile && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '6px 10px', marginBottom: 8,
+                background: 'var(--pt-bg-2)', borderRadius: 999, fontSize: 12,
+              }}>
+                <span>📎 {stagedFile.filename}</span>
+                <button
+                  onClick={() => setStagedFile(null)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', opacity: 0.6 }}
+                  aria-label="Remove attachment"
+                >×</button>
+              </div>
+            )}
+            <div className="pt-agent-chat-input-row" style={{ marginTop: 0 }}>
+              <button
+                type="button"
+                className="pt-btn pt-btn-ghost"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || streaming || confirming}
+                title="Attach a price list"
+                style={{ height: 36, width: 36, padding: 0 }}
+              >
+                <Icons.paperclip size={14} />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf,image/png,image/jpeg,image/webp"
+                hidden
+                onChange={e => {
+                  const f = e.target.files?.[0]
+                  if (f) void uploadFile(f)
+                  e.target.value = ''
+                }}
+              />
+              <textarea
+                className="pt-agent-chat-textarea"
+                placeholder={uploading ? 'Uploading…' : stagedFile ? 'Add a message (optional)…' : 'Type your reply…'}
+                rows={1}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onPaste={e => {
+                  const file = e.clipboardData.files?.[0]
+                  if (file) { e.preventDefault(); void uploadFile(file) }
+                }}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send() } }}
+                disabled={streaming || confirming}
+              />
+              <button
+                className="pt-btn pt-btn-primary pt-agent-send-btn"
+                onClick={() => void send()}
+                disabled={(!input.trim() && !stagedFile) || streaming || confirming || uploading}
+              >
+                <Icons.send size={13} />
+              </button>
+            </div>
           </div>
         </div>
         )}
