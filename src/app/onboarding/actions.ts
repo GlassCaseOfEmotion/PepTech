@@ -4,6 +4,8 @@ import { createClient, getServerUser } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { CATALOG_PRESETS, type BusinessType } from '@/lib/catalog-presets'
+import { commitExtractedCatalog } from '@/lib/catalog/extraction/commit'
+import type { CommitInput } from '@/lib/catalog/extraction/types'
 
 const VALID_TYPES = new Set(['peptides', 'nootropics', 'sarms', 'general'])
 const VALID_CURRENCIES = new Set(['USD', 'EUR', 'GBP', 'AUD', 'SGD', 'IDR', 'MYR', 'THB'])
@@ -160,4 +162,19 @@ export async function completeOnboarding(): Promise<void> {
   await c.supabase.from('tenants').update({ onboarded_at: new Date().toISOString() }).eq('id', c.tenantId)
   revalidatePath('/', 'layout')
   redirect('/')
+}
+
+export async function commitExtractedCatalogAction(
+  input: CommitInput,
+): Promise<{ count?: number; error?: string }> {
+  const c = await ctx()
+  if (!c) return { error: 'Unauthorized' }
+  if (!Array.isArray(input.rows) || input.rows.length === 0) return { error: 'No rows to import' }
+  try {
+    const out = await commitExtractedCatalog({ supabase: c.supabase, tenantId: c.tenantId, input })
+    revalidatePath('/onboarding')
+    return { count: out.count }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Commit failed' }
+  }
 }
