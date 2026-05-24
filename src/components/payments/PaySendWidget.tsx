@@ -116,9 +116,14 @@ export function PaySendWidget({
               Copy link
             </button>
           )}
-          {copyState === 'copied' && (
-            <button className="pay-comp-snd-copy awaiting" onClick={canMarkAwaiting ? handleMarkAwaiting : undefined}>
+          {copyState === 'copied' && canMarkAwaiting && (
+            <button className="pay-comp-snd-copy awaiting" onClick={handleMarkAwaiting}>
               Mark order as awaiting →
+            </button>
+          )}
+          {copyState === 'copied' && !canMarkAwaiting && (
+            <button className="pay-comp-snd-copy marked" disabled>
+              <Icons.check size={10} /> Copied
             </button>
           )}
           {copyState === 'marked' && (
