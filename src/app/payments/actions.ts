@@ -370,8 +370,8 @@ export async function createPaymentLink(orderId: string, payCurrency: string, me
     if (!wallet) return { error: 'Could not provision wallet' }
 
     const linkId = crypto.randomUUID()
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://peptech.app'
-    const hostedUrl = `${appUrl}/pay/${linkId}`
+    const payBaseUrl = process.env.NEXT_PUBLIC_PAY_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://peptech.app'
+    const hostedUrl = `${payBaseUrl}/pay/${linkId}`
 
     const { createNowPayment } = await import('@/lib/payments/nowpayments')
     const payment = await createNowPayment({

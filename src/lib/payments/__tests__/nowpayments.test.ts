@@ -4,12 +4,11 @@ import { createNowPayment, getNowPayment } from '../nowpayments'
 describe('createNowPayment', () => {
   beforeEach(() => { vi.resetAllMocks() })
 
-  it('returns payment id and hosted url from payment_url when present', async () => {
+  it('returns payment id and expiry from response', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         payment_id: 'pay_123',
-        payment_url: 'https://nowpayments.io/payment/?iid=pay_123',
         expiration_estimate_date: '2026-05-23T10:00:00Z',
       }),
     }))
@@ -21,28 +20,7 @@ describe('createNowPayment', () => {
       orderDescription: 'A-2001',
     })
     expect(result.id).toBe('pay_123')
-    expect(result.hostedUrl).toBe('https://nowpayments.io/payment/?iid=pay_123')
     expect(result.expiresAt).toBe('2026-05-23T10:00:00Z')
-  })
-
-  it('constructs hosted url from payment_id when payment_url is absent', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        payment_id: 'pay_456',
-        expiration_estimate_date: null,
-      }),
-    }))
-    const result = await createNowPayment({
-      amountUsd: 50,
-      payCurrency: 'btc',
-      payoutAddress: 'So1anaAddr1234',
-      orderId: 'order-uuid-2',
-      orderDescription: 'A-2002',
-    })
-    expect(result.id).toBe('pay_456')
-    expect(result.hostedUrl).toBe('https://nowpayments.io/payment/?iid=pay_456')
-    expect(result.expiresAt).toBeNull()
   })
 
   it('throws on non-ok response', async () => {
