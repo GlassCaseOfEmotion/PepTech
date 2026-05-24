@@ -59,7 +59,7 @@ export function CustomerRail({ conversation, baseCurrency }: CustomerRailProps) 
       <div className="pt-right-section">
         <div className="pt-right-hd">
           <span>Customer</span>
-          <Link href={`/customers/${customer.id}`} className="pt-link">Open →</Link>
+          <Link href={`/contacts/${customer.id}`} className="pt-link">Open →</Link>
         </div>
       </div>
     </aside>

@@ -28,7 +28,7 @@ export async function addCustomerTag(
       .from('customer_tags')
       .insert({ tenant_id: tenantId, customer_id: customerId, tag: normalized })
     if (error) return { error: error.code === '23505' ? 'Tag already exists' : error.message }
-    revalidatePath(`/customers/${customerId}`)
+    revalidatePath(`/contacts/${customerId}`)
     return { success: true }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }
@@ -48,7 +48,7 @@ export async function removeCustomerTag(
       .eq('customer_id', customerId)
       .eq('tag', tag)
     if (error) return { error: error.message }
-    revalidatePath(`/customers/${customerId}`)
+    revalidatePath(`/contacts/${customerId}`)
     return { success: true }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }
@@ -69,7 +69,7 @@ export async function addCustomerNote(
       .select('id, content, created_at')
       .single()
     if (error || !data) return { error: error?.message ?? 'Failed to save note' }
-    revalidatePath(`/customers/${customerId}`)
+    revalidatePath(`/contacts/${customerId}`)
     return { success: true, note: data as { id: string; content: string; created_at: string } }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }
@@ -101,7 +101,7 @@ export async function upsertProtocolOverride(data: {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'tenant_id,customer_id,product_id' })
     if (error) return { error: error.message }
-    revalidatePath(`/customers/${data.customerId}`)
+    revalidatePath(`/contacts/${data.customerId}`)
     return { success: true }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }

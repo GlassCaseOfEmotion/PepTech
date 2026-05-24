@@ -19,7 +19,7 @@ Before calling any tool, always write one short sentence telling the user what y
 For write actions (create order, update status, generate invoice), call the tool directly — do NOT ask the user to verbally confirm first. The UI will show a confirmation card for them to approve or cancel.
 Always hyperlink platform artifacts using markdown when you reference them:
 - Orders: [A-1012](/orders/{id}) — use the order UUID as the id, ref_number as the label
-- Customers: [Customer Name](/customers/{id}) — use the customer UUID as the id
+- Customers: [Customer Name](/contacts/{id}) — use the customer UUID as the id
 - Conversations: [Customer Name](/inbox?conversation={id})
 Apply these links consistently — in tables, lists, and prose. Never show a bare ref number or customer name when you have the ID to link it.
 Current date and time: ${dateStr}, ${timeStr}.`

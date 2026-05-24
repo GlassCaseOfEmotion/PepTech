@@ -105,7 +105,7 @@ export function LeadsTable({ leads, recentConvByCustomer, leavingIds, onRowConve
                           )}
                         </div>
                         <div className="pt-cl-name">
-                          <Link href={`/customers/${l.id}`} className="pt-link">
+                          <Link href={`/contacts/${l.id}`} className="pt-link">
                             {l.display_name}
                           </Link>
                           {isLeaving && (

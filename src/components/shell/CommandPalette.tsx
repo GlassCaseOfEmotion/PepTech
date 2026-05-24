@@ -157,7 +157,7 @@ export function CommandPalette() {
     }
     let href = ''
     let label = ''
-    if (r.kind === 'customer')      { href = `/customers/${r.id}`;                   label = r.name }
+    if (r.kind === 'customer')      { href = `/contacts/${r.id}`;                    label = r.name }
     if (r.kind === 'order')         { href = `/orders/${r.id}`;                       label = `#${r.refNumber}` }
     if (r.kind === 'conversation')  { href = `/inbox?conversation=${r.id}`;           label = r.customerName }
     if (r.kind === 'catalog')       { href = `/catalog?product=${r.id}`;               label = r.name }

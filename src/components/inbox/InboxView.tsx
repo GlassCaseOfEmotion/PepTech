@@ -960,7 +960,7 @@ function ConversationRail({ thread, baseCurrency }: { thread: InboxThread; baseC
     <aside className="pt-ix-rail">
       {/* Customer card */}
       <div className="pt-cust">
-        <Link href={`/customers/${thread.customerId}`} className="pt-cust-hd" style={{ textDecoration: 'none', color: 'inherit' }}>
+        <Link href={`/contacts/${thread.customerId}`} className="pt-cust-hd" style={{ textDecoration: 'none', color: 'inherit' }}>
           <div className="pt-cust-av" data-channel={thread.channel}>{initials(thread.name)}</div>
           <div className="pt-cust-id">
             <div className="pt-cust-name">{thread.name}</div>

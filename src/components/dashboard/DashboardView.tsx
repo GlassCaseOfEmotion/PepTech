@@ -383,7 +383,7 @@ function ReordersCard({ reorders }: { reorders: ReorderSignal[] }) {
       )}
       <ul className="pt-reorder-list">
         {reorders.map((r, i) => (
-          <Link key={i} href={`/customers/${r.customerId}`} style={{ textDecoration: 'none', color: 'inherit', display: 'contents' }}>
+          <Link key={i} href={`/contacts/${r.customerId}`} style={{ textDecoration: 'none', color: 'inherit', display: 'contents' }}>
           <li className="pt-reorder">
             <div className="pt-reorder-due">
               <div className={`pt-reorder-when ${r.dueIn === 'now' ? 'is-now' : ''}`}>{r.dueIn}</div>
@@ -595,7 +595,7 @@ export function DashboardRightRail({
     agendaItems.push({ bullet: '', title: `Reply to ${t.name}`, sub: t.snippet ?? '', href: `/inbox?conversation=${t.id}` })
   })
   reordersDueSoon.forEach(r => {
-    agendaItems.push({ bullet: '', title: `Reorder ${r.product}`, sub: r.dueIn === 'now' ? 'Due now' : `Due in ${r.dueIn}`, href: `/customers/${r.customerId}` })
+    agendaItems.push({ bullet: '', title: `Reorder ${r.product}`, sub: r.dueIn === 'now' ? 'Due now' : `Due in ${r.dueIn}`, href: `/contacts/${r.customerId}` })
   })
 
   const [pending, setPending] = useState<QueuedRun[]>(queuedRuns)
@@ -661,7 +661,7 @@ export function DashboardRightRail({
             <span>Focus customer</span>
             <Link href="/inbox" className="pt-link">Open →</Link>
           </div>
-          <Link href={`/customers/${t.customerId}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+          <Link href={`/contacts/${t.customerId}`} style={{ textDecoration: 'none', color: 'inherit' }}>
             <div className="pt-cust">
               <div className="pt-cust-hd">
                 <div className="pt-cust-av" data-channel={t.channel}>{initials(t.name)}</div>

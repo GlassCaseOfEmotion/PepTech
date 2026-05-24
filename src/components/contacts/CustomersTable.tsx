@@ -183,7 +183,7 @@ export function CustomersTable({
                 const isLeaving = leavingIds?.has(c.id) ?? false
 
                 return (
-                  <tr key={c.id} className={isLeaving ? 'pt-row-leaving' : undefined} onClick={() => router.push(`/customers/${c.id}`)}>
+                  <tr key={c.id} className={isLeaving ? 'pt-row-leaving' : undefined} onClick={() => router.push(`/contacts/${c.id}`)}>
                     <td>
                       <div className="pt-cl-cust">
                         <div className="pt-thread-av" data-channel={chKey}>
@@ -229,7 +229,7 @@ export function CustomersTable({
                     <td>
                       <div className="pt-cl-actions">
                         <Link
-                          href={`/customers/${c.id}`}
+                          href={`/contacts/${c.id}`}
                           className="pt-btn pt-btn-ghost"
                           style={{ fontSize: 11 }}
                           onClick={e => e.stopPropagation()}

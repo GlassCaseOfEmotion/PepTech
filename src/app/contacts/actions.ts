@@ -53,7 +53,7 @@ export async function setLifecycleStage(
     if (eventError) return { error: eventError.message }
 
     revalidatePath('/contacts')
-    revalidatePath(`/customers/${customerId}`)
+    revalidatePath(`/contacts/${customerId}`)
     return { success: true }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }
@@ -97,7 +97,7 @@ export async function setAcquisitionSource(
     if (error) return { error: error.message }
 
     revalidatePath('/contacts')
-    revalidatePath(`/customers/${customerId}`)
+    revalidatePath(`/contacts/${customerId}`)
     return { success: true }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' }

@@ -688,7 +688,7 @@ export function OrderDetailView({
             <section className="pt-card">
               <header className="pt-card-hd">
                 <div><h3>Customer</h3></div>
-                <Link href={`/customers/${order.customers.id}`} className="pt-iconbtn" title="Open customer">
+                <Link href={`/contacts/${order.customers.id}`} className="pt-iconbtn" title="Open customer">
                   <span style={{ display: 'inline-flex', transform: 'rotate(90deg)' }}><Icons.arrowUp size={14} /></span>
                 </Link>
               </header>
