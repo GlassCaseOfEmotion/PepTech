@@ -12,7 +12,7 @@ interface BottomNavProps {
 const TABS = [
   { label: 'Dashboard', href: '/',          icon: Icons.spark  },
   { label: 'Inbox',     href: '/inbox',      icon: Icons.inbox  },
-  { label: 'Customers', href: '/customers',  icon: Icons.users  },
+  { label: 'Contacts', href: '/contacts',  icon: Icons.users  },
   { label: 'Orders',    href: '/orders',     icon: Icons.box    },
 ]
 

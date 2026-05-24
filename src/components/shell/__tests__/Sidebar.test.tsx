@@ -20,7 +20,7 @@ describe('Sidebar', () => {
     render(<Sidebar displayName="dr_peptide" />)
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
     expect(screen.getByText('Inbox')).toBeInTheDocument()
-    expect(screen.getByText('Customers')).toBeInTheDocument()
+    expect(screen.getByText('Contacts')).toBeInTheDocument()
     expect(screen.getByText('Media')).toBeInTheDocument()
     expect(screen.getByText('Settings')).toBeInTheDocument()
   })

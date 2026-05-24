@@ -1,5 +1,26 @@
 ﻿/* customer.css */
 
+/* ── Contacts tabs ──────────────────────────────────────────────────────── */
+.pt-contacts-tabs {
+  display: flex; gap: 2px;
+  border-bottom: 0.5px solid var(--pt-line);
+  margin-bottom: 14px;
+}
+.pt-contacts-tab {
+  padding: 8px 14px; font-size: 13px; font-weight: 500;
+  color: var(--pt-fg-3); background: transparent; border: 0;
+  border-bottom: 2px solid transparent; cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: -0.5px;
+  -webkit-tap-highlight-color: transparent;
+}
+.pt-contacts-tab:hover { color: var(--pt-fg-2); }
+.pt-contacts-tab.is-on {
+  color: var(--pt-fg);
+  border-bottom-color: var(--pt-accent);
+}
+.pt-contacts-tab .pt-pill-num { font-size: 11px; }
+
 /* ── Customer list filters ──────────────────────────────────────────────── */
 .pt-cl-filters {
   display: flex; align-items: center; justify-content: space-between;
