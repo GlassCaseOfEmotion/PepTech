@@ -167,8 +167,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
   const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
   const activity = (activityRaw ?? []) as ActivityItem[]
   const automationRuns = (automationRunsRaw ?? []) as AutomationRunRow[]
-  const lifecycleStage = (customer.lifecycle_stage as 'lead' | 'customer' | null) ?? 'customer'
-  const isLead = lifecycleStage === 'lead'
+  const isLead = customer.lifecycle_stage === 'lead'
 
   const primary = customer.customer_channels?.find(c => c.is_primary) ?? customer.customer_channels?.[0]
   const chKey = primary ? CH_KEY[primary.channel_type] ?? 'wa' : 'wa'

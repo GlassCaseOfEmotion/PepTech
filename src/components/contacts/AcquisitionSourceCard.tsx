@@ -44,7 +44,7 @@ export function AcquisitionSourceCard({ customerId, initialSource, initialNote, 
   return (
     <section className="pt-card">
       <header className="pt-card-hd">
-        <div><h3 className="pt-card__title">Acquisition source</h3></div>
+        <div><h3>Acquisition source</h3></div>
       </header>
       <div className="pt-card-body">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
