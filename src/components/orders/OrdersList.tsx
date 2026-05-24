@@ -60,7 +60,7 @@ export function OrdersList({ orders, onAdvance, onOpen }: Props) {
   const sorted = useMemo(() => {
     const d = sortDir === 'asc' ? 1 : -1
     const fns: Record<SortKey, (a: OrderCard, b: OrderCard) => number> = {
-      ref:      (a, b) => d * (parseInt(a.refNumber, 10) - parseInt(b.refNumber, 10)),
+      ref:      (a, b) => d * a.refNumber.localeCompare(b.refNumber, undefined, { numeric: true }),
       date:     (a, b) => d * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
       customer: (a, b) => d * a.customerName.localeCompare(b.customerName),
       items:    (a, b) => d * (a.items.length - b.items.length),
