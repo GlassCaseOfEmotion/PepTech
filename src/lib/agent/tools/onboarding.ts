@@ -323,6 +323,17 @@ export const extractCatalog: AgentTool = {
       source_file_ref: input.file_ref,
       source_filename: filename,
     })
+
+    // Empty extraction is almost never useful — the UI would render an empty
+    // proposal card. Surface a diagnostic the model can pass through to the
+    // user, and let the UI fall back to the generic "tool ran" indicator.
+    if (result.products.length === 0) {
+      return {
+        error: `Extracted 0 products from "${filename}". The file may be unclear, password-protected, or not a product list. The user can try a sharper image/PDF, paste the contents as text, or use seed_catalog_preset as a starter.`,
+        detected_currency: result.detected_currency,
+        tenant_notes: result.tenant_notes,
+      }
+    }
     return result
   },
 }

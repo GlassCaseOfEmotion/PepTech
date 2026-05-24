@@ -5,13 +5,19 @@ export interface PromptContext {
   baseCurrency: string
 }
 
+// strict: false intentionally. We rely on the validator to normalise and
+// default any missing/extra fields. The previous strict:true configuration
+// (with all the new family / presentation / raw_category fields required)
+// was correlating with very slow runs and occasionally empty responses
+// against Gemini 2.5 Pro on large PDFs — too many constraints to satisfy
+// while reading the document. Best-effort schema + a robust validator is
+// the right trade.
 export const EXTRACTION_JSON_SCHEMA = {
   name: 'catalog_extraction',
-  strict: true,
+  strict: false,
   schema: {
     type: 'object',
-    additionalProperties: false,
-    required: ['detected_currency', 'products', 'tenant_notes'],
+    required: ['products'],
     properties: {
       detected_currency: {
         type: ['string', 'null'],
@@ -21,8 +27,10 @@ export const EXTRACTION_JSON_SCHEMA = {
         type: 'array',
         items: {
           type: 'object',
-          additionalProperties: false,
-          required: ['name', 'raw_name', 'raw_category', 'family', 'presentation', 'unit_price', 'confidence'],
+          // Only the bare essentials are required. The model is told in the
+          // prompt to also fill family / presentation / raw_category, but if
+          // it's unsure it can omit them and the server will fill defaults.
+          required: ['name', 'unit_price'],
           properties: {
             name:         { type: 'string', description: 'Cleaned product name (compound + dose), e.g. "BPC-157 5mg"' },
             raw_name:     { type: 'string', description: 'Verbatim string from the source' },
