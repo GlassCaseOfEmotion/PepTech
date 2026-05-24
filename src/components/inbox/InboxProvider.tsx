@@ -13,7 +13,7 @@ const CONV_SELECT = `
   id, status, unread_count, last_message_at, last_message_snippet,
   channel_type, channel_identifier, is_pinned, window_expires_at,
   customers (
-    id, display_name, trust_score, ltv,
+    id, display_name, trust_score, ltv, lifecycle_stage, acquisition_source,
     customer_tags (tag),
     customer_channels (channel_type, display_handle, is_primary)
   )

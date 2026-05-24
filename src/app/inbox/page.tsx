@@ -21,7 +21,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         id, status, unread_count, last_message_at, last_message_snippet,
         channel_type, channel_identifier, window_expires_at,
         customers (
-          id, display_name, trust_score, ltv,
+          id, display_name, trust_score, ltv, lifecycle_stage, acquisition_source,
           customer_tags (tag),
           customer_channels (channel_type, display_handle, is_primary)
         )
