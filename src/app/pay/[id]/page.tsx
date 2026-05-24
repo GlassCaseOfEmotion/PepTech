@@ -13,7 +13,7 @@ async function fetchCheckout(id: string): Promise<CheckoutData | null> {
     .from('crypto_payment_links')
     .select(`
       id, status, amount_usd, amount_base, base_currency, memo,
-      pay_address, pay_currency, pay_amount_crypto, expires_at, confirmed_at,
+      pay_address, pay_currency, pay_amount_crypto, expires_at, confirmed_at, created_at,
       orders ( ref_number ),
       tenants ( name )
     `)
@@ -34,6 +34,7 @@ async function fetchCheckout(id: string): Promise<CheckoutData | null> {
     pay_amount_crypto: d.pay_amount_crypto !== null ? Number(d.pay_amount_crypto) : null,
     expires_at: d.expires_at,
     confirmed_at: d.confirmed_at,
+    created_at: d.created_at,
     tenant_name: d.tenants?.name ?? 'Merchant',
     order_ref: d.orders?.ref_number ?? '',
   }

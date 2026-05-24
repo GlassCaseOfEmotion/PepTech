@@ -7,27 +7,40 @@ import type { CheckoutData, CryptoPaymentStatus } from '@/types/payments-crypto'
 const PENDING: CryptoPaymentStatus[] = ['waiting', 'confirming']
 const DEAD: CryptoPaymentStatus[] = ['expired', 'failed', 'refunded']
 
+const RATE_LOCK_MS = 20 * 60 * 1000
+
 function formatAmount(amount: number, currency: string): string {
   if (currency === 'USD') return `$${amount.toFixed(2)}`
   return `${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${currency}`
 }
 
-function useCountdown(expiresAt: string | null): string {
-  const [label, setLabel] = useState('')
+// Fires once when expires_at is reached — drives the 7-day link-expired dead state
+function useLinkExpired(expiresAt: string | null): boolean {
+  const [expired, setExpired] = useState(() =>
+    expiresAt ? Date.now() >= new Date(expiresAt).getTime() : false
+  )
   useEffect(() => {
     if (!expiresAt) return
-    const tick = () => {
-      const diff = new Date(expiresAt).getTime() - Date.now()
-      if (diff <= 0) { setLabel('Expired'); return }
-      const m = Math.floor(diff / 60000)
-      const s = Math.floor((diff % 60000) / 1000)
-      setLabel(`${m}:${s.toString().padStart(2, '0')}`)
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
+    const ms = new Date(expiresAt).getTime() - Date.now()
+    if (ms <= 0) { setExpired(true); return }
+    const id = setTimeout(() => setExpired(true), ms)
+    return () => clearTimeout(id)
   }, [expiresAt])
-  return label
+  return expired
+}
+
+// Fires once 20 min after created_at — rate lock window for the quoted crypto amount
+function useRateLockExpired(createdAt: string): boolean {
+  const [expired, setExpired] = useState(() =>
+    Date.now() >= new Date(createdAt).getTime() + RATE_LOCK_MS
+  )
+  useEffect(() => {
+    const ms = new Date(createdAt).getTime() + RATE_LOCK_MS - Date.now()
+    if (ms <= 0) { setExpired(true); return }
+    const id = setTimeout(() => setExpired(true), ms)
+    return () => clearTimeout(id)
+  }, [createdAt])
+  return expired
 }
 
 const STATUS_CONFIG: Record<string, { label: string; meta: string }> = {
@@ -52,8 +65,9 @@ function statusClass(status: string): string {
 export function CheckoutClient({ initial }: { initial: CheckoutData }) {
   const [data, setData] = useState<CheckoutData>(initial)
   const [copied, setCopied] = useState(false)
-  const countdown = useCountdown(data.expires_at)
-  const timedOut = countdown === 'Expired'
+
+  const linkExpired = useLinkExpired(data.expires_at)
+  const rateLockExpired = useRateLockExpired(data.created_at)
 
   const poll = useCallback(async () => {
     try {
@@ -64,10 +78,10 @@ export function CheckoutClient({ initial }: { initial: CheckoutData }) {
   }, [data.id])
 
   useEffect(() => {
-    if (!PENDING.includes(data.status) || timedOut) return
+    if (!PENDING.includes(data.status)) return
     const id = setInterval(poll, 5000)
     return () => clearInterval(id)
-  }, [data.status, timedOut, poll])
+  }, [data.status, poll])
 
   const copyAddress = async () => {
     if (!data.pay_address) return
@@ -83,8 +97,8 @@ export function CheckoutClient({ initial }: { initial: CheckoutData }) {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const isDead = DEAD.includes(data.status) || timedOut
-  const effectiveStatus = timedOut && !DEAD.includes(data.status) ? 'expired' : data.status
+  const isDead = DEAD.includes(data.status) || linkExpired
+  const effectiveStatus = linkExpired && !DEAD.includes(data.status) ? 'expired' : data.status
   const sc = statusClass(effectiveStatus)
   const cfg = STATUS_CONFIG[effectiveStatus] ?? STATUS_CONFIG.waiting
 
@@ -131,7 +145,7 @@ export function CheckoutClient({ initial }: { initial: CheckoutData }) {
           )}
         </div>
 
-        {/* Payment block — hidden once expired (by time or status) to prevent accidental sends */}
+        {/* Payment block — hidden once link has truly expired or status is dead */}
         {isDead ? (
           <div className="pay-cust-dead">
             <div className="pay-cust-dead-icon">
@@ -173,7 +187,18 @@ export function CheckoutClient({ initial }: { initial: CheckoutData }) {
               <div className="pay-cust-amt-crypto">
                 <span>Send exactly</span>
                 <b>{data.pay_amount_crypto} {data.pay_currency?.toUpperCase()}</b>
-                <span className="live">live</span>
+                {!rateLockExpired && <span className="live">live</span>}
+              </div>
+            )}
+
+            {rateLockExpired && (
+              <div className="pay-cust-rate-warn">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M8 2L14.5 13H1.5L8 2Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+                  <path d="M8 6v3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                  <circle cx="8" cy="11" r="0.75" fill="currentColor"/>
+                </svg>
+                <span>The quoted rate has expired — confirm the current amount with the merchant before sending.</span>
               </div>
             )}
 
@@ -193,14 +218,6 @@ export function CheckoutClient({ initial }: { initial: CheckoutData }) {
         ) : (
           <div className="pay-cust-no-addr">
             Payment address unavailable. Contact the merchant.
-          </div>
-        )}
-
-        {/* Expiry timer */}
-        {countdown && !['finished', 'expired', 'failed', 'refunded'].includes(data.status) && (
-          <div className="pay-cust-timer">
-            <span>Quote expires in</span>
-            <span className="clk">{countdown}</span>
           </div>
         )}
 

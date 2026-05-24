@@ -385,7 +385,7 @@ export async function createPaymentLink(orderId: string, payCurrency: string, me
       amount_base: amountBase,
       base_currency: orderCurrency,
       payout_address: wallet.solana_address,
-      expires_at: payment.expiresAt,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       memo: memo ?? order.ref_number,
       pay_address: payment.payAddress || null,
       pay_currency: payment.payCurrency || null,

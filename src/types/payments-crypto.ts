@@ -116,6 +116,7 @@ export type CheckoutData = {
   pay_amount_crypto: number | null
   expires_at: string | null
   confirmed_at: string | null
+  created_at: string
   tenant_name: string
   order_ref: string
 }
