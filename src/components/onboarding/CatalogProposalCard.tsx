@@ -53,7 +53,12 @@ export function CatalogProposalCard({
   if (status === 'done') {
     return (
       <div className="pt-proposal pt-proposal-done">
-        ✓ Imported {visibleCount} product{visibleCount === 1 ? '' : 's'}.
+        <span className="pt-proposal-done-check" aria-hidden>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <polyline points="2,7 6,11 12,3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+        Imported {visibleCount} product{visibleCount === 1 ? '' : 's'}.
       </div>
     )
   }
@@ -61,8 +66,10 @@ export function CatalogProposalCard({
     return <div className="pt-proposal pt-proposal-cancelled">Import cancelled.</div>
   }
 
+  const importing = status === 'importing'
+
   return (
-    <div className="pt-proposal">
+    <div className={`pt-proposal${importing ? ' is-importing' : ''}`}>
       <div className="pt-proposal-hd">
         <strong>{visibleCount} products extracted</strong>
         {initial.detected_currency && <span className="pt-proposal-cur">· {initial.detected_currency}</span>}
@@ -118,16 +125,27 @@ export function CatalogProposalCard({
         </div>
       )}
 
-      <div className="pt-proposal-foot">
-        <button className="pt-btn pt-btn-ghost" onClick={onCancel} disabled={status === 'importing'}>Cancel</button>
-        <button
-          className="pt-btn pt-btn-primary"
-          onClick={commit}
-          disabled={visibleCount === 0 || status === 'importing'}
-        >
-          {status === 'importing' ? 'Importing…' : `Looks good — import ${visibleCount} →`}
-        </button>
-      </div>
+      {importing ? (
+        <div className="pt-proposal-importing">
+          <div className="pt-proposal-importing-row">
+            <span className="pt-proposal-importing-label">
+              Importing {visibleCount} product{visibleCount === 1 ? '' : 's'}…
+            </span>
+          </div>
+          <div className="pt-proposal-progress" role="progressbar" aria-busy="true" aria-label="Importing products" />
+        </div>
+      ) : (
+        <div className="pt-proposal-foot">
+          <button className="pt-btn pt-btn-ghost" onClick={onCancel}>Cancel</button>
+          <button
+            className="pt-btn pt-btn-primary"
+            onClick={commit}
+            disabled={visibleCount === 0}
+          >
+            {`Looks good — import ${visibleCount} →`}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

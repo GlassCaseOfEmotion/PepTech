@@ -198,6 +198,10 @@ export function OnboardingAgent({
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const sentOpenerRef = useRef(false)
+  // Extract-catalog results are buffered here so the proposal card can render
+  // in its own bubble AFTER the agent's post-tool explanation message
+  // (instead of inline with the pre-tool "Reading your PDF..." bubble).
+  const pendingProposalsRef = useRef<{ toolCallId: string; toolCall: ToolCall }[]>([])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -252,9 +256,13 @@ export function OnboardingAgent({
   }, [])
 
   const appendAssistantDelta = useCallback((delta: string) => {
+    // Only append to the last bubble if it's an in-progress assistant message
+    // from the CURRENT turn (streaming: true). Once a turn has finished
+    // streaming, the next turn's deltas should land in a fresh bubble so each
+    // agent reply gets its own bubble.
     setMessages(prev => {
       const last = prev[prev.length - 1]
-      if (last?.role === 'assistant' && !last.toolCalls) {
+      if (last?.role === 'assistant' && !last.toolCalls && last.streaming) {
         return [...prev.slice(0, -1), { ...last, text: last.text + delta, streaming: true }]
       }
       return [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: delta, streaming: true }]
@@ -286,6 +294,10 @@ export function OnboardingAgent({
     const attachment = stagedFile
     if (!typed && !attachment) return
     if (!override) setInput('')
+    // Clear the staged file from the composer immediately — it's now in flight as
+    // part of this turn. Waiting until onDone (which can be 10+ seconds for
+    // extraction) makes the composer look stuck.
+    if (attachment) setStagedFile(null)
     setStreaming(true)
     setPendingConfirm(null)
 
@@ -324,7 +336,23 @@ export function OnboardingAgent({
         ]),
         onToolUse: (toolCalls) => {
           setState(prev => applyToolOutputsToState(prev, toolCalls))
-          mergeResolvedToolCalls(toolCalls)
+
+          // Defer extract_catalog proposals — they get their own bubble after
+          // the agent's post-tool message. All other tools render inline.
+          const deferred: ToolCall[] = []
+          const inline: ToolCall[] = []
+          for (const tc of toolCalls) {
+            const isExtractProposal =
+              tc.name === 'extract_catalog'
+              && tc.status === 'complete'
+              && tc.output
+              && typeof tc.output === 'object'
+              && !('error' in tc.output)
+            if (isExtractProposal) deferred.push(tc); else inline.push(tc)
+          }
+          if (inline.length > 0) mergeResolvedToolCalls(inline)
+          for (const tc of deferred) pendingProposalsRef.current.push({ toolCallId: tc.id, toolCall: tc })
+
           finishIfComplete(toolCalls)
         },
         onConfirm: (toolCalls, messageId) => {
@@ -338,8 +366,26 @@ export function OnboardingAgent({
         onDone: (newSid) => {
           setSessionId(newSid)
           setStreaming(false)
-          setMessages(prev => prev.map(m => ({ ...m, streaming: false })))
-          if (sendingAttachment) setStagedFile(null)
+          setMessages(prev => {
+            const cleaned = prev.map(m => ({ ...m, streaming: false }))
+            // Flush any buffered extract_catalog proposals as their own bubble
+            // at the end — visually below the agent's "I've extracted X
+            // products" message that just streamed in.
+            const pending = pendingProposalsRef.current.splice(0)
+            if (pending.length === 0) return cleaned
+            return [
+              ...cleaned,
+              ...pending.map(p => ({
+                id: `a-prop-${p.toolCallId}`,
+                role: 'assistant' as const,
+                text: '',
+                toolCalls: [p.toolCall],
+                streaming: false,
+              })),
+            ]
+          })
+          // Note: staged file was already cleared at send time.
+          void sendingAttachment
         },
         onError: (msg) => {
           setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${msg}` }])
