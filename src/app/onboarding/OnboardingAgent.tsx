@@ -210,8 +210,10 @@ export function OnboardingAgent({
 
   const mergeResolvedToolCalls = useCallback((resolved: ToolCall[]) => {
     // Update existing bubbles that already contain these tool calls (by id) so
-    // pending confirm cards flip to "Done"/"Skipped". If no bubble has the id,
-    // attach the resolved call(s) to the last assistant bubble (or create one).
+    // pending confirm cards flip to "Done"/"Skipped". For tool calls without an
+    // existing bubble: attach to the FINAL message only if it's a current-turn
+    // assistant bubble (otherwise the card would land above the user's reply
+    // from the new turn).
     setMessages(prev => {
       const resolvedById = new Map(resolved.map(tc => [tc.id, tc]))
       const updated = prev.map(m => {
@@ -226,14 +228,15 @@ export function OnboardingAgent({
       })
       const leftovers = Array.from(resolvedById.values()).filter(tc => !SILENT_TOOLS.has(tc.name))
       if (leftovers.length === 0) return updated
-      const lastIdx = [...updated].reverse().findIndex(m => m.role === 'assistant')
-      if (lastIdx === -1) {
-        return [...updated, { id: `a-${Date.now()}`, role: 'assistant', text: '', toolCalls: leftovers, streaming: false }]
+
+      const lastMsg = updated[updated.length - 1]
+      if (lastMsg && lastMsg.role === 'assistant') {
+        // Mid-turn: attach to the assistant bubble we're currently building.
+        const merged = { ...lastMsg, toolCalls: [...(lastMsg.toolCalls ?? []), ...leftovers], streaming: false }
+        return [...updated.slice(0, -1), merged]
       }
-      const realIdx = updated.length - 1 - lastIdx
-      const last = updated[realIdx]
-      const merged = { ...last, toolCalls: [...(last.toolCalls ?? []), ...leftovers], streaming: false }
-      return [...updated.slice(0, realIdx), merged, ...updated.slice(realIdx + 1)]
+      // Last message is the user's — create a fresh assistant bubble AFTER it.
+      return [...updated, { id: `a-${Date.now()}`, role: 'assistant', text: '', toolCalls: leftovers, streaming: false }]
     })
   }, [])
 
@@ -267,26 +270,37 @@ export function OnboardingAgent({
   }, [])
 
   const send = useCallback(async (override?: string, opts: { hideUserMessage?: boolean } = {}) => {
-    const text = (override ?? input).trim()
-    if (!text || streaming) return
+    if (streaming) return
+    const typed = (override ?? input).trim()
+    const attachment = stagedFile
+    if (!typed && !attachment) return
     if (!override) setInput('')
     setStreaming(true)
     setPendingConfirm(null)
 
+    // What the user sees in their own bubble.
+    const userBubbleText = typed
+      ? (attachment ? `${typed}\n📎 ${attachment.filename}` : typed)
+      : attachment ? `📎 ${attachment.filename}` : ''
+    // What the agent receives. Synthesize a brief description when attachment-only
+    // so the chat API's non-empty-message requirement is satisfied and the agent
+    // has a clear cue to call extract_catalog.
+    const apiMessage = typed || `Here's my price list — please process it.`
+
     if (!opts.hideUserMessage) {
-      setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user', text }])
+      setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user', text: userBubbleText }])
     }
 
     try {
-      const sendingAttachment = stagedFile
+      const sendingAttachment = attachment
       const res = await fetch('/api/agent/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
-          message: text,
+          message: apiMessage,
           mode: 'onboarding',
-          attachments: stagedFile ? [stagedFile] : [],
+          attachments: attachment ? [attachment] : [],
         }),
       })
       if (!res.ok) throw new Error('Request failed')
@@ -464,10 +478,23 @@ export function OnboardingAgent({
         </div>
       </aside>
 
-      {/* ── Right panel: chat (or completion overlay) ── */}
-      <main className="ob-right">
+      {/* ── Right panel: chat (or completion overlay) ──
+          Override ob-right's default centered+scroll behavior so the composer
+          is pinned to the viewport bottom and only the message list scrolls. */}
+      <main
+        className="ob-right"
+        style={{
+          height: '100vh',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'stretch',
+          justifyContent: 'flex-start',
+          padding: '0',
+        }}
+      >
         {completing && (
-          <div className="ob-step ob-completing" key="done">
+          <div className="ob-step ob-completing" key="done" style={{ margin: 'auto' }}>
             <div className="ob-completing-ring">
               <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
                 <circle cx="24" cy="24" r="21" stroke="var(--pt-ok)" strokeWidth="1.5" opacity="0.25"/>
@@ -480,8 +507,17 @@ export function OnboardingAgent({
           </div>
         )}
         {!completing && (
-        <div className="ob-step" style={{ maxWidth: 720, width: '100%', display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div className="ob-step-hd" style={{ marginBottom: 16 }}>
+        <div
+          className="ob-step"
+          style={{
+            maxWidth: 720, width: '100%',
+            margin: '0 auto',
+            display: 'flex', flexDirection: 'column',
+            flex: 1, minHeight: 0,
+            padding: '24px 32px 0',
+          }}
+        >
+          <div className="ob-step-hd" style={{ marginBottom: 16, flexShrink: 0 }}>
             <h2 className="ob-step-title">Let&apos;s get {businessName || 'your store'} set up</h2>
             <p className="ob-step-sub">Just chat — the assistant will walk you through each step. You can answer in any order.</p>
           </div>
@@ -490,6 +526,7 @@ export function OnboardingAgent({
             ref={msgsRef}
             style={{
               flex: 1,
+              minHeight: 0,
               overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column',
@@ -552,6 +589,12 @@ export function OnboardingAgent({
               e.preventDefault()
               const file = e.dataTransfer.files?.[0]
               if (file) void uploadFile(file)
+            }}
+            style={{
+              flexShrink: 0,
+              padding: '12px 0 20px',
+              background: 'var(--pt-bg)',
+              borderTop: '1px solid rgba(255,255,255,0.04)',
             }}
           >
             {stagedFile && (
