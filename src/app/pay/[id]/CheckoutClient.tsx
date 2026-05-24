@@ -5,6 +5,7 @@ import QRCode from 'react-qr-code'
 import type { CheckoutData, CryptoPaymentStatus } from '@/types/payments-crypto'
 
 const PENDING: CryptoPaymentStatus[] = ['waiting', 'confirming']
+const DEAD: CryptoPaymentStatus[] = ['expired', 'failed', 'refunded']
 
 function formatAmount(amount: number, currency: string): string {
   if (currency === 'USD') return `$${amount.toFixed(2)}`
@@ -127,8 +128,20 @@ export function CheckoutClient({ initial }: { initial: CheckoutData }) {
           )}
         </div>
 
-        {/* Payment block */}
-        {data.pay_address ? (
+        {/* Payment block — hidden for dead statuses to prevent accidental sends */}
+        {DEAD.includes(data.status) ? (
+          <div className="pay-cust-dead">
+            <div className="pay-cust-dead-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M4.5 4.5l15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <div className="pay-cust-dead-title">{cfg.label}</div>
+            <div className="pay-cust-dead-meta">{cfg.meta}</div>
+          </div>
+        ) : data.pay_address ? (
           <div className="pay-cust-pay-block">
             <div className="pay-cust-pay-lbl">
               Pay with {data.pay_currency?.toUpperCase() ?? 'crypto'}

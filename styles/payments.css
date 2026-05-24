@@ -763,6 +763,25 @@
   font-size: 12px; color: var(--pt-fg-3);
   background: oklch(0.985 0.002 100); border-top: 0.5px solid var(--pt-line-soft);
 }
+.pay-cust-dead {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; padding: 36px 24px;
+  border-top: 0.5px solid var(--pt-line-soft);
+  background: oklch(0.985 0.002 100);
+  text-align: center;
+}
+.pay-cust-dead-icon {
+  color: var(--pt-fg-4);
+  opacity: 0.55;
+}
+.pay-cust-dead-title {
+  font-size: 15px; font-weight: 600; color: var(--pt-fg-2);
+  letter-spacing: -0.01em;
+}
+.pay-cust-dead-meta {
+  font-size: 12.5px; color: var(--pt-fg-3); line-height: 1.55;
+  max-width: 240px;
+}
 
 /* ─── Smart send widget (PaySendWidget) ──────────────────────────────────── */
 /* Animations reuse ptPacSpring and ptPacProgress from peptech.css */
