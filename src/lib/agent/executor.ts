@@ -11,6 +11,15 @@ import type { AgentSupabase, SseEvent, ToolCall, AgentMessage } from './types'
  *   ops        → OPENROUTER_MODEL          → gemini-flash-2.5
  */
 const FALLBACK_MODEL = 'google/gemini-flash-2.5'
+
+/**
+ * Tools that represent a "ball in the user's court" interaction — after they
+ * resolve, the model has nothing more to say until the user responds. We
+ * persist the assistant turn and stop; no recursive streamCompletion call.
+ * Otherwise we'd hit the model with a tool result it can't usefully follow
+ * up on, which manifests as empty completions / spurious error states.
+ */
+const TERMINAL_TOOLS = new Set(['present_choices'])
 function modelForMode(mode: AgentMode): string {
   if (mode === 'onboarding') {
     return process.env.OPENROUTER_ONBOARDING_MODEL ?? process.env.OPENROUTER_MODEL ?? FALLBACK_MODEL
@@ -283,6 +292,14 @@ export async function executeAgentTurn(
     await saveAssistantMessage(sessionId, tenantId, text || null, toolCalls, supabase)
     send({ type: 'tool_use', toolCalls })
 
+    // If every tool in this turn was a terminal/interactive tool (e.g.
+    // present_choices), stop here — the model has already said its piece
+    // and the conversation is now waiting on the user.
+    if (toolCalls.every(tc => TERMINAL_TOOLS.has(tc.name))) {
+      send({ type: 'done', sessionId })
+      return
+    }
+
     // Build next history in memory
     const assistantMsg: ChatCompletionMessageParam = {
       role: 'assistant',
@@ -383,10 +400,15 @@ async function continueTurn(
     return
   }
 
-  // All tools resolved — persist, notify, and recurse so the model can produce
-  // its follow-up text or chain another tool.
+  // All tools resolved — persist + notify. If every tool was terminal/
+  // interactive (e.g. present_choices), stop here. Otherwise recurse so
+  // the model can produce its follow-up text or chain another tool.
   await saveAssistantMessage(sessionId, tenantId, text || null, toolCalls, supabase)
   send({ type: 'tool_use', toolCalls })
+
+  if (toolCalls.every(tc => TERMINAL_TOOLS.has(tc.name))) {
+    return
+  }
 
   const assistantMsg: ChatCompletionMessageParam = {
     role: 'assistant',
