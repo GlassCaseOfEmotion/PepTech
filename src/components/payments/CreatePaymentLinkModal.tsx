@@ -25,8 +25,6 @@ type CreatedLink = {
   nowpayments_id: string
 }
 
-const EXPIRY_OPTIONS = ['1h', '6h', '24h', '7d', 'never'] as const
-
 export function CreateComposer({ onBack, baseCurrency = 'USD', initialOrderId }: { onBack: () => void; baseCurrency?: string; initialOrderId?: string }) {
   const [query, setQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
@@ -38,8 +36,6 @@ export function CreateComposer({ onBack, baseCurrency = 'USD', initialOrderId }:
   const [usdEstimate, setUsdEstimate] = useState<number | null>(null)
   const [payCurrency, setPayCurrency] = useState<string | null>(null)
   const [memo, setMemo] = useState('')
-  const [expiry, setExpiry] = useState('24h')
-  const [showAdvanced, setShowAdvanced] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [showErrorDetails, setShowErrorDetails] = useState(false)
@@ -138,7 +134,7 @@ export function CreateComposer({ onBack, baseCurrency = 'USD', initialOrderId }:
     setSubmitting(true)
     setSubmitError('')
     setShowErrorDetails(false)
-    const result = await createPaymentLink(foundOrder.id, payCurrency, memo || foundOrder.ref_number, expiry)
+    const result = await createPaymentLink(foundOrder.id, payCurrency, memo || foundOrder.ref_number)
     setSubmitting(false)
     if (result.error) { setSubmitError(result.error); return }
     if (result.link) {
@@ -288,27 +284,6 @@ export function CreateComposer({ onBack, baseCurrency = 'USD', initialOrderId }:
 
         {/* ── Advanced ─────────────────────────────────────────── */}
         <div className="pay-comp-section">
-          <button
-            className={`pay-comp-adv-toggle${showAdvanced ? ' is-open' : ''}`}
-            onClick={() => setShowAdvanced(s => !s)}
-          >
-            <Icons.gear size={11} />
-            Advanced options
-            <Icons.arrowDn size={10} />
-          </button>
-
-          {showAdvanced && (
-            <div style={{ marginTop: 14 }}>
-              <div className="pay-comp-field">
-                <label>Expires after</label>
-                <div className="pay-comp-segctl">
-                  {EXPIRY_OPTIONS.map(e => (
-                    <button key={e} className={expiry === e ? 'is-on' : ''} onClick={() => setExpiry(e)}>{e}</button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {submitError && (

@@ -10,7 +10,6 @@ export type CreatePaymentInput = {
   payoutAddress: string // tenant's Solana wallet — receives USDC after conversion
   orderId: string
   orderDescription: string
-  timeToPay?: number    // seconds until quote expires; defaults to NOWPayments' 1200s if omitted
 }
 
 export type CreatedPayment = {
@@ -43,7 +42,6 @@ export async function createNowPayment(input: CreatePaymentInput): Promise<Creat
       payout_address:  input.payoutAddress,
       order_id:        input.orderId,
       order_description: input.orderDescription,
-      ...(input.timeToPay ? { time_to_pay: input.timeToPay } : {}),
     }),
   })
   if (!res.ok) {

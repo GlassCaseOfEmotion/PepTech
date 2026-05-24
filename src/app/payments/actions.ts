@@ -314,15 +314,7 @@ export async function sendPaymentLinkToCustomer(
   }
 }
 
-function expiryToSeconds(expiry: string): number {
-  if (expiry === '1h')  return 3_600
-  if (expiry === '6h')  return 21_600
-  if (expiry === '24h') return 86_400
-  if (expiry === '7d')  return 604_800
-  return 604_800  // 'never' → use max
-}
-
-export async function createPaymentLink(orderId: string, payCurrency: string, memo?: string, expiry?: string): Promise<{
+export async function createPaymentLink(orderId: string, payCurrency: string, memo?: string): Promise<{
   link?: CryptoPaymentLink
   error?: string
 }> {
@@ -380,7 +372,6 @@ export async function createPaymentLink(orderId: string, payCurrency: string, me
       payoutAddress: wallet.solana_address,
       orderId: order.id,
       orderDescription: memo ?? order.ref_number,
-      timeToPay: expiryToSeconds(expiry ?? '24h'),
     })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
