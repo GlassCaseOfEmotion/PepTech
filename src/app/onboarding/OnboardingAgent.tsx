@@ -6,6 +6,9 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Icons } from '@/lib/icons'
 import type { SseEvent, ToolCall } from '@/lib/agent/types'
+import { CatalogProposalCard } from '@/components/onboarding/CatalogProposalCard'
+import { commitExtractedCatalogAction } from './actions'
+import type { ExtractionResult, ExtractedProduct } from '@/lib/catalog/extraction/types'
 
 interface OnboardingState {
   display_name: string | null
@@ -46,7 +49,7 @@ function summariseToolCall(name: string, input: Record<string, unknown>): string
       return `Saved channels — ${ch}`
     }
     case 'seed_catalog_preset':    return 'Seed starter catalog from preset list'
-    case 'extract_catalog':        return 'Extract products from upload (coming soon)'
+    case 'extract_catalog':        return 'Extracted products from upload'
     case 'complete_onboarding':    return 'Finish onboarding and go to dashboard'
     default: return name.replace(/_/g, ' ')
   }
@@ -128,6 +131,10 @@ function applyToolOutputsToState(
       case 'complete_onboarding':
         next.complete = !!out.complete
         break
+      case 'extract_catalog':
+        // No state change yet; the catalog step is completed by the commit server action,
+        // which bumps product_count directly via handleProposalImport.
+        break
       case 'read_onboarding_state': {
         // Authoritative refresh
         const dn = out.display_name
@@ -182,6 +189,7 @@ export function OnboardingAgent({
     file_ref: string; filename: string; mime_type: string
   } | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [proposalStatus, setProposalStatus] = useState<Record<string, 'idle' | 'importing' | 'done' | 'cancelled'>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
   const msgsRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -316,6 +324,34 @@ export function OnboardingAgent({
       setStreaming(false)
     }
   }, [input, streaming, sessionId, stagedFile, appendAssistantDelta, mergeResolvedToolCalls, finishIfComplete])
+
+  const handleProposalImport = useCallback(async (
+    toolCallId: string,
+    result: ExtractionResult,
+    rows: Array<ExtractedProduct & { user_edited: boolean }>,
+  ) => {
+    setProposalStatus(s => ({ ...s, [toolCallId]: 'importing' }))
+    const out = await commitExtractedCatalogAction({
+      rows,
+      source_file_ref: result.source_file_ref,
+      source_filename: result.source_filename,
+      model: result.model,
+    })
+    if (out.error) {
+      setProposalStatus(s => ({ ...s, [toolCallId]: 'idle' }))
+      setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${out.error}` }])
+      return
+    }
+    setProposalStatus(s => ({ ...s, [toolCallId]: 'done' }))
+    // Reflect catalog state immediately so the left rail ticks "Catalog" off
+    setState(prev => ({ ...prev, product_count: (prev.product_count ?? 0) + (out.count ?? rows.length) }))
+    // Tell the agent so it knows to congratulate / move on without re-prompting upload
+    void send(`I imported ${out.count ?? rows.length} products from ${result.source_filename}.`, { hideUserMessage: true })
+  }, [send])
+
+  const handleProposalCancel = useCallback((toolCallId: string) => {
+    setProposalStatus(s => ({ ...s, [toolCallId]: 'cancelled' }))
+  }, [])
 
   const confirm = useCallback(async (toolCallId: string, confirmed: boolean) => {
     if (!pendingConfirm || !sessionId) return
@@ -473,19 +509,34 @@ export function OnboardingAgent({
                       : m.text}
                   </div>
                 ) : null}
-                {m.toolCalls?.map(tc => (
-                  <div key={tc.id} className={`pt-agent-confirm ${tc.status !== 'pending' ? 'is-resolved' : ''}`}>
-                    <div className="pt-agent-confirm-summary">{summariseToolCall(tc.name, tc.input)}</div>
-                    {tc.status === 'pending' && (
-                      <div className="pt-agent-confirm-btns">
-                        <button className="pt-btn pt-btn-primary" style={{ height: 30, fontSize: 12.5 }} onClick={() => confirm(tc.id, true)} disabled={confirming}>Confirm</button>
-                        <button className="pt-btn pt-btn-ghost"   style={{ height: 30, fontSize: 12.5 }} onClick={() => confirm(tc.id, false)} disabled={confirming}>Cancel</button>
-                      </div>
-                    )}
-                    {tc.status === 'complete' && <div className="pt-agent-confirm-done"><Icons.check size={11} /> Done</div>}
-                    {tc.status === 'rejected' && <div className="pt-agent-confirm-skip">Skipped</div>}
-                  </div>
-                ))}
+                {m.toolCalls?.map(tc => {
+                  if (tc.name === 'extract_catalog' && tc.status === 'complete' && tc.output && typeof tc.output === 'object' && !('error' in tc.output)) {
+                    const result = tc.output as ExtractionResult
+                    const status = proposalStatus[tc.id] ?? 'idle'
+                    return (
+                      <CatalogProposalCard
+                        key={tc.id}
+                        initial={result}
+                        status={status}
+                        onImport={rows => handleProposalImport(tc.id, result, rows)}
+                        onCancel={() => handleProposalCancel(tc.id)}
+                      />
+                    )
+                  }
+                  return (
+                    <div key={tc.id} className={`pt-agent-confirm ${tc.status !== 'pending' ? 'is-resolved' : ''}`}>
+                      <div className="pt-agent-confirm-summary">{summariseToolCall(tc.name, tc.input)}</div>
+                      {tc.status === 'pending' && (
+                        <div className="pt-agent-confirm-btns">
+                          <button className="pt-btn pt-btn-primary" style={{ height: 30, fontSize: 12.5 }} onClick={() => confirm(tc.id, true)} disabled={confirming}>Confirm</button>
+                          <button className="pt-btn pt-btn-ghost"   style={{ height: 30, fontSize: 12.5 }} onClick={() => confirm(tc.id, false)} disabled={confirming}>Cancel</button>
+                        </div>
+                      )}
+                      {tc.status === 'complete' && <div className="pt-agent-confirm-done"><Icons.check size={11} /> Done</div>}
+                      {tc.status === 'rejected' && <div className="pt-agent-confirm-skip">Skipped</div>}
+                    </div>
+                  )
+                })}
               </div>
             ))}
             {(streaming || confirming) && !messages.some(m => m.role === 'assistant' && m.streaming) && (
