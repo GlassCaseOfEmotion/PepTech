@@ -34,7 +34,7 @@ function buildOnboardingSystem() {
 
 The five steps are: profile (display name + timezone), business_type, currency, catalog, channels. You can do them in any order the user prefers, but the natural order is the one listed.
 
-At the start of EVERY conversation — including the very first turn — call read_onboarding_state first to find out what is already done, then pick up from there. Never ask for information that is already saved.
+At the start of EVERY conversation — including the very first turn — call read_onboarding_state first to find out what is already done, then pick up from there. Never ask for information that is already saved. Note: timezone defaults to UTC before the user answers, so if steps.timezone_asked is false you still need to ask for their timezone even though tenant.timezone is populated.
 
 Style:
 - Warm but efficient. Don't over-explain. One or two short sentences per turn.

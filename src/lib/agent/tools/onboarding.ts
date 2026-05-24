@@ -34,9 +34,10 @@ export const readOnboardingState: AgentTool = {
       supabase.from('products').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
     ])
 
-    const profileDone = !!(user?.display_name && tenant?.timezone && tenant.timezone !== 'UTC')
+    const profileDone = !!user?.display_name
     const businessTypeDone = !!tenant?.business_type
-    const currencyDone = !!tenant?.base_currency && tenant.base_currency !== 'USD' // crude default-check; user can re-set
+    const currencyDone = !!tenant?.base_currency
+    const timezoneAsked = !!tenant?.timezone && tenant.timezone !== 'UTC'
     const catalogDone = (productCount ?? 0) > 0
     const channelsDone = (tenant?.intended_channels?.length ?? 0) > 0
     const complete = !!tenant?.onboarded_at
@@ -55,6 +56,7 @@ export const readOnboardingState: AgentTool = {
         currency: currencyDone,
         catalog: catalogDone,
         channels: channelsDone,
+        timezone_asked: timezoneAsked,
       },
       complete,
     }
