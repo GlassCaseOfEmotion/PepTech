@@ -75,7 +75,11 @@ export function CreateComposer({ onBack, baseCurrency = 'USD', initialOrderId }:
     customerName: string | null
   } | null>(null)
   const pickerRef = useRef<HTMLDivElement>(null)
+  const pickerInputRef = useRef<HTMLInputElement>(null)
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Auto-focus the order picker on mount
+  useEffect(() => { pickerInputRef.current?.focus() }, [])
 
   // Pre-select order when deep-linked from order detail page
   useEffect(() => {
@@ -209,6 +213,7 @@ export function CreateComposer({ onBack, baseCurrency = 'USD', initialOrderId }:
             <div className={`pay-comp-picker-input${isOpen ? ' is-open' : ''}`}>
               <Icons.box size={13} style={{ color: 'var(--pt-fg-3)', flexShrink: 0 }} />
               <input
+                ref={pickerInputRef}
                 value={query}
                 onChange={handleSearch}
                 onFocus={handleFocus}
