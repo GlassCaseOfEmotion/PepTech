@@ -1,16 +1,18 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { cache } from 'react'
+import { createClient, getServerUser } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import type { Database } from '@/types/database'
 
-async function getTenantId() {
+const getTenantId = cache(async function getTenantId() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getServerUser()
   if (!user) throw new Error('Unauthorized')
   const { data: userRow } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
   if (!userRow) throw new Error('User not found')
   return { supabase, tenantId: userRow.tenant_id as string, userId: user.id }
-}
+})
 
 export async function setLifecycleStage(
   customerId: string,
@@ -22,10 +24,17 @@ export async function setLifecycleStage(
   try {
     const { supabase, tenantId, userId } = await getTenantId()
 
-    const update: Record<string, unknown> = { lifecycle_stage: stage }
-    if (stage === 'customer') update.converted_at = new Date().toISOString()
-    else                       update.converted_at = null
+    type CustomerUpdate = Database['public']['Tables']['customers']['Update']
+    const update: Pick<CustomerUpdate, 'lifecycle_stage' | 'converted_at'> = {
+      lifecycle_stage: stage,
+      converted_at: stage === 'customer' ? new Date().toISOString() : null,
+    }
 
+    // NOTE: UPDATE + INSERT are not in a transaction. If the audit insert fails,
+    // we return the error so the caller knows; but a process crash between the
+    // two statements would leave a flipped stage with no audit row. The auto-flip
+    // path (Postgres trigger in 20260524000003_lifecycle_auto_flip_trigger.sql)
+    // runs inside the orders update's transaction and doesn't have this issue.
     const { error } = await supabase
       .from('customers')
       .update(update)
@@ -34,13 +43,14 @@ export async function setLifecycleStage(
 
     if (error) return { error: error.message }
 
-    await supabase.from('customer_events').insert({
+    const { error: eventError } = await supabase.from('customer_events').insert({
       tenant_id: tenantId,
       customer_id: customerId,
       event_type: stage === 'customer' ? 'lifecycle_flip_to_customer' : 'lifecycle_flip_to_lead',
       reason: 'manual',
       actor_user_id: userId,
     })
+    if (eventError) return { error: eventError.message }
 
     revalidatePath('/contacts')
     revalidatePath(`/customers/${customerId}`)
