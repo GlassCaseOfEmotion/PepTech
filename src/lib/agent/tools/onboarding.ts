@@ -200,6 +200,31 @@ export const seedCatalogPreset: AgentTool = {
     const { data: inserted, error } = await supabase.from('products').insert(rows).select('id, sku')
     if (error) throw new Error(error.message)
 
+    // Seed protocols for peptide presets that ship with protocol metadata
+    if (tenant.business_type === 'peptides' && inserted) {
+      const protocolRows = inserted
+        .map(p => {
+          const preset = presets.find(sp => sp.sku === p.sku)
+          const proto = preset?.protocol
+          if (!proto) return null
+          return {
+            tenant_id:          tenantId,
+            product_id:         p.id,
+            vial_strength:      proto.vial_strength,
+            reconstitution_ml:  proto.reconstitution_ml,
+            draw_volume_ml:     proto.draw_volume_ml,
+            frequency:          proto.frequency,
+            timing:             proto.timing ?? null,
+            cycle_length_weeks: proto.cycle_length_weeks,
+            notes:              proto.notes ?? null,
+          }
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null)
+      if (protocolRows.length > 0) {
+        await supabase.from('product_protocols').insert(protocolRows).then(() => {})
+      }
+    }
+
     // starter batches, non-fatal
     if (inserted && inserted.length > 0) {
       const batchRows = inserted.map(p => ({
