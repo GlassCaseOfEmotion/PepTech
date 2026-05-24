@@ -28,11 +28,13 @@ export const EXTRACTION_JSON_SCHEMA = {
         items: {
           type: 'object',
           // Only the bare essentials are required. The model is told in the
-          // prompt to also fill family / presentation / raw_category, but if
-          // it's unsure it can omit them and the server will fill defaults.
+          // prompt to also fill sku / family / presentation / raw_category,
+          // but if it's unsure it can omit them and the server will fill
+          // defaults.
           required: ['name', 'unit_price'],
           properties: {
             name:         { type: 'string', description: 'Cleaned product name (compound + dose), e.g. "BPC-157 5mg"' },
+            sku:          { type: ['string', 'null'], description: 'Short product code following the SKU convention in the prompt (compound shorthand + dose, e.g. RETA-10, BPC157-5)' },
             raw_name:     { type: 'string', description: 'Verbatim string from the source' },
             raw_category: { type: ['string', 'null'], description: 'Verbatim category heading from the source, e.g. "RECOVERY & HEALING"' },
             family:       { type: ['string', 'null'], description: 'The CANONICAL family slug (see prompt) for this product, or null if uncertain' },
@@ -74,6 +76,31 @@ function familyGuide(bt: PromptContext['businessType']): string {
   ].join('\n')
 }
 
+function skuGuide(): string {
+  return [
+    '',
+    'SKU — short product identifier you propose for each row:',
+    '  Format: <COMPOUND_CODE>-<DOSE> in uppercase, alphanumeric + hyphens only, max 16 chars.',
+    '  Examples:',
+    '    Retatrutide 10mg                            → RETA-10',
+    '    Tirzepatide 30mg                            → TIRZ-30',
+    '    Semaglutide 10mg                            → SEMA-10',
+    '    Ipamorelin 5mg                              → IPAM-5',
+    '    BPC-157 5mg                                 → BPC157-5    (drop internal hyphens in the compound code)',
+    '    TB-500 5mg                                  → TB500-5',
+    '    TB-500 10mg                                 → TB500-10    (different dose → different SKU)',
+    '    GHK-Cu 50mg                                 → GHKCU-50',
+    '    5-Amino-1MQ 50mg                            → AMNO1MQ-50  (pick a recognisable shorthand if the name is long)',
+    '    CJC-1295+Ipamorelin Blend 5mg+5mg          → CJC1295-5    (use the first compound for blends)',
+    '    Glow Stack (BPC/TB/GHK-Cu) 10mg/10mg/50mg   → GLOW-STACK',
+    '  Rules:',
+    '    - ALWAYS include the dose number, even when the compound name already contains digits — otherwise different doses of the same compound would collide.',
+    '    - 3–6 char compound code: take a recognisable shorthand of the compound name, drop internal hyphens.',
+    '    - Uppercase, alphanumeric and hyphens only.',
+    '    - When uncertain, output null and the server will derive one.',
+  ].join('\n')
+}
+
 function presentationGuide(): string {
   return [
     '',
@@ -107,5 +134,6 @@ export function buildExtractionPrompt(ctx: PromptContext): string {
     '- Use confidence to flag rows you are unsure about (e.g. handwritten, low-resolution, ambiguous price).',
     familyGuide(ctx.businessType),
     presentationGuide(),
+    skuGuide(),
   ].join('\n')
 }

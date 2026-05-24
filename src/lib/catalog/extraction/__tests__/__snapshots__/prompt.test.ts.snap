@@ -31,5 +31,25 @@ PRESENTATION — pick the physical form from this set (or null if not stated):
 Rules:
 - Look for clues in the source: "Pen", "Vial", "Capsule", "Spray", "sublingual", "x 60caps" → capsule.
 - For peptide rows with no explicit form factor, default to "vial" — peptides ship in vials by default.
-- "Pen/vial" written together means a pen device that contains a vial — use "pen"."
+- "Pen/vial" written together means a pen device that contains a vial — use "pen".
+
+SKU — short product identifier you propose for each row:
+  Format: <COMPOUND_CODE>-<DOSE> in uppercase, alphanumeric + hyphens only, max 16 chars.
+  Examples:
+    Retatrutide 10mg                            → RETA-10
+    Tirzepatide 30mg                            → TIRZ-30
+    Semaglutide 10mg                            → SEMA-10
+    Ipamorelin 5mg                              → IPAM-5
+    BPC-157 5mg                                 → BPC157-5    (drop internal hyphens in the compound code)
+    TB-500 5mg                                  → TB500-5
+    TB-500 10mg                                 → TB500-10    (different dose → different SKU)
+    GHK-Cu 50mg                                 → GHKCU-50
+    5-Amino-1MQ 50mg                            → AMNO1MQ-50  (pick a recognisable shorthand if the name is long)
+    CJC-1295+Ipamorelin Blend 5mg+5mg          → CJC1295-5    (use the first compound for blends)
+    Glow Stack (BPC/TB/GHK-Cu) 10mg/10mg/50mg   → GLOW-STACK
+  Rules:
+    - ALWAYS include the dose number, even when the compound name already contains digits — otherwise different doses of the same compound would collide.
+    - 3–6 char compound code: take a recognisable shorthand of the compound name, drop internal hyphens.
+    - Uppercase, alphanumeric and hyphens only.
+    - When uncertain, output null and the server will derive one."
 `;

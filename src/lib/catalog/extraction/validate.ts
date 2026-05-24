@@ -8,6 +8,7 @@ import {
 
 interface RawProduct {
   name: unknown
+  sku: unknown
   raw_name: unknown
   raw_category: unknown
   family: unknown
@@ -85,44 +86,56 @@ function normalisePresentation(v: unknown, businessType: NormaliseCtx['businessT
 }
 
 /**
- * Suggest a short, human-readable SKU from a product name.
+ * Heuristic SKU suggester — used only as a fallback when the extraction model
+ * doesn't return a SKU for a row. The model is the primary source of truth
+ * (see prompt.ts skuGuide()).
  *
- * Heuristic chosen to match the convention already used by CATALOG_PRESETS:
- *  - "Retatrutide 10mg"  → "RETA-10"  (first 4 letters of compound + dose)
+ * Format: <COMPOUND_CODE>-<DOSE>, uppercase, alphanumeric+hyphens.
+ *  - "Retatrutide 10mg"  → "RETA-10"
  *  - "Tirzepatide 30mg"  → "TIRZ-30"
- *  - "Semaglutide 10mg"  → "SEMA-10"
- *  - "BPC-157 5mg"       → "BPC-157"  (compound name carries digits → already unique)
- *  - "TB-500 5mg"        → "TB-500"
- *  - "GHK-Cu 50mg"       → "GHK-CU-50"
- *  - "5-Amino-1MQ 50mg"  → "5-AMINO-1MQ"
- *
- * Output is uppercase, alphanumeric with hyphens only — suitable as a real SKU.
- * Users can edit it in the proposal table before commit.
+ *  - "BPC-157 5mg"       → "BPC157-5"   (drop internal hyphens; always include dose)
+ *  - "TB-500 5mg"        → "TB500-5"
+ *  - "TB-500 10mg"       → "TB500-10"   (different dose → different SKU)
+ *  - "GHK-Cu 50mg"       → "GHKCU-50"
+ *  - "5-Amino-1MQ 50mg"  → "5AMINO1MQ-50"
  */
 export function suggestSku(name: string): string {
   // Strip trailing dose/quantity ("10mg", "50mg x 60caps", "5mg+5mg") and anything after.
   const stripped = name.replace(/\s+\d+(?:\.\d+)?\s*(?:mg|mcg|iu|ml|caps)\b.*$/i, '').trim()
   // First "word" (split on whitespace or +) — for blends, just take the first compound.
   const firstWord = stripped.split(/[\s+]+/)[0] ?? ''
-  const compoundHasDigits = /\d/.test(firstWord)
 
-  let abbrev: string
-  if (/-/.test(firstWord) || /\d/.test(firstWord)) {
-    // BPC-157, TB-500, GHK-Cu, 5-Amino-1MQ, CJC1295 — keep the compound as-is, uppercased.
-    abbrev = firstWord.toUpperCase().replace(/[^A-Z0-9-]/g, '')
-  } else {
-    // Plain alphabetic compound — first 4 letters as the abbreviation.
-    abbrev = firstWord.slice(0, 4).toUpperCase().replace(/[^A-Z0-9]/g, '')
-  }
-  if (!abbrev) abbrev = 'PROD'
+  // Compound code: uppercase the first word, drop everything that isn't
+  // alphanumeric (collapses internal hyphens too — "BPC-157" → "BPC157",
+  // "GHK-Cu" → "GHKCU"). For *plain* single-word alphabetic compounds with
+  // no hyphens AND no digits, truncate to 4 chars (Retatrutide → RETA). When
+  // the original had a hyphen, keep the full de-hyphenated form — that's a
+  // recognisable shorthand the user already chose (GHK-Cu → GHKCU).
+  const hadHyphenOrDigit = /[-\d]/.test(firstWord)
+  let compoundCode = firstWord.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  if (compoundCode && !hadHyphenOrDigit) compoundCode = compoundCode.slice(0, 4)
+  if (!compoundCode) compoundCode = 'PROD'
 
-  // Compounds that already carry a digit (BPC-157, TB-500) don't need a dose
-  // suffix — they're inherently unique to the compound. Only suffix when the
-  // abbreviation is alpha-only.
-  if (compoundHasDigits) return abbrev
-
+  // Always include the dose if we can find one — even when the compound code
+  // already contains digits — otherwise different doses of the same compound
+  // would collide.
   const doseMatch = name.match(/\b(\d+(?:\.\d+)?)\s*(?:mg|mcg|iu)\b/i)
-  return doseMatch ? `${abbrev}-${doseMatch[1]}` : abbrev
+  return doseMatch ? `${compoundCode}-${doseMatch[1]}` : compoundCode
+}
+
+/** True if a string looks like a plausibly-formed SKU after normalisation. */
+function looksLikeSku(s: string): boolean {
+  // 2–24 chars, uppercase alphanumeric + hyphens, not all-digits.
+  if (s.length < 2 || s.length > 24) return false
+  if (!/^[A-Z0-9-]+$/.test(s)) return false
+  if (!/[A-Z]/.test(s)) return false
+  return true
+}
+
+/** Normalise a candidate string into the canonical SKU shape: uppercase,
+ *  alphanumeric + hyphens, collapsed-dash, no leading/trailing dashes. */
+function normaliseSku(s: string): string {
+  return s.toUpperCase().replace(/[^A-Z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24)
 }
 
 /**
@@ -169,9 +182,17 @@ export function validateAndNormalise(raw: RawResult, ctx: NormaliseCtx): Extract
     if (price === null || price <= 0) continue
     const name = clean(r.name)
     if (!name) continue
+    // Prefer the model's SKU when it looks valid after normalisation; fall
+    // back to the heuristic otherwise. The model has been shown the
+    // convention in the prompt, including the "always include the dose"
+    // rule — but if it returns nothing, garbage, or a duplicated value we
+    // still want a sensible default.
+    const modelSku = typeof r.sku === 'string' ? normaliseSku(r.sku) : ''
+    const finalSku = modelSku && looksLikeSku(modelSku) ? modelSku : suggestSku(name)
+
     products.push({
       name,
-      sku: suggestSku(name),
+      sku: finalSku,
       raw_name: clean(r.raw_name, name),
       raw_category: typeof r.raw_category === 'string' && r.raw_category.trim() ? r.raw_category.trim().slice(0, 100) : null,
       family: normaliseFamily(r.family, ctx.businessType),

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { validateAndNormalise, generateSku, suggestSku, reserveSku } from '../validate'
 
-describe('suggestSku', () => {
+describe('suggestSku (fallback heuristic)', () => {
   it('takes first 4 letters + dose for plain alphabetic compounds', () => {
     expect(suggestSku('Retatrutide 10mg')).toBe('RETA-10')
     expect(suggestSku('Tirzepatide 30mg')).toBe('TIRZ-30')
@@ -9,24 +9,78 @@ describe('suggestSku', () => {
     expect(suggestSku('Ipamorelin 5mg')).toBe('IPAM-5')
   })
 
-  it('keeps the compound name when it already carries a digit (no dose suffix)', () => {
-    expect(suggestSku('BPC-157 5mg')).toBe('BPC-157')
-    expect(suggestSku('TB-500 5mg')).toBe('TB-500')
-    expect(suggestSku('5-Amino-1MQ 50mg')).toBe('5-AMINO-1MQ')
+  it('ALWAYS includes the dose, even when the compound already carries a digit', () => {
+    // Critical: TB-500 5mg vs TB-500 10mg must produce different SKUs.
+    expect(suggestSku('BPC-157 5mg')).toBe('BPC157-5')
+    expect(suggestSku('TB-500 5mg')).toBe('TB500-5')
+    expect(suggestSku('TB-500 10mg')).toBe('TB500-10')
+    expect(suggestSku('TB-500 20mg')).toBe('TB500-20')
   })
 
-  it('preserves hyphens in alphabetic compound names (with dose suffix)', () => {
-    expect(suggestSku('GHK-Cu 50mg')).toBe('GHK-CU-50')
+  it('drops internal hyphens in the compound code', () => {
+    expect(suggestSku('GHK-Cu 50mg')).toBe('GHKCU-50')
+    expect(suggestSku('5-Amino-1MQ 50mg')).toBe('5AMINO1MQ-50')
   })
 
   it('handles blends by taking the first compound', () => {
-    expect(suggestSku('CJC1295+IPAMORELIN BLEND 5mg+5mg')).toBe('CJC1295')
-    expect(suggestSku('BPC-157+TB-500 BLEND 5mg+5mg')).toBe('BPC-157')
+    expect(suggestSku('CJC1295+IPAMORELIN BLEND 5mg+5mg')).toBe('CJC1295-5')
+    expect(suggestSku('BPC-157+TB-500 BLEND 5mg+5mg')).toBe('BPC157-5')
   })
 
-  it('produces PROD- when name is empty / unparseable', () => {
+  it('produces PROD when name is empty / unparseable', () => {
     expect(suggestSku('')).toBe('PROD')
     expect(suggestSku('— —')).toBe('PROD')
+  })
+})
+
+describe('validateAndNormalise - SKU sourcing', () => {
+  const baseCtx = {
+    source_file_ref: 'x', source_filename: 'x.pdf',
+    model: 'google/gemini-2.5-pro', businessType: 'peptides' as const,
+  }
+
+  it('uses the model-supplied SKU when present and well-formed', () => {
+    const out = validateAndNormalise({
+      detected_currency: null,
+      products: [
+        { name: 'Retatrutide 10mg', sku: 'RETA-10', raw_name: 'x', raw_category: null, family: 'GLP-1', presentation: 'vial', unit_price: 1, confidence: 1 },
+      ],
+      tenant_notes: [],
+    }, baseCtx)
+    expect(out.products[0].sku).toBe('RETA-10')
+  })
+
+  it('normalises a messy model SKU before accepting it', () => {
+    const out = validateAndNormalise({
+      detected_currency: null,
+      products: [
+        { name: 'BPC-157 5mg', sku: 'bpc_157.5', raw_name: 'x', raw_category: null, family: 'HEALING', presentation: 'vial', unit_price: 1, confidence: 1 },
+      ],
+      tenant_notes: [],
+    }, baseCtx)
+    expect(out.products[0].sku).toBe('BPC-157-5')
+  })
+
+  it('falls back to suggestSku when the model omits SKU', () => {
+    const out = validateAndNormalise({
+      detected_currency: null,
+      products: [
+        { name: 'Tirzepatide 30mg', raw_name: 'x', raw_category: null, family: 'GLP-1', presentation: 'vial', unit_price: 1, confidence: 1 },
+      ],
+      tenant_notes: [],
+    }, baseCtx)
+    expect(out.products[0].sku).toBe('TIRZ-30')
+  })
+
+  it('falls back to suggestSku when the model returns garbage', () => {
+    const out = validateAndNormalise({
+      detected_currency: null,
+      products: [
+        { name: 'Semaglutide 10mg', sku: '!!', raw_name: 'x', raw_category: null, family: 'GLP-1', presentation: 'vial', unit_price: 1, confidence: 1 },
+      ],
+      tenant_notes: [],
+    }, baseCtx)
+    expect(out.products[0].sku).toBe('SEMA-10')
   })
 })
 
@@ -77,7 +131,7 @@ describe('validateAndNormalise', () => {
     businessType: 'peptides' as const,
   }
 
-  it('passes through a clean response, defaults stock to 10, and suggests a SKU', () => {
+  it('passes through a clean response, defaults stock to 10, and derives a fallback SKU when model omits it', () => {
     const out = validateAndNormalise({
       detected_currency: 'IDR',
       products: [
@@ -87,7 +141,7 @@ describe('validateAndNormalise', () => {
     }, baseCtx)
     expect(out.products).toHaveLength(1)
     expect(out.products[0].name).toBe('BPC-157 5mg')
-    expect(out.products[0].sku).toBe('BPC-157')
+    expect(out.products[0].sku).toBe('BPC157-5')
     expect(out.products[0].family).toBe('HEALING')
     expect(out.products[0].presentation).toBe('vial')
     expect(out.products[0].stock).toBe(10)
