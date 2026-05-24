@@ -486,7 +486,7 @@ export async function updateOrder(
     if (data.paymentAsset !== undefined || data.paymentAmount !== undefined) {
       const effectiveAsset = data.paymentAsset ?? current.payment_asset
       const FIAT_ASSETS = new Set(['cash', 'bank_transfer'])
-      if (!FIAT_ASSETS.has(effectiveAsset) && current.currency !== 'USD') {
+      if (effectiveAsset && !FIAT_ASSETS.has(effectiveAsset) && current.currency !== 'USD') {
         const TTL_MS = 60 * 60 * 1000
         const { data: cached } = await supabase
           .from('exchange_rates')

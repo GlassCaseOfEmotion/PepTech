@@ -247,7 +247,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
     ? [latestAddr.ln1, latestAddr.ln2, `${latestAddr.city}${latestAddr.state ? ', ' + latestAddr.state : ''}${latestAddr.zip ? ' ' + latestAddr.zip : ''}`].filter(Boolean).join(', ')
     : null
 
-  const payMethods = [...new Set(realOrders.map(o => o.payment_asset))]
+  const payMethods = [...new Set(realOrders.map(o => o.payment_asset).filter((a): a is string => a != null))]
     .map(a => PAY_BADGE[a]?.label ?? a)
 
   const deliveredCount = realOrders.filter(o => o.status === 'delivered').length
@@ -391,7 +391,9 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                       <tbody>
                         {realOrders.map(o => {
                           const items = (o.order_items as { qty: number; products: { name: string } | null }[]) ?? []
-                          const badge = PAY_BADGE[o.payment_asset] ?? { label: o.payment_asset, key: 'other' }
+                          const badge = o.payment_asset
+                            ? (PAY_BADGE[o.payment_asset] ?? { label: o.payment_asset, key: 'other' })
+                            : { label: '—', key: 'other' }
                           return (
                             <tr key={o.id}>
                               <td className="mono" style={{ whiteSpace: 'nowrap' }}>
