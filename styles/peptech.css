@@ -2662,3 +2662,30 @@ kbd {
   transition: background 120ms, transform 120ms;
 }
 .pt-pac-goto:hover { background: var(--pt-surface-2); transform: translateX(1px); }
+
+/* ─── Acquisition source banner ──────────────────────────────────────────── */
+.pt-banner {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  padding: 8px 12px;
+  border-top: 0.5px solid var(--pt-line);
+  background: var(--pt-surface);
+}
+.pt-banner--soft { background: var(--pt-surface-2); }
+.pt-banner__label {
+  font-size: 11.5px; color: var(--pt-fg-3); margin-right: 2px;
+}
+.pt-banner__skip {
+  margin-left: auto;
+  background: none; border: 0; padding: 2px 4px;
+  font-size: 11px; color: var(--pt-fg-4); cursor: pointer;
+}
+.pt-banner__skip:hover { color: var(--pt-fg-2); }
+.pt-banner__link {
+  display: block; width: 100%;
+  background: none; border: 0; padding: 4px 12px;
+  font-size: 11px; color: var(--pt-fg-4); text-align: left; cursor: pointer;
+  border-top: 0.5px solid var(--pt-line);
+}
+.pt-banner__link:hover { color: var(--pt-accent); }
+.pt-chip--sm { padding: 2px 8px; font-size: 10.5px; cursor: pointer; }
+.pt-chip--sm:disabled { opacity: 0.5; cursor: not-allowed; }

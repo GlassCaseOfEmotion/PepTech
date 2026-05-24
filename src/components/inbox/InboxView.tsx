@@ -14,6 +14,7 @@ import { ProductInfoPicker } from './ProductInfoPicker'
 import type { DbConversation, DbQuickReply, DbTemplate, InboxThread, InboxMessage } from '@/types/inbox'
 import type { QueuedRun } from '@/types/automations'
 import { PendingApprovalRow } from '@/components/shared/PendingApprovalRow'
+import { AcquisitionSourceBanner } from '@/components/inbox/AcquisitionSourceBanner'
 import { initials } from '@/types/inbox'
 import { createClient } from '@/lib/supabase/client'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -907,6 +908,11 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
         </div>
       </div>
 
+      <AcquisitionSourceBanner
+        customerId={thread.customerId}
+        currentSource={thread.acquisitionSource ?? null}
+        lifecycleStage={thread.lifecycleStage}
+      />
       <Composer thread={thread} onSend={onSend} isSending={isSending} initialText={initialPrefill} />
     </div>
   )
