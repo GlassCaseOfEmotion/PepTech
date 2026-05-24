@@ -1,15 +1,16 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { setAcquisitionSource, type AcquisitionSource } from '@/app/contacts/actions'
 
-const SOURCE_LABELS: Record<AcquisitionSource, string> = {
+type QuickSource = Exclude<AcquisitionSource, 'other'>
+
+const SOURCE_LABELS: Record<QuickSource, string> = {
   referral:   'Referral',
   community:  'Community',
   group_chat: 'Group chat',
   direct:     'Direct',
-  other:      'Other',
 }
 
 interface Props {
@@ -23,28 +24,34 @@ export function AcquisitionSourceBanner({
   currentSource,
   lifecycleStage = 'lead',
 }: Props) {
-  const [demoted, setDemoted] = useState(false)
-  const [pending, start] = useTransition()
+  const [demoted, setDemoted] = useState<boolean>(() =>
+    typeof window !== 'undefined'
+    && sessionStorage.getItem('pt:acq_src_dismissed:' + customerId) === '1'
+  )
+  const [pending, setPending] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     if (currentSource !== null || lifecycleStage !== 'lead' || demoted) return
-    const t = setTimeout(() => setDemoted(true), 10_000)
+    const t = setTimeout(() => {
+      sessionStorage.setItem('pt:acq_src_dismissed:' + customerId, '1')
+      setDemoted(true)
+    }, 10_000)
     return () => clearTimeout(t)
-  }, [currentSource, lifecycleStage, demoted])
+  }, [currentSource, lifecycleStage, demoted, customerId])
 
   if (currentSource !== null) return null
   if (lifecycleStage !== 'lead') return null
 
-  function pick(source: AcquisitionSource) {
-    start(async () => {
-      const result = await setAcquisitionSource(customerId, {
-        source,
-        note: source === 'other' ? '' : null,
-      })
-      if ('error' in result) return
-      router.refresh()
-    })
+  async function pick(source: QuickSource) {
+    setPending(true)
+    const result = await setAcquisitionSource(customerId, { source, note: null })
+    setPending(false)
+    if ('error' in result) {
+      alert(result.error)
+      return
+    }
+    router.refresh()
   }
 
   if (demoted) {
@@ -52,7 +59,10 @@ export function AcquisitionSourceBanner({
       <button
         type="button"
         className="pt-banner__link"
-        onClick={() => setDemoted(false)}
+        onClick={() => {
+          sessionStorage.removeItem('pt:acq_src_dismissed:' + customerId)
+          setDemoted(false)
+        }}
       >
         Set source
       </button>
@@ -62,7 +72,7 @@ export function AcquisitionSourceBanner({
   return (
     <div className="pt-banner pt-banner--soft" role="region" aria-label="Acquisition source prompt">
       <span className="pt-banner__label">Where&apos;d they find you?</span>
-      {(Object.keys(SOURCE_LABELS) as AcquisitionSource[]).map(s => (
+      {(Object.keys(SOURCE_LABELS) as QuickSource[]).map(s => (
         <button
           key={s}
           type="button"
@@ -76,7 +86,10 @@ export function AcquisitionSourceBanner({
       <button
         type="button"
         className="pt-banner__skip"
-        onClick={() => setDemoted(true)}
+        onClick={() => {
+          sessionStorage.setItem('pt:acq_src_dismissed:' + customerId, '1')
+          setDemoted(true)
+        }}
       >
         skip
       </button>

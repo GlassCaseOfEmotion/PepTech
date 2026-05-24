@@ -910,7 +910,7 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
 
       <AcquisitionSourceBanner
         customerId={thread.customerId}
-        currentSource={thread.acquisitionSource ?? null}
+        currentSource={thread.acquisitionSource}
         lifecycleStage={thread.lifecycleStage}
       />
       <Composer thread={thread} onSend={onSend} isSending={isSending} initialText={initialPrefill} />
