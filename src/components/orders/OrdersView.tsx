@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
 import { updateOrderStatus } from '@/app/orders/actions'
 import { CreateOrderModal } from './CreateOrderModal'
 import { ShipOrderModal } from './ShipOrderModal'
 import { OrdersBoard, COLUMNS } from './OrdersBoard'
+import { OrdersList } from './OrdersList'
 import type { OrderCard, OrderStatus } from '@/types/orders'
 import { formatAmount } from '@/lib/currency'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -19,6 +20,17 @@ export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
   const [toast, setToast] = useState<{ text: string; kind: string; id: number } | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [pendingShipOrder, setPendingShipOrder] = useState<{ id: string; refNumber: string } | null>(null)
+  const [view, setView] = useState<'board' | 'list'>('board')
+
+  useEffect(() => {
+    const stored = localStorage.getItem('pt:orders-view')
+    if (stored === 'list' || stored === 'board') setView(stored)
+  }, [])
+
+  function switchView(next: 'board' | 'list') {
+    setView(next)
+    localStorage.setItem('pt:orders-view', next)
+  }
 
   const showToast = (text: string, kind = 'ok') => {
     setToast({ text, kind, id: Date.now() })
@@ -80,6 +92,26 @@ export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
           <p>{orders.length} open · {formatAmount(totalAwaiting, orders[0]?.currency ?? 'USD')} awaiting payment · {inFlight} in transit</p>
         </div>
         <div className="pt-or-hd-actions">
+          <div className="pt-segctl" role="tablist" aria-label="View mode">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={view === 'board'}
+              className={view === 'board' ? 'is-on' : undefined}
+              onClick={() => switchView('board')}
+            >
+              Board
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={view === 'list'}
+              className={view === 'list' ? 'is-on' : undefined}
+              onClick={() => switchView('list')}
+            >
+              List
+            </button>
+          </div>
           <div className="pt-or-search">
             <Icons.search size={12} />
             <input placeholder="Search by # or customer…" />
@@ -117,12 +149,20 @@ export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
           />
         </div>
       ) : (
-        <OrdersBoard
-          orders={orders}
-          pulse={pulse}
-          onAdvance={tryMove}
-          onOpen={id => router.push(`/orders/${id}`)}
-        />
+        view === 'board' ? (
+          <OrdersBoard
+            orders={orders}
+            pulse={pulse}
+            onAdvance={tryMove}
+            onOpen={(id) => router.push(`/orders/${id}`)}
+          />
+        ) : (
+          <OrdersList
+            orders={orders}
+            onAdvance={tryMove}
+            onOpen={(id) => router.push(`/orders/${id}`)}
+          />
+        )
       )}
 
       {showCreateModal && (
