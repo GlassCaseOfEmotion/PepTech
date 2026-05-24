@@ -5,6 +5,7 @@ import type { CommitInput, ExtractedProduct } from '../types'
 function row(over: Partial<ExtractedProduct & { user_edited: boolean }> = {}): ExtractedProduct & { user_edited: boolean } {
   return {
     name: 'BPC-157 5mg',
+    sku: 'BPC-157',
     raw_name: 'BPC-157 5mg',
     raw_category: 'RECOVERY',
     family: 'HEALING',
@@ -55,7 +56,7 @@ describe('commitExtractedCatalog', () => {
       sku: string; tenant_id: string; product_family: string; presentation: string | null;
       resources: { provenance: { source: string; user_edited: boolean; raw_family: string | null } };
     }
-    expect(product.sku).toBe('bpc-157-5mg')
+    expect(product.sku).toBe('BPC-157')
     expect(product.tenant_id).toBe('tenant-1')
     expect(product.product_family).toBe('HEALING')
     expect(product.presentation).toBe('vial')
@@ -106,12 +107,12 @@ describe('commitExtractedCatalog', () => {
       from(table: string) {
         return {
           select() {
-            return { eq: () => Promise.resolve({ data: [{ sku: 'bpc-157-5mg' }], error: null }) }
+            return { eq: () => Promise.resolve({ data: [{ sku: 'BPC-157' }], error: null }) }
           },
           insert(rows: unknown[]) {
             captured.push({ table, rows })
             return {
-              select: () => Promise.resolve({ data: table === 'products' ? [{ id: 'pid-0', sku: 'bpc-157-5mg-2' }] : null, error: null }),
+              select: () => Promise.resolve({ data: table === 'products' ? [{ id: 'pid-0', sku: 'BPC-157-2' }] : null, error: null }),
               then: (res: (v: { data: null; error: null }) => void) => res({ data: null, error: null }),
             }
           },
@@ -129,7 +130,37 @@ describe('commitExtractedCatalog', () => {
     })
 
     const productsCall = captured.find(c => c.table === 'products')!
-    expect((productsCall.rows[0] as { sku: string }).sku).toBe('bpc-157-5mg-2')
+    expect((productsCall.rows[0] as { sku: string }).sku).toBe('BPC-157-2')
+  })
+
+  it('uses the user-edited SKU when one is supplied on the row', async () => {
+    const captured: { table: string; rows: unknown[] }[] = []
+    const fakeSupabase = {
+      from(table: string) {
+        return {
+          select() { return { eq: () => Promise.resolve({ data: [], error: null }) } },
+          insert(rows: unknown[]) {
+            captured.push({ table, rows })
+            return {
+              select: () => Promise.resolve({ data: table === 'products' ? [{ id: 'pid-0', sku: (rows as { sku: string }[])[0].sku }] : null, error: null }),
+              then: (res: (v: { data: null; error: null }) => void) => res({ data: null, error: null }),
+            }
+          },
+        }
+      },
+    } as unknown as Parameters<typeof commitExtractedCatalog>[0]['supabase']
+
+    await commitExtractedCatalog({
+      supabase: fakeSupabase,
+      tenantId: 't',
+      input: {
+        rows: [row({ sku: 'MY-CUSTOM-SKU' })],
+        source_file_ref: 'f', source_filename: 'f.pdf', model: 'm',
+      },
+    })
+
+    const productsCall = captured.find(c => c.table === 'products')!
+    expect((productsCall.rows[0] as { sku: string }).sku).toBe('MY-CUSTOM-SKU')
   })
 
   it('throws if rows is empty', async () => {

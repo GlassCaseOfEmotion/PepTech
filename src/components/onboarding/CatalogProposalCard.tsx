@@ -117,10 +117,11 @@ export function CatalogProposalCard({ initial, onImport, onCancel, status, busin
           <table className="pt-proposal-table">
             <thead>
               <tr>
+                <th style={{ width: 110 }}>SKU</th>
                 <th className="pt-proposal-th-name">Name</th>
-                <th style={{ width: 110 }}>Format</th>
-                <th style={{ width: 130, textAlign: 'right' }}>Price</th>
-                <th style={{ width: 80, textAlign: 'right' }}>Stock</th>
+                <th style={{ width: 90 }}>Format</th>
+                <th style={{ width: 120, textAlign: 'right' }}>Price</th>
+                <th style={{ width: 70, textAlign: 'right' }}>Stock</th>
                 <th style={{ width: 100 }}>Family</th>
                 <th style={{ width: 32 }} aria-label="Actions"></th>
               </tr>
@@ -130,6 +131,14 @@ export function CatalogProposalCard({ initial, onImport, onCancel, status, busin
                 const idx = rows.indexOf(r)
                 return (
                   <tr key={idx} className={r.confidence < 0.6 ? 'is-low-confidence' : undefined}>
+                    <td>
+                      <input
+                        className="pt-proposal-cell pt-proposal-cell-sku mono"
+                        value={r.sku}
+                        onChange={e => updateRow(idx, { sku: e.target.value.toUpperCase() })}
+                        placeholder="—"
+                      />
+                    </td>
                     <td>
                       <input
                         className="pt-proposal-cell"

@@ -617,6 +617,14 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+.pt-proposal-cell-sku {
+  font-family: var(--pt-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--pt-fg);
+  text-transform: uppercase;
+}
 .pt-proposal-select {
   appearance: none;
   -webkit-appearance: none;

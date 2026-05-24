@@ -19,6 +19,11 @@ export const CANONICAL_FAMILIES: Record<'peptides' | 'nootropics' | 'sarms' | 'g
 export interface ExtractedProduct {
   /** Canonical name as it should appear in the products table. */
   name: string
+  /** Shorthand SKU like "RETA-10", "BPC-157". Auto-generated server-side
+   * from the name but editable in the proposal UI; what the user types
+   * becomes the committed value (with collision-dedup against existing
+   * tenant SKUs). */
+  sku: string
   /** Verbatim string the model read from the source. Stored in provenance for audit. */
   raw_name: string
   /** Family the model assigned, mapped to the canonical set for the tenant's
