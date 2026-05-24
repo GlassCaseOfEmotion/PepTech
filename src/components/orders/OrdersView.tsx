@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
 import { updateOrderStatus } from '@/app/orders/actions'
@@ -14,14 +14,19 @@ import { PAYMENT_BADGE } from '@/types/payments'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 
-export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
+interface Props {
+  initialOrders: OrderCard[]
+  initialView?: 'board' | 'list'
+}
+
+export function OrdersView({ initialOrders, initialView = 'board' }: Props) {
   const router = useRouter()
   const [orders, setOrders] = useState(initialOrders)
   const [pulse, setPulse] = useState<Record<string, string>>({})
   const [toast, setToast] = useState<{ text: string; kind: string; id: number } | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [pendingShipOrder, setPendingShipOrder] = useState<{ id: string; refNumber: string } | null>(null)
-  const [view, setView] = useState<'board' | 'list'>('board')
+  const [view, setView] = useState<'board' | 'list'>(initialView)
   const [search, setSearch] = useState('')
 
   const filtered = useMemo(() => {
@@ -41,14 +46,10 @@ export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
     })
   }, [orders, search])
 
-  useEffect(() => {
-    const stored = localStorage.getItem('pt:orders-view')
-    if (stored === 'list' || stored === 'board') setView(stored)
-  }, [])
-
   function switchView(next: 'board' | 'list') {
     setView(next)
-    localStorage.setItem('pt:orders-view', next)
+    // 1-year cookie so the server can render the right view on next load
+    document.cookie = `pt-orders-view=${next}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`
   }
 
   const showToast = (text: string, kind = 'ok') => {

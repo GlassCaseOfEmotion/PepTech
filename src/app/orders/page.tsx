@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { createClient, getServerUser } from '@/lib/supabase/server'
 import { Shell } from '@/components/shell/Shell'
 import { OrdersView } from '@/components/orders/OrdersView'
@@ -39,9 +40,13 @@ export default async function OrdersPage() {
 
   const cards = ((orders ?? []) as unknown as DbOrderRow[]).map(dbOrderToCard)
 
+  const cookieStore = await cookies()
+  const storedView = cookieStore.get('pt-orders-view')?.value
+  const initialView: 'board' | 'list' = storedView === 'list' ? 'list' : 'board'
+
   return (
     <Shell section="Orders">
-      <OrdersView initialOrders={cards} />
+      <OrdersView initialOrders={cards} initialView={initialView} />
     </Shell>
   )
 }
