@@ -12,6 +12,9 @@ export type ConversationWithCustomer = {
     trust_score: number
     ltv: number
     customer_tags: { tag: string }[]
+    // HAND-NARROWED: lifecycle_stage and acquisition_source are text+CHECK columns in DB.
+    // `npm run db:types` will overwrite these literal unions back to `string` — re-apply
+    // the narrowings after any regen. See CLAUDE.md "Hand-narrowed database types".
     lifecycle_stage: 'lead' | 'customer'
     acquisition_source: 'referral' | 'community' | 'group_chat' | 'direct' | 'other' | null
   } | null
@@ -62,6 +65,9 @@ export type DbConversation = {
     ltv: number
     customer_tags: { tag: string }[]
     customer_channels: { channel_type: string; display_handle: string; is_primary: boolean }[]
+    // HAND-NARROWED: lifecycle_stage and acquisition_source are text+CHECK columns in DB.
+    // `npm run db:types` will overwrite these literal unions back to `string` — re-apply
+    // the narrowings after any regen. See CLAUDE.md "Hand-narrowed database types".
     lifecycle_stage: 'lead' | 'customer'
     acquisition_source: 'referral' | 'community' | 'group_chat' | 'direct' | 'other' | null
   } | null

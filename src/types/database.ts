@@ -646,6 +646,9 @@ export type Database = {
           },
         ]
       }
+      // HAND-NARROWED: lifecycle_stage and acquisition_source are text+CHECK columns in DB.
+      // `npm run db:types` will overwrite these literal unions back to `string` — re-apply
+      // the narrowings after any regen. See CLAUDE.md "Hand-narrowed database types".
       customers: {
         Row: {
           acquisition_source: 'referral' | 'community' | 'group_chat' | 'direct' | 'other' | null
