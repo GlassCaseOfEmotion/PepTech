@@ -63,7 +63,8 @@ export const Icons = {
   bot:     (p: IconProps) => <PtIcon {...p}><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8V5 M9 5h6 M9 13h.01 M15 13h.01 M9 17h6"/></PtIcon>,
   wand:    (p: IconProps) => <PtIcon {...p} d="M15 4l5 5L7 22l-5-5L15 4Z M9 9l6 6 M14.5 2.5l1 1 M19.5 7.5l1 1 M2.5 14.5l1 1 M7.5 19.5l1 1" />,
   moon:    (p: IconProps) => <PtIcon {...p} d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />,
-  photo:   (p: IconProps) => <PtIcon {...p}><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.5"/><path d="M3 9h2l2-3h10l2 3"/></PtIcon>,
+  photo:      (p: IconProps) => <PtIcon {...p}><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.5"/><path d="M3 9h2l2-3h10l2 3"/></PtIcon>,
+  paperclip:  (p: IconProps) => <PtIcon {...p} d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48" />,
 }
 
 export function ChannelIcon({ channelType, size = 9 }: { channelType: 'whatsapp' | 'telegram' | 'email'; size?: number }) {

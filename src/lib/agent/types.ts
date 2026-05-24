@@ -51,3 +51,9 @@ export interface AgentTool<TInput = Record<string, unknown>> {
   execute: (input: TInput, supabase: AgentSupabase, tenantId: string) => Promise<unknown>
   summarise?: (input: TInput) => string   // human-readable summary for confirm card
 }
+
+export interface Attachment {
+  file_ref:  string
+  filename:  string
+  mime_type: string
+}

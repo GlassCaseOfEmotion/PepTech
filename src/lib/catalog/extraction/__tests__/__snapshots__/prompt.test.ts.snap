@@ -1,0 +1,16 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildExtractionPrompt > produces a deterministic prompt referencing tenant context 1`] = `
+"You extract a tenant's product catalogue from an uploaded price list (PDF, image, or text).
+This is a peptide supplier. Product names will look like "BPC-157", "Semaglutide", "Tirzepatide" — dose strings are usually attached (5mg, 10mg).
+Their declared base currency is IDR; if the file is clearly in a different currency, set detected_currency accordingly, otherwise prefer IDR.
+
+Rules:
+- Output ONLY the structured JSON described by the response schema. No prose.
+- One row per distinct product offering. Combine multi-line entries that belong to the same item.
+- Keep the verbatim source string in raw_name. Put a cleaned, commit-ready version (with dose/presentation) in name.
+- Map category headers (e.g. "RECOVERY & HEALING") onto each product underneath that header. Use null when there is no obvious category.
+- For unit_price, strip currency symbols and thousand separators. "1.700.000" in an IDR list means 1700000; "1,200.00" in a USD list means 1200.
+- Skip rows that are clearly not products: footnotes, disclaimers, contact info, advertisements. Lift those into tenant_notes instead.
+- Use confidence to flag rows you are unsure about (e.g. handwritten, low-resolution, ambiguous price)."
+`;

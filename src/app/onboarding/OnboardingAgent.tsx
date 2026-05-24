@@ -6,6 +6,9 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Icons } from '@/lib/icons'
 import type { SseEvent, ToolCall } from '@/lib/agent/types'
+import { CatalogProposalCard } from '@/components/onboarding/CatalogProposalCard'
+import { commitExtractedCatalogAction } from './actions'
+import type { ExtractionResult, ExtractedProduct } from '@/lib/catalog/extraction/types'
 
 interface OnboardingState {
   display_name: string | null
@@ -46,7 +49,7 @@ function summariseToolCall(name: string, input: Record<string, unknown>): string
       return `Saved channels — ${ch}`
     }
     case 'seed_catalog_preset':    return 'Seed starter catalog from preset list'
-    case 'extract_catalog':        return 'Extract products from upload (coming soon)'
+    case 'extract_catalog':        return 'Extracted products from upload'
     case 'complete_onboarding':    return 'Finish onboarding and go to dashboard'
     default: return name.replace(/_/g, ' ')
   }
@@ -128,6 +131,10 @@ function applyToolOutputsToState(
       case 'complete_onboarding':
         next.complete = !!out.complete
         break
+      case 'extract_catalog':
+        // No state change yet; the catalog step is completed by the commit server action,
+        // which bumps product_count directly via handleProposalImport.
+        break
       case 'read_onboarding_state': {
         // Authoritative refresh
         const dn = out.display_name
@@ -178,6 +185,12 @@ export function OnboardingAgent({
   const [confirming, setConfirming] = useState(false)
   const [pendingConfirm, setPendingConfirm] = useState<{ messageId: string; toolCalls: ToolCall[] } | null>(null)
   const [completing, setCompleting] = useState(false)
+  const [stagedFile, setStagedFile] = useState<{
+    file_ref: string; filename: string; mime_type: string
+  } | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [proposalStatus, setProposalStatus] = useState<Record<string, 'idle' | 'importing' | 'done' | 'cancelled'>>({})
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const msgsRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const sentOpenerRef = useRef(false)
@@ -232,6 +245,25 @@ export function OnboardingAgent({
     })
   }, [])
 
+  const uploadFile = useCallback(async (file: File) => {
+    setUploading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/onboarding/upload', { method: 'POST', body: form })
+      if (!res.ok) {
+        const { error } = await res.json() as { error?: string }
+        throw new Error(error ?? 'Upload failed')
+      }
+      const data = await res.json() as { file_ref: string; filename: string; mime_type: string }
+      setStagedFile(data)
+    } catch (e) {
+      setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${e instanceof Error ? e.message : 'Upload error'}` }])
+    } finally {
+      setUploading(false)
+    }
+  }, [])
+
   const send = useCallback(async (override?: string, opts: { hideUserMessage?: boolean } = {}) => {
     const text = (override ?? input).trim()
     if (!text || streaming) return
@@ -244,10 +276,16 @@ export function OnboardingAgent({
     }
 
     try {
+      const sendingAttachment = stagedFile
       const res = await fetch('/api/agent/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, message: text, mode: 'onboarding' }),
+        body: JSON.stringify({
+          sessionId,
+          message: text,
+          mode: 'onboarding',
+          attachments: stagedFile ? [stagedFile] : [],
+        }),
       })
       if (!res.ok) throw new Error('Request failed')
 
@@ -274,6 +312,7 @@ export function OnboardingAgent({
           setSessionId(newSid)
           setStreaming(false)
           setMessages(prev => prev.map(m => ({ ...m, streaming: false })))
+          if (sendingAttachment) setStagedFile(null)
         },
         onError: (msg) => {
           setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${msg}` }])
@@ -284,7 +323,35 @@ export function OnboardingAgent({
       setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${e instanceof Error ? e.message : 'Error'}` }])
       setStreaming(false)
     }
-  }, [input, streaming, sessionId, appendAssistantDelta, mergeResolvedToolCalls, finishIfComplete])
+  }, [input, streaming, sessionId, stagedFile, appendAssistantDelta, mergeResolvedToolCalls, finishIfComplete])
+
+  const handleProposalImport = useCallback(async (
+    toolCallId: string,
+    result: ExtractionResult,
+    rows: Array<ExtractedProduct & { user_edited: boolean }>,
+  ) => {
+    setProposalStatus(s => ({ ...s, [toolCallId]: 'importing' }))
+    const out = await commitExtractedCatalogAction({
+      rows,
+      source_file_ref: result.source_file_ref,
+      source_filename: result.source_filename,
+      model: result.model,
+    })
+    if (out.error) {
+      setProposalStatus(s => ({ ...s, [toolCallId]: 'idle' }))
+      setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${out.error}` }])
+      return
+    }
+    setProposalStatus(s => ({ ...s, [toolCallId]: 'done' }))
+    // Reflect catalog state immediately so the left rail ticks "Catalog" off
+    setState(prev => ({ ...prev, product_count: (prev.product_count ?? 0) + (out.count ?? rows.length) }))
+    // Tell the agent so it knows to congratulate / move on without re-prompting upload
+    void send(`I imported ${out.count ?? rows.length} products from ${result.source_filename}.`, { hideUserMessage: true })
+  }, [send])
+
+  const handleProposalCancel = useCallback((toolCallId: string) => {
+    setProposalStatus(s => ({ ...s, [toolCallId]: 'cancelled' }))
+  }, [])
 
   const confirm = useCallback(async (toolCallId: string, confirmed: boolean) => {
     if (!pendingConfirm || !sessionId) return
@@ -442,19 +509,34 @@ export function OnboardingAgent({
                       : m.text}
                   </div>
                 ) : null}
-                {m.toolCalls?.map(tc => (
-                  <div key={tc.id} className={`pt-agent-confirm ${tc.status !== 'pending' ? 'is-resolved' : ''}`}>
-                    <div className="pt-agent-confirm-summary">{summariseToolCall(tc.name, tc.input)}</div>
-                    {tc.status === 'pending' && (
-                      <div className="pt-agent-confirm-btns">
-                        <button className="pt-btn pt-btn-primary" style={{ height: 30, fontSize: 12.5 }} onClick={() => confirm(tc.id, true)} disabled={confirming}>Confirm</button>
-                        <button className="pt-btn pt-btn-ghost"   style={{ height: 30, fontSize: 12.5 }} onClick={() => confirm(tc.id, false)} disabled={confirming}>Cancel</button>
-                      </div>
-                    )}
-                    {tc.status === 'complete' && <div className="pt-agent-confirm-done"><Icons.check size={11} /> Done</div>}
-                    {tc.status === 'rejected' && <div className="pt-agent-confirm-skip">Skipped</div>}
-                  </div>
-                ))}
+                {m.toolCalls?.map(tc => {
+                  if (tc.name === 'extract_catalog' && tc.status === 'complete' && tc.output && typeof tc.output === 'object' && !('error' in tc.output)) {
+                    const result = tc.output as ExtractionResult
+                    const status = proposalStatus[tc.id] ?? 'idle'
+                    return (
+                      <CatalogProposalCard
+                        key={tc.id}
+                        initial={result}
+                        status={status}
+                        onImport={rows => handleProposalImport(tc.id, result, rows)}
+                        onCancel={() => handleProposalCancel(tc.id)}
+                      />
+                    )
+                  }
+                  return (
+                    <div key={tc.id} className={`pt-agent-confirm ${tc.status !== 'pending' ? 'is-resolved' : ''}`}>
+                      <div className="pt-agent-confirm-summary">{summariseToolCall(tc.name, tc.input)}</div>
+                      {tc.status === 'pending' && (
+                        <div className="pt-agent-confirm-btns">
+                          <button className="pt-btn pt-btn-primary" style={{ height: 30, fontSize: 12.5 }} onClick={() => confirm(tc.id, true)} disabled={confirming}>Confirm</button>
+                          <button className="pt-btn pt-btn-ghost"   style={{ height: 30, fontSize: 12.5 }} onClick={() => confirm(tc.id, false)} disabled={confirming}>Cancel</button>
+                        </div>
+                      )}
+                      {tc.status === 'complete' && <div className="pt-agent-confirm-done"><Icons.check size={11} /> Done</div>}
+                      {tc.status === 'rejected' && <div className="pt-agent-confirm-skip">Skipped</div>}
+                    </div>
+                  )
+                })}
               </div>
             ))}
             {(streaming || confirming) && !messages.some(m => m.role === 'assistant' && m.streaming) && (
@@ -465,23 +547,71 @@ export function OnboardingAgent({
             <div ref={bottomRef} aria-hidden style={{ height: 1 }} />
           </div>
 
-          <div className="pt-agent-chat-input-row" style={{ marginTop: 12 }}>
-            <textarea
-              className="pt-agent-chat-textarea"
-              placeholder="Type your reply…"
-              rows={1}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send() } }}
-              disabled={streaming || confirming}
-            />
-            <button
-              className="pt-btn pt-btn-primary pt-agent-send-btn"
-              onClick={() => void send()}
-              disabled={!input.trim() || streaming || confirming}
-            >
-              <Icons.send size={13} />
-            </button>
+          <div
+            onDragOver={e => { e.preventDefault() }}
+            onDrop={e => {
+              e.preventDefault()
+              const file = e.dataTransfer.files?.[0]
+              if (file) void uploadFile(file)
+            }}
+          >
+            {stagedFile && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '6px 10px', marginBottom: 8,
+                background: 'var(--pt-bg-2)', borderRadius: 999, fontSize: 12,
+              }}>
+                <span>📎 {stagedFile.filename}</span>
+                <button
+                  onClick={() => setStagedFile(null)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', opacity: 0.6 }}
+                  aria-label="Remove attachment"
+                >×</button>
+              </div>
+            )}
+            <div className="pt-agent-chat-input-row" style={{ marginTop: 0 }}>
+              <button
+                type="button"
+                className="pt-btn pt-btn-ghost"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || streaming || confirming}
+                title="Attach a price list"
+                style={{ height: 36, width: 36, padding: 0 }}
+              >
+                <Icons.paperclip size={14} />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf,image/png,image/jpeg,image/webp"
+                hidden
+                onChange={e => {
+                  const f = e.target.files?.[0]
+                  if (f) void uploadFile(f)
+                  e.target.value = ''
+                }}
+              />
+              <textarea
+                className="pt-agent-chat-textarea"
+                placeholder={uploading ? 'Uploading…' : stagedFile ? 'Add a message (optional)…' : 'Type your reply…'}
+                rows={1}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onPaste={e => {
+                  const file = e.clipboardData.files?.[0]
+                  if (file) { e.preventDefault(); void uploadFile(file) }
+                }}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send() } }}
+                disabled={streaming || confirming}
+              />
+              <button
+                className="pt-btn pt-btn-primary pt-agent-send-btn"
+                onClick={() => void send()}
+                disabled={(!input.trim() && !stagedFile) || streaming || confirming || uploading}
+              >
+                <Icons.send size={13} />
+              </button>
+            </div>
           </div>
         </div>
         )}

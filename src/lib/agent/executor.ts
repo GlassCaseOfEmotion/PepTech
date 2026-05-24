@@ -34,7 +34,7 @@ function buildOnboardingSystem() {
 
 The five steps are: profile (display name + timezone), business_type, currency, catalog, channels. You can do them in any order the user prefers, but the natural order is the one listed.
 
-At the start of EVERY conversation — including the very first turn — call read_onboarding_state first to find out what is already done, then pick up from there. Never ask for information that is already saved.
+At the start of EVERY conversation — including the very first turn — call read_onboarding_state first to find out what is already done, then pick up from there. Never ask for information that is already saved. Note: timezone defaults to UTC before the user answers, so if steps.timezone_asked is false you still need to ask for their timezone even though tenant.timezone is populated.
 
 Style:
 - Warm but efficient. Don't over-explain. One or two short sentences per turn.
@@ -44,7 +44,8 @@ Style:
 - If the user gives a city or country instead of a timezone, infer the IANA zone yourself (e.g. "Bangkok" → "Asia/Bangkok", "London" → "Europe/London", "Bali" → "Asia/Makassar"). Don't ask them to look it up.
 - NEVER invent values you weren't told. If you only know the user's name and not their timezone, call save_profile with ONLY display_name — do not pass a default timezone. Same for any other tool with optional fields: pass only what the user has told you.
 - Channel intent is just a selection of which channels they plan to use later. Don't try to actually connect them in this conversation — connection happens in Settings.
-- The catalog step in this version (v0.1) is limited: you can offer seed_catalog_preset (a starter list for their business type) or let them skip and add products later. The full "upload your price list and I'll extract it" experience is coming in the next release — you can mention it's coming but don't promise it now.
+- Catalog step: ask the user to drop in their price list — PDF, screenshot, or pasted text — using the paperclip in the composer. When they upload a file, the chat message will contain a "[uploaded: <filename> (file_ref=<ref>)]" hint; call extract_catalog with that file_ref. The UI will render the extracted products as an editable proposal — DO NOT recite the products back in chat; just confirm extraction started and let the user review the proposal. Once they click Import the client will send you a synthetic message confirming the import — react briefly and move on to the next step.
+- If the user explicitly says they don't have a list or wants to skip the catalog, offer seed_catalog_preset (a starter list for their business type) as a fallback. They can always add or edit products in the dashboard later.
 - After all required steps are done, call complete_onboarding to send them to the dashboard. When you do, your closing message should briefly set the expectation that a short tour of the dashboard will start automatically once they land (one short sentence — they can dismiss the tour from inside if they want to skip).
 
 Valid values:
@@ -203,17 +204,24 @@ export async function executeAgentTurn(
   userMessage: string,
   tenantId: string,
   supabase: AgentSupabase,
-  controller: ReadableStreamDefaultController<Uint8Array>
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  attachments: { file_ref: string; filename: string; mime_type: string }[] = [],
 ) {
   const encoder = new TextEncoder()
   const send = (e: SseEvent) => controller.enqueue(encoder.encode(encodeEvent(e)))
   const client = createClient()
   const mode = await modeForSession(sessionId, supabase)
 
-  await saveUserMessage(sessionId, tenantId, userMessage, supabase)
+  let messageForAgent = userMessage
+  if (attachments.length > 0) {
+    const lines = attachments.map(a => `[uploaded: ${a.filename} (file_ref=${a.file_ref})]`)
+    messageForAgent = `${lines.join('\n')}\n${userMessage}`.trim()
+  }
+
+  await saveUserMessage(sessionId, tenantId, messageForAgent, supabase)
   let history = await loadHistory(sessionId, supabase)
   if (history.length === 0) {
-    history = [{ role: 'user', content: userMessage }]
+    history = [{ role: 'user', content: messageForAgent }]
   }
 
   const { text, toolCalls } = await streamCompletion(client, history, send, mode)
