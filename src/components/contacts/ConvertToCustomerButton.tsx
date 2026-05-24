@@ -8,9 +8,10 @@ import { useToast, Toast } from '@/components/ui/Toast'
 interface Props {
   customerId: string
   currentStage: 'lead' | 'customer'
+  onSuccess?: () => void
 }
 
-export function ConvertToCustomerButton({ customerId, currentStage }: Props) {
+export function ConvertToCustomerButton({ customerId, currentStage, onSuccess }: Props) {
   const [pending, start] = useTransition()
   const router = useRouter()
   const { toast, showToast } = useToast()
@@ -30,7 +31,11 @@ export function ConvertToCustomerButton({ customerId, currentStage }: Props) {
               showToast(result.error, 'err')
               return
             }
-            router.refresh()
+            if (onSuccess) {
+              onSuccess()
+            } else {
+              router.refresh()
+            }
           })
         }
       >

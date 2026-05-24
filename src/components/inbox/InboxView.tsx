@@ -743,7 +743,7 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
   initialPrefill?: string
   baseCurrency: string
 }) {
-  const { snooze, markDone, reopen, messagesLoading } = useInbox()
+  const { snooze, markDone, reopen, messagesLoading, updateThreadLifecycle, updateThreadAcquisitionSource } = useInbox()
   const [showSnooze, setShowSnooze] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [sheetExpanded, setSheetExpanded] = useState(false)
@@ -816,7 +816,11 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
         </div>
         <div className="pt-ix-conv-actions">
           {thread.lifecycleStage === 'lead' && (
-            <ConvertToCustomerButton customerId={thread.customerId} currentStage="lead" />
+            <ConvertToCustomerButton
+              customerId={thread.customerId}
+              currentStage="lead"
+              onSuccess={() => updateThreadLifecycle(thread.id, 'customer')}
+            />
           )}
           <div ref={snoozeRef} style={{ position: 'relative' }}>
             <button className="pt-btn pt-btn-ghost" onClick={() => setShowSnooze(v => !v)}>
@@ -917,6 +921,7 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
         customerId={thread.customerId}
         currentSource={thread.acquisitionSource}
         lifecycleStage={thread.lifecycleStage}
+        onSuccess={(source) => updateThreadAcquisitionSource(thread.id, source)}
       />
       <Composer thread={thread} onSend={onSend} isSending={isSending} initialText={initialPrefill} />
     </div>

@@ -18,12 +18,14 @@ interface Props {
   customerId: string
   currentSource: AcquisitionSource | null
   lifecycleStage?: 'lead' | 'customer'
+  onSuccess?: (source: AcquisitionSource | null) => void
 }
 
 export function AcquisitionSourceBanner({
   customerId,
   currentSource,
   lifecycleStage = 'lead',
+  onSuccess,
 }: Props) {
   const [demoted, setDemoted] = useState<boolean>(() =>
     typeof window !== 'undefined'
@@ -53,7 +55,11 @@ export function AcquisitionSourceBanner({
       showToast(result.error, 'err')
       return
     }
-    router.refresh()
+    if (onSuccess) {
+      onSuccess(source)
+    } else {
+      router.refresh()
+    }
   }
 
   if (demoted) {

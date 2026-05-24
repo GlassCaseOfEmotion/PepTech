@@ -43,6 +43,8 @@ type InboxCtx = {
   pendingInvoicePath: string | null
   pendingInvoiceName: string | null
   clearPendingInvoice: () => void
+  updateThreadLifecycle: (threadId: string, stage: 'lead' | 'customer') => void
+  updateThreadAcquisitionSource: (threadId: string, source: 'referral' | 'community' | 'group_chat' | 'direct' | 'other' | null) => void
 }
 
 const InboxContext = createContext<InboxCtx | null>(null)
@@ -307,6 +309,18 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
     await supabase.from('conversations').update({ is_pinned: newVal } as never).eq('id', id)
   }, [threads, supabase])
 
+  // ── Optimistic thread field updates ──────────────────────────────────────
+  const updateThreadLifecycle = useCallback((threadId: string, stage: 'lead' | 'customer') => {
+    setThreads(prev => prev.map(t => t.id === threadId ? { ...t, lifecycleStage: stage } : t))
+  }, [])
+
+  const updateThreadAcquisitionSource = useCallback((
+    threadId: string,
+    source: 'referral' | 'community' | 'group_chat' | 'direct' | 'other' | null,
+  ) => {
+    setThreads(prev => prev.map(t => t.id === threadId ? { ...t, acquisitionSource: source } : t))
+  }, [])
+
   // ── Reopen a resolved conversation ────────────────────────────────────────
   const reopen = useCallback(async () => {
     if (!activeId) return
@@ -451,6 +465,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
       threads, activeId, setActiveId, filter, setFilter,
       messages, notes, quickReplies, templates, isSending, messagesLoading, resolvedCount, activeThread, sendMessage, sendTemplate, addNote, snooze, markDone, reopen, togglePin,
       pendingInvoicePath, pendingInvoiceName, clearPendingInvoice,
+      updateThreadLifecycle, updateThreadAcquisitionSource,
     }}>
       {children}
     </InboxContext.Provider>
