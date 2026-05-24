@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
 import { updateOrderStatus } from '@/app/orders/actions'
@@ -10,6 +10,7 @@ import { OrdersBoard, COLUMNS } from './OrdersBoard'
 import { OrdersList } from './OrdersList'
 import type { OrderCard, OrderStatus } from '@/types/orders'
 import { formatAmount } from '@/lib/currency'
+import { PAYMENT_BADGE } from '@/types/payments'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 
@@ -21,6 +22,24 @@ export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [pendingShipOrder, setPendingShipOrder] = useState<{ id: string; refNumber: string } | null>(null)
   const [view, setView] = useState<'board' | 'list'>('board')
+  const [search, setSearch] = useState('')
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return orders
+    return orders.filter(o => {
+      const payLabel = (PAYMENT_BADGE[o.paymentAsset ?? '']?.label ?? o.paymentAsset ?? '').toLowerCase()
+      return (
+        o.refNumber.toLowerCase().includes(q) ||
+        o.customerName.toLowerCase().includes(q) ||
+        o.handle.toLowerCase().includes(q) ||
+        o.status.toLowerCase().includes(q) ||
+        payLabel.includes(q) ||
+        o.channel.toLowerCase().includes(q) ||
+        o.items.some(it => it.name.toLowerCase().includes(q))
+      )
+    })
+  }, [orders, search])
 
   useEffect(() => {
     const stored = localStorage.getItem('pt:orders-view')
@@ -114,7 +133,12 @@ export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
           </div>
           <div className="pt-or-search">
             <Icons.search size={12} />
-            <input placeholder="Search by # or customer…" />
+            <input
+              type="search"
+              placeholder="Search by # or customer…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
           <button className="pt-btn pt-btn-primary" onClick={() => setShowCreateModal(true)}>
             <Icons.plus size={12} /> New order
@@ -151,14 +175,14 @@ export function OrdersView({ initialOrders }: { initialOrders: OrderCard[] }) {
       ) : (
         view === 'board' ? (
           <OrdersBoard
-            orders={orders}
+            orders={filtered}
             pulse={pulse}
             onAdvance={tryMove}
             onOpen={(id) => router.push(`/orders/${id}`)}
           />
         ) : (
           <OrdersList
-            orders={orders}
+            orders={filtered}
             onAdvance={tryMove}
             onOpen={(id) => router.push(`/orders/${id}`)}
           />
