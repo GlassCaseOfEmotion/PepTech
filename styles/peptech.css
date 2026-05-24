@@ -2689,4 +2689,23 @@ kbd {
 }
 .pt-banner__link:hover { color: var(--pt-accent); }
 .pt-chip--sm { padding: 2px 8px; font-size: 10.5px; cursor: pointer; }
+
+/* Shared toast — generic equivalent of .pt-or-toast */
+.pt-toast {
+  position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 13px;
+  background: var(--pt-fg); color: var(--pt-bg);
+  border-radius: 7px;
+  font-size: 12px;
+  box-shadow: 0 4px 16px oklch(from var(--pt-fg) l c h / 0.25);
+  z-index: 9999;
+  animation: ptToast 0.25s ease-out;
+}
+.pt-toast-ok { /* inherits default dark background */ }
+.pt-toast-err { background: var(--pt-danger); color: white; }
+@keyframes ptToast {
+  from { transform: translate(-50%, 8px); opacity: 0; }
+  to   { transform: translate(-50%, 0);   opacity: 1; }
+}
 .pt-chip--sm:disabled { opacity: 0.5; cursor: not-allowed; }

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { setAcquisitionSource, type AcquisitionSource } from '@/app/contacts/actions'
+import { useToast, Toast } from '@/components/ui/Toast'
 
 const SOURCE_LABELS: Record<AcquisitionSource, string> = {
   referral:   'Referral',
@@ -25,6 +26,7 @@ export function AcquisitionSourceCard({ customerId, initialSource, initialNote, 
   const [referredBy, setReferredBy] = useState(initialReferredBy ?? '')
   const [pending, start]    = useTransition()
   const router = useRouter()
+  const { toast, showToast } = useToast()
 
   function save(nextSource: AcquisitionSource | null) {
     start(async () => {
@@ -34,7 +36,7 @@ export function AcquisitionSourceCard({ customerId, initialSource, initialNote, 
         referredByCustomerId: nextSource === 'referral' ? (referredBy || null) : null,
       })
       if ('error' in result) {
-        alert(result.error)
+        showToast(result.error, 'err')
         return
       }
       router.refresh()
@@ -110,6 +112,7 @@ export function AcquisitionSourceCard({ customerId, initialSource, initialNote, 
           />
         )}
       </div>
+      <Toast toast={toast} />
     </section>
   )
 }

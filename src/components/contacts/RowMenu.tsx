@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { setLifecycleStage } from '@/app/contacts/actions'
+import { useToast, Toast } from '@/components/ui/Toast'
 
 export function RowMenu({ customerId, currentStage }: {
   customerId: string
@@ -10,6 +11,7 @@ export function RowMenu({ customerId, currentStage }: {
 }) {
   const [pending, setPending] = useState(false)
   const router = useRouter()
+  const { toast, showToast } = useToast()
 
   const targetStage: 'lead' | 'customer' = currentStage === 'lead' ? 'customer' : 'lead'
   const label = currentStage === 'lead' ? 'Mark as customer' : 'Mark as lead'
@@ -21,21 +23,24 @@ export function RowMenu({ customerId, currentStage }: {
     const result = await setLifecycleStage(customerId, targetStage)
     setPending(false)
     if ('error' in result) {
-      alert(result.error)
+      showToast(result.error, 'err')
       return
     }
     router.refresh()
   }
 
   return (
-    <button
-      type="button"
-      className="pt-btn pt-btn-ghost"
-      style={{ fontSize: 11 }}
-      disabled={pending}
-      onClick={handleClick}
-    >
-      {label}
-    </button>
+    <>
+      <button
+        type="button"
+        className="pt-btn pt-btn-ghost"
+        style={{ fontSize: 11 }}
+        disabled={pending}
+        onClick={handleClick}
+      >
+        {label}
+      </button>
+      <Toast toast={toast} />
+    </>
   )
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { setAcquisitionSource, type AcquisitionSource } from '@/app/contacts/actions'
+import { useToast, Toast } from '@/components/ui/Toast'
 
 type QuickSource = Exclude<AcquisitionSource, 'other'>
 
@@ -30,6 +31,7 @@ export function AcquisitionSourceBanner({
   )
   const [pending, setPending] = useState(false)
   const router = useRouter()
+  const { toast, showToast } = useToast()
 
   useEffect(() => {
     if (currentSource !== null || lifecycleStage !== 'lead' || demoted) return
@@ -48,7 +50,7 @@ export function AcquisitionSourceBanner({
     const result = await setAcquisitionSource(customerId, { source, note: null })
     setPending(false)
     if ('error' in result) {
-      alert(result.error)
+      showToast(result.error, 'err')
       return
     }
     router.refresh()
@@ -56,16 +58,19 @@ export function AcquisitionSourceBanner({
 
   if (demoted) {
     return (
-      <button
-        type="button"
-        className="pt-banner__link"
-        onClick={() => {
-          sessionStorage.removeItem('pt:acq_src_dismissed:' + customerId)
-          setDemoted(false)
-        }}
-      >
-        Set source
-      </button>
+      <>
+        <button
+          type="button"
+          className="pt-banner__link"
+          onClick={() => {
+            sessionStorage.removeItem('pt:acq_src_dismissed:' + customerId)
+            setDemoted(false)
+          }}
+        >
+          Set source
+        </button>
+        <Toast toast={toast} />
+      </>
     )
   }
 
@@ -93,6 +98,7 @@ export function AcquisitionSourceBanner({
       >
         skip
       </button>
+      <Toast toast={toast} />
     </div>
   )
 }
