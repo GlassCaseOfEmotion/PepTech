@@ -166,7 +166,7 @@ function TlIcon({ icon, variant }: { icon: keyof typeof Icons; variant: TlVarian
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWithOrder; onBack: () => void }) {
+export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWithOrder; onBack?: () => void }) {
   const router   = useRouter()
   const steps    = getProgressSteps(link.status, link)
   const timeline = getTimeline(link)
@@ -206,7 +206,7 @@ export function PaymentLinkDetail({ link, onBack }: { link: CryptoPaymentLinkWit
           <div>
             <button
               className="pt-btn pt-btn-ghost"
-              onClick={onBack}
+              onClick={() => onBack ? onBack() : router.push('/payments')}
               style={{ padding: '3px 8px', fontSize: 11, marginBottom: 12 }}
             >
               ← Back

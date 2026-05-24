@@ -373,7 +373,7 @@ export function OrderDetailView({
               )}
               {sendState === 'idle' && isCryptoSelected && cryptoPaymentLink && (
                 <a
-                  href={`/payments?link=${cryptoPaymentLink.id}`}
+                  href={`/payments/${cryptoPaymentLink.id}`}
                   style={{ fontSize: 11, padding: '0 10px', height: 26, display: 'inline-flex', alignItems: 'center', borderRadius: 5, border: '0.5px solid var(--pt-line)', color: 'var(--pt-fg-3)', textDecoration: 'none', boxSizing: 'border-box' }}
                 >
                   View link
@@ -663,7 +663,7 @@ export function OrderDetailView({
                     <div className="pt-od-pay-val">
                       {cryptoPaymentLink ? (
                         <a
-                          href={`/payments?link=${cryptoPaymentLink.id}`}
+                          href={`/payments/${cryptoPaymentLink.id}`}
                           style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '0.5px solid var(--pt-cool)', background: 'var(--pt-cool-soft)', color: 'var(--pt-cool)', textDecoration: 'none', display: 'inline-block' }}
                         >
                           View in Payments →

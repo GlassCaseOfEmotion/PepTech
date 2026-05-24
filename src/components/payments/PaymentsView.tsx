@@ -2,10 +2,10 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Icons } from '@/lib/icons'
 import type { TenantCryptoWallet, CryptoPaymentLinkWithOrder, CryptoPaymentStatus, WalletTransaction } from '@/types/payments-crypto'
 import { formatAmountCompact } from '@/lib/currency'
-import { PaymentLinkDetail } from './PaymentLinkDetail'
 import { CreateComposer } from './CreatePaymentLinkModal'
 import { ResendPopover } from './ResendPopover'
 import { CancelPopover } from './CancelPopover'
@@ -162,20 +162,16 @@ export function PaymentsView({
   recentTransactions: _transactions,
   paymentLinks,
   baseCurrency = 'USD',
-  initialLinkId,
   initialOrderId,
 }: {
   wallet: TenantCryptoWallet | null
   recentTransactions: WalletTransaction[]
   paymentLinks: CryptoPaymentLinkWithOrder[]
   baseCurrency?: string
-  initialLinkId?: string | null
   initialOrderId?: string | null
 }) {
-  const [view, setView] = useState<'list' | 'create' | 'detail'>(
-    initialLinkId ? 'detail' : initialOrderId ? 'create' : 'list'
-  )
-  const [selectedId, setSelectedId] = useState<string | null>(initialLinkId ?? null)
+  const router = useRouter()
+  const [view, setView] = useState<'list' | 'create'>(initialOrderId ? 'create' : 'list')
   const [tab, setTab] = useState('all')
   const [search, setSearch]             = useState('')
   const [dateFilter, setDateFilter]     = useState<'7d' | '30d' | '90d' | 'all'>('all')
@@ -195,8 +191,7 @@ export function PaymentsView({
     if (ms !== Infinity && Date.now() - new Date(l.created_at).getTime() > ms) return false
     return true
   })
-  const selectedLink = paymentLinks.find(l => l.id === selectedId) ?? null
-  const kpi         = computeKpis(paymentLinks)
+  const kpi = computeKpis(paymentLinks)
 
   const tabDefs = [
     { id: 'all',        label: 'All',        count: paymentLinks.length },
@@ -209,10 +204,6 @@ export function PaymentsView({
 
   if (view === 'create') {
     return <CreateComposer onBack={() => setView('list')} baseCurrency={baseCurrency} initialOrderId={initialOrderId ?? undefined} />
-  }
-
-  if (view === 'detail' && selectedLink) {
-    return <PaymentLinkDetail link={selectedLink} onBack={() => setView('list')} />
   }
 
   // ── Header subtitle ──────────────────────────────────────────────────────
@@ -359,8 +350,7 @@ export function PaymentsView({
                 return (
                   <tr
                     key={l.id}
-                    className={selectedId === l.id ? 'is-selected' : ''}
-                    onClick={() => { setSelectedId(l.id); setView('detail') }}
+                    onClick={() => router.push(`/payments/${l.id}`)}
                   >
                     <td>
                       <div className="pay-tt-link">

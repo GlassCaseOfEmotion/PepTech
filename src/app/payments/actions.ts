@@ -105,6 +105,28 @@ export async function getPaymentLinks(): Promise<CryptoPaymentLinkWithOrder[]> {
   return (data ?? []) as unknown as CryptoPaymentLinkWithOrder[]
 }
 
+export async function getPaymentLink(linkId: string): Promise<CryptoPaymentLinkWithOrder | null> {
+  const { supabase } = await getTenantId()
+  const { data } = await supabase
+    .from('crypto_payment_links')
+    .select(`
+      *,
+      orders (
+        ref_number,
+        status,
+        conversation_id,
+        customers (
+          id,
+          display_name,
+          customer_channels ( channel_type, is_primary )
+        )
+      )
+    `)
+    .eq('id', linkId)
+    .single()
+  return (data ?? null) as unknown as CryptoPaymentLinkWithOrder | null
+}
+
 export async function getRecentOrders(): Promise<{
   orders?: { id: string; ref_number: string; payment_amount: number; currency: string; customer_name: string | null }[]
   error?: string
