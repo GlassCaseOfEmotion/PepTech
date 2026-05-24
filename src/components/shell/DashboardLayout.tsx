@@ -8,6 +8,7 @@ import { AgentPalette } from './AgentPalette'
 import { CommandPalette } from './CommandPalette'
 import { ComposeModal } from './ComposeModal'
 import { WelcomeTour } from './WelcomeTour'
+import { TourAutostart } from './TourAutostart'
 import { BottomNav } from './BottomNav'
 import { DashboardView, DashboardRightRail } from '@/components/dashboard/DashboardView'
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist'
@@ -49,6 +50,7 @@ export function DashboardLayout({ displayName, connectedChannels, threads, initi
       <CommandPalette />
       <ComposeModal />
       <WelcomeTour />
+      <TourAutostart />
       {onboardingStatus && (
         <OnboardingChecklist
           hasProducts={onboardingStatus.hasProducts}

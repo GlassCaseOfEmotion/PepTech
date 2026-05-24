@@ -189,7 +189,7 @@ export function OnboardingAgent({
   const finishIfComplete = useCallback((toolCalls: ToolCall[]) => {
     if (toolCalls.some(tc => tc.name === 'complete_onboarding' && tc.status === 'complete')) {
       setCompleting(true)
-      setTimeout(() => router.push('/'), 1500)
+      setTimeout(() => router.push('/?tour=1'), 1500)
     }
   }, [router])
 
@@ -407,7 +407,7 @@ export function OnboardingAgent({
               </svg>
             </div>
             <h2 className="ob-completing-h">You&apos;re all set!</h2>
-            <p className="ob-completing-p">Taking you to your dashboard…</p>
+            <p className="ob-completing-p">Taking you to your dashboard — I&apos;ll show you around when we land.</p>
           </div>
         )}
         {!completing && (
