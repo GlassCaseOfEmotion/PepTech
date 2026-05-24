@@ -203,17 +203,24 @@ export async function executeAgentTurn(
   userMessage: string,
   tenantId: string,
   supabase: AgentSupabase,
-  controller: ReadableStreamDefaultController<Uint8Array>
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  attachments: { file_ref: string; filename: string; mime_type: string }[] = [],
 ) {
   const encoder = new TextEncoder()
   const send = (e: SseEvent) => controller.enqueue(encoder.encode(encodeEvent(e)))
   const client = createClient()
   const mode = await modeForSession(sessionId, supabase)
 
-  await saveUserMessage(sessionId, tenantId, userMessage, supabase)
+  let messageForAgent = userMessage
+  if (attachments.length > 0) {
+    const lines = attachments.map(a => `[uploaded: ${a.filename} (file_ref=${a.file_ref})]`)
+    messageForAgent = `${lines.join('\n')}\n${userMessage}`.trim()
+  }
+
+  await saveUserMessage(sessionId, tenantId, messageForAgent, supabase)
   let history = await loadHistory(sessionId, supabase)
   if (history.length === 0) {
-    history = [{ role: 'user', content: userMessage }]
+    history = [{ role: 'user', content: messageForAgent }]
   }
 
   const { text, toolCalls } = await streamCompletion(client, history, send, mode)

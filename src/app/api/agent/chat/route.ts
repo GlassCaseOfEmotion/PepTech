@@ -6,8 +6,9 @@ export async function POST(request: Request) {
   const user = await getServerUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { sessionId, message, mode } = await request.json() as {
-    sessionId?: string; message?: string; mode?: 'ops' | 'onboarding'
+  const { sessionId, message, mode, attachments } = await request.json() as {
+    sessionId?: string; message?: string; mode?: 'ops' | 'onboarding';
+    attachments?: { file_ref: string; filename: string; mime_type: string }[]
   }
   if (!message?.trim()) return NextResponse.json({ error: 'message required' }, { status: 400 })
 
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        await executeAgentTurn(sid!, message, tenantId, supabase, controller)
+        await executeAgentTurn(sid!, message, tenantId, supabase, controller, attachments ?? [])
       } catch (e) {
         const encoder = new TextEncoder()
         const msg = e instanceof Error ? e.message : 'Agent error'
