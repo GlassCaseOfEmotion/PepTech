@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { RowMenu } from './RowMenu'
 
 type Channel = { channel_type: string; display_handle: string; is_primary: boolean }
 
@@ -117,7 +118,7 @@ export function LeadsTable({ leads, recentConvByCustomer }: Props) {
                     <td>{l.acquisition_source ? SOURCE_LABEL[l.acquisition_source] : <span className="pt-cl-no-supply">—</span>}</td>
                     <td className="pt-cl-last-order">{fmtAge(l.created_at)}</td>
                     <td className="pt-cl-last-order">{lastMsg ? fmtAge(lastMsg) : <span className="pt-cl-no-supply">—</span>}</td>
-                    <td>{/* RowMenu added in Task 11 */}</td>
+                    <td><RowMenu customerId={l.id} currentStage="lead" /></td>
                   </tr>
                 )
               })}

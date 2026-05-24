@@ -6,6 +6,7 @@ import { Icons } from '@/lib/icons'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatAmount } from '@/lib/currency'
 import type { SupplyStatus } from '@/types/protocols'
+import { RowMenu } from './RowMenu'
 
 type CustomerChannel = { channel_type: string; display_handle: string; is_primary: boolean }
 type CustomerTag = { tag: string }
@@ -233,6 +234,7 @@ export function CustomersTable({
                         >
                           Message
                         </Link>
+                        <RowMenu customerId={c.id} currentStage="customer" />
                       </div>
                     </td>
                   </tr>
