@@ -1300,6 +1300,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          presentation: string | null
           product_family: string
           resources: Json
           sku: string
@@ -1313,6 +1314,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          presentation?: string | null
           product_family: string
           resources?: Json
           sku: string
@@ -1326,6 +1328,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          presentation?: string | null
           product_family?: string
           resources?: Json
           sku?: string

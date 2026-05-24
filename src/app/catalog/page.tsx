@@ -99,7 +99,7 @@ export default async function CatalogPage() {
     return acc
   }, {})
 
-  const catalogProducts = ((products ?? []) as DbProduct[]).map(p => ({
+  const catalogProducts = ((products ?? []) as unknown as DbProduct[]).map(p => ({
     ...dbProductToDisplay(p, batchesByProduct[p.id] ?? [], mediaByProduct[p.id] ?? []),
     velocity7d: velocity7dMap[p.id] ?? [0, 0, 0, 0, 0, 0, 0],
     velocity30dTotal: velocity30dMap[p.id] ?? 0,

@@ -9,8 +9,10 @@ const STORAGE_KEY = 'pt-onboarding-mode'
 interface OnboardingState {
   display_name: string | null
   timezone: string | null
+  timezone_asked: boolean
   business_type: string | null
   base_currency: string | null
+  currency_asked: boolean
   intended_channels: string[]
   product_count: number
   complete: boolean
@@ -74,11 +76,16 @@ export function OnboardingShell({
     )
   }
 
+  // Seed the *_asked flags from heuristics: a non-default value is the
+  // strongest signal we have on first load that the user has previously
+  // answered. Empty channels means we definitely haven't asked yet.
   const agentState: OnboardingState = {
     display_name:      displayName || null,
     timezone:          initialTimezone === 'UTC' ? null : initialTimezone,
+    timezone_asked:    initialTimezone !== 'UTC' && !!initialTimezone,
     business_type:     initialBusinessType,
     base_currency:     initialCurrency,
+    currency_asked:    initialCurrency !== 'USD' && !!initialCurrency,
     intended_channels: initialChannels,
     product_count:     productCount,
     complete:          false,
@@ -131,7 +138,7 @@ function ModeToggle({ current, onChange }: { current: 'agent' | 'classic'; onCha
           }}
         >
           {m === 'agent' ? 'Agent' : 'Classic'}
-          {m === 'agent' && <span style={{ marginLeft: 6, opacity: 0.6, fontSize: 9 }}>v0.1</span>}
+          {m === 'agent' && <span style={{ marginLeft: 6, opacity: 0.6, fontSize: 9 }}>v0.2</span>}
         </button>
       ))}
     </div>

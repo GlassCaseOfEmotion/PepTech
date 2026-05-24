@@ -62,5 +62,6 @@ export async function extractCatalog(params: ExtractParams): Promise<ExtractionR
     source_file_ref: params.source_file_ref,
     source_filename: params.source_filename,
     model: EXTRACTION_MODEL,
+    businessType: params.businessType,
   })
 }

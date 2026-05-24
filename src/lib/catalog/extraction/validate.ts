@@ -1,9 +1,17 @@
-import type { ExtractedProduct, ExtractionResult } from './types'
+import {
+  CANONICAL_FAMILIES,
+  PRESENTATION_OPTIONS,
+  type ExtractedProduct,
+  type ExtractionResult,
+  type Presentation,
+} from './types'
 
 interface RawProduct {
   name: unknown
   raw_name: unknown
-  category: unknown
+  raw_category: unknown
+  family: unknown
+  presentation: unknown
   unit_price: unknown
   confidence: unknown
 }
@@ -18,9 +26,12 @@ interface NormaliseCtx {
   source_file_ref: string
   source_filename: string
   model: string
+  businessType: 'peptides' | 'nootropics' | 'sarms' | 'general' | null
 }
 
 const MAX_NAME = 200
+const DEFAULT_STOCK = 10
+const PRESENTATION_SET = new Set<string>(PRESENTATION_OPTIONS)
 
 function clean(v: unknown, fallback = ''): string {
   return typeof v === 'string' ? v.trim().slice(0, MAX_NAME) : fallback
@@ -33,6 +44,44 @@ function num(v: unknown): number | null {
 function clamp01(v: unknown): number {
   if (typeof v !== 'number' || !Number.isFinite(v)) return 0
   return Math.max(0, Math.min(1, v))
+}
+
+function normaliseFamily(v: unknown, businessType: NormaliseCtx['businessType']): string | null {
+  if (typeof v !== 'string' || !v.trim()) return null
+  const slug = v.trim().toUpperCase()
+  if (!businessType) return slug.slice(0, 40)
+  const canonical = CANONICAL_FAMILIES[businessType]
+  if (canonical.includes(slug)) return slug
+  // Best-effort coercion: if the model returned a known synonym, map it.
+  const synonyms: Record<string, string> = {
+    'GROWTH HORMONE': 'GH',
+    'GROWTH-HORMONE': 'GH',
+    'GH-AXIS': 'GH',
+    'RECOVERY': 'HEALING',
+    'REPAIR': 'HEALING',
+    'HEALING & RECOVERY': 'HEALING',
+    'MITOCHONDRIAL': 'MITO',
+    'COGNITION': 'NEURO',
+    'BRAIN': 'NEURO',
+    'COGNITIVE': businessType === 'peptides' ? 'NEURO' : 'COGNITIVE',
+    'SKIN': 'COSMETIC',
+    'TANNING': 'COSMETIC',
+    'LIBIDO': 'COSMETIC',
+  }
+  if (synonyms[slug] && canonical.includes(synonyms[slug])) return synonyms[slug]
+  return canonical.includes('OTHER') ? 'OTHER' : null
+}
+
+function normalisePresentation(v: unknown, businessType: NormaliseCtx['businessType']): Presentation | null {
+  if (typeof v === 'string' && v.trim()) {
+    const lower = v.trim().toLowerCase()
+    if (PRESENTATION_SET.has(lower)) return lower as Presentation
+    if (lower === 'tablet' || lower === 'pill') return 'oral'
+    if (lower === 'sublingual') return 'spray'
+  }
+  // Peptides ship in vials by default — better to assume something useful
+  // than leave the column blank for every row.
+  return businessType === 'peptides' ? 'vial' : null
 }
 
 export function generateSku(name: string, taken: Set<string>): string {
@@ -62,8 +111,11 @@ export function validateAndNormalise(raw: RawResult, ctx: NormaliseCtx): Extract
     products.push({
       name,
       raw_name: clean(r.raw_name, name),
-      category: typeof r.category === 'string' && r.category.trim() ? r.category.trim().slice(0, 100) : null,
+      raw_category: typeof r.raw_category === 'string' && r.raw_category.trim() ? r.raw_category.trim().slice(0, 100) : null,
+      family: normaliseFamily(r.family, ctx.businessType),
+      presentation: normalisePresentation(r.presentation, ctx.businessType),
       unit_price: price,
+      stock: DEFAULT_STOCK,
       confidence: clamp01(r.confidence),
     })
   }

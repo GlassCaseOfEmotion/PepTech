@@ -1,48 +1,30 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { commitExtractedCatalog } from '../commit'
-import type { CommitInput } from '../types'
+import type { CommitInput, ExtractedProduct } from '../types'
 
-function mockSupabase(opts: { existingSkus?: string[]; productsInsertResult?: { id: string; sku: string }[] } = {}) {
-  const inserts: { table: string; rows: unknown[] }[] = []
-  const supabase = {
-    from(table: string) {
-      return {
-        select: () => ({
-          eq: () => ({
-            // existing skus lookup
-            // returns array of { sku }
-            then: undefined,
-            data: (opts.existingSkus ?? []).map(s => ({ sku: s })),
-            error: null,
-          }),
-        }),
-        insert: (rows: unknown[]) => ({
-          select: () => ({
-            data: opts.productsInsertResult ?? (rows as { sku: string }[]).map((r, i) => ({ id: `id-${i}`, sku: r.sku })),
-            error: null,
-          }),
-          // for batches insert (no .select())
-          data: null,
-          error: null,
-          then: (resolve: (v: { data: null; error: null }) => void) => resolve({ data: null, error: null }),
-        }),
-      }
-    },
+function row(over: Partial<ExtractedProduct & { user_edited: boolean }> = {}): ExtractedProduct & { user_edited: boolean } {
+  return {
+    name: 'BPC-157 5mg',
+    raw_name: 'BPC-157 5mg',
+    raw_category: 'RECOVERY',
+    family: 'HEALING',
+    presentation: 'vial',
+    unit_price: 900000,
+    stock: 10,
+    confidence: 0.97,
+    user_edited: false,
+    ...over,
   }
-  // Hijack the select-eq chain: tests below use a helper to drive it differently
-  return { supabase, inserts }
 }
 
 describe('commitExtractedCatalog', () => {
-  it('inserts products with provenance and seed batches', async () => {
+  it('inserts products with presentation, provenance, and per-row stock', async () => {
     const captured: { table: string; rows: unknown[] }[] = []
     const fakeSupabase = {
       from(table: string) {
         return {
           select() {
-            return {
-              eq: () => Promise.resolve({ data: [], error: null }),
-            }
+            return { eq: () => Promise.resolve({ data: [], error: null }) }
           },
           insert(rows: unknown[]) {
             captured.push({ table, rows })
@@ -59,9 +41,7 @@ describe('commitExtractedCatalog', () => {
     } as unknown as Parameters<typeof commitExtractedCatalog>[0]['supabase']
 
     const input: CommitInput = {
-      rows: [
-        { name: 'BPC-157 5mg', raw_name: 'BPC-157 5mg', category: 'RECOVERY', unit_price: 900000, confidence: 0.97, user_edited: false },
-      ],
+      rows: [row({ stock: 25 })],
       source_file_ref: 'abc',
       source_filename: 'list.pdf',
       model: 'google/gemini-2.5-pro',
@@ -71,19 +51,25 @@ describe('commitExtractedCatalog', () => {
     expect(result.count).toBe(1)
 
     const productsCall = captured.find(c => c.table === 'products')!
-    expect((productsCall.rows[0] as { sku: string }).sku).toBe('bpc-157-5mg')
-    expect((productsCall.rows[0] as { tenant_id: string }).tenant_id).toBe('tenant-1')
-    expect((productsCall.rows[0] as { product_family: string }).product_family).toBe('RECOVERY')
-    const prov = (productsCall.rows[0] as { resources: { provenance: { source: string; user_edited: boolean } } }).resources.provenance
-    expect(prov.source).toBe('extraction')
-    expect(prov.user_edited).toBe(false)
+    const product = productsCall.rows[0] as {
+      sku: string; tenant_id: string; product_family: string; presentation: string | null;
+      resources: { provenance: { source: string; user_edited: boolean; raw_family: string | null } };
+    }
+    expect(product.sku).toBe('bpc-157-5mg')
+    expect(product.tenant_id).toBe('tenant-1')
+    expect(product.product_family).toBe('HEALING')
+    expect(product.presentation).toBe('vial')
+    expect(product.resources.provenance.source).toBe('extraction')
+    expect(product.resources.provenance.raw_family).toBe('RECOVERY')
+    expect(product.resources.provenance.user_edited).toBe(false)
 
     const batchesCall = captured.find(c => c.table === 'batches')!
     expect(batchesCall.rows).toHaveLength(1)
     expect((batchesCall.rows[0] as { product_id: string }).product_id).toBe('pid-0')
+    expect((batchesCall.rows[0] as { stock: number }).stock).toBe(25)
   })
 
-  it('falls back to "UNCATEGORISED" when category is null', async () => {
+  it('falls back to "OTHER" when family is null', async () => {
     const captured: { table: string; rows: unknown[] }[] = []
     const fakeSupabase = {
       from(table: string) {
@@ -104,13 +90,14 @@ describe('commitExtractedCatalog', () => {
       supabase: fakeSupabase,
       tenantId: 't',
       input: {
-        rows: [{ name: 'X', raw_name: 'X', category: null, unit_price: 1, confidence: 1, user_edited: true }],
+        rows: [row({ family: null, raw_category: null, presentation: null, user_edited: true })],
         source_file_ref: 'f', source_filename: 'f.pdf', model: 'm',
       },
     })
 
     const productsCall = captured.find(c => c.table === 'products')!
-    expect((productsCall.rows[0] as { product_family: string }).product_family).toBe('UNCATEGORISED')
+    expect((productsCall.rows[0] as { product_family: string }).product_family).toBe('OTHER')
+    expect((productsCall.rows[0] as { presentation: string | null }).presentation).toBeNull()
   })
 
   it('dedupes SKUs against existing tenant skus', async () => {
@@ -119,9 +106,7 @@ describe('commitExtractedCatalog', () => {
       from(table: string) {
         return {
           select() {
-            return {
-              eq: () => Promise.resolve({ data: [{ sku: 'bpc-157-5mg' }], error: null }),
-            }
+            return { eq: () => Promise.resolve({ data: [{ sku: 'bpc-157-5mg' }], error: null }) }
           },
           insert(rows: unknown[]) {
             captured.push({ table, rows })
@@ -138,7 +123,7 @@ describe('commitExtractedCatalog', () => {
       supabase: fakeSupabase,
       tenantId: 't',
       input: {
-        rows: [{ name: 'BPC-157 5mg', raw_name: 'x', category: null, unit_price: 1, confidence: 1, user_edited: false }],
+        rows: [row({ family: null, raw_category: null })],
         source_file_ref: 'f', source_filename: 'f.pdf', model: 'm',
       },
     })

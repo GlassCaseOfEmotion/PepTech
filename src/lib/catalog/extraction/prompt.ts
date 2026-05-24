@@ -1,3 +1,5 @@
+import { CANONICAL_FAMILIES, PRESENTATION_OPTIONS } from './types'
+
 export interface PromptContext {
   businessType: 'peptides' | 'nootropics' | 'sarms' | 'general' | null
   baseCurrency: string
@@ -20,13 +22,15 @@ export const EXTRACTION_JSON_SCHEMA = {
         items: {
           type: 'object',
           additionalProperties: false,
-          required: ['name', 'raw_name', 'category', 'unit_price', 'confidence'],
+          required: ['name', 'raw_name', 'raw_category', 'family', 'presentation', 'unit_price', 'confidence'],
           properties: {
-            name:        { type: 'string', description: 'Cleaned product name including dose/presentation, e.g. "BPC-157 5mg"' },
-            raw_name:    { type: 'string', description: 'Verbatim string from the source' },
-            category:    { type: ['string', 'null'], description: 'Category/family heading from the source, e.g. "RECOVERY & HEALING"' },
-            unit_price:  { type: 'number', description: 'Numeric price as printed; ignore currency symbols' },
-            confidence:  { type: 'number', minimum: 0, maximum: 1, description: 'Your confidence that this row is a real product entry, not a header or footnote' },
+            name:         { type: 'string', description: 'Cleaned product name (compound + dose), e.g. "BPC-157 5mg"' },
+            raw_name:     { type: 'string', description: 'Verbatim string from the source' },
+            raw_category: { type: ['string', 'null'], description: 'Verbatim category heading from the source, e.g. "RECOVERY & HEALING"' },
+            family:       { type: ['string', 'null'], description: 'The CANONICAL family slug (see prompt) for this product, or null if uncertain' },
+            presentation: { type: ['string', 'null'], description: 'Form factor — one of: vial, pen, capsule, spray, oral, other — or null if unclear' },
+            unit_price:   { type: 'number', description: 'Numeric price as printed; ignore currency symbols' },
+            confidence:   { type: 'number', minimum: 0, maximum: 1, description: 'Your confidence that this row is a real product entry, not a header or footnote' },
           },
         },
       },
@@ -38,6 +42,41 @@ export const EXTRACTION_JSON_SCHEMA = {
     },
   },
 } as const
+
+function familyGuide(bt: PromptContext['businessType']): string {
+  if (!bt) return ''
+  const families = CANONICAL_FAMILIES[bt]
+  const examples: Record<string, string> = {
+    'GLP-1':    'Semaglutide, Tirzepatide, Retatrutide, Cagrilintide — metabolic / weight-loss',
+    HEALING:    'BPC-157, TB-500, Thymosin Alpha-1/Beta-4, KPV, LL-37 — recovery / repair',
+    GH:         'CJC-1295, Ipamorelin, Tesamorelin, Hexarelin, IGF-1 LR3 — growth hormone axis',
+    COSMETIC:   'GHK-Cu, Melanotan II, PT-141, Kisspeptin — skin / aesthetic / libido',
+    MITO:       'MOTS-c, SS-31, 5-Amino-1MQ, NAD+ — mitochondrial / cellular energy',
+    NEURO:      'Semax, Selank, DSIP, Cerebrolysin, Dihexa — cognition / brain',
+    OTHER:      'Anything that doesn\'t fit the above',
+  }
+  return [
+    '',
+    'CANONICAL FAMILY SET — assign each product to EXACTLY ONE of these slugs (or null if you\'re unsure):',
+    ...families.map(f => `  - ${f}${examples[f] ? `   (${examples[f]})` : ''}`),
+    'Mapping rules:',
+    '- Read the source\'s category header (e.g. "FAT LOSS & MUSCLE GAIN (NATURAL GH BOOSTER)") AND the product name; pick the canonical family that best fits the COMPOUND, not just the header.',
+    '- A header like "FAT LOSS & WEIGHT LOSS" contains both GLP-1 drugs (Tirzepatide, Retatrutide) AND mitochondrial agents (5-Amino-1MQ, MOTS-c) — classify by the compound itself.',
+    '- Keep the verbatim header in raw_category. Put the canonical slug in family.',
+  ].join('\n')
+}
+
+function presentationGuide(): string {
+  return [
+    '',
+    'PRESENTATION — pick the physical form from this set (or null if not stated):',
+    `  ${PRESENTATION_OPTIONS.join(', ')}`,
+    'Rules:',
+    '- Look for clues in the source: "Pen", "Vial", "Capsule", "Spray", "sublingual", "x 60caps" → capsule.',
+    '- For peptide rows with no explicit form factor, default to "vial" — peptides ship in vials by default.',
+    '- "Pen/vial" written together means a pen device that contains a vial — use "pen".',
+  ].join('\n')
+}
 
 export function buildExtractionPrompt(ctx: PromptContext): string {
   const domainHint = ctx.businessType === 'peptides'
@@ -54,10 +93,11 @@ export function buildExtractionPrompt(ctx: PromptContext): string {
     'Rules:',
     '- Output ONLY the structured JSON described by the response schema. No prose.',
     '- One row per distinct product offering. Combine multi-line entries that belong to the same item.',
-    '- Keep the verbatim source string in raw_name. Put a cleaned, commit-ready version (with dose/presentation) in name.',
-    '- Map category headers (e.g. "RECOVERY & HEALING") onto each product underneath that header. Use null when there is no obvious category.',
+    '- Keep the verbatim source string in raw_name. Put a cleaned, commit-ready version (with dose) in name.',
     '- For unit_price, strip currency symbols and thousand separators. "1.700.000" in an IDR list means 1700000; "1,200.00" in a USD list means 1200.',
     '- Skip rows that are clearly not products: footnotes, disclaimers, contact info, advertisements. Lift those into tenant_notes instead.',
     '- Use confidence to flag rows you are unsure about (e.g. handwritten, low-resolution, ambiguous price).',
+    familyGuide(ctx.businessType),
+    presentationGuide(),
   ].join('\n')
 }

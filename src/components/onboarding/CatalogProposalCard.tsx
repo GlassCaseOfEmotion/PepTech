@@ -1,40 +1,71 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import type { ExtractedProduct, ExtractionResult } from '@/lib/catalog/extraction/types'
+import {
+  CANONICAL_FAMILIES,
+  PRESENTATION_OPTIONS,
+  type ExtractedProduct,
+  type ExtractionResult,
+  type Presentation,
+} from '@/lib/catalog/extraction/types'
 
 interface EditableRow extends ExtractedProduct {
   user_edited: boolean
   removed: boolean
 }
 
-export function CatalogProposalCard({
-  initial,
-  onImport,
-  onCancel,
-  status,
-}: {
+interface Props {
   initial: ExtractionResult
   onImport: (rows: Array<ExtractedProduct & { user_edited: boolean }>) => void
   onCancel: () => void
   status: 'idle' | 'importing' | 'done' | 'cancelled'
-}) {
+  /** Tenant's business type — drives the canonical family dropdown. */
+  businessType: 'peptides' | 'nootropics' | 'sarms' | 'general' | null
+}
+
+function familySortKey(canonical: string[]): (f: string | null) => number {
+  return (f) => {
+    if (!f) return canonical.length + 1
+    const i = canonical.indexOf(f)
+    return i === -1 ? canonical.length : i
+  }
+}
+
+function formatPrice(value: number, currency: string | null): string {
+  // Locale-aware grouping; show no decimals for IDR (which uses dots as
+  // thousands and rarely has fractional units anyway) and 2 decimals
+  // elsewhere unless the value is an integer.
+  if (currency === 'IDR') {
+    return value.toLocaleString('en-US', { maximumFractionDigits: 0 })
+  }
+  const isInt = Number.isInteger(value)
+  return value.toLocaleString('en-US', { minimumFractionDigits: isInt ? 0 : 2, maximumFractionDigits: 2 })
+}
+
+export function CatalogProposalCard({ initial, onImport, onCancel, status, businessType }: Props) {
+  const families = businessType ? CANONICAL_FAMILIES[businessType] : ['OTHER']
+  const sortKey = familySortKey(families)
+
   const [rows, setRows] = useState<EditableRow[]>(() =>
     initial.products.map(p => ({ ...p, user_edited: false, removed: false }))
   )
 
+  // Group by family, in canonical order. Rows whose family no longer matches
+  // any canonical slug fall under "Other".
   const grouped = useMemo(() => {
     const m = new Map<string, EditableRow[]>()
     for (const r of rows) {
       if (r.removed) continue
-      const key = r.category ?? 'Uncategorised'
+      const key = r.family ?? 'OTHER'
       if (!m.has(key)) m.set(key, [])
       m.get(key)!.push(r)
     }
-    return [...m.entries()]
-  }, [rows])
+    return [...m.entries()].sort((a, b) => sortKey(a[0]) - sortKey(b[0]))
+  }, [rows, sortKey])
 
-  const visibleCount = rows.filter(r => !r.removed).length
+  const visibleRows = rows.filter(r => !r.removed)
+  const visibleCount = visibleRows.length
+  const totalStock = visibleRows.reduce((s, r) => s + (r.stock || 0), 0)
 
   function updateRow(index: number, patch: Partial<EditableRow>) {
     setRows(prev => prev.map((r, i) => i === index ? { ...r, ...patch, user_edited: true } : r))
@@ -73,37 +104,86 @@ export function CatalogProposalCard({
       <div className="pt-proposal-hd">
         <strong>{visibleCount} products extracted</strong>
         {initial.detected_currency && <span className="pt-proposal-cur">· {initial.detected_currency}</span>}
-        <span className="pt-proposal-hint">Click any cell to edit. Remove rows you don&apos;t want.</span>
+        <span className="pt-proposal-cur">· {totalStock} units on hand</span>
+        <span className="pt-proposal-hint">Click a cell to edit · change family to reorganise.</span>
       </div>
 
-      {grouped.map(([category, items]) => (
-        <div key={category} className="pt-proposal-group">
-          <div className="pt-proposal-group-hd">{category}</div>
+      {grouped.map(([family, items]) => (
+        <div key={family} className="pt-proposal-group">
+          <div className="pt-proposal-group-hd">
+            <span className={`pt-proposal-family-chip pt-fam-${family.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>{family}</span>
+            <span className="pt-proposal-group-count">{items.length} product{items.length === 1 ? '' : 's'}</span>
+          </div>
           <table className="pt-proposal-table">
             <thead>
-              <tr><th>Name</th><th style={{ width: 120 }}>Price</th><th style={{ width: 56 }}></th></tr>
+              <tr>
+                <th className="pt-proposal-th-name">Name</th>
+                <th style={{ width: 110 }}>Format</th>
+                <th style={{ width: 130, textAlign: 'right' }}>Price</th>
+                <th style={{ width: 80, textAlign: 'right' }}>Stock</th>
+                <th style={{ width: 100 }}>Family</th>
+                <th style={{ width: 32 }} aria-label="Actions"></th>
+              </tr>
             </thead>
             <tbody>
               {items.map(r => {
                 const idx = rows.indexOf(r)
                 return (
-                  <tr key={idx}>
+                  <tr key={idx} className={r.confidence < 0.6 ? 'is-low-confidence' : undefined}>
                     <td>
                       <input
                         className="pt-proposal-cell"
                         value={r.name}
                         onChange={e => updateRow(idx, { name: e.target.value })}
+                        title={r.raw_name !== r.name ? `Source: ${r.raw_name}` : undefined}
                       />
                     </td>
                     <td>
+                      <select
+                        className="pt-proposal-cell pt-proposal-select"
+                        value={r.presentation ?? ''}
+                        onChange={e => updateRow(idx, { presentation: (e.target.value || null) as Presentation | null })}
+                      >
+                        <option value="">—</option>
+                        {PRESENTATION_OPTIONS.map(p => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
                       <input
-                        className="pt-proposal-cell"
+                        className="pt-proposal-cell pt-proposal-cell-num mono"
                         type="number"
+                        min={0}
                         value={r.unit_price}
                         onChange={e => updateRow(idx, { unit_price: Number(e.target.value) || 0 })}
+                        title={initial.detected_currency
+                          ? `${formatPrice(r.unit_price, initial.detected_currency)} ${initial.detected_currency}`
+                          : undefined}
+                      />
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <input
+                        className="pt-proposal-cell pt-proposal-cell-num mono"
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={r.stock}
+                        onChange={e => updateRow(idx, { stock: Math.max(0, Math.floor(Number(e.target.value) || 0)) })}
                       />
                     </td>
                     <td>
+                      <select
+                        className="pt-proposal-cell pt-proposal-select"
+                        value={r.family ?? 'OTHER'}
+                        onChange={e => updateRow(idx, { family: e.target.value })}
+                      >
+                        {families.map(f => (
+                          <option key={f} value={f}>{f}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
                       <button
                         className="pt-proposal-rm"
                         onClick={() => removeRow(idx)}

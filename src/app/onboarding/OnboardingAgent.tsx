@@ -13,8 +13,16 @@ import type { ExtractionResult, ExtractedProduct } from '@/lib/catalog/extractio
 interface OnboardingState {
   display_name: string | null
   timezone: string | null
+  /** Whether the user has been asked + answered the timezone question.
+   * Tracked separately from `timezone` because tenants.timezone defaults to
+   * 'UTC' at signup, so the value alone can't tell us whether the user
+   * actually picked it. Flipped true when save_profile runs with a timezone
+   * argument, or seeded from a non-default value at page load. */
+  timezone_asked: boolean
   business_type: string | null
   base_currency: string | null
+  /** Same shape as timezone_asked but for base_currency (defaults to 'USD'). */
+  currency_asked: boolean
   intended_channels: string[]
   product_count: number
   complete: boolean
@@ -57,11 +65,11 @@ function summariseToolCall(name: string, input: Record<string, unknown>): string
 
 function deriveSteps(state: OnboardingState) {
   return {
-    profile:       !!state.display_name,
+    // "Profile" in the left rail covers both name + timezone since the
+    // classic wizard captures them together.
+    profile:       !!state.display_name && !!state.timezone_asked,
     business_type: !!state.business_type,
-    // Currency and timezone columns have non-null defaults (USD / UTC); treat
-    // those default values as "not answered yet" to match the agent's flags.
-    currency:      !!state.base_currency && state.base_currency !== 'USD',
+    currency:      !!state.currency_asked,
     catalog:       (state.product_count ?? 0) > 0,
     channels:      (state.intended_channels?.length ?? 0) > 0,
   }
@@ -116,13 +124,22 @@ function applyToolOutputsToState(
     switch (tc.name) {
       case 'save_profile':
         if (typeof out.display_name === 'string') next.display_name = out.display_name
-        if (typeof out.timezone === 'string')     next.timezone = out.timezone
+        if (typeof out.timezone === 'string') {
+          next.timezone = out.timezone
+          next.timezone_asked = true
+        }
         break
       case 'save_business_type':
         if (typeof out.business_type === 'string') next.business_type = out.business_type
         break
       case 'save_currency':
-        if (typeof out.currency === 'string') next.base_currency = out.currency
+        if (typeof out.currency === 'string') {
+          next.base_currency = out.currency
+          // The user explicitly picked a currency — mark answered regardless
+          // of whether they happened to pick the default (USD). The
+          // value-only heuristic was a regression source pre-launch.
+          next.currency_asked = true
+        }
         break
       case 'save_channel_intent':
         if (Array.isArray(out.channels)) next.intended_channels = out.channels as string[]
@@ -138,18 +155,22 @@ function applyToolOutputsToState(
         // which bumps product_count directly via handleProposalImport.
         break
       case 'read_onboarding_state': {
-        // Authoritative refresh
+        // Authoritative refresh — preserve any client-side asked flags that
+        // the server can't observe (currency_asked once user picks USD, etc).
         const dn = out.display_name
         const tz = out.timezone
         const bt = out.business_type
         const bc = out.base_currency
         const ic = out.intended_channels
         const pc = out.product_count
+        const steps = (out.steps as Record<string, unknown> | undefined) ?? {}
         next = {
           display_name:      typeof dn === 'string' ? dn : null,
           timezone:          typeof tz === 'string' ? tz : null,
+          timezone_asked:    prev.timezone_asked || !!steps.timezone_asked,
           business_type:     typeof bt === 'string' ? bt : null,
           base_currency:     typeof bc === 'string' ? bc : null,
+          currency_asked:    prev.currency_asked || !!steps.currency_asked,
           intended_channels: Array.isArray(ic) ? (ic as string[]) : [],
           product_count:     typeof pc === 'number' ? pc : 0,
           complete:          !!out.complete,
@@ -581,6 +602,7 @@ export function OnboardingAgent({
 
           <div
             ref={msgsRef}
+            className="pt-agent-msgs-scroll"
             style={{
               flex: 1,
               minHeight: 0,
@@ -611,6 +633,7 @@ export function OnboardingAgent({
                         key={tc.id}
                         initial={result}
                         status={status}
+                        businessType={(state.business_type as 'peptides' | 'nootropics' | 'sarms' | 'general' | null) ?? null}
                         onImport={rows => handleProposalImport(tc.id, result, rows)}
                         onCancel={() => handleProposalCancel(tc.id)}
                       />

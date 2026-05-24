@@ -226,6 +226,15 @@
   height: 38px; width: 38px; padding: 0; display: grid; place-items: center; flex-shrink: 0;
 }
 
+/* Hide the visible scrollbar on the onboarding chat surface (scrolling still
+   works via wheel/trackpad/keyboard). Modern AI chat conventions; the bar
+   itself adds visual noise to an otherwise calm interface. */
+.pt-agent-msgs-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.pt-agent-msgs-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
 /* ─── Onboarding composer (pt-composer-*) ────────────────────────────────
    A polished, auto-grow chat composer used by the onboarding agent.
    Rounded container owns the look; the textarea inside is borderless.
@@ -458,26 +467,153 @@
 /* ─── Catalog proposal card ──────────────────────────────────────────────── */
 .pt-proposal {
   margin-top: 8px;
-  padding: 12px;
-  border: 1px solid var(--pt-border, rgba(255,255,255,0.08));
-  border-radius: 10px;
-  background: var(--pt-bg-2, rgba(255,255,255,0.02));
+  padding: 14px 14px 12px;
+  border: 1px solid var(--pt-line);
+  border-radius: 12px;
+  background: var(--pt-surface);
   font-size: 13px;
 }
-.pt-proposal-hd { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 10px; }
+.pt-proposal-hd {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--pt-line-soft);
+}
 .pt-proposal-cur { opacity: 0.7; }
-.pt-proposal-hint { margin-left: auto; opacity: 0.5; font-size: 11px; }
-.pt-proposal-group { margin-top: 10px; }
-.pt-proposal-group-hd { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.6; padding: 6px 4px; }
+.pt-proposal-hint { margin-left: auto; opacity: 0.55; font-size: 11px; }
+
+.pt-proposal-group { margin-top: 14px; }
+.pt-proposal-group:first-of-type { margin-top: 0; }
+.pt-proposal-group-hd {
+  display: flex; align-items: center; gap: 10px;
+  padding: 4px 0 8px;
+  font-size: 11px;
+}
+.pt-proposal-group-count { color: var(--pt-fg-4); }
+
+.pt-proposal-family-chip {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--pt-surface-2);
+  border: 1px solid var(--pt-line);
+  color: var(--pt-fg);
+}
+/* Family hues — soft tinted backgrounds keyed on each canonical slug.
+   Hues chosen so peptide categories read as distinct at a glance. */
+.pt-fam-glp-1     { background: oklch(0.92 0.05 230 / 0.7); border-color: oklch(0.55 0.16 230 / 0.5); color: oklch(0.30 0.14 230); }
+.pt-fam-healing   { background: oklch(0.92 0.05 145 / 0.7); border-color: oklch(0.55 0.16 145 / 0.5); color: oklch(0.30 0.14 145); }
+.pt-fam-gh        { background: oklch(0.92 0.05 80  / 0.7); border-color: oklch(0.60 0.16 80  / 0.5); color: oklch(0.32 0.14 80); }
+.pt-fam-cosmetic  { background: oklch(0.92 0.05 340 / 0.7); border-color: oklch(0.60 0.16 340 / 0.5); color: oklch(0.32 0.14 340); }
+.pt-fam-mito      { background: oklch(0.92 0.05 190 / 0.7); border-color: oklch(0.55 0.16 190 / 0.5); color: oklch(0.30 0.14 190); }
+.pt-fam-neuro     { background: oklch(0.92 0.05 290 / 0.7); border-color: oklch(0.55 0.16 290 / 0.5); color: oklch(0.30 0.14 290); }
+.pt-fam-other     { background: var(--pt-surface-2); border-color: var(--pt-line); color: var(--pt-fg-3); }
+
+/* In dark themes, soften the chip bg toward darker but keep saturation. */
+@media (prefers-color-scheme: dark) {
+  .pt-fam-glp-1    { background: oklch(0.30 0.08 230 / 0.5); color: oklch(0.85 0.10 230); }
+  .pt-fam-healing  { background: oklch(0.30 0.08 145 / 0.5); color: oklch(0.85 0.10 145); }
+  .pt-fam-gh       { background: oklch(0.32 0.08 80  / 0.5); color: oklch(0.85 0.10 80); }
+  .pt-fam-cosmetic { background: oklch(0.32 0.08 340 / 0.5); color: oklch(0.85 0.10 340); }
+  .pt-fam-mito     { background: oklch(0.30 0.08 190 / 0.5); color: oklch(0.85 0.10 190); }
+  .pt-fam-neuro    { background: oklch(0.30 0.08 290 / 0.5); color: oklch(0.85 0.10 290); }
+}
+
 .pt-proposal-table { width: 100%; border-collapse: collapse; }
-.pt-proposal-table th { text-align: left; font-weight: 500; opacity: 0.55; padding: 4px 6px; font-size: 11px; }
-.pt-proposal-table td { padding: 2px 6px; border-top: 1px solid var(--pt-border, rgba(255,255,255,0.05)); }
-.pt-proposal-cell { width: 100%; background: transparent; border: 0; color: inherit; font-size: 13px; padding: 4px 0; }
-.pt-proposal-cell:focus { outline: 1px solid var(--pt-accent, #6aa); border-radius: 4px; }
-.pt-proposal-rm { background: none; border: 0; color: inherit; opacity: 0.4; cursor: pointer; font-size: 16px; }
-.pt-proposal-rm:hover { opacity: 1; color: var(--pt-danger, #d66); }
-.pt-proposal-notes { margin-top: 12px; font-size: 12px; opacity: 0.75; }
-.pt-proposal-foot { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+.pt-proposal-table th {
+  text-align: left; font-weight: 500;
+  color: var(--pt-fg-4);
+  padding: 6px 8px;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--pt-line-soft);
+}
+.pt-proposal-th-name { padding-left: 8px; }
+.pt-proposal-table tbody tr {
+  transition: background 0.12s ease;
+}
+.pt-proposal-table tbody tr:hover {
+  background: oklch(from var(--pt-fg) l c h / 0.025);
+}
+.pt-proposal-table tbody tr.is-low-confidence {
+  background: oklch(from var(--pt-accent) l c h / 0.04);
+}
+.pt-proposal-table tbody tr.is-low-confidence td:first-child::before {
+  content: '⚠';
+  margin-right: 6px;
+  color: oklch(0.65 0.15 60);
+  font-size: 11px;
+}
+.pt-proposal-table td {
+  padding: 4px 8px;
+  border-top: 1px solid var(--pt-line-soft);
+  vertical-align: middle;
+}
+.pt-proposal-cell {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font-size: 13px;
+  padding: 6px 4px;
+  border-radius: 4px;
+  transition: background 0.1s ease;
+}
+.pt-proposal-cell:hover { background: oklch(from var(--pt-fg) l c h / 0.04); }
+.pt-proposal-cell:focus {
+  outline: 1px solid var(--pt-accent);
+  background: var(--pt-surface-2);
+}
+.pt-proposal-cell-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.pt-proposal-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 18px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--pt-fg-3) 50%),
+                    linear-gradient(135deg, var(--pt-fg-3) 50%, transparent 50%);
+  background-position: calc(100% - 8px) 50%, calc(100% - 4px) 50%;
+  background-size: 4px 4px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  text-transform: capitalize;
+  font-size: 12px;
+}
+
+.pt-proposal-rm {
+  background: none; border: 0;
+  color: var(--pt-fg-4);
+  opacity: 0.5;
+  cursor: pointer;
+  font-size: 17px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.12s, color 0.12s, opacity 0.12s;
+}
+.pt-proposal-rm:hover {
+  opacity: 1;
+  color: oklch(0.55 0.18 25);
+  background: oklch(0.55 0.18 25 / 0.08);
+}
+
+.pt-proposal-notes { margin-top: 14px; font-size: 12px; color: var(--pt-fg-3); }
+.pt-proposal-notes ul { margin: 6px 0 0; padding-left: 18px; }
+.pt-proposal-notes li { margin-bottom: 3px; }
+
+.pt-proposal-foot {
+  display: flex; gap: 8px; justify-content: flex-end;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--pt-line-soft);
+}
 
 /* ─── Proposal: importing state ─────────────────────────────────────────── */
 .pt-proposal.is-importing .pt-proposal-table,
