@@ -56,7 +56,7 @@ export function AcquisitionSourceCard({ customerId, initialSource, initialNote, 
   }
 
   return (
-    <section className="pt-card">
+    <section className="pt-card" style={{ marginBottom: 12 }}>
       <header className="pt-card-hd">
         <div><h3>Acquisition source</h3></div>
       </header>

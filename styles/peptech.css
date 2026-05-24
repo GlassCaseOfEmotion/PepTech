@@ -312,6 +312,14 @@ kbd {
   font-size: 11px;
   color: var(--pt-fg-2);
 }
+button.pt-chip { cursor: pointer; }
+button.pt-chip:hover:not(:disabled) { background: var(--pt-surface-2); color: var(--pt-fg); }
+button.pt-chip.is-on {
+  background: var(--pt-accent-soft);
+  border-color: var(--pt-accent-fg);
+  color: var(--pt-accent-fg);
+  font-weight: 500;
+}
 .pt-chip-wa svg { color: var(--pt-wa); }
 .pt-chip-tg svg { color: var(--pt-tg); }
 .pt-chip-em svg { color: var(--pt-em); }
