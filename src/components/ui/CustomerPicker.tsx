@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export type PickedCustomer = { id: string; display_name: string }
@@ -19,7 +19,9 @@ export function CustomerPicker({ value, onChange, excludeId, placeholder = 'Sear
   const [results, setResults] = useState<PickedCustomer[]>([])
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [anchor, setAnchor] = useState<{ top: number; left: number; width: number } | null>(null)
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -44,6 +46,23 @@ export function CustomerPicker({ value, onChange, excludeId, placeholder = 'Sear
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  useLayoutEffect(() => {
+    if (!open) { setAnchor(null); return }
+    const update = () => {
+      const el = inputRef.current
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      setAnchor({ top: r.bottom + 2, left: r.left, width: r.width })
+    }
+    update()
+    window.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
+    }
+  }, [open, results.length])
+
   if (value) {
     return (
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '4px 10px 4px 7px', borderRadius: 20, background: 'oklch(from var(--pt-accent) l c h / 0.15)', border: '0.5px solid oklch(from var(--pt-accent) l c h / 0.4)', fontSize: 13 }}>
@@ -59,6 +78,7 @@ export function CustomerPicker({ value, onChange, excludeId, placeholder = 'Sear
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
       <input
+        ref={inputRef}
         type="text"
         className="pt-input"
         placeholder={placeholder}
@@ -68,8 +88,8 @@ export function CustomerPicker({ value, onChange, excludeId, placeholder = 'Sear
         onFocus={() => setOpen(true)}
         style={{ width: '100%', boxSizing: 'border-box' }}
       />
-      {open && results.length > 0 && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: 'var(--pt-bg-side)', border: '0.5px solid var(--pt-line)', borderRadius: 6, marginTop: 2, overflow: 'hidden' }}>
+      {open && results.length > 0 && anchor && (
+        <div style={{ position: 'fixed', top: anchor.top, left: anchor.left, width: anchor.width, zIndex: 1000, background: 'var(--pt-bg-side)', border: '0.5px solid var(--pt-line)', borderRadius: 6, overflow: 'hidden', boxShadow: 'var(--pt-shadow-card)' }}>
           {results.map(c => (
             <div
               key={c.id}
