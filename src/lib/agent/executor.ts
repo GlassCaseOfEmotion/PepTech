@@ -239,6 +239,22 @@ export async function executeAgentTurn(
 
   const { text, toolCalls } = await streamCompletion(client, history, send, mode)
 
+  // Empty response detection. A 200 OK with no text AND no tool calls almost
+  // always means the model errored mid-stream — most commonly a
+  // MALFORMED_FUNCTION_CALL from a model that can't reliably handle this
+  // schema (Gemini Flash Lite is the usual suspect; bigger Flash and
+  // Claude variants don't have this problem). Without this guard, the
+  // SSE stream closes silently and the UI looks frozen.
+  if (!text.trim() && toolCalls.length === 0) {
+    const modelName = modelForMode(mode)
+    console.error('[executor] model returned empty completion', { sessionId, mode, model: modelName })
+    send({
+      type: 'error',
+      message: `The model (${modelName}) returned an empty response. This usually means it failed to format a tool call — try a different model via the OPENROUTER_${mode === 'onboarding' ? 'ONBOARDING_' : ''}MODEL env var (recommended: google/gemini-2.5-flash or anthropic/claude-haiku-4.5).`,
+    })
+    return
+  }
+
   // Restrict tool calls to those available in this mode (defensive — model shouldn't call others)
   const allowedNames = new Set(toolsForMode(mode).map(t => t.name))
 
@@ -318,6 +334,18 @@ async function continueTurn(
   }
 
   const { text, toolCalls } = await streamCompletion(client, history, send, mode)
+
+  // Empty completion mid-turn (same MALFORMED_FUNCTION_CALL failure mode as
+  // executeAgentTurn — see comment there).
+  if (!text.trim() && toolCalls.length === 0) {
+    const modelName = modelForMode(mode)
+    console.error('[continueTurn] model returned empty completion', { sessionId, mode, model: modelName, depth })
+    send({
+      type: 'error',
+      message: `The model (${modelName}) returned an empty follow-up. This usually means a malformed tool call — try a different model via the OPENROUTER_${mode === 'onboarding' ? 'ONBOARDING_' : ''}MODEL env var (recommended: google/gemini-2.5-flash or anthropic/claude-haiku-4.5).`,
+    })
+    return
+  }
 
   // If the model produced text only, we're done with this turn.
   if (toolCalls.length === 0) {
