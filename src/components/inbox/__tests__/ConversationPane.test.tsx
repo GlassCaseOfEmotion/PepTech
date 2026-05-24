@@ -7,7 +7,7 @@ const CONV: ConversationWithCustomer = {
   id: 'c1', status: 'needs_reply', unread_count: 2,
   last_message_at: null, last_message_snippet: null,
   channel_type: 'telegram', channel_identifier: '99887766',
-  customers: { id: 'cust-1', display_name: 'gymrat_84', trust_score: 88, ltv: 2840, customer_tags: [] },
+  customers: { id: 'cust-1', display_name: 'gymrat_84', trust_score: 88, ltv: 2840, customer_tags: [], lifecycle_stage: 'customer' as const, acquisition_source: null },
 }
 
 const MESSAGES: MessageRow[] = [

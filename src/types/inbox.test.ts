@@ -10,7 +10,8 @@ describe('dbConversationToThread', () => {
       channel_identifier: '+1234', is_pinned: false, window_expires_at: null,
       customers: { id: 'u1', display_name: 'Alice', trust_score: 80, ltv: 500,
         customer_tags: [{ tag: 'vip' }],
-        customer_channels: [{ channel_type: 'whatsapp', display_handle: '+1 ••• 4421', is_primary: true }] }
+        customer_channels: [{ channel_type: 'whatsapp', display_handle: '+1 ••• 4421', is_primary: true }],
+        lifecycle_stage: 'customer' as const, acquisition_source: null }
     })
     expect(thread.channel).toBe('wa')
     expect(thread.name).toBe('Alice')
@@ -25,7 +26,8 @@ describe('dbConversationToThread', () => {
       last_message_at: null, last_message_snippet: null,
       channel_type: 'telegram', channel_identifier: '@swolepriest', is_pinned: false, window_expires_at: null,
       customers: { id: 'u2', display_name: 'Bob', trust_score: 70, ltv: 200,
-        customer_tags: [], customer_channels: [] }
+        customer_tags: [], customer_channels: [],
+        lifecycle_stage: 'customer' as const, acquisition_source: null }
     })
     expect(thread.channel).toBe('tg')
     expect(thread.handle).toBe('@swolepriest')

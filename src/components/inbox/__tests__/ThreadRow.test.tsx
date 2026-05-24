@@ -17,6 +17,8 @@ const BASE_CONV: ConversationWithCustomer = {
     trust_score: 88,
     ltv: 2840,
     customer_tags: [{ tag: 'vip' }, { tag: 'repeat' }],
+    lifecycle_stage: 'customer' as const,
+    acquisition_source: null,
   },
 }
 

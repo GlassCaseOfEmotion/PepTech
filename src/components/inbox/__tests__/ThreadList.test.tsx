@@ -16,7 +16,7 @@ function makeConv(id: string, status: string): ConversationWithCustomer {
     id, status: status as ConversationWithCustomer['status'], unread_count: 0,
     last_message_at: null, last_message_snippet: 'msg',
     channel_type: 'telegram', channel_identifier: '123',
-    customers: { id: `cust-${id}`, display_name: `Customer ${id}`, trust_score: 80, ltv: 100, customer_tags: [] },
+    customers: { id: `cust-${id}`, display_name: `Customer ${id}`, trust_score: 80, ltv: 100, customer_tags: [], lifecycle_stage: 'customer' as const, acquisition_source: null },
   }
 }
 

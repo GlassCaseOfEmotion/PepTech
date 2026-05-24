@@ -11,7 +11,7 @@ const CONV: ConversationWithCustomer = {
   id: 'c1', status: 'needs_reply', unread_count: 0,
   last_message_at: null, last_message_snippet: null,
   channel_type: 'whatsapp', channel_identifier: '+15005550001',
-  customers: { id: 'cust-1', display_name: 'K. (gymrat_84)', trust_score: 92, ltv: 2840, customer_tags: [{ tag: 'vip' }] },
+  customers: { id: 'cust-1', display_name: 'K. (gymrat_84)', trust_score: 92, ltv: 2840, customer_tags: [{ tag: 'vip' }], lifecycle_stage: 'customer' as const, acquisition_source: null },
 }
 
 describe('CustomerRail', () => {

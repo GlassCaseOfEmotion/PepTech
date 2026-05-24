@@ -12,6 +12,8 @@ export type ConversationWithCustomer = {
     trust_score: number
     ltv: number
     customer_tags: { tag: string }[]
+    lifecycle_stage: 'lead' | 'customer'
+    acquisition_source: 'referral' | 'community' | 'group_chat' | 'direct' | 'other' | null
   } | null
 }
 
@@ -60,6 +62,8 @@ export type DbConversation = {
     ltv: number
     customer_tags: { tag: string }[]
     customer_channels: { channel_type: string; display_handle: string; is_primary: boolean }[]
+    lifecycle_stage: 'lead' | 'customer'
+    acquisition_source: 'referral' | 'community' | 'group_chat' | 'direct' | 'other' | null
   } | null
 }
 
@@ -141,6 +145,8 @@ export type InboxThread = {
   ltv: number
   pinned: boolean
   windowExpiresAt: string | null
+  lifecycleStage: 'lead' | 'customer'
+  acquisitionSource: 'referral' | 'community' | 'group_chat' | 'direct' | 'other' | null
 }
 
 export type InboxMessage = {
@@ -181,6 +187,8 @@ export function dbConversationToThread(c: DbConversation): InboxThread {
     ltv: c.customers?.ltv ?? 0,
     pinned: c.is_pinned,
     windowExpiresAt: c.window_expires_at ?? null,
+    lifecycleStage:    c.customers?.lifecycle_stage ?? 'lead',
+    acquisitionSource: c.customers?.acquisition_source ?? null,
   }
 }
 

@@ -361,17 +361,23 @@ export type Database = {
       }
       crypto_payment_links: {
         Row: {
+          amount_base: number | null
           amount_usd: number
+          base_currency: string
           confirmed_at: string | null
           created_at: string
           expires_at: string | null
           hosted_url: string
           id: string
+          memo: string | null
           nowpayments_id: string
           nowpayments_tx_id: string | null
           order_id: string
           paid_amount: number | null
           paid_token: string | null
+          pay_address: string | null
+          pay_amount_crypto: number | null
+          pay_currency: string | null
           payout_address: string
           sent_via: string | null
           status: string
@@ -379,17 +385,23 @@ export type Database = {
           usdc_received: number | null
         }
         Insert: {
+          amount_base?: number | null
           amount_usd: number
+          base_currency?: string
           confirmed_at?: string | null
           created_at?: string
           expires_at?: string | null
           hosted_url: string
           id?: string
+          memo?: string | null
           nowpayments_id: string
           nowpayments_tx_id?: string | null
           order_id: string
           paid_amount?: number | null
           paid_token?: string | null
+          pay_address?: string | null
+          pay_amount_crypto?: number | null
+          pay_currency?: string | null
           payout_address: string
           sent_via?: string | null
           status?: string
@@ -397,17 +409,23 @@ export type Database = {
           usdc_received?: number | null
         }
         Update: {
+          amount_base?: number | null
           amount_usd?: number
+          base_currency?: string
           confirmed_at?: string | null
           created_at?: string
           expires_at?: string | null
           hosted_url?: string
           id?: string
+          memo?: string | null
           nowpayments_id?: string
           nowpayments_tx_id?: string | null
           order_id?: string
           paid_amount?: number | null
           paid_token?: string | null
+          pay_address?: string | null
+          pay_amount_crypto?: number | null
+          pay_currency?: string | null
           payout_address?: string
           sent_via?: string | null
           status?: string
@@ -472,6 +490,58 @@ export type Database = {
           },
           {
             foreignKeyName: "customer_channels_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_events: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          customer_id: string
+          event_type: string
+          id: string
+          reason: string
+          tenant_id: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          customer_id: string
+          event_type: string
+          id?: string
+          reason: string
+          tenant_id: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          customer_id?: string
+          event_type?: string
+          id?: string
+          reason?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_events_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_events_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_events_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -578,36 +648,58 @@ export type Database = {
       }
       customers: {
         Row: {
+          acquisition_source: 'referral' | 'community' | 'group_chat' | 'direct' | 'other' | null
+          acquisition_source_note: string | null
+          converted_at: string | null
           created_at: string
           display_name: string
           id: string
+          lifecycle_stage: 'lead' | 'customer'
           ltv: number
           notes: string | null
+          referred_by_customer_id: string | null
           tenant_id: string
           trust_score: number
           updated_at: string
         }
         Insert: {
+          acquisition_source?: 'referral' | 'community' | 'group_chat' | 'direct' | 'other' | null
+          acquisition_source_note?: string | null
+          converted_at?: string | null
           created_at?: string
           display_name: string
           id?: string
+          lifecycle_stage?: 'lead' | 'customer'
           ltv?: number
           notes?: string | null
+          referred_by_customer_id?: string | null
           tenant_id: string
           trust_score?: number
           updated_at?: string
         }
         Update: {
+          acquisition_source?: 'referral' | 'community' | 'group_chat' | 'direct' | 'other' | null
+          acquisition_source_note?: string | null
+          converted_at?: string | null
           created_at?: string
           display_name?: string
           id?: string
+          lifecycle_stage?: 'lead' | 'customer'
           ltv?: number
           notes?: string | null
+          referred_by_customer_id?: string | null
           tenant_id?: string
           trust_score?: number
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "customers_referred_by_customer_id_fkey"
+            columns: ["referred_by_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "customers_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -1028,7 +1120,7 @@ export type Database = {
           payment_address: string | null
           payment_amount: number
           payment_amount_base: number | null
-          payment_asset: string
+          payment_asset: string | null
           ref_number: string
           shipped_at: string | null
           shipping_address: Json | null
@@ -1053,7 +1145,7 @@ export type Database = {
           payment_address?: string | null
           payment_amount?: number
           payment_amount_base?: number | null
-          payment_asset?: string
+          payment_asset?: string | null
           ref_number: string
           shipped_at?: string | null
           shipping_address?: Json | null
@@ -1078,7 +1170,7 @@ export type Database = {
           payment_address?: string | null
           payment_amount?: number
           payment_amount_base?: number | null
-          payment_asset?: string
+          payment_asset?: string | null
           ref_number?: string
           shipped_at?: string | null
           shipping_address?: Json | null
