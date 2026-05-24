@@ -62,29 +62,43 @@ export const readOnboardingState: AgentTool = {
 
 export const saveProfile: AgentTool = {
   name: 'save_profile',
-  description: 'Save the user\'s display name and timezone. Timezone must be an IANA zone (e.g. "Asia/Bangkok", "Europe/London"). If the user gives a city or region, map it to the closest IANA zone yourself.',
+  description: 'Save the user\'s display name and/or timezone. Both fields are optional individually — pass only the values you have just learned from the user. Do NOT invent or default a value the user has not given you. If the user gives a city/region for timezone, map it to the closest IANA zone yourself (e.g. "Bali" → "Asia/Makassar", "London" → "Europe/London").',
   requiresConfirmation: false,
   inputSchema: {
     type: 'object',
-    required: ['display_name', 'timezone'],
     properties: {
       display_name: { type: 'string', description: 'How the user wants to be addressed (e.g. first name)' },
       timezone:     { type: 'string', description: 'IANA timezone, e.g. "Asia/Singapore"' },
     },
   },
   async execute(raw, supabase, tenantId) {
-    const input = raw as { display_name: string; timezone: string }
-    const name = input.display_name.trim().slice(0, 80)
-    if (!name) throw new Error('Display name is required')
-    const tz = VALID_TIMEZONES.has(input.timezone) ? input.timezone : 'UTC'
+    const input = raw as { display_name?: string; timezone?: string }
+    const updates: { display_name?: string; timezone?: string } = {}
+    let name: string | undefined
+    let tz: string | undefined
+
+    if (typeof input.display_name === 'string' && input.display_name.trim()) {
+      name = input.display_name.trim().slice(0, 80)
+      updates.display_name = name
+    }
+    if (typeof input.timezone === 'string' && input.timezone.trim()) {
+      if (!VALID_TIMEZONES.has(input.timezone)) throw new Error(`Unknown timezone "${input.timezone}". Use an IANA zone like "Asia/Singapore".`)
+      tz = input.timezone
+      updates.timezone = tz
+    }
+    if (!name && !tz) throw new Error('Provide display_name and/or timezone — at least one is required.')
+
     const userId = await currentUserId(supabase)
-    const [n, t] = await Promise.all([
-      supabase.from('users').update({ display_name: name }).eq('id', userId),
-      supabase.from('tenants').update({ timezone: tz }).eq('id', tenantId),
-    ])
-    if (n.error) throw new Error(n.error.message)
-    if (t.error) throw new Error(t.error.message)
-    return { display_name: name, timezone: tz }
+    if (name) {
+      const { error } = await supabase.from('users').update({ display_name: name }).eq('id', userId)
+      if (error) throw new Error(error.message)
+    }
+    if (tz) {
+      const { error } = await supabase.from('tenants').update({ timezone: tz }).eq('id', tenantId)
+      if (error) throw new Error(error.message)
+    }
+
+    return { display_name: name ?? null, timezone: tz ?? null }
   },
 }
 

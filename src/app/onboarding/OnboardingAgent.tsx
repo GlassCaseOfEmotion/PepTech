@@ -27,10 +27,18 @@ interface DisplayMsg {
 
 const STEP_LABELS = ['Profile', 'Business', 'Currency', 'Catalog', 'Channels']
 
+// Tools whose state changes silently — never render a tool card for these
+const SILENT_TOOLS = new Set(['read_onboarding_state'])
+
 function summariseToolCall(name: string, input: Record<string, unknown>): string {
   switch (name) {
     case 'read_onboarding_state':  return 'Checked your progress'
-    case 'save_profile':           return `Saved profile — ${input.display_name ?? ''}, ${input.timezone ?? ''}`
+    case 'save_profile': {
+      const parts: string[] = []
+      if (typeof input.display_name === 'string' && input.display_name.trim()) parts.push(`name "${input.display_name}"`)
+      if (typeof input.timezone === 'string' && input.timezone.trim())         parts.push(`timezone ${input.timezone}`)
+      return parts.length ? `Saved ${parts.join(' · ')}` : 'Saved profile'
+    }
     case 'save_business_type':     return `Set business type — ${input.business_type ?? ''}`
     case 'save_currency':          return `Set currency — ${input.currency ?? ''}`
     case 'save_channel_intent': {
@@ -170,11 +178,12 @@ export function OnboardingAgent({
   const [confirming, setConfirming] = useState(false)
   const [pendingConfirm, setPendingConfirm] = useState<{ messageId: string; toolCalls: ToolCall[] } | null>(null)
   const msgsRef = useRef<HTMLDivElement>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
   const sentOpenerRef = useRef(false)
 
   useEffect(() => {
-    msgsRef.current?.scrollTo({ top: msgsRef.current.scrollHeight, behavior: 'smooth' })
-  }, [messages])
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [messages, streaming, confirming, pendingConfirm])
 
   const appendAssistantDelta = useCallback((delta: string) => {
     setMessages(prev => {
@@ -213,11 +222,14 @@ export function OnboardingAgent({
         ]),
         onToolUse: (toolCalls) => {
           setState(prev => applyToolOutputsToState(prev, toolCalls))
-          setMessages(prev => {
-            const last = prev[prev.length - 1]
-            if (last?.role === 'assistant') return [...prev.slice(0, -1), { ...last, toolCalls, streaming: false }]
-            return [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: '', toolCalls, streaming: false }]
-          })
+          const visible = toolCalls.filter(tc => !SILENT_TOOLS.has(tc.name))
+          if (visible.length > 0) {
+            setMessages(prev => {
+              const last = prev[prev.length - 1]
+              if (last?.role === 'assistant') return [...prev.slice(0, -1), { ...last, toolCalls: visible, streaming: false }]
+              return [...prev, { id: `a-${Date.now()}`, role: 'assistant', text: '', toolCalls: visible, streaming: false }]
+            })
+          }
           // If onboarding just completed, push to dashboard
           if (toolCalls.some(tc => tc.name === 'complete_onboarding' && tc.status === 'complete')) {
             setTimeout(() => router.push('/'), 800)
@@ -410,6 +422,7 @@ export function OnboardingAgent({
                 <div className="pt-agent-typing"><span /><span /><span /></div>
               </div>
             )}
+            <div ref={bottomRef} aria-hidden style={{ height: 1 }} />
           </div>
 
           <div className="pt-agent-chat-input-row" style={{ marginTop: 12 }}>
