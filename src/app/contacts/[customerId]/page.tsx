@@ -118,7 +118,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
     automations: { name: string } | null
   }
 
-  const [{ data: customer }, { data: notes }, { data: orders }, { data: tenantRow }, { data: activityRaw }, { data: conversation }, { data: automationRunsRaw }] = await Promise.all([
+  const [{ data: customer }, { data: notes }, { data: orders }, { data: tenantRow }, { data: activityRaw }, { data: conversation }, { data: automationRunsRaw }, { data: referrals }] = await Promise.all([
     supabase
       .from('customers')
       .select('id, display_name, trust_score, ltv, created_at, lifecycle_stage, acquisition_source, acquisition_source_note, referred_by_customer_id, converted_at, customer_channels(channel_type, display_handle, is_primary), customer_tags(tag)')
@@ -160,13 +160,29 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
       .eq('context_ref', customerId)
       .order('created_at', { ascending: false })
       .limit(20),
+    supabase
+      .from('customers')
+      .select('id, display_name, lifecycle_stage, created_at')
+      .eq('referred_by_customer_id', customerId)
+      .order('created_at', { ascending: false }),
   ])
 
   if (!customer) redirect('/contacts')
 
+  let referrer: { id: string; display_name: string } | null = null
+  if (customer.referred_by_customer_id) {
+    const { data: ref } = await supabase
+      .from('customers')
+      .select('id, display_name')
+      .eq('id', customer.referred_by_customer_id)
+      .maybeSingle()
+    if (ref) referrer = ref as { id: string; display_name: string }
+  }
+
   const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
   const activity = (activityRaw ?? []) as ActivityItem[]
   const automationRuns = (automationRunsRaw ?? []) as AutomationRunRow[]
+  const referralList = (referrals ?? []) as { id: string; display_name: string; lifecycle_stage: 'lead' | 'customer'; created_at: string }[]
   const isLead = customer.lifecycle_stage === 'lead'
 
   const primary = customer.customer_channels?.find(c => c.is_primary) ?? customer.customer_channels?.[0]
@@ -368,7 +384,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
               customerId={customer.id}
               initialSource={(customer.acquisition_source as AcquisitionSource | null) ?? null}
               initialNote={(customer.acquisition_source_note as string | null) ?? null}
-              initialReferredBy={(customer.referred_by_customer_id as string | null) ?? null}
+              initialReferredBy={referrer}
             />
           )}
 
@@ -482,8 +498,36 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                     customerId={customer.id}
                     initialSource={(customer.acquisition_source as AcquisitionSource | null) ?? null}
                     initialNote={(customer.acquisition_source_note as string | null) ?? null}
-                    initialReferredBy={(customer.referred_by_customer_id as string | null) ?? null}
+                    initialReferredBy={referrer}
                   />
+                )}
+                {referralList.length > 0 && (
+                  <section className="pt-card" style={{ marginBottom: 12 }}>
+                    <header className="pt-card-hd">
+                      <div><h3>Referrals</h3><p>{referralList.length} {referralList.length === 1 ? 'person' : 'people'} referred</p></div>
+                    </header>
+                    <div className="pt-card-body" style={{ padding: 0 }}>
+                      <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                        {referralList.map(r => (
+                          <li key={r.id} style={{ borderTop: '0.5px solid var(--pt-line)' }}>
+                            <Link
+                              href={`/contacts/${r.id}`}
+                              className="pt-link"
+                              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', fontSize: 13 }}
+                            >
+                              <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--pt-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, flexShrink: 0 }}>
+                                {r.display_name.slice(0, 2).toUpperCase()}
+                              </div>
+                              <span style={{ flex: 1 }}>{r.display_name}</span>
+                              <span style={{ fontSize: 11, color: 'var(--pt-fg-4)' }}>
+                                {r.lifecycle_stage === 'lead' ? 'Lead' : 'Customer'} · {fmtDate(r.created_at)}
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </section>
                 )}
               </>
             }
