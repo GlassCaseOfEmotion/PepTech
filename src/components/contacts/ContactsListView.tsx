@@ -47,19 +47,26 @@ export function ContactsListView({
   const [tagFilter, setTagFilter]           = useState<string | null>(null)
   const [noSourceOnly, setNoSourceOnly]     = useState(false)
 
-  // Counts for filter pills (always from full list for the active tab's superset)
-  const chCounts: Record<string, number> = { whatsapp: 0, telegram: 0, email: 0 }
-  const tagCounts: Record<string, number> = { vip: 0, new: 0, payment: 0, low_supply: 0 }
-  for (const c of customers) {
-    const primary = c.customer_channels.find(ch => ch.is_primary) ?? c.customer_channels[0]
-    if (primary?.channel_type && primary.channel_type in chCounts) chCounts[primary.channel_type]++
-    const tags = c.customer_tags.map(t => t.tag)
-    if (tags.includes('vip'))     tagCounts.vip++
-    if (tags.includes('new'))     tagCounts.new++
-    if (tags.includes('payment')) tagCounts.payment++
-    const s = supplyStatuses[c.id]
-    if (s === 'low' || s === 'critical') tagCounts.low_supply++
-  }
+  // Counts for filter pills — scoped to the active tab's lifecycle stage (unfiltered)
+  const { chCounts, tagCounts, tabBaseCount } = useMemo(() => {
+    const isLeadsTab = tab === 'leads'
+    const base = customers.filter(c =>
+      isLeadsTab ? c.lifecycle_stage === 'lead' : c.lifecycle_stage === 'customer'
+    )
+    const ch: Record<string, number> = { whatsapp: 0, telegram: 0, email: 0 }
+    const tag: Record<string, number> = { vip: 0, new: 0, payment: 0, low_supply: 0 }
+    for (const c of base) {
+      const primary = c.customer_channels.find(chan => chan.is_primary) ?? c.customer_channels[0]
+      if (primary?.channel_type && primary.channel_type in ch) ch[primary.channel_type]++
+      const tags = c.customer_tags.map(t => t.tag)
+      if (tags.includes('vip'))     tag.vip++
+      if (tags.includes('new'))     tag.new++
+      if (tags.includes('payment')) tag.payment++
+      const s = supplyStatuses[c.id]
+      if (s === 'low' || s === 'critical') tag.low_supply++
+    }
+    return { chCounts: ch, tagCounts: tag, tabBaseCount: base.length }
+  }, [customers, tab, supplyStatuses])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -128,7 +135,7 @@ export function ContactsListView({
           role="tab"
           aria-selected={tab === 'customers'}
           className={`pt-contacts-tab${tab === 'customers' ? ' is-on' : ''}`}
-          onClick={() => setTab('customers')}
+          onClick={() => { setTab('customers'); setNoSourceOnly(false) }}
         >
           Customers <span className="pt-pill-num">{buyers.length}</span>
         </button>
@@ -137,7 +144,7 @@ export function ContactsListView({
       <div className="pt-cl-filters">
         <div className="pt-pillbar">
           <button className={`pt-pill ${!channelFilter ? 'is-on' : ''}`} onClick={() => setChannelFilter(null)}>
-            All <span className="pt-pill-num">{customers.length}</span>
+            All <span className="pt-pill-num">{tabBaseCount}</span>
           </button>
           {chCounts.whatsapp > 0 && (
             <button className={`pt-pill ${channelFilter === 'whatsapp' ? 'is-on' : ''}`} onClick={() => setChannelFilter(channelFilter === 'whatsapp' ? null : 'whatsapp')}>

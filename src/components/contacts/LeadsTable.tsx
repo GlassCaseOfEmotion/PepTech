@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 type Channel = { channel_type: string; display_handle: string; is_primary: boolean }
 
@@ -55,9 +56,11 @@ export function LeadsTable({ leads, recentConvByCustomer }: Props) {
         <section className="pt-card">
           <div className="pt-card-body" style={{ padding: 0 }}>
             <div className="pt-empty-page" style={{ minHeight: 280 }}>
-              <div className="pt-empty pt-empty-md">
-                <p className="pt-empty-body">No leads yet. New conversations from unknown handles will appear here.</p>
-              </div>
+              <EmptyState
+                icon={<Icons.users size={24} />}
+                title="No leads yet"
+                body="New conversations from unknown handles will appear here."
+              />
             </div>
           </div>
         </section>

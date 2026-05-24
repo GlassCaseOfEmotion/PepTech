@@ -27,7 +27,8 @@ export default async function ContactsPage() {
     supabase
       .from('conversations')
       .select('customer_id, channel_type, last_message_at')
-      .order('last_message_at', { ascending: false, nullsFirst: false }),
+      .order('last_message_at', { ascending: false, nullsFirst: false })
+      .limit(500),
   ])
 
   const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
