@@ -37,6 +37,9 @@ export function ThreadRow({ conv, active, onClick }: ThreadRowProps) {
           )}
         </div>
         <div className="pt-ixt-row3">
+          {customer?.lifecycle_stage === 'lead' && (
+            <span className="pt-tag pt-tag-lead">Lead</span>
+          )}
           {tags.includes('vip') && <span className="pt-tag pt-tag-vip">VIP</span>}
           {tags.includes('new') && <span className="pt-tag pt-tag-new">new</span>}
           {tags.includes('waitlist') && <span className="pt-tag">waitlist</span>}

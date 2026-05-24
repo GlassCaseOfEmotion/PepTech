@@ -658,6 +658,7 @@ kbd {
 .pt-tag-vip { background: var(--pt-accent-soft); color: var(--pt-accent-fg); }
 .pt-tag-new { background: var(--pt-cool-soft); color: var(--pt-cool); }
 .pt-tag-warn { background: var(--pt-warn-soft); color: var(--pt-warn); }
+.pt-tag-lead { background: oklch(0.92 0.05 60); color: oklch(0.45 0.12 55); }
 
 /* trust */
 .pt-trust-pill {

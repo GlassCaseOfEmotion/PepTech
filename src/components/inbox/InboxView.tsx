@@ -18,6 +18,7 @@ import { AcquisitionSourceBanner } from '@/components/inbox/AcquisitionSourceBan
 import { initials } from '@/types/inbox'
 import { createClient } from '@/lib/supabase/client'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ConvertToCustomerButton } from '@/components/contacts/ConvertToCustomerButton'
 
 interface ActivityItem {
   id: string
@@ -813,6 +814,9 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
           </div>
         </div>
         <div className="pt-ix-conv-actions">
+          {thread.lifecycleStage === 'lead' && (
+            <ConvertToCustomerButton customerId={thread.customerId} currentStage="lead" />
+          )}
           <div ref={snoozeRef} style={{ position: 'relative' }}>
             <button className="pt-btn pt-btn-ghost" onClick={() => setShowSnooze(v => !v)}>
               <Icons.clock size={12} /> Snooze

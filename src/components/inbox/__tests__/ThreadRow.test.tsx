@@ -56,4 +56,15 @@ describe('ThreadRow', () => {
     fireEvent.click(screen.getByText('gymrat_84'))
     expect(onClick).toHaveBeenCalledOnce()
   })
+
+  it('shows a Lead pill when the thread is a lead', () => {
+    const conv = { ...BASE_CONV, customers: { ...BASE_CONV.customers!, lifecycle_stage: 'lead' as const } }
+    render(<ThreadRow conv={conv} active={false} onClick={vi.fn()} />)
+    expect(screen.getByText(/^lead$/i)).toBeInTheDocument()
+  })
+
+  it('does not show a Lead pill for customers', () => {
+    render(<ThreadRow conv={BASE_CONV} active={false} onClick={vi.fn()} />)
+    expect(screen.queryByText(/^lead$/i)).not.toBeInTheDocument()
+  })
 })
