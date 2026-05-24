@@ -1,6 +1,7 @@
 'use server'
+import { cache } from 'react'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getServerUser } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function createOrFindConversation(
@@ -8,7 +9,7 @@ export async function createOrFindConversation(
   channelType: string,
 ): Promise<{ conversationId: string } | { error: string }> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getServerUser()
   if (!user) return { error: 'Not authenticated' }
 
   // Get the customer's channel identifier for this channel type

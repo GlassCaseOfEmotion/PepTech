@@ -1,19 +1,20 @@
 'use server'
+import { cache } from 'react'
 
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getServerUser } from '@/lib/supabase/server'
 import { createOrFindConversation } from '@/app/inbox/actions'
 import type { AutoState, AutomationWithRuns, TriggerType, ActionType, Condition, Automation, QueuedRun } from '@/types/automations'
 
-async function getTenantId() {
+const getTenantId = cache(async function getTenantId() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getServerUser()
   if (!user) throw new Error('Unauthorized')
   const { data: userRow } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
   if (!userRow) throw new Error('User not found')
   return { supabase, tenantId: userRow.tenant_id as string }
-}
+})
 
 export async function getAutomations(): Promise<AutomationWithRuns[]> {
   const { supabase } = await getTenantId()

@@ -1,6 +1,7 @@
 'use server'
+import { cache } from 'react'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getServerUser } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function createTemplate(formData: FormData) {
@@ -9,7 +10,7 @@ export async function createTemplate(formData: FormData) {
   if (!title || !content) return { error: 'Title and content are required' }
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getServerUser()
   if (!user) return { error: 'Unauthorized' }
 
   const { data: userRow } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
@@ -34,7 +35,7 @@ export async function updateTemplate(formData: FormData) {
   if (!id || !title || !content) return { error: 'Missing fields' }
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getServerUser()
   if (!user) return { error: 'Unauthorized' }
 
   const { data: userRow } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
@@ -63,7 +64,7 @@ export async function deleteTemplate(formData: FormData) {
   if (!id) return { error: 'Missing id' }
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getServerUser()
   if (!user) return { error: 'Unauthorized' }
 
   const { error } = await supabase.from('templates').delete().eq('id', id)

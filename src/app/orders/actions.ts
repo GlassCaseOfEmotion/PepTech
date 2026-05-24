@@ -1,6 +1,7 @@
 'use server'
+import { cache } from 'react'
 
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getServerUser } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import { buildAssignments } from './utils'
@@ -8,14 +9,14 @@ import { runAutomationsForEvent } from '@/lib/automations/engine'
 import { buildPaymentMessage } from '@/lib/payments'
 import type { TenantPaymentConfig } from '@/types/payments'
 
-async function getTenantId() {
+const getTenantId = cache(async function getTenantId() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getServerUser()
   if (!user) throw new Error('Unauthorized')
   const { data: userRow } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
   if (!userRow) throw new Error('User not found')
-  return { supabase, tenantId: userRow.tenant_id }
-}
+  return { supabase, tenantId: userRow.tenant_id as string }
+})
 
 const STATUS_LABELS: Record<string, string> = {
   created: 'Order created',

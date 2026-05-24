@@ -1,12 +1,13 @@
 'use server'
-import { createClient } from '@/lib/supabase/server'
+import { cache } from 'react'
+import { createClient, getServerUser } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function createWaTemplate(data: {
   name: string; body: string; variables: { key: string; label: string }[]
 }): Promise<{ error?: string }> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getServerUser()
   if (!user) return { error: 'Unauthorized' }
   const { data: userRow } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
   if (!userRow) return { error: 'User not found' }
@@ -21,7 +22,7 @@ export async function updateWaTemplate(id: string, patch: {
   variables?: { key: string; label: string }[]
 }): Promise<{ error?: string }> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getServerUser()
   if (!user) return { error: 'Unauthorized' }
   const { error } = await supabase.from('whatsapp_templates').update(patch).eq('id', id)
   if (error) return { error: error.message }
@@ -31,7 +32,7 @@ export async function updateWaTemplate(id: string, patch: {
 
 export async function deleteWaTemplate(id: string): Promise<{ error?: string }> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getServerUser()
   if (!user) return { error: 'Unauthorized' }
   const { error } = await supabase.from('whatsapp_templates').delete().eq('id', id)
   if (error) return { error: error.message }

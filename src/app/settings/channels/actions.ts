@@ -1,6 +1,7 @@
 'use server'
+import { cache } from 'react'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getServerUser } from '@/lib/supabase/server'
 import { registerTelegramWebhook } from '@/lib/channels/telegram'
 import { revalidatePath } from 'next/cache'
 
@@ -9,7 +10,7 @@ export async function saveTelegramCredentials(formData: FormData) {
   if (!botToken) return { error: 'Bot token is required' }
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getServerUser()
   if (!user) return { error: 'Unauthorized' }
 
   const { data: userRow } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
@@ -44,7 +45,7 @@ export async function connectWhatsAppNumber(formData: FormData) {
   const phoneNumber = `+${digits}`
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getServerUser()
   if (!user) return { error: 'Unauthorized' }
 
   const { data: userRow } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
@@ -64,7 +65,7 @@ export async function connectWhatsAppNumber(formData: FormData) {
 
 export async function disconnectChannel(channelType: 'whatsapp' | 'telegram' | 'email'): Promise<{ success: true } | { error: string }> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getServerUser()
   if (!user) return { error: 'Unauthorized' }
 
   const { data: userRow } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()

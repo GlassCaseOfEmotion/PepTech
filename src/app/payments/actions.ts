@@ -1,20 +1,21 @@
 'use server'
+import { cache } from 'react'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getServerUser } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import { createOrFindConversation } from '@/app/inbox/actions'
 import type { TenantCryptoWallet, CryptoPaymentLink, CryptoPaymentLinkWithOrder, WalletTransaction } from '@/types/payments-crypto'
 import { fetchFiatRate } from '@/lib/currency'
 
-async function getTenantId() {
+const getTenantId = cache(async function getTenantId() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getServerUser()
   if (!user) throw new Error('Unauthorized')
   const { data: userRow } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
   if (!userRow) throw new Error('User not found')
   return { supabase, tenantId: userRow.tenant_id as string }
-}
+})
 
 // Returns IDR-per-USD (or equivalent) rate, using cached exchange_rates with 1-hour TTL.
 // e.g. for 'IDR': returns ~16000, meaning 1 USD = 16,000 IDR.
