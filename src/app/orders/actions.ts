@@ -7,7 +7,7 @@ import { cookies } from 'next/headers'
 import { buildAssignments } from './utils'
 import { runAutomationsForEvent } from '@/lib/automations/engine'
 import { buildPaymentMessage } from '@/lib/payments'
-import type { TenantPaymentConfig } from '@/types/payments'
+import { OFF_PLATFORM_METHODS, type TenantPaymentConfig } from '@/types/payments'
 
 const getTenantId = cache(async function getTenantId() {
   const supabase = await createClient()
@@ -51,7 +51,7 @@ export async function createOrder(data: {
     const currency = tenantRow?.base_currency ?? 'USD'
 
     // For crypto payments with non-USD base currency, fetch and cache exchange rate
-    const FIAT_ASSETS = new Set(['cash', 'bank_transfer'])
+    const FIAT_ASSETS = new Set<string>(OFF_PLATFORM_METHODS)
     const isCrypto = !!data.paymentAsset && !FIAT_ASSETS.has(data.paymentAsset)
     let exchangeRate: number | null = null
 
@@ -485,7 +485,7 @@ export async function updateOrder(
     let newExchangeRate: number | undefined
     if (data.paymentAsset !== undefined || data.paymentAmount !== undefined) {
       const effectiveAsset = data.paymentAsset ?? current.payment_asset
-      const FIAT_ASSETS = new Set(['cash', 'bank_transfer'])
+      const FIAT_ASSETS = new Set<string>(OFF_PLATFORM_METHODS)
       if (effectiveAsset && !FIAT_ASSETS.has(effectiveAsset) && current.currency !== 'USD') {
         const TTL_MS = 60 * 60 * 1000
         const { data: cached } = await supabase
