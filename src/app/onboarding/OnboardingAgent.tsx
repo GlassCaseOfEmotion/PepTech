@@ -741,6 +741,7 @@ export function OnboardingAgent({
                         initial={out}
                         status={mapped as 'idle' | 'saving' | 'done' | 'cancelled'}
                         onSave={input => handleProposalPaymentsImport(tc.id, input)}
+                        onCancel={() => handleProposalCancel(tc.id)}
                       />
                     )
                   }
