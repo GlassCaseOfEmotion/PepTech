@@ -192,9 +192,9 @@ export default async function ChannelsPage() {
                         <li style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                           <span style={stepBadgeStyle}>2</span>
                           <div style={{ flex: 1, paddingTop: 1 }}>
-                            <div style={stepTitleStyle}>Enable Business Mode on the bot</div>
+                            <div style={stepTitleStyle}>Enable Secretary Mode on the bot</div>
                             <div style={stepBodyStyle}>
-                              Still in BotFather: send <code style={inlineCodeStyle}>/mybots</code> → pick the bot you just made → <strong>Bot Settings → Business Mode → Enable</strong>. Without this, Telegram Business will refuse to link the bot with the error <em>&ldquo;this bot does not support Telegram Business yet&rdquo;</em>.
+                              Still in BotFather: send <code style={inlineCodeStyle}>/mybots</code> → pick the bot you just made → tap <strong>Secretary Mode</strong> (Telegram&apos;s name for Business Bot Mode — it lets the bot act as a secretary for your Business account). Without this, Telegram Business will refuse to link the bot with the error <em>&ldquo;this bot does not support Telegram Business yet&rdquo;</em>.
                             </div>
                           </div>
                         </li>
