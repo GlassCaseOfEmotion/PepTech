@@ -69,10 +69,13 @@ export const readOnboardingState: AgentTool = {
     //  - tenants.timezone defaults to 'UTC'
     //  - users.display_name is now null at signup (older tenants may have an
     //    email-prefix value — treated as answered for them).
-    const profileDone = !!user?.display_name
-    const businessTypeDone = !!tenant?.business_type
     const currencyAnswered = !!tenant?.base_currency && tenant.base_currency !== 'USD'
     const timezoneAnswered = !!tenant?.timezone && tenant.timezone !== 'UTC'
+    // Profile is one rail step covering both name AND timezone; without this
+    // bundling the agent reads steps.profile=true after just the name and
+    // skips timezone entirely. Matches the rail's deriveSteps() exactly.
+    const profileDone = !!user?.display_name && timezoneAnswered
+    const businessTypeDone = !!tenant?.business_type
     const catalogDone = (productCount ?? 0) > 0
     const channelsDone = (tenant?.intended_channels?.length ?? 0) > 0
     const paymentsConfigured = (paymentConfigCount ?? 0) > 0 || (cryptoWalletCount ?? 0) > 0
