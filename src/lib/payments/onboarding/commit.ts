@@ -13,6 +13,15 @@ interface CommitParams {
 export async function commitPaymentMethods(params: CommitParams): Promise<PaymentMethodsCommitResult> {
   const { supabase, tenantId, input } = params
 
+  console.log('[commitPaymentMethods] start', {
+    tenantId,
+    managed_crypto: input.managed_crypto,
+    byo_crypto_count: input.byo_crypto.length,
+    byo_crypto_types: input.byo_crypto.map(e => e.type),
+    off_platform_count: input.off_platform.length,
+    off_platform_types: input.off_platform.map(e => e.type),
+  })
+
   if (!input.managed_crypto && input.byo_crypto.length === 0 && input.off_platform.length === 0) {
     throw new Error('commit failed: no payment methods to save')
   }
@@ -45,14 +54,18 @@ export async function commitPaymentMethods(params: CommitParams): Promise<Paymen
       .maybeSingle() as unknown as Promise<{ data: { solana_address: string } | null }>)
 
     if (existing) {
+      console.log('[commitPaymentMethods] managed wallet already exists', { tenantId, solana_address: existing.solana_address })
       managed_wallet_ready = true
       managed_solana_address = existing.solana_address
     } else {
+      console.log('[commitPaymentMethods] provisioning Privy wallet', { tenantId })
       let privyWallet: { id: string; address: string }
       try {
         privyWallet = await createPrivyWallet()
+        console.log('[commitPaymentMethods] Privy wallet created', { tenantId, privy_wallet_id: privyWallet.id, solana_address: privyWallet.address })
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'unknown error'
+        console.error('[commitPaymentMethods] Privy provisioning failed', { tenantId, error: msg })
         throw new Error(`failed to provision managed wallet: ${msg}`)
       }
 
@@ -64,11 +77,17 @@ export async function commitPaymentMethods(params: CommitParams): Promise<Paymen
           solana_address: privyWallet.address,
         }) as unknown as Promise<{ error: { message: string } | null }>)
 
-      if (walletErr) throw new Error(`failed to provision managed wallet: ${walletErr.message}`)
+      if (walletErr) {
+        console.error('[commitPaymentMethods] tenant_crypto_wallets insert failed', { tenantId, error: walletErr.message })
+        throw new Error(`failed to provision managed wallet: ${walletErr.message}`)
+      }
 
+      console.log('[commitPaymentMethods] tenant_crypto_wallets row inserted', { tenantId })
       managed_wallet_ready = true
       managed_solana_address = privyWallet.address
     }
+  } else {
+    console.log('[commitPaymentMethods] managed_crypto is falsy — skipping Privy provisioning', { tenantId, value: input.managed_crypto })
   }
 
   const configRows = [
@@ -86,14 +105,22 @@ export async function commitPaymentMethods(params: CommitParams): Promise<Paymen
     })),
   ]
 
+  if (configRows.length === 0) {
+    console.log('[commitPaymentMethods] no payment config rows to insert (managed-only path)', { tenantId, managed_wallet_ready })
+    return { configs_inserted: 0, managed_wallet_ready, managed_solana_address }
+  }
+
   const { data: inserted, error: insertErr } = await (supabase
     .from('tenant_payment_configs')
     .insert(configRows)
     .select('id') as unknown as Promise<{ data: { id: string }[] | null; error: { message: string } | null }>)
 
   if (insertErr || !inserted) {
+    console.error('[commitPaymentMethods] tenant_payment_configs insert failed', { tenantId, error: insertErr?.message, rows: configRows.length })
     throw new Error(insertErr?.message ?? 'Failed to insert payment configs')
   }
+
+  console.log('[commitPaymentMethods] done', { tenantId, configs_inserted: inserted.length, managed_wallet_ready })
 
   return {
     configs_inserted: inserted.length,

@@ -518,13 +518,16 @@ export const proposePaymentMethods: AgentTool = {
       byo_crypto_assets?: string[]
       off_platform_methods?: string[]
     }
+    console.log('[propose_payment_methods] raw input from model', input)
     const off = (input.off_platform_methods ?? []).filter(t => OFF_PLATFORM_METHODS.includes(t as PaymentType))
     const byo = (input.byo_crypto_assets ?? []).filter(t => (CRYPTO_TYPES as readonly string[]).includes(t))
-    return {
+    const output = {
       managed_crypto: !!input.managed_crypto,
       byo_crypto_assets: byo,
       off_platform_methods: off,
     }
+    console.log('[propose_payment_methods] validated output to UI', output)
+    return output
   },
 }
 
