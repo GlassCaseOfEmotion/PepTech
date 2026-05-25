@@ -54,6 +54,17 @@ export function dbProductToDisplay(
   batches: DbBatch[],
   media: ProductMediaItem[] = [],
 ): CatalogProduct {
+  // `products.resources` is JSONB and is now written in two different shapes:
+  //   - legacy/manual:  { label, url }[]            (marketing links for the product)
+  //   - catalog ingest: { provenance: {...} }       (extraction audit metadata)
+  // The display layer only knows about the legacy shape — coerce non-array
+  // values to [] so the product detail page doesn't crash on imported
+  // products. The provenance data stays untouched in the DB; we'll surface
+  // it separately when we want to.
+  const rawResources = product.resources as unknown
+  const resources = Array.isArray(rawResources)
+    ? rawResources as { label: string; url: string }[]
+    : []
   return {
     id: product.id,
     sku: product.sku,
@@ -63,7 +74,7 @@ export function dbProductToDisplay(
     costPrice: product.cost_price ?? null,
     description: product.description,
     isActive: product.is_active,
-    resources: product.resources,
+    resources,
     media,
     batches,
     totalStock: batches.reduce((sum, b) => sum + b.stock, 0),
