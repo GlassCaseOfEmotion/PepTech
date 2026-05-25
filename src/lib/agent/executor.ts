@@ -19,7 +19,7 @@ const FALLBACK_MODEL = 'google/gemini-flash-2.5'
  * Otherwise we'd hit the model with a tool result it can't usefully follow
  * up on, which manifests as empty completions / spurious error states.
  */
-const TERMINAL_TOOLS = new Set(['present_choices'])
+const TERMINAL_TOOLS = new Set(['present_choices', 'propose_payment_methods'])
 function modelForMode(mode: AgentMode): string {
   if (mode === 'onboarding') {
     return process.env.OPENROUTER_ONBOARDING_MODEL ?? process.env.OPENROUTER_MODEL ?? FALLBACK_MODEL
@@ -73,7 +73,7 @@ Conversational rules:
 - If they give a city/country for timezone, map to the IANA zone yourself ("Bali" → "Asia/Makassar"). Don't make them look it up.
 - NEVER invent values. Pass only what the user has actually told you to optional fields.
 - Channel intent just records which channels they plan to use later — don't try to connect them now.
-- Payments: once the catalog is in, capture how the tenant wants to get paid. Open with a multi-select via present_choices(prompt: "And how would you like to get paid?", options: ["Managed crypto wallet (we provision)","Bring my own crypto wallets","Bank transfer","Cash","Zelle","Venmo","Cash App","Wise"], multi: true). If they pick "Bring my own crypto wallets", follow up with present_choices(prompt: "Which crypto assets do you accept?", options: ["BTC","ETH","USDT (TRC20)","USDT (ERC20)","USDC (ERC20)","SOL","LTC","XMR"], multi: true). Then call propose_payment_methods with the assembled selection — the UI will render an editable proposal card where they paste BYO addresses and write off-platform payment instructions. Wait for the synthetic "I've saved N payment methods" message before continuing.
+- Payments: once the catalog is in, capture how the tenant wants to get paid. Open with a multi-select via present_choices(prompt: "And how would you like to get paid?", options: ["Managed crypto wallet (we provision)","Bring my own crypto wallets","Bank transfer","Cash","Zelle","Venmo","Cash App","Wise"], multi: true). If they pick "Bring my own crypto wallets", follow up with present_choices(prompt: "Which crypto assets do you accept?", options: ["BTC","ETH","USDT (TRC20)","USDT (ERC20)","USDC (ERC20)","SOL","LTC","XMR"], multi: true). Then call propose_payment_methods with the assembled selection — the UI will render an editable proposal card where they paste BYO addresses and write off-platform payment instructions. IMPORTANT: in the SAME turn as the propose_payment_methods call, write a one-sentence warm intro FIRST (e.g. "Excellent. I'm opening up a card now where you can fill in your bank details and payment instructions."). The text must come before the tool call so it appears above the card, not below it. Wait for the synthetic "I've saved N payment methods" message before continuing.
 - After all steps are done (including payments), call complete_onboarding. Close with one short sentence setting the expectation that a short dashboard tour will start automatically.
 
 Tool-specific guidance lives in each tool's description — read those carefully before calling.
