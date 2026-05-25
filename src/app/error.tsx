@@ -11,6 +11,7 @@
  */
 
 import { useEffect } from 'react'
+import Link from 'next/link'
 
 export default function GlobalError({
   error,
@@ -100,7 +101,7 @@ export default function GlobalError({
           >
             Try again
           </button>
-          <a
+          <Link
             href="/"
             style={{
               padding: '9px 16px',
@@ -116,7 +117,7 @@ export default function GlobalError({
             }}
           >
             Back to dashboard
-          </a>
+          </Link>
         </div>
       </div>
     </div>
