@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
 import { TOOL_MAP, toolsForMode, openAiToolsForMode, type AgentMode } from './tools/index'
+import { fetchOnboardingStateSnapshot, type OnboardingStateSnapshot } from './tools/onboarding'
 import type { AgentSupabase, SseEvent, ToolCall, AgentMessage } from './types'
 
 /**
@@ -51,12 +52,29 @@ Apply these links consistently — in tables, lists, and prose. Never show a bar
 ${dateLine()}`
 }
 
-function buildOnboardingSystem() {
+function renderStateBlock(state: OnboardingStateSnapshot): string {
+  return [
+    '<current_onboarding_state>',
+    `display_name:      ${state.display_name ?? '(not set)'}`,
+    `timezone:          ${state.timezone ?? '(not set)'}  (asked: ${state.steps.timezone_asked})`,
+    `business_type:     ${state.business_type ?? '(not set)'}`,
+    `base_currency:     ${state.base_currency ?? '(not set)'}  (asked: ${state.steps.currency_asked})`,
+    `intended_channels: ${state.intended_channels.length ? state.intended_channels.join(', ') : '(none)'}`,
+    `product_count:     ${state.product_count}`,
+    `business_name:     ${state.business_name ?? '(not set)'}`,
+    `steps_done:        ${Object.entries(state.steps).filter(([, v]) => v).map(([k]) => k).join(', ') || '(none)'}`,
+    `complete:          ${state.complete}`,
+    '</current_onboarding_state>',
+  ].join('\n')
+}
+
+function buildOnboardingSystem(state?: OnboardingStateSnapshot) {
+  const stateBlock = state ? `\n\n${renderStateBlock(state)}\n\nUse the state above as the source of truth for what's done. Do NOT re-ask anything already populated. Pick up at the first incomplete step.` : ''
   return `You are the Peptech onboarding assistant — a high-end hotel concierge welcoming a brand-new tenant. Warm, gracious, attentive. Use hospitable touches naturally ("Wonderful, thank you", "Lovely", "Of course", "Perfect choice", "Happy to set that up") — never robotic or saccharine, never emoji.
 
 Steps: profile (name + timezone), business_type, currency, catalog, channels, payments. They can answer in any order, but payments is the final step before completion.
 
-Always start every conversation by calling read_onboarding_state to see what's done. Never re-ask saved information. Important: timezone and currency columns have non-null defaults ("UTC" / "USD") that DO NOT mean the user has answered — only steps.timezone_asked and steps.currency_asked confirm that. If those are false, ask the question even though the column is populated.
+The current onboarding state is injected into your system prompt at the start of every turn (see <current_onboarding_state> block below). Treat it as the source of truth — never re-ask anything already populated. Important: timezone and currency columns have non-null defaults ("UTC" / "USD") that DO NOT mean the user has answered — only the (asked: true) markers confirm that. If asked is false, ask the question even though the column is populated. The read_onboarding_state tool exists for refreshing the state mid-turn after a save runs, but you do not need to call it at the start of a conversation — the state is already here.
 
 Conversational rules:
 - When you don't yet have a name on file (steps.profile is false), ask open-endedly — "How should I address you?" or "What should I call you?" — NOT "What's your first name?". Some users prefer a handle, a title (Dr. Peptide), or just initials; let them choose. Whatever they answer, pass it through to save_profile.display_name verbatim.
@@ -81,8 +99,21 @@ Tool-specific guidance lives in each tool's description — read those carefully
 ${dateLine()}`
 }
 
-function buildSystem(mode: AgentMode) {
-  return mode === 'onboarding' ? buildOnboardingSystem() : buildOpsSystem()
+function buildSystem(mode: AgentMode, state?: OnboardingStateSnapshot) {
+  return mode === 'onboarding' ? buildOnboardingSystem(state) : buildOpsSystem()
+}
+
+async function buildSystemForTurn(
+  mode: AgentMode,
+  supabase: AgentSupabase,
+  tenantId: string,
+): Promise<string> {
+  if (mode !== 'onboarding') return buildSystem(mode)
+  const state = await fetchOnboardingStateSnapshot(supabase, tenantId).catch((e) => {
+    console.warn('[executor] failed to fetch onboarding state for system prompt', e)
+    return undefined
+  })
+  return buildSystem(mode, state)
 }
 
 function createClient() {
@@ -166,13 +197,14 @@ async function saveAssistantMessage(
 // Stream a chat completion, accumulating text and tool calls
 async function streamCompletion(
   client: OpenAI,
+  system: string,
   history: ChatCompletionMessageParam[],
   send: (e: SseEvent) => void,
   mode: AgentMode,
 ): Promise<{ text: string; toolCalls: ToolCall[] }> {
   const stream = await client.chat.completions.create({
     model: modelForMode(mode),
-    messages: [{ role: 'system', content: buildSystem(mode) }, ...history],
+    messages: [{ role: 'system', content: system }, ...history],
     tools: openAiToolsForMode(mode),
     stream: true,
   })
@@ -249,7 +281,8 @@ export async function executeAgentTurn(
     history = [{ role: 'user', content: messageForAgent }]
   }
 
-  let { text, toolCalls } = await streamCompletion(client, history, send, mode)
+  const system = await buildSystemForTurn(mode, supabase, tenantId)
+  let { text, toolCalls } = await streamCompletion(client, system, history, send, mode)
 
   // Empty response detection. A 200 OK with no text AND no tool calls almost
   // always means the model errored mid-stream — most commonly a
@@ -260,7 +293,7 @@ export async function executeAgentTurn(
   if (!text.trim() && toolCalls.length === 0) {
     const modelName = modelForMode(mode)
     console.warn('[executor] empty completion, retrying once', { sessionId, mode, model: modelName })
-    const retry = await streamCompletion(client, history, send, mode)
+    const retry = await streamCompletion(client, system, history, send, mode)
     text = retry.text
     toolCalls = retry.toolCalls
     if (!text.trim() && toolCalls.length === 0) {
@@ -359,7 +392,11 @@ async function continueTurn(
     return
   }
 
-  let { text, toolCalls } = await streamCompletion(client, history, send, mode)
+  // Re-fetch state each follow-up turn so save_* tools that just ran are
+  // reflected in the system prompt. Cheap (one query) and keeps the prompt
+  // honest as the conversation advances.
+  const system = await buildSystemForTurn(mode, supabase, tenantId)
+  let { text, toolCalls } = await streamCompletion(client, system, history, send, mode)
 
   // Empty completion mid-turn (same MALFORMED_FUNCTION_CALL failure mode as
   // executeAgentTurn — see comment there). Gemini Flash empty completions are
@@ -367,7 +404,7 @@ async function continueTurn(
   if (!text.trim() && toolCalls.length === 0) {
     const modelName = modelForMode(mode)
     console.warn('[continueTurn] empty completion, retrying once', { sessionId, mode, model: modelName, depth })
-    const retry = await streamCompletion(client, history, send, mode)
+    const retry = await streamCompletion(client, system, history, send, mode)
     text = retry.text
     toolCalls = retry.toolCalls
     if (!text.trim() && toolCalls.length === 0) {

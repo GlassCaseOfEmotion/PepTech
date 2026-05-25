@@ -41,68 +41,98 @@ async function currentUserId(supabase: AgentSupabase): Promise<string> {
   return data.user.id
 }
 
+export interface OnboardingStateSnapshot {
+  business_name: string | null
+  display_name: string | null
+  timezone: string | null
+  business_type: string | null
+  base_currency: string | null
+  intended_channels: string[]
+  product_count: number
+  steps: {
+    profile: boolean
+    business_type: boolean
+    currency: boolean
+    catalog: boolean
+    channels: boolean
+    payments: boolean
+    timezone_asked: boolean
+    currency_asked: boolean
+  }
+  complete: boolean
+}
+
+/** Fetches the canonical onboarding state for a tenant. Shared by the
+ * read_onboarding_state tool (model-callable) and the executor's
+ * per-turn system-prompt injection (deterministic, doesn't rely on the
+ * model remembering to call the tool). */
+export async function fetchOnboardingStateSnapshot(
+  supabase: AgentSupabase,
+  tenantId: string,
+): Promise<OnboardingStateSnapshot> {
+  const userId = await currentUserId(supabase)
+  const [
+    { data: tenant },
+    { data: user },
+    { count: productCount },
+    { count: paymentConfigCount },
+    { count: cryptoWalletCount },
+  ] = await Promise.all([
+    supabase.from('tenants')
+      .select('name, business_type, base_currency, timezone, intended_channels, onboarded_at')
+      .eq('id', tenantId).single(),
+    supabase.from('users').select('display_name').eq('id', userId).single(),
+    supabase.from('products').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+    supabase.from('tenant_payment_configs').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+    supabase.from('tenant_crypto_wallets').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+  ])
+
+  // Defaults present at signup that should NOT count as "answered":
+  //  - tenants.base_currency defaults to 'USD'
+  //  - tenants.timezone defaults to 'UTC'
+  //  - users.display_name is now null at signup (older tenants may have an
+  //    email-prefix value — treated as answered for them).
+  const currencyAnswered = !!tenant?.base_currency && tenant.base_currency !== 'USD'
+  const timezoneAnswered = !!tenant?.timezone && tenant.timezone !== 'UTC'
+  // Profile is one rail step covering both name AND timezone; without this
+  // bundling the agent reads steps.profile=true after just the name and
+  // skips timezone entirely. Matches the rail's deriveSteps() exactly.
+  const profileDone = !!user?.display_name && timezoneAnswered
+  const businessTypeDone = !!tenant?.business_type
+  const catalogDone = (productCount ?? 0) > 0
+  const channelsDone = (tenant?.intended_channels?.length ?? 0) > 0
+  const paymentsConfigured = (paymentConfigCount ?? 0) > 0 || (cryptoWalletCount ?? 0) > 0
+  const complete = !!tenant?.onboarded_at
+
+  return {
+    business_name: tenant?.name ?? null,
+    display_name: user?.display_name ?? null,
+    timezone: tenant?.timezone ?? null,
+    business_type: tenant?.business_type ?? null,
+    base_currency: tenant?.base_currency ?? null,
+    intended_channels: tenant?.intended_channels ?? [],
+    product_count: productCount ?? 0,
+    steps: {
+      profile: profileDone,
+      business_type: businessTypeDone,
+      currency: currencyAnswered,
+      catalog: catalogDone,
+      channels: channelsDone,
+      payments: paymentsConfigured,
+      timezone_asked: timezoneAnswered,
+      currency_asked: currencyAnswered,
+    },
+    complete,
+  }
+}
+
 export const readOnboardingState: AgentTool = {
   name: 'read_onboarding_state',
-  description: 'Read the current onboarding progress. Returns which steps are done and the values captured so far. Call this at the start of every conversation so you know what to ask next. steps.payments flips true once at least one BYO/off-platform method or a managed wallet is configured (tenant_payment_configs or tenant_crypto_wallets has a row).',
+  description: 'Refresh the onboarding state shown in your system prompt. The system prompt already includes the latest state at the start of every turn — only call this tool if you want to re-read after a save tool ran in this same turn.',
   requiresConfirmation: false,
   inputSchema: { type: 'object', properties: {} },
   async execute(_raw, supabase, tenantId) {
-    const userId = await currentUserId(supabase)
-    const [
-      { data: tenant },
-      { data: user },
-      { count: productCount },
-      { count: paymentConfigCount },
-      { count: cryptoWalletCount },
-    ] = await Promise.all([
-      supabase.from('tenants')
-        .select('name, business_type, base_currency, timezone, intended_channels, onboarded_at')
-        .eq('id', tenantId).single(),
-      supabase.from('users').select('display_name').eq('id', userId).single(),
-      supabase.from('products').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
-      supabase.from('tenant_payment_configs').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
-      supabase.from('tenant_crypto_wallets').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
-    ])
-
-    // Defaults present at signup that should NOT count as "answered":
-    //  - tenants.base_currency defaults to 'USD'
-    //  - tenants.timezone defaults to 'UTC'
-    //  - users.display_name is now null at signup (older tenants may have an
-    //    email-prefix value — treated as answered for them).
-    const currencyAnswered = !!tenant?.base_currency && tenant.base_currency !== 'USD'
-    const timezoneAnswered = !!tenant?.timezone && tenant.timezone !== 'UTC'
-    // Profile is one rail step covering both name AND timezone; without this
-    // bundling the agent reads steps.profile=true after just the name and
-    // skips timezone entirely. Matches the rail's deriveSteps() exactly.
-    const profileDone = !!user?.display_name && timezoneAnswered
-    const businessTypeDone = !!tenant?.business_type
-    const catalogDone = (productCount ?? 0) > 0
-    const channelsDone = (tenant?.intended_channels?.length ?? 0) > 0
-    const paymentsConfigured = (paymentConfigCount ?? 0) > 0 || (cryptoWalletCount ?? 0) > 0
-    const complete = !!tenant?.onboarded_at
-
-    return {
-      business_name: tenant?.name ?? null,
-      display_name: user?.display_name ?? null,
-      timezone: tenant?.timezone ?? null,
-      business_type: tenant?.business_type ?? null,
-      base_currency: tenant?.base_currency ?? null,
-      intended_channels: tenant?.intended_channels ?? [],
-      product_count: productCount ?? 0,
-      steps: {
-        profile: profileDone,
-        business_type: businessTypeDone,
-        currency: currencyAnswered,
-        catalog: catalogDone,
-        channels: channelsDone,
-        payments: paymentsConfigured,
-        // Explicit "asked" signals for fields whose columns have non-null defaults.
-        // The agent should keep asking until these flip true even if the column already has a value.
-        timezone_asked: timezoneAnswered,
-        currency_asked: currencyAnswered,
-      },
-      complete,
-    }
+    return fetchOnboardingStateSnapshot(supabase, tenantId)
   },
 }
 
