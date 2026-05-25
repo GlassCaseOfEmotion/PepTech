@@ -174,7 +174,7 @@ export default async function ChannelsPage() {
 
                     <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
                       <p style={{ fontSize: 12, color: 'var(--pt-fg-3)', margin: 0, lineHeight: 1.55 }}>
-                        Peptech connects to Telegram via a silent bot linked to your Telegram Business account. Three steps:
+                        Peptech connects to Telegram via a silent bot linked to your Telegram Business account. Four steps:
                       </p>
 
                       <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -192,6 +192,16 @@ export default async function ChannelsPage() {
                         <li style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                           <span style={stepBadgeStyle}>2</span>
                           <div style={{ flex: 1, paddingTop: 1 }}>
+                            <div style={stepTitleStyle}>Enable Business Mode on the bot</div>
+                            <div style={stepBodyStyle}>
+                              Still in BotFather: send <code style={inlineCodeStyle}>/mybots</code> → pick the bot you just made → <strong>Bot Settings → Business Mode → Enable</strong>. Without this, Telegram Business will refuse to link the bot with the error <em>&ldquo;this bot does not support Telegram Business yet&rdquo;</em>.
+                            </div>
+                          </div>
+                        </li>
+
+                        <li style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                          <span style={stepBadgeStyle}>3</span>
+                          <div style={{ flex: 1, paddingTop: 1 }}>
                             <div style={stepTitleStyle}>Paste the token below and save</div>
                             <div style={stepBodyStyle}>
                               Peptech registers the webhook with Telegram automatically — no URL to copy anywhere. The token stays server-side; we never expose it to the browser.
@@ -200,7 +210,7 @@ export default async function ChannelsPage() {
                         </li>
 
                         <li style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                          <span style={stepBadgeStyle}>3</span>
+                          <span style={stepBadgeStyle}>4</span>
                           <div style={{ flex: 1, paddingTop: 1 }}>
                             <div style={stepTitleStyle}>Link the bot to your Telegram Business account</div>
                             <div style={stepBodyStyle}>

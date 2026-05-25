@@ -117,10 +117,26 @@ export async function sendTelegramDocument(
 }
 
 export async function registerTelegramWebhook(botToken: string, webhookUrl: string): Promise<void> {
+  // Telegram excludes the business_* update types from the default webhook
+  // payload set — they MUST be listed in allowed_updates for the bot to
+  // receive connection events or business messages. Without this, even a
+  // bot with Business Mode enabled in BotFather will silently get no
+  // inbound traffic from the linked Telegram Business account.
   const res = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url: webhookUrl }),
+    body: JSON.stringify({
+      url: webhookUrl,
+      allowed_updates: [
+        'message',
+        'edited_message',
+        'callback_query',
+        'business_connection',
+        'business_message',
+        'edited_business_message',
+        'deleted_business_messages',
+      ],
+    }),
   })
   const json = await res.json() as { ok: boolean; description?: string }
   if (!json.ok) throw new Error(`setWebhook failed: ${json.description}`)
