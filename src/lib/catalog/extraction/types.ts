@@ -24,13 +24,15 @@ export interface ExtractedProduct {
    * becomes the committed value (with collision-dedup against existing
    * tenant SKUs). */
   sku: string
-  /** Verbatim string the model read from the source. Stored in provenance for audit. */
+  /** Verbatim string the model read from the source. Used for the inline
+   * "Source: <name>" tooltip in the proposal table when the user edits the
+   * name field to something different. Not persisted. */
   raw_name: string
   /** Family the model assigned, mapped to the canonical set for the tenant's
    * business_type. May be null when the model couldn't classify the row. */
   family: string | null
   /** The raw category text from the source (e.g. "RECOVERY & HEALING"). Kept
-   * for audit and UI hover-state context; family is what gets committed. */
+   * for UI hover-state context only. Not persisted. */
   raw_category: string | null
   /** Form factor: vial, pen, capsule, etc. Stored to products.presentation on commit. */
   presentation: Presentation | null
@@ -56,25 +58,6 @@ export interface ExtractionResult {
   source_file_ref: string
   source_filename: string
   model: string
-}
-
-/** Per-row provenance stored in products.resources JSON on commit. */
-export interface Provenance {
-  source: 'extraction'
-  model: string
-  extracted_at: string
-  source_file_ref: string
-  source_filename: string
-  raw_name: string
-  confidence: number
-  user_edited: boolean
-  /** The category/family text exactly as the model read it from the source,
-   * before normalisation to the canonical set. Useful audit info. */
-  raw_family: string | null
-  /** When the product matched a peptide_reference row at extraction time,
-   * this is the alias string that matched (canonical name or one of the
-   * aliases). null for unmatched rows. */
-  matched_alias: string | null
 }
 
 /** What the commit server action accepts. */

@@ -303,7 +303,7 @@ export const extractCatalog: AgentTool = {
 
     // Find the most recent attachment metadata stored on the latest user message in this session
     // so we know the filename + mime type. The file_ref alone is enough to fetch, but the
-    // model and provenance want the original filename.
+    // model wants the original filename when describing the file.
     const { data: msgs } = await supabase
       .from('agent_messages')
       .select('content')

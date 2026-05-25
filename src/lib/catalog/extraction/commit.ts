@@ -1,5 +1,5 @@
 import type { AgentSupabase } from '@/lib/agent/types'
-import type { CommitInput, Provenance } from './types'
+import type { CommitInput } from './types'
 import { reserveSku, suggestSku } from './validate'
 
 interface CommitParams {
@@ -18,20 +18,7 @@ export async function commitExtractedCatalog(params: CommitParams): Promise<{ co
   if (existErr) throw new Error(existErr.message)
   const taken = new Set((existing ?? []).map(r => r.sku))
 
-  const extractedAt = new Date().toISOString()
   const rowsWithSkus = input.rows.map(r => {
-    const provenance: Provenance = {
-      source: 'extraction',
-      model: input.model,
-      extracted_at: extractedAt,
-      source_file_ref: input.source_file_ref,
-      source_filename: input.source_filename,
-      raw_name: r.raw_name,
-      raw_family: r.raw_category,
-      confidence: r.confidence,
-      user_edited: r.user_edited,
-      matched_alias: r.reference_id ? r.reference_id : null,
-    }
     // Prefer the SKU on the row (which may have been user-edited in the
     // proposal) — fall back to suggestSku(name) if for some reason it's
     // missing. Either way, reserveSku normalises + dedupes against
@@ -51,7 +38,11 @@ export async function commitExtractedCatalog(params: CommitParams): Promise<{ co
         presentation:   r.presentation ?? null,
         unit_price:     r.unit_price,
         description:    r.description ?? null,
-        resources:      { provenance } as unknown as import('@/types/database').Json,
+        // resources is for product marketing links (legacy shape:
+        // { label, url }[]). We don't write any on import — the imported
+        // product starts with an empty links list and the tenant adds
+        // links later via the catalog edit form.
+        resources:      [] as unknown as import('@/types/database').Json,
       },
     }
   })

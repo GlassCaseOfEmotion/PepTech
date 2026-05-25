@@ -22,7 +22,7 @@ function row(over: Partial<ExtractedProduct & { user_edited: boolean }> = {}): E
 }
 
 describe('commitExtractedCatalog', () => {
-  it('inserts products with presentation, provenance, and per-row stock', async () => {
+  it('inserts products with presentation, empty resources, and per-row stock', async () => {
     const captured: { table: string; rows: unknown[] }[] = []
     const fakeSupabase = {
       from(table: string) {
@@ -57,15 +57,16 @@ describe('commitExtractedCatalog', () => {
     const productsCall = captured.find(c => c.table === 'products')!
     const product = productsCall.rows[0] as {
       sku: string; tenant_id: string; product_family: string; presentation: string | null;
-      resources: { provenance: { source: string; user_edited: boolean; raw_family: string | null } };
+      resources: unknown;
     }
     expect(product.sku).toBe('BPC-157')
     expect(product.tenant_id).toBe('tenant-1')
     expect(product.product_family).toBe('HEALING')
     expect(product.presentation).toBe('vial')
-    expect(product.resources.provenance.source).toBe('extraction')
-    expect(product.resources.provenance.raw_family).toBe('RECOVERY')
-    expect(product.resources.provenance.user_edited).toBe(false)
+    // resources starts empty — it's the marketing-links column, populated
+    // later via the catalog edit form. We don't persist any extraction audit
+    // data; the tenant just gets a clean product.
+    expect(product.resources).toEqual([])
 
     const batchesCall = captured.find(c => c.table === 'batches')!
     expect(batchesCall.rows).toHaveLength(1)

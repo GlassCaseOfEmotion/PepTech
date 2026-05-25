@@ -54,13 +54,11 @@ export function dbProductToDisplay(
   batches: DbBatch[],
   media: ProductMediaItem[] = [],
 ): CatalogProduct {
-  // `products.resources` is JSONB and is now written in two different shapes:
-  //   - legacy/manual:  { label, url }[]            (marketing links for the product)
-  //   - catalog ingest: { provenance: {...} }       (extraction audit metadata)
-  // The display layer only knows about the legacy shape — coerce non-array
-  // values to [] so the product detail page doesn't crash on imported
-  // products. The provenance data stays untouched in the DB; we'll surface
-  // it separately when we want to.
+  // `products.resources` is JSONB and is intended to hold a list of marketing
+  // links: { label, url }[]. Older imported products (committed before we
+  // stopped persisting extraction audit metadata) may have a non-array shape
+  // in this column — defensively coerce anything non-array to [] so those
+  // rows render cleanly.
   const rawResources = product.resources as unknown
   const resources = Array.isArray(rawResources)
     ? rawResources as { label: string; url: string }[]
