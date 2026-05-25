@@ -248,22 +248,28 @@ export async function executeAgentTurn(
     history = [{ role: 'user', content: messageForAgent }]
   }
 
-  const { text, toolCalls } = await streamCompletion(client, history, send, mode)
+  let { text, toolCalls } = await streamCompletion(client, history, send, mode)
 
   // Empty response detection. A 200 OK with no text AND no tool calls almost
   // always means the model errored mid-stream — most commonly a
   // MALFORMED_FUNCTION_CALL from a model that can't reliably handle this
   // schema (Gemini Flash Lite is the usual suspect; bigger Flash and
-  // Claude variants don't have this problem). Without this guard, the
-  // SSE stream closes silently and the UI looks frozen.
+  // Claude variants don't have this problem). Retry once before erroring —
+  // these failures are often transient.
   if (!text.trim() && toolCalls.length === 0) {
     const modelName = modelForMode(mode)
-    console.error('[executor] model returned empty completion', { sessionId, mode, model: modelName })
-    send({
-      type: 'error',
-      message: `The model (${modelName}) returned an empty response. This usually means it failed to format a tool call — try a different model via the OPENROUTER_${mode === 'onboarding' ? 'ONBOARDING_' : ''}MODEL env var (recommended: google/gemini-2.5-flash or anthropic/claude-haiku-4.5).`,
-    })
-    return
+    console.warn('[executor] empty completion, retrying once', { sessionId, mode, model: modelName })
+    const retry = await streamCompletion(client, history, send, mode)
+    text = retry.text
+    toolCalls = retry.toolCalls
+    if (!text.trim() && toolCalls.length === 0) {
+      console.error('[executor] model returned empty completion (after retry)', { sessionId, mode, model: modelName })
+      send({
+        type: 'error',
+        message: `The model (${modelName}) returned an empty response twice in a row. This usually means it failed to format a tool call — try a different model via the OPENROUTER_${mode === 'onboarding' ? 'ONBOARDING_' : ''}MODEL env var (recommended: anthropic/claude-haiku-4.5 for reliable tool calls).`,
+      })
+      return
+    }
   }
 
   // Restrict tool calls to those available in this mode (defensive — model shouldn't call others)
@@ -352,18 +358,25 @@ async function continueTurn(
     return
   }
 
-  const { text, toolCalls } = await streamCompletion(client, history, send, mode)
+  let { text, toolCalls } = await streamCompletion(client, history, send, mode)
 
   // Empty completion mid-turn (same MALFORMED_FUNCTION_CALL failure mode as
-  // executeAgentTurn — see comment there).
+  // executeAgentTurn — see comment there). Gemini Flash empty completions are
+  // often transient — retry once before surfacing the error to the user.
   if (!text.trim() && toolCalls.length === 0) {
     const modelName = modelForMode(mode)
-    console.error('[continueTurn] model returned empty completion', { sessionId, mode, model: modelName, depth })
-    send({
-      type: 'error',
-      message: `The model (${modelName}) returned an empty follow-up. This usually means a malformed tool call — try a different model via the OPENROUTER_${mode === 'onboarding' ? 'ONBOARDING_' : ''}MODEL env var (recommended: google/gemini-2.5-flash or anthropic/claude-haiku-4.5).`,
-    })
-    return
+    console.warn('[continueTurn] empty completion, retrying once', { sessionId, mode, model: modelName, depth })
+    const retry = await streamCompletion(client, history, send, mode)
+    text = retry.text
+    toolCalls = retry.toolCalls
+    if (!text.trim() && toolCalls.length === 0) {
+      console.error('[continueTurn] model returned empty completion (after retry)', { sessionId, mode, model: modelName, depth })
+      send({
+        type: 'error',
+        message: `The model (${modelName}) returned an empty follow-up twice in a row. This usually means a malformed tool call — try a different model via the OPENROUTER_${mode === 'onboarding' ? 'ONBOARDING_' : ''}MODEL env var (recommended: anthropic/claude-haiku-4.5 for reliable tool calls).`,
+      })
+      return
+    }
   }
 
   // If the model produced text only, we're done with this turn.
