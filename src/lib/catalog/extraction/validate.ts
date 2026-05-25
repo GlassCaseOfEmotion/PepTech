@@ -177,6 +177,10 @@ export function validateAndNormalise(raw: RawResult, ctx: NormaliseCtx): Extract
     throw new Error('Extraction response: products is not an array')
   }
   const products: ExtractedProduct[] = []
+  // Track SKUs we've already assigned in this extraction so duplicates from
+  // the model (or heuristic — blends often collapse to the same compound +
+  // dose as the standalone) get -2/-3 suffixes before they ever reach the UI.
+  const seenSkus = new Set<string>()
   for (const r of raw.products as RawProduct[]) {
     const price = num(r.unit_price)
     if (price === null || price <= 0) continue
@@ -186,9 +190,12 @@ export function validateAndNormalise(raw: RawResult, ctx: NormaliseCtx): Extract
     // back to the heuristic otherwise. The model has been shown the
     // convention in the prompt, including the "always include the dose"
     // rule — but if it returns nothing, garbage, or a duplicated value we
-    // still want a sensible default.
+    // still want a sensible default. reserveSku also handles cross-row
+    // collisions (BPC-157 5mg standalone vs BPC-157/TB-500 blend 5mg both
+    // collapsing to BPC157-5).
     const modelSku = typeof r.sku === 'string' ? normaliseSku(r.sku) : ''
-    const finalSku = modelSku && looksLikeSku(modelSku) ? modelSku : suggestSku(name)
+    const candidate = modelSku && looksLikeSku(modelSku) ? modelSku : suggestSku(name)
+    const finalSku = reserveSku(candidate, seenSkus, name)
 
     products.push({
       name,

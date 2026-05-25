@@ -667,7 +667,7 @@ export function OnboardingAgent({
         <div
           className="ob-step"
           style={{
-            maxWidth: 720, width: '100%',
+            maxWidth: 960, width: '100%',
             margin: '0 auto',
             display: 'flex', flexDirection: 'column',
             flex: 1, minHeight: 0,

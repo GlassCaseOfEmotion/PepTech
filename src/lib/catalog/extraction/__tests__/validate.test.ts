@@ -82,6 +82,35 @@ describe('validateAndNormalise - SKU sourcing', () => {
     }, baseCtx)
     expect(out.products[0].sku).toBe('SEMA-10')
   })
+
+  it('dedupes when the model returns the same SKU on two different products', () => {
+    // Real-world failure mode: the model gave "BPC157-5" to both a BPC-157
+    // standalone and a BPC-157/TB-500 blend at 5mg+5mg. Validator must
+    // disambiguate before the proposal UI sees them.
+    const out = validateAndNormalise({
+      detected_currency: null,
+      products: [
+        { name: 'BPC-157 5mg',                     sku: 'BPC157-5', raw_name: 'a', raw_category: null, family: 'HEALING', presentation: 'vial', unit_price: 900000,  confidence: 1 },
+        { name: 'BPC-157/TB-500 Blend 5mg+5mg',    sku: 'BPC157-5', raw_name: 'b', raw_category: null, family: 'HEALING', presentation: 'vial', unit_price: 1700000, confidence: 1 },
+      ],
+      tenant_notes: [],
+    }, baseCtx)
+    expect(out.products[0].sku).toBe('BPC157-5')
+    expect(out.products[1].sku).toBe('BPC157-5-2')
+  })
+
+  it('dedupes when both the model and heuristic collide on the same SKU', () => {
+    const out = validateAndNormalise({
+      detected_currency: null,
+      products: [
+        { name: 'Tirzepatide 10mg',     sku: 'TIRZ-10', raw_name: 'a', raw_category: null, family: 'GLP-1', presentation: 'vial', unit_price: 1, confidence: 1 },
+        { name: 'Tirzepatide Pen 10mg', sku: 'TIRZ-10', raw_name: 'b', raw_category: null, family: 'GLP-1', presentation: 'pen',  unit_price: 2, confidence: 1 },
+      ],
+      tenant_notes: [],
+    }, baseCtx)
+    expect(out.products[0].sku).toBe('TIRZ-10')
+    expect(out.products[1].sku).toBe('TIRZ-10-2')
+  })
 })
 
 describe('reserveSku', () => {
