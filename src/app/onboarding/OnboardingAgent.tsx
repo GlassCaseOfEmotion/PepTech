@@ -29,6 +29,10 @@ interface OnboardingState {
   currency_asked: boolean
   intended_channels: string[]
   product_count: number
+  /** True once at least one tenant_payment_configs row or a managed
+   * tenant_crypto_wallets row exists for the tenant. Mirrors steps.payments
+   * from read_onboarding_state. */
+  payments_configured: boolean
   complete: boolean
 }
 
@@ -40,7 +44,7 @@ interface DisplayMsg {
   toolCalls?: ToolCall[]
 }
 
-const STEP_LABELS = ['Profile', 'Business', 'Currency', 'Catalog', 'Channels']
+const STEP_LABELS = ['Profile', 'Business', 'Currency', 'Catalog', 'Channels', 'Payments']
 
 // Tools whose state changes silently — never render a tool card for these
 const SILENT_TOOLS = new Set(['read_onboarding_state'])
@@ -77,6 +81,7 @@ function deriveSteps(state: OnboardingState) {
     currency:      !!state.currency_asked,
     catalog:       (state.product_count ?? 0) > 0,
     channels:      (state.intended_channels?.length ?? 0) > 0,
+    payments:      !!state.payments_configured,
   }
 }
 
@@ -170,15 +175,16 @@ function applyToolOutputsToState(
         const pc = out.product_count
         const steps = (out.steps as Record<string, unknown> | undefined) ?? {}
         next = {
-          display_name:      typeof dn === 'string' ? dn : null,
-          timezone:          typeof tz === 'string' ? tz : null,
-          timezone_asked:    prev.timezone_asked || !!steps.timezone_asked,
-          business_type:     typeof bt === 'string' ? bt : null,
-          base_currency:     typeof bc === 'string' ? bc : null,
-          currency_asked:    prev.currency_asked || !!steps.currency_asked,
-          intended_channels: Array.isArray(ic) ? (ic as string[]) : [],
-          product_count:     typeof pc === 'number' ? pc : 0,
-          complete:          !!out.complete,
+          display_name:        typeof dn === 'string' ? dn : null,
+          timezone:            typeof tz === 'string' ? tz : null,
+          timezone_asked:      prev.timezone_asked || !!steps.timezone_asked,
+          business_type:       typeof bt === 'string' ? bt : null,
+          base_currency:       typeof bc === 'string' ? bc : null,
+          currency_asked:      prev.currency_asked || !!steps.currency_asked,
+          intended_channels:   Array.isArray(ic) ? (ic as string[]) : [],
+          product_count:       typeof pc === 'number' ? pc : 0,
+          payments_configured: prev.payments_configured || !!steps.payments,
+          complete:            !!out.complete,
         }
         break
       }
@@ -538,6 +544,8 @@ export function OnboardingAgent({
       return
     }
     setProposalStatus(s => ({ ...s, [toolCallId]: 'done' }))
+    // Reflect payments state immediately so the left rail ticks "Payments" off
+    setState(prev => ({ ...prev, payments_configured: true }))
     const count = out.configs_inserted + (out.managed_wallet_ready ? 1 : 0)
     void send(`I've saved ${count} payment method${count === 1 ? '' : 's'}.`, { hideUserMessage: true })
   }, [send])

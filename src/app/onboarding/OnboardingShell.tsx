@@ -15,6 +15,7 @@ interface OnboardingState {
   currency_asked: boolean
   intended_channels: string[]
   product_count: number
+  payments_configured: boolean
   complete: boolean
 }
 
@@ -86,9 +87,10 @@ export function OnboardingShell({
     business_type:     initialBusinessType,
     base_currency:     initialCurrency,
     currency_asked:    initialCurrency !== 'USD' && !!initialCurrency,
-    intended_channels: initialChannels,
-    product_count:     productCount,
-    complete:          false,
+    intended_channels:   initialChannels,
+    product_count:       productCount,
+    payments_configured: false,
+    complete:            false,
   }
 
   return (
