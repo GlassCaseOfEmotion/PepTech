@@ -3,6 +3,8 @@ import { CATALOG_PRESETS, type BusinessType } from '@/lib/catalog-presets'
 import { extractCatalog as runExtraction } from '@/lib/catalog/extraction/extract'
 import { loadPeptideReference } from '@/lib/catalog/reference/lookup'
 import { enrichWithReference } from '@/lib/catalog/extraction/enrich'
+import { OFF_PLATFORM_METHODS } from '@/types/payments'
+import type { PaymentType } from '@/types/payments'
 
 const VALID_TYPES = new Set(['peptides', 'nootropics', 'sarms', 'general'])
 const VALID_CURRENCIES = new Set(['USD', 'EUR', 'GBP', 'AUD', 'SGD', 'IDR', 'MYR', 'THB'])
@@ -41,17 +43,25 @@ async function currentUserId(supabase: AgentSupabase): Promise<string> {
 
 export const readOnboardingState: AgentTool = {
   name: 'read_onboarding_state',
-  description: 'Read the current onboarding progress. Returns which steps are done and the values captured so far. Call this at the start of every conversation so you know what to ask next.',
+  description: 'Read the current onboarding progress. Returns which steps are done and the values captured so far. Call this at the start of every conversation so you know what to ask next. steps.payments flips true once at least one BYO/off-platform method or a managed wallet is configured (tenant_payment_configs or tenant_crypto_wallets has a row).',
   requiresConfirmation: false,
   inputSchema: { type: 'object', properties: {} },
   async execute(_raw, supabase, tenantId) {
     const userId = await currentUserId(supabase)
-    const [{ data: tenant }, { data: user }, { count: productCount }] = await Promise.all([
+    const [
+      { data: tenant },
+      { data: user },
+      { count: productCount },
+      { count: paymentConfigCount },
+      { count: cryptoWalletCount },
+    ] = await Promise.all([
       supabase.from('tenants')
         .select('name, business_type, base_currency, timezone, intended_channels, onboarded_at')
         .eq('id', tenantId).single(),
       supabase.from('users').select('display_name').eq('id', userId).single(),
       supabase.from('products').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+      supabase.from('tenant_payment_configs').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+      supabase.from('tenant_crypto_wallets').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
     ])
 
     // Defaults present at signup that should NOT count as "answered":
@@ -65,6 +75,7 @@ export const readOnboardingState: AgentTool = {
     const timezoneAnswered = !!tenant?.timezone && tenant.timezone !== 'UTC'
     const catalogDone = (productCount ?? 0) > 0
     const channelsDone = (tenant?.intended_channels?.length ?? 0) > 0
+    const paymentsConfigured = (paymentConfigCount ?? 0) > 0 || (cryptoWalletCount ?? 0) > 0
     const complete = !!tenant?.onboarded_at
 
     return {
@@ -81,6 +92,7 @@ export const readOnboardingState: AgentTool = {
         currency: currencyAnswered,
         catalog: catalogDone,
         channels: channelsDone,
+        payments: paymentsConfigured,
         // Explicit "asked" signals for fields whose columns have non-null defaults.
         // The agent should keep asking until these flip true even if the column already has a value.
         timezone_asked: timezoneAnswered,
@@ -368,13 +380,20 @@ export const extractCatalog: AgentTool = {
 
 export const completeOnboarding: AgentTool = {
   name: 'complete_onboarding',
-  description: 'Mark onboarding as complete and send the user to their dashboard. Only call when profile, business_type, currency, and channels are all set. Catalog is optional (user can add products later).',
+  description: 'Mark onboarding as complete and send the user to their dashboard. Only call when profile, business_type, currency, channels, and payments are all set. Catalog is optional (user can add products later). Refuses to run until at least one payment method has been saved.',
   requiresConfirmation: true,
   inputSchema: { type: 'object', properties: {} },
   summarise() {
     return 'Finish onboarding and go to dashboard'
   },
   async execute(_raw, supabase, tenantId) {
+    const [{ count: paymentConfigCount }, { count: cryptoWalletCount }] = await Promise.all([
+      supabase.from('tenant_payment_configs').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+      supabase.from('tenant_crypto_wallets').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+    ])
+    if ((paymentConfigCount ?? 0) === 0 && (cryptoWalletCount ?? 0) === 0) {
+      throw new Error('Cannot complete onboarding yet: no payment methods configured. Call propose_payment_methods first.')
+    }
     const { error } = await supabase.from('tenants').update({ onboarded_at: new Date().toISOString() }).eq('id', tenantId)
     if (error) throw new Error(error.message)
     return { complete: true }
@@ -420,6 +439,62 @@ export const presentChoices: AgentTool = {
   },
 }
 
+const CRYPTO_TYPES = ['btc', 'eth', 'usdt_trc20', 'usdt_erc20', 'usdc_erc20', 'sol', 'ltc', 'xmr'] as const
+
+export const proposePaymentMethods: AgentTool = {
+  name: 'propose_payment_methods',
+  description: [
+    'Open the payment-methods proposal card after the user has chosen what they want to support. The card lets them paste BYO crypto addresses, write off-platform payment instructions, and confirm managed-wallet provisioning. The tenant edits and submits — on submit we provision Privy (if managed_crypto) and write tenant_payment_configs rows.',
+    '',
+    "When to call: after asking via present_choices \"Which payment methods would you like to support?\" (multi-select with at least these options: ['Managed crypto wallet (we provision)','Bring my own crypto wallets','Bank transfer','Cash','Zelle','Venmo','Cash App','Wise']).",
+    '',
+    'How to map user selection to args:',
+    "  - 'Managed crypto wallet (we provision)' → managed_crypto: true",
+    "  - 'Bring my own crypto wallets' → ask a follow-up present_choices multi-select for which assets, options: ['BTC','ETH','USDT (TRC20)','USDT (ERC20)','USDC (ERC20)','SOL','LTC','XMR'] → map to ['btc','eth','usdt_trc20','usdt_erc20','usdc_erc20','sol','ltc','xmr']",
+    "  - 'Bank transfer' → off_platform_methods includes 'bank_transfer'",
+    "  - 'Cash' → 'cash'; 'Zelle' → 'zelle'; 'Venmo' → 'venmo'; 'Cash App' → 'cashapp'; 'Wise' → 'wise'",
+    '',
+    'Wait for the synthetic "I\'ve saved N payment methods" message before continuing to complete_onboarding.',
+  ].join('\n'),
+  requiresConfirmation: false,
+  inputSchema: {
+    type: 'object',
+    required: ['managed_crypto', 'byo_crypto_assets', 'off_platform_methods'],
+    properties: {
+      managed_crypto: {
+        type: 'boolean',
+        description: 'true if the tenant wants Peptech to provision a Solana wallet that auto-converts inbound USDT/BTC/ETH/etc. to USDC (Privy + NowPayments).',
+      },
+      byo_crypto_assets: {
+        type: 'array',
+        items: { type: 'string', enum: ['btc', 'eth', 'usdt_trc20', 'usdt_erc20', 'usdc_erc20', 'sol', 'ltc', 'xmr'] },
+        description: 'Crypto assets the tenant will accept with their own wallet. Each becomes an editable row in the proposal card where they paste their address.',
+      },
+      off_platform_methods: {
+        type: 'array',
+        items: { type: 'string', enum: ['bank_transfer', 'cash', 'zelle', 'venmo', 'cashapp', 'wise'] },
+        description: 'Off-platform methods (bank, cash, Zelle, Venmo, Cash App, Wise). Each becomes a textarea where the tenant writes payment instructions.',
+      },
+    },
+  },
+  async execute(raw) {
+    // No-op server side — output consumed by the UI to render PaymentMethodsProposalCard.
+    // Validate and echo a clean payload.
+    const input = raw as {
+      managed_crypto?: boolean
+      byo_crypto_assets?: string[]
+      off_platform_methods?: string[]
+    }
+    const off = (input.off_platform_methods ?? []).filter(t => OFF_PLATFORM_METHODS.includes(t as PaymentType))
+    const byo = (input.byo_crypto_assets ?? []).filter(t => (CRYPTO_TYPES as readonly string[]).includes(t))
+    return {
+      managed_crypto: !!input.managed_crypto,
+      byo_crypto_assets: byo,
+      off_platform_methods: off,
+    }
+  },
+}
+
 export const ONBOARDING_TOOLS: AgentTool[] = [
   readOnboardingState,
   presentChoices,
@@ -429,5 +504,6 @@ export const ONBOARDING_TOOLS: AgentTool[] = [
   saveChannelIntent,
   seedCatalogPreset,
   extractCatalog,
+  proposePaymentMethods,
   completeOnboarding,
 ]
