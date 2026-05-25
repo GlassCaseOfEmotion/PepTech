@@ -21,20 +21,37 @@ export async function upsertPaymentConfig(data: {
   accountNumber?: string
   sortCode?: string
   iban?: string
+  instructions?: string
 }): Promise<{ success: true } | { error: string }> {
   try {
     const { supabase, tenantId } = await getTenantId()
-    const { error } = await supabase.from('tenant_payment_configs').upsert({
+    // Read the existing row so we don't accidentally null out fields the
+    // current caller didn't provide. Onboarding writes only `instructions`;
+    // the structured fields on a bank_transfer should survive a later edit
+    // that only touches instructions, and vice versa.
+    const { data: existing } = await supabase
+      .from('tenant_payment_configs')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('type', data.type)
+      .maybeSingle()
+
+    const row = {
       tenant_id: tenantId,
       type: data.type,
-      wallet_address: data.walletAddress ?? null,
-      bank_name: data.bankName ?? null,
-      account_name: data.accountName ?? null,
-      account_number: data.accountNumber ?? null,
-      sort_code: data.sortCode ?? null,
-      iban: data.iban ?? null,
+      wallet_address: data.walletAddress ?? existing?.wallet_address ?? null,
+      bank_name:      data.bankName      ?? existing?.bank_name      ?? null,
+      account_name:   data.accountName   ?? existing?.account_name   ?? null,
+      account_number: data.accountNumber ?? existing?.account_number ?? null,
+      sort_code:      data.sortCode      ?? existing?.sort_code      ?? null,
+      iban:           data.iban          ?? existing?.iban           ?? null,
+      instructions:   data.instructions  ?? existing?.instructions   ?? null,
       is_active: true,
-    }, { onConflict: 'tenant_id,type' })
+    }
+
+    const { error } = await supabase
+      .from('tenant_payment_configs')
+      .upsert(row, { onConflict: 'tenant_id,type' })
     if (error) return { error: error.message }
     revalidatePath('/settings/wallets')
     return { success: true }
