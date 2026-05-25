@@ -9,6 +9,10 @@ export type PaymentType =
   | 'sol'
   | 'bank_transfer'
   | 'cash'
+  | 'zelle'
+  | 'venmo'
+  | 'cashapp'
+  | 'wise'
 
 export const PAYMENT_LABELS: Record<PaymentType, string> = {
   usdt_trc20:       'USDT (TRC20)',
@@ -21,6 +25,10 @@ export const PAYMENT_LABELS: Record<PaymentType, string> = {
   sol:              'SOL',
   bank_transfer:    'Bank Transfer',
   cash:             'Cash',
+  zelle:            'Zelle',
+  venmo:            'Venmo',
+  cashapp:          'Cash App',
+  wise:             'Wise',
 }
 
 // Short label + CSS data-asset key for coloured badges
@@ -33,8 +41,12 @@ export const PAYMENT_BADGE: Record<string, { label: string; key: string }> = {
   ltc:              { label: 'LTC',   key: 'ltc'   },
   xmr:              { label: 'XMR',   key: 'xmr'   },
   sol:              { label: 'SOL',   key: 'sol'   },
-  bank_transfer:    { label: 'Bank',  key: 'bank'  },
-  cash:             { label: 'Cash',  key: 'cash'  },
+  bank_transfer:    { label: 'Bank',  key: 'bank'     },
+  cash:             { label: 'Cash',  key: 'cash'     },
+  zelle:            { label: 'Zelle', key: 'zelle'    },
+  venmo:            { label: 'Venmo', key: 'venmo'    },
+  cashapp:          { label: 'Cash App', key: 'cashapp' },
+  wise:             { label: 'Wise',  key: 'wise'     },
   // legacy casing
   USDT:  { label: 'USDT',  key: 'usdt'  },
   BTC:   { label: 'BTC',   key: 'btc'   },
@@ -45,6 +57,11 @@ export const PAYMENT_BADGE: Record<string, { label: string; key: string }> = {
 // Ordered list shown in dropdowns and config UI (excludes cash)
 export const PAYMENT_METHODS: PaymentType[] = [
   'usdt_trc20', 'usdt_erc20', 'btc', 'eth', 'usdc_erc20', 'ltc', 'xmr', 'sol', 'bank_transfer',
+]
+
+// Off-platform payment methods (no crypto wallet link generated)
+export const OFF_PLATFORM_METHODS: PaymentType[] = [
+  'bank_transfer', 'cash', 'zelle', 'venmo', 'cashapp', 'wise',
 ]
 
 export interface TenantPaymentConfig {
@@ -59,4 +76,5 @@ export interface TenantPaymentConfig {
   iban: string | null
   is_active: boolean
   created_at: string
+  instructions: string | null
 }

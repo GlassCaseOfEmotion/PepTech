@@ -7,13 +7,13 @@ const configs: TenantPaymentConfig[] = [
     id: '1', tenant_id: 't1', type: 'usdt_trc20',
     wallet_address: 'TXxx', bank_name: null, account_name: null,
     account_number: null, sort_code: null, iban: null,
-    is_active: true, created_at: '2026-01-01',
+    is_active: true, created_at: '2026-01-01', instructions: null,
   },
   {
     id: '2', tenant_id: 't1', type: 'bank_transfer',
     wallet_address: null, bank_name: 'HSBC', account_name: 'Acme Ltd',
     account_number: '12345678', sort_code: '01-02-03', iban: null,
-    is_active: true, created_at: '2026-01-01',
+    is_active: true, created_at: '2026-01-01', instructions: null,
   },
 ]
 
@@ -71,7 +71,7 @@ describe('buildPaymentMessage', () => {
     const cfg: TenantPaymentConfig = {
       id: '1', tenant_id: 't1', type: 'bank_transfer', is_active: true,
       wallet_address: null, bank_name: 'HSBC', account_name: 'Peptech Ltd',
-      account_number: '12345678', sort_code: '40-20-30', iban: null, created_at: '',
+      account_number: '12345678', sort_code: '40-20-30', iban: null, created_at: '', instructions: null,
     }
     const result = buildPaymentMessage(
       { ref_number: 'A-4', payment_amount: 200, payment_asset: 'bank_transfer', payment_address: null },

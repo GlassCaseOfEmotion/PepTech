@@ -1208,6 +1208,63 @@ export type Database = {
           },
         ]
       }
+      peptide_reference: {
+        Row: {
+          aliases: Json
+          canonical_name: string
+          created_at: string
+          cycle_length_weeks: number | null
+          description: string
+          dose_display: string | null
+          draw_volume_ml: number | null
+          family: string
+          frequency: string | null
+          id: string
+          notes: string | null
+          reconstitution_ml: number | null
+          source: string
+          timing: string | null
+          updated_at: string
+          vial_strength: string | null
+        }
+        Insert: {
+          aliases?: Json
+          canonical_name: string
+          created_at?: string
+          cycle_length_weeks?: number | null
+          description: string
+          dose_display?: string | null
+          draw_volume_ml?: number | null
+          family: string
+          frequency?: string | null
+          id?: string
+          notes?: string | null
+          reconstitution_ml?: number | null
+          source?: string
+          timing?: string | null
+          updated_at?: string
+          vial_strength?: string | null
+        }
+        Update: {
+          aliases?: Json
+          canonical_name?: string
+          created_at?: string
+          cycle_length_weeks?: number | null
+          description?: string
+          dose_display?: string | null
+          draw_volume_ml?: number | null
+          family?: string
+          frequency?: string | null
+          id?: string
+          notes?: string | null
+          reconstitution_ml?: number | null
+          source?: string
+          timing?: string | null
+          updated_at?: string
+          vial_strength?: string | null
+        }
+        Relationships: []
+      }
       platform_admins: {
         Row: {
           created_at: string
@@ -1291,63 +1348,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      peptide_reference: {
-        Row: {
-          aliases: Json
-          canonical_name: string
-          created_at: string
-          cycle_length_weeks: number | null
-          description: string
-          dose_display: string | null
-          draw_volume_ml: number | null
-          family: string
-          frequency: string | null
-          id: string
-          notes: string | null
-          reconstitution_ml: number | null
-          source: string
-          timing: string | null
-          updated_at: string
-          vial_strength: string | null
-        }
-        Insert: {
-          aliases?: Json
-          canonical_name: string
-          created_at?: string
-          cycle_length_weeks?: number | null
-          description: string
-          dose_display?: string | null
-          draw_volume_ml?: number | null
-          family: string
-          frequency?: string | null
-          id?: string
-          notes?: string | null
-          reconstitution_ml?: number | null
-          source?: string
-          timing?: string | null
-          updated_at?: string
-          vial_strength?: string | null
-        }
-        Update: {
-          aliases?: Json
-          canonical_name?: string
-          created_at?: string
-          cycle_length_weeks?: number | null
-          description?: string
-          dose_display?: string | null
-          draw_volume_ml?: number | null
-          family?: string
-          frequency?: string | null
-          id?: string
-          notes?: string | null
-          reconstitution_ml?: number | null
-          source?: string
-          timing?: string | null
-          updated_at?: string
-          vial_strength?: string | null
-        }
-        Relationships: []
       }
       products: {
         Row: {
@@ -1588,6 +1588,7 @@ export type Database = {
           created_at: string
           iban: string | null
           id: string
+          instructions: string | null
           is_active: boolean
           sort_code: string | null
           tenant_id: string
@@ -1601,6 +1602,7 @@ export type Database = {
           created_at?: string
           iban?: string | null
           id?: string
+          instructions?: string | null
           is_active?: boolean
           sort_code?: string | null
           tenant_id: string
@@ -1614,6 +1616,7 @@ export type Database = {
           created_at?: string
           iban?: string | null
           id?: string
+          instructions?: string | null
           is_active?: boolean
           sort_code?: string | null
           tenant_id?: string
