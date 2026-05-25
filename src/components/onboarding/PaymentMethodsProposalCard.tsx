@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { PAYMENT_LABELS } from '@/types/payments'
+import { PAYMENT_LABELS, PAYMENT_BADGE } from '@/types/payments'
 import { validateAddress } from '@/lib/payments/onboarding/validate'
+import { Icons } from '@/lib/icons'
 import type { PaymentType } from '@/types/payments'
 import type { PaymentMethodsCommitInput } from '@/lib/payments/onboarding/types'
 
@@ -29,6 +30,17 @@ interface OffRow {
   instructions: string
 }
 
+// Managed wallet asset chips — shown inline in the info banner
+const MANAGED_ASSETS: Array<{ label: string; key: string }> = [
+  { label: 'USDT', key: 'usdt' },
+  { label: 'BTC',  key: 'btc'  },
+  { label: 'ETH',  key: 'eth'  },
+  { label: 'USDC', key: 'usdc' },
+  { label: 'LTC',  key: 'ltc'  },
+  { label: 'XMR',  key: 'xmr'  },
+  { label: 'SOL',  key: 'sol'  },
+]
+
 function addressPlaceholder(type: PaymentType): string {
   switch (type) {
     case 'btc':        return '1... / 3... / bc1...'
@@ -45,12 +57,12 @@ function addressPlaceholder(type: PaymentType): string {
 
 function instructionsPlaceholder(type: PaymentType): string {
   switch (type) {
-    case 'cashapp':       return 'e.g. $YourCashTag'
-    case 'venmo':         return 'e.g. @YourVenmoHandle'
-    case 'zelle':         return 'e.g. phone number or email registered with Zelle'
-    case 'bank_transfer': return 'Bank name, account name, account number, routing number or IBAN'
-    case 'cash':          return 'Instructions for paying cash (e.g. "Cash on delivery only")'
-    case 'wise':          return 'Wise email or payment link'
+    case 'cashapp':       return 'Paste your $cashtag (e.g. $alanbusiness)'
+    case 'venmo':         return 'Paste your @username (e.g. @alan-business)'
+    case 'zelle':         return 'Phone or email registered with Zelle'
+    case 'bank_transfer': return 'Bank name, account number, sort code / IBAN, account holder'
+    case 'cash':          return 'Pickup address, hours, who to ask for'
+    case 'wise':          return 'Email or Wise tag'
     default:              return 'Payment instructions'
   }
 }
@@ -131,6 +143,20 @@ export function PaymentMethodsProposalCard({ initial, onSave, status, onCancel }
     return <div className="pt-proposal pt-proposal-cancelled">Cancelled.</div>
   }
 
+  // Empty state — all rows removed
+  if (totalVisible === 0) {
+    return (
+      <div className="pt-proposal pt-proposal-payments-empty">
+        <span className="pt-proposal-payments-empty-label">All methods removed.</span>
+        {onCancel && (
+          <button className="pt-proposal-payments-reset-link" onClick={onCancel}>
+            Cancel &amp; go back
+          </button>
+        )}
+      </div>
+    )
+  }
+
   const saving = status === 'saving'
 
   return (
@@ -140,94 +166,166 @@ export function PaymentMethodsProposalCard({ initial, onSave, status, onCancel }
         <span className="pt-proposal-hint">{totalVisible} method{totalVisible === 1 ? '' : 's'} selected</span>
       </div>
 
-      {/* Managed crypto section */}
+      {/* ── Managed crypto section ── */}
       {managedKept && (
-        <div className="pt-proposal-group">
+        <div className="pt-proposal-group pt-proposal-payments-group">
           <div className="pt-proposal-group-hd">
-            <span className="pt-proposal-family-chip">Managed Crypto</span>
+            <Icons.shield size={12} style={{ color: 'var(--pt-accent-fg)', flexShrink: 0 }} />
+            <span className="pt-proposal-family-chip">Managed wallet</span>
+            <span className="pt-proposal-group-count">7 assets</span>
           </div>
-          <div style={{ padding: '10px 12px', fontSize: 12.5, color: 'var(--pt-fg-3)', background: 'var(--pt-surface)', borderRadius: 6, border: '0.5px solid var(--pt-line)', marginTop: 6 }}>
-            We&apos;ll provision a Solana wallet that auto-converts USDT, BTC, ETH, USDC, LTC, XMR, and SOL into USDC. You&apos;ll see the address right after you save.
+          <div className="pt-proposal-payments-banner">
+            <div className="pt-proposal-payments-banner-icon">
+              <Icons.vault size={13} />
+            </div>
+            <div className="pt-proposal-payments-banner-body">
+              <div className="pt-proposal-payments-banner-title">
+                We&apos;ll provision a Solana wallet for you
+              </div>
+              <div className="pt-proposal-payments-banner-sub">
+                Auto-converts incoming crypto to USDC. Address appears right after you save.
+              </div>
+              <div className="pt-proposal-payments-banner-chips">
+                {MANAGED_ASSETS.map(a => (
+                  <span
+                    key={a.key}
+                    className="pt-pay-asset pt-proposal-payments-asset-chip"
+                    data-asset={a.key}
+                  >
+                    {a.label}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* BYO crypto section */}
+      {/* ── BYO crypto section ── */}
       {byoRows.length > 0 && (
-        <div className="pt-proposal-group">
+        <div className="pt-proposal-group pt-proposal-payments-group">
           <div className="pt-proposal-group-hd">
-            <span className="pt-proposal-family-chip">Bring Your Own Wallets</span>
+            <Icons.wallet size={12} style={{ color: 'var(--pt-fg-3)', flexShrink: 0 }} />
+            <span className="pt-proposal-family-chip">Your wallets</span>
             <span className="pt-proposal-group-count">{byoRows.length} asset{byoRows.length === 1 ? '' : 's'}</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
-            {byoRows.map((row, idx) => (
-              <div key={`${row.type}-${idx}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                <div style={{ width: 110, flexShrink: 0, fontSize: 12.5, paddingTop: 7, color: 'var(--pt-fg-2)', fontWeight: 500 }}>
-                  {PAYMENT_LABELS[row.type]}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <input
-                    className="pt-input"
-                    value={row.address}
-                    placeholder={addressPlaceholder(row.type)}
-                    onChange={e => updateByoAddress(idx, e.target.value)}
-                    onBlur={() => blurByo(idx)}
-                    disabled={saving}
-                    aria-label={`${PAYMENT_LABELS[row.type]} wallet address`}
-                  />
-                  {row.touched && row.error && (
-                    <div style={{ fontSize: 11, color: 'var(--pt-err, #e05)', marginTop: 3 }}>{row.error}</div>
+          <div className="pt-proposal-payments-rows">
+            {byoRows.map((row, idx) => {
+              const badge = PAYMENT_BADGE[row.type]
+              const isValid = row.address.trim() !== '' && validateAddress(row.type, row.address).ok
+              const isError = row.touched && row.error !== null
+              return (
+                <div key={`${row.type}-${idx}`} className="pt-proposal-payments-row">
+                  <div className="pt-proposal-payments-row-label">
+                    {badge && (
+                      <span
+                        className="pt-pay-asset pt-proposal-payments-asset-chip"
+                        data-asset={badge.key}
+                      >
+                        {badge.label}
+                      </span>
+                    )}
+                    <span className="pt-proposal-payments-label-text">
+                      {PAYMENT_LABELS[row.type]}
+                    </span>
+                  </div>
+                  <div className="pt-proposal-payments-input-wrap">
+                    <input
+                      className={`pt-input pt-proposal-payments-addr${isError ? ' is-err' : ''}${isValid ? ' is-ok' : ''}`}
+                      value={row.address}
+                      placeholder={addressPlaceholder(row.type)}
+                      onChange={e => updateByoAddress(idx, e.target.value)}
+                      onBlur={() => blurByo(idx)}
+                      disabled={saving}
+                      aria-label={`${PAYMENT_LABELS[row.type]} wallet address`}
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                    {isValid && (
+                      <span className="pt-proposal-payments-field-icon pt-proposal-payments-field-ok" aria-hidden>
+                        <Icons.check size={11} />
+                      </span>
+                    )}
+                    {isError && (
+                      <span className="pt-proposal-payments-field-icon pt-proposal-payments-field-err" aria-hidden>
+                        <Icons.alert size={11} />
+                      </span>
+                    )}
+                  </div>
+                  {isError && (
+                    <div className="pt-proposal-payments-err-msg">{row.error}</div>
                   )}
+                  <button
+                    className="pt-proposal-payments-rm"
+                    onClick={() => removeByo(idx)}
+                    aria-label={`Remove ${PAYMENT_LABELS[row.type]}`}
+                    disabled={saving}
+                    tabIndex={-1}
+                  >
+                    <Icons.x size={11} />
+                  </button>
                 </div>
-                <button
-                  className="pt-btn pt-btn-ghost"
-                  style={{ height: 32, width: 32, padding: 0, flexShrink: 0, fontSize: 16 }}
-                  onClick={() => removeByo(idx)}
-                  aria-label={`Remove ${PAYMENT_LABELS[row.type]}`}
-                  disabled={saving}
-                >×</button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
 
-      {/* Off-platform section */}
+      {/* ── Off-platform section ── */}
       {offRows.length > 0 && (
-        <div className="pt-proposal-group">
+        <div className="pt-proposal-group pt-proposal-payments-group">
           <div className="pt-proposal-group-hd">
-            <span className="pt-proposal-family-chip">Off-Platform Methods</span>
+            <Icons.card size={12} style={{ color: 'var(--pt-fg-3)', flexShrink: 0 }} />
+            <span className="pt-proposal-family-chip">Other ways to be paid</span>
             <span className="pt-proposal-group-count">{offRows.length} method{offRows.length === 1 ? '' : 's'}</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
-            {offRows.map((row, idx) => (
-              <div key={`${row.type}-${idx}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                <div style={{ width: 110, flexShrink: 0, fontSize: 12.5, paddingTop: 7, color: 'var(--pt-fg-2)', fontWeight: 500 }}>
-                  {PAYMENT_LABELS[row.type]}
+          <div className="pt-proposal-payments-rows">
+            {offRows.map((row, idx) => {
+              const badge = PAYMENT_BADGE[row.type]
+              return (
+                <div key={`${row.type}-${idx}`} className="pt-proposal-payments-row pt-proposal-payments-row-off">
+                  <div className="pt-proposal-payments-row-label">
+                    {badge && (
+                      <span
+                        className="pt-pay-asset pt-proposal-payments-asset-chip"
+                        data-asset={badge.key}
+                      >
+                        {badge.label}
+                      </span>
+                    )}
+                    <span className="pt-proposal-payments-label-text">
+                      {PAYMENT_LABELS[row.type]}
+                    </span>
+                  </div>
+                  <div className="pt-proposal-payments-textarea-wrap">
+                    <textarea
+                      className="pt-input pt-proposal-payments-notes"
+                      rows={2}
+                      value={row.instructions}
+                      placeholder={instructionsPlaceholder(row.type)}
+                      onChange={e => updateOffInstructions(idx, e.target.value)}
+                      disabled={saving}
+                      aria-label={`${PAYMENT_LABELS[row.type]} instructions`}
+                    />
+                  </div>
+                  <button
+                    className="pt-proposal-payments-rm"
+                    onClick={() => removeOff(idx)}
+                    aria-label={`Remove ${PAYMENT_LABELS[row.type]}`}
+                    disabled={saving}
+                    tabIndex={-1}
+                    style={{ alignSelf: 'flex-start', marginTop: 8 }}
+                  >
+                    <Icons.x size={11} />
+                  </button>
                 </div>
-                <textarea
-                  className="pt-input"
-                  rows={2}
-                  value={row.instructions}
-                  placeholder={instructionsPlaceholder(row.type)}
-                  onChange={e => updateOffInstructions(idx, e.target.value)}
-                  disabled={saving}
-                  aria-label={`${PAYMENT_LABELS[row.type]} instructions`}
-                />
-                <button
-                  className="pt-btn pt-btn-ghost"
-                  style={{ height: 32, width: 32, padding: 0, flexShrink: 0, fontSize: 16, marginTop: 4 }}
-                  onClick={() => removeOff(idx)}
-                  aria-label={`Remove ${PAYMENT_LABELS[row.type]}`}
-                  disabled={saving}
-                >×</button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       {saving ? (
         <div className="pt-proposal-importing">
           <div className="pt-proposal-importing-row">
@@ -241,7 +339,7 @@ export function PaymentMethodsProposalCard({ initial, onSave, status, onCancel }
             <button className="pt-btn pt-btn-ghost" onClick={onCancel}>Cancel</button>
           )}
           <button
-            className="pt-btn pt-btn-primary"
+            className="pt-btn pt-btn-primary pt-proposal-payments-save"
             onClick={commit}
             disabled={saveDisabled}
           >
