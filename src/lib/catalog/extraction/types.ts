@@ -40,6 +40,12 @@ export interface ExtractedProduct {
   stock: number
   /** Model self-rated confidence 0–1. */
   confidence: number
+  /** ID of the matching peptide_reference row, or null if unmatched. */
+  reference_id: string | null
+  /** Description copied from the matching reference, or null if unmatched. */
+  description: string | null
+  /** Protocol copied from the matching reference, or null if unmatched. */
+  protocol: import('@/lib/catalog/reference/types').PeptideProtocol | null
 }
 
 /** Result of one extraction call. */
@@ -65,6 +71,10 @@ export interface Provenance {
   /** The category/family text exactly as the model read it from the source,
    * before normalisation to the canonical set. Useful audit info. */
   raw_family: string | null
+  /** When the product matched a peptide_reference row at extraction time,
+   * this is the alias string that matched (canonical name or one of the
+   * aliases). null for unmatched rows. */
+  matched_alias: string | null
 }
 
 /** What the commit server action accepts. */

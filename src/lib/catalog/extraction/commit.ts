@@ -30,6 +30,7 @@ export async function commitExtractedCatalog(params: CommitParams): Promise<{ co
       raw_family: r.raw_category,
       confidence: r.confidence,
       user_edited: r.user_edited,
+      matched_alias: r.reference_id ? r.reference_id : null,
     }
     // Prefer the SKU on the row (which may have been user-edited in the
     // proposal) — fall back to suggestSku(name) if for some reason it's
@@ -40,6 +41,8 @@ export async function commitExtractedCatalog(params: CommitParams): Promise<{ co
     return {
       sku: finalSku,
       stock: Math.max(0, Math.floor(r.stock ?? 10)),
+      protocol: r.protocol,
+      referenceId: r.reference_id,
       row: {
         tenant_id:      tenantId,
         name:           r.name,
@@ -47,7 +50,7 @@ export async function commitExtractedCatalog(params: CommitParams): Promise<{ co
         product_family: r.family ?? 'OTHER',
         presentation:   r.presentation ?? null,
         unit_price:     r.unit_price,
-        description:    null,
+        description:    r.description ?? null,
         resources:      { provenance } as unknown as import('@/types/database').Json,
       },
     }
@@ -80,6 +83,44 @@ export async function commitExtractedCatalog(params: CommitParams): Promise<{ co
         count: batchRows.length,
         sample: batchRows[0],
       })
+    }
+  }
+
+  // Create product_protocols rows for products whose extraction matched a
+  // peptide_reference with protocol data. Non-fatal but logged on error.
+  const protocolBySku = new Map(
+    rowsWithSkus
+      .filter(r => r.protocol)
+      .map(r => [r.sku, r.protocol!]),
+  )
+  if (protocolBySku.size > 0) {
+    const protocolRows = inserted
+      .map(p => {
+        const proto = protocolBySku.get(p.sku)
+        // draw_volume_ml, frequency, reconstitution_ml are required (NOT NULL) in
+        // the product_protocols table — skip if any required field is absent.
+        if (!proto || proto.draw_volume_ml == null || proto.frequency == null || proto.reconstitution_ml == null) return null
+        return {
+          tenant_id:          tenantId,
+          product_id:         p.id,
+          vial_strength:      proto.vial_strength,
+          reconstitution_ml:  proto.reconstitution_ml,
+          draw_volume_ml:     proto.draw_volume_ml,
+          frequency:          proto.frequency,
+          timing:             proto.timing,
+          cycle_length_weeks: proto.cycle_length_weeks,
+          notes:              proto.notes,
+        }
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null)
+    if (protocolRows.length > 0) {
+      const { error: protoErr } = await supabase.from('product_protocols').insert(protocolRows)
+      if (protoErr) {
+        console.error('[commitExtractedCatalog] product_protocols insert failed', {
+          message: protoErr.message,
+          count: protocolRows.length,
+        })
+      }
     }
   }
 

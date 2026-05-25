@@ -1,6 +1,8 @@
 import type { AgentTool, AgentSupabase } from '../types'
 import { CATALOG_PRESETS, type BusinessType } from '@/lib/catalog-presets'
 import { extractCatalog as runExtraction } from '@/lib/catalog/extraction/extract'
+import { loadPeptideReference } from '@/lib/catalog/reference/lookup'
+import { enrichWithReference } from '@/lib/catalog/extraction/enrich'
 
 const VALID_TYPES = new Set(['peptides', 'nootropics', 'sarms', 'general'])
 const VALID_CURRENCIES = new Set(['USD', 'EUR', 'GBP', 'AUD', 'SGD', 'IDR', 'MYR', 'THB'])
@@ -333,26 +335,34 @@ export const extractCatalog: AgentTool = {
       .from('onboarding-uploads').createSignedUrl(input.file_ref, 60 * 10)
     if (signErr || !signed?.signedUrl) throw new Error('Could not sign uploaded file URL')
 
-    const result = await runExtraction({
-      businessType:    (tenant?.business_type ?? null) as 'peptides' | 'nootropics' | 'sarms' | 'general' | null,
-      baseCurrency:    tenant?.base_currency ?? 'USD',
-      fileUrl:         signed.signedUrl,
-      mimeType:        mimeFromExt,
-      source_file_ref: input.file_ref,
-      source_filename: filename,
-    })
+    const [result, references] = await Promise.all([
+      runExtraction({
+        businessType:    (tenant?.business_type ?? null) as 'peptides' | 'nootropics' | 'sarms' | 'general' | null,
+        baseCurrency:    tenant?.base_currency ?? 'USD',
+        fileUrl:         signed.signedUrl,
+        mimeType:        mimeFromExt,
+        source_file_ref: input.file_ref,
+        source_filename: filename,
+      }),
+      loadPeptideReference(supabase).catch((e: unknown) => {
+        // Non-fatal: extraction without reference enrichment still works.
+        console.error('[extract_catalog] peptide_reference load failed', e instanceof Error ? e.message : e)
+        return []
+      }),
+    ])
+    const enriched = enrichWithReference(result, references)
 
     // Empty extraction is almost never useful — the UI would render an empty
     // proposal card. Surface a diagnostic the model can pass through to the
     // user, and let the UI fall back to the generic "tool ran" indicator.
-    if (result.products.length === 0) {
+    if (enriched.products.length === 0) {
       return {
         error: `Extracted 0 products from "${filename}". The file may be unclear, password-protected, or not a product list. The user can try a sharper image/PDF, paste the contents as text, or use seed_catalog_preset as a starter.`,
-        detected_currency: result.detected_currency,
-        tenant_notes: result.tenant_notes,
+        detected_currency: enriched.detected_currency,
+        tenant_notes: enriched.tenant_notes,
       }
     }
-    return result
+    return enriched
   },
 }
 

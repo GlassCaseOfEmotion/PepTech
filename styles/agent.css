@@ -731,6 +731,24 @@
   color: oklch(0.55 0.18 25);
   background: oklch(0.55 0.18 25 / 0.08);
 }
+.pt-proposal-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pt-proposal-match-badge {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--pt-accent-soft);
+  border: 1px solid oklch(from var(--pt-accent) l c h / 0.32);
+  color: var(--pt-accent-fg);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: help;
+}
 
 .pt-proposal-notes { margin-top: 14px; font-size: 12px; color: var(--pt-fg-3); }
 .pt-proposal-notes ul { margin: 6px 0 0; padding-left: 18px; }

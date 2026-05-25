@@ -207,6 +207,9 @@ export function validateAndNormalise(raw: RawResult, ctx: NormaliseCtx): Extract
       unit_price: price,
       stock: DEFAULT_STOCK,
       confidence: clamp01(r.confidence),
+      reference_id: null,
+      description: null,
+      protocol: null,
     })
   }
   const tenant_notes = Array.isArray(raw.tenant_notes)

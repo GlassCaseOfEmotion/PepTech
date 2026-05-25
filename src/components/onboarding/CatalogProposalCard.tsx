@@ -140,12 +140,22 @@ export function CatalogProposalCard({ initial, onImport, onCancel, status, busin
                       />
                     </td>
                     <td>
-                      <input
-                        className="pt-proposal-cell"
-                        value={r.name}
-                        onChange={e => updateRow(idx, { name: e.target.value })}
-                        title={r.raw_name !== r.name ? `Source: ${r.raw_name}` : undefined}
-                      />
+                      <div className="pt-proposal-name-cell">
+                        <input
+                          className="pt-proposal-cell"
+                          value={r.name}
+                          onChange={e => updateRow(idx, { name: e.target.value })}
+                          title={r.raw_name !== r.name ? `Source: ${r.raw_name}` : undefined}
+                        />
+                        {r.reference_id && (
+                          <span
+                            className="pt-proposal-match-badge"
+                            title="Matched against the peptide reference — description and protocol will be auto-populated."
+                          >
+                            ✓ matched
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <select
