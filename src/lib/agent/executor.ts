@@ -201,7 +201,7 @@ async function streamCompletion(
   history: ChatCompletionMessageParam[],
   send: (e: SseEvent) => void,
   mode: AgentMode,
-): Promise<{ text: string; toolCalls: ToolCall[] }> {
+): Promise<{ text: string; toolCalls: ToolCall[]; finishReason: string | null }> {
   const stream = await client.chat.completions.create({
     model: modelForMode(mode),
     messages: [{ role: 'system', content: system }, ...history],
@@ -210,11 +210,15 @@ async function streamCompletion(
   })
 
   let textAccum = ''
+  let finishReason: string | null = null
   // Accumulate streamed tool call fragments by index
   const tcFragments = new Map<number, { id: string; name: string; args: string }>()
 
   for await (const chunk of stream) {
-    const delta = chunk.choices[0]?.delta
+    const choice = chunk.choices[0]
+    if (!choice) continue
+    if (choice.finish_reason) finishReason = choice.finish_reason
+    const delta = choice.delta
     if (!delta) continue
 
     if (delta.content) {
@@ -244,7 +248,7 @@ async function streamCompletion(
   // Send the complete text as a single event
   if (textAccum) send({ type: 'text', delta: textAccum })
 
-  return { text: textAccum, toolCalls }
+  return { text: textAccum, toolCalls, finishReason }
 }
 
 async function modeForSession(sessionId: string, supabase: AgentSupabase): Promise<AgentMode> {
@@ -282,22 +286,24 @@ export async function executeAgentTurn(
   }
 
   const system = await buildSystemForTurn(mode, supabase, tenantId)
-  let { text, toolCalls } = await streamCompletion(client, system, history, send, mode)
+  let { text, toolCalls, finishReason } = await streamCompletion(client, system, history, send, mode)
 
-  // Empty response detection. A 200 OK with no text AND no tool calls almost
-  // always means the model errored mid-stream — most commonly a
-  // MALFORMED_FUNCTION_CALL from a model that can't reliably handle this
-  // schema (Gemini Flash Lite is the usual suspect; bigger Flash and
-  // Claude variants don't have this problem). Retry once before erroring —
-  // these failures are often transient.
-  if (!text.trim() && toolCalls.length === 0) {
+  // Empty response detection. A 200 OK with no text AND no tool calls + a
+  // finishReason that ISN'T 'stop' almost always means the model errored
+  // mid-stream — most commonly a MALFORMED_FUNCTION_CALL from a model that
+  // can't reliably handle this schema (Gemini Flash Lite is the usual
+  // suspect). Retry once before erroring — these failures are often transient.
+  // finishReason === 'stop' with empty content is a LEGITIMATE end-of-turn
+  // (the model had nothing to add) and should pass through silently.
+  if (!text.trim() && toolCalls.length === 0 && finishReason !== 'stop') {
     const modelName = modelForMode(mode)
-    console.warn('[executor] empty completion, retrying once', { sessionId, mode, model: modelName })
+    console.warn('[executor] empty completion, retrying once', { sessionId, mode, model: modelName, finishReason })
     const retry = await streamCompletion(client, system, history, send, mode)
     text = retry.text
     toolCalls = retry.toolCalls
-    if (!text.trim() && toolCalls.length === 0) {
-      console.error('[executor] model returned empty completion (after retry)', { sessionId, mode, model: modelName })
+    finishReason = retry.finishReason
+    if (!text.trim() && toolCalls.length === 0 && finishReason !== 'stop') {
+      console.error('[executor] model returned empty completion (after retry)', { sessionId, mode, model: modelName, finishReason })
       send({
         type: 'error',
         message: `The model (${modelName}) returned an empty response twice in a row. This usually means it failed to format a tool call — try a different model via the OPENROUTER_${mode === 'onboarding' ? 'ONBOARDING_' : ''}MODEL env var (recommended: anthropic/claude-haiku-4.5 for reliable tool calls).`,
@@ -396,19 +402,23 @@ async function continueTurn(
   // reflected in the system prompt. Cheap (one query) and keeps the prompt
   // honest as the conversation advances.
   const system = await buildSystemForTurn(mode, supabase, tenantId)
-  let { text, toolCalls } = await streamCompletion(client, system, history, send, mode)
+  let { text, toolCalls, finishReason } = await streamCompletion(client, system, history, send, mode)
 
-  // Empty completion mid-turn (same MALFORMED_FUNCTION_CALL failure mode as
-  // executeAgentTurn — see comment there). Gemini Flash empty completions are
-  // often transient — retry once before surfacing the error to the user.
-  if (!text.trim() && toolCalls.length === 0) {
+  // Empty follow-up mid-turn. finishReason === 'stop' with empty content is
+  // legitimate (the model already produced a complete turn before the tool
+  // ran — e.g. greeted the user AND called read_onboarding_state; after the
+  // tool returns there is nothing more to say until the user replies). Only
+  // retry/error on the actual broken-stream case (Gemini MALFORMED_FUNCTION_CALL
+  // and similar), which surfaces with a non-'stop' finishReason.
+  if (!text.trim() && toolCalls.length === 0 && finishReason !== 'stop') {
     const modelName = modelForMode(mode)
-    console.warn('[continueTurn] empty completion, retrying once', { sessionId, mode, model: modelName, depth })
+    console.warn('[continueTurn] empty completion, retrying once', { sessionId, mode, model: modelName, depth, finishReason })
     const retry = await streamCompletion(client, system, history, send, mode)
     text = retry.text
     toolCalls = retry.toolCalls
-    if (!text.trim() && toolCalls.length === 0) {
-      console.error('[continueTurn] model returned empty completion (after retry)', { sessionId, mode, model: modelName, depth })
+    finishReason = retry.finishReason
+    if (!text.trim() && toolCalls.length === 0 && finishReason !== 'stop') {
+      console.error('[continueTurn] model returned empty completion (after retry)', { sessionId, mode, model: modelName, depth, finishReason })
       send({
         type: 'error',
         message: `The model (${modelName}) returned an empty follow-up twice in a row. This usually means a malformed tool call — try a different model via the OPENROUTER_${mode === 'onboarding' ? 'ONBOARDING_' : ''}MODEL env var (recommended: anthropic/claude-haiku-4.5 for reliable tool calls).`,
@@ -419,6 +429,10 @@ async function continueTurn(
 
   // If the model produced text only, we're done with this turn.
   if (toolCalls.length === 0) {
+    // Skip saving entirely if there's nothing to save — happens when the
+    // model legitimately had nothing to add after a tool result (typically
+    // because it already produced its full reply in the prior turn).
+    if (!text.trim()) return
     await saveAssistantMessage(sessionId, tenantId, text || null, [], supabase)
     return
   }
