@@ -7,8 +7,12 @@ import remarkGfm from 'remark-gfm'
 import { Icons } from '@/lib/icons'
 import type { SseEvent, ToolCall } from '@/lib/agent/types'
 import { CatalogProposalCard } from '@/components/onboarding/CatalogProposalCard'
+import { PaymentMethodsProposalCard } from '@/components/onboarding/PaymentMethodsProposalCard'
 import { commitExtractedCatalogAction } from './actions'
+import { commitPaymentMethodsAction } from './payment-actions'
 import type { ExtractionResult, ExtractedProduct } from '@/lib/catalog/extraction/types'
+import type { PaymentMethodsCommitInput } from '@/lib/payments/onboarding/types'
+import type { PaymentType } from '@/types/payments'
 
 interface OnboardingState {
   display_name: string | null
@@ -59,6 +63,7 @@ function summariseToolCall(name: string, input: Record<string, unknown>): string
     case 'seed_catalog_preset':    return 'Seed starter catalog from preset list'
     case 'extract_catalog':        return 'Extracted products from upload'
     case 'complete_onboarding':    return 'Finish onboarding and go to dashboard'
+    case 'propose_payment_methods': return 'Configured payment methods'
     default: return name.replace(/_/g, ' ')
   }
 }
@@ -521,6 +526,22 @@ export function OnboardingAgent({
     setProposalStatus(s => ({ ...s, [toolCallId]: 'cancelled' }))
   }, [])
 
+  const handleProposalPaymentsImport = useCallback(async (
+    toolCallId: string,
+    input: PaymentMethodsCommitInput,
+  ) => {
+    setProposalStatus(s => ({ ...s, [toolCallId]: 'importing' }))
+    const out = await commitPaymentMethodsAction(input)
+    if ('error' in out) {
+      setProposalStatus(s => ({ ...s, [toolCallId]: 'idle' }))
+      setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', text: `⚠ ${out.error}` }])
+      return
+    }
+    setProposalStatus(s => ({ ...s, [toolCallId]: 'done' }))
+    const count = out.configs_inserted + (out.managed_wallet_ready ? 1 : 0)
+    void send(`I've saved ${count} payment method${count === 1 ? '' : 's'}.`, { hideUserMessage: true })
+  }, [send])
+
   const handleChoiceSubmit = useCallback((toolCallId: string, label: string) => {
     setChoiceStatus(s => ({ ...s, [toolCallId]: 'submitted' }))
     void send(label)
@@ -710,6 +731,19 @@ export function OnboardingAgent({
                   </div>
                 )}
                 {m.toolCalls?.map(tc => {
+                  if (tc.name === 'propose_payment_methods' && tc.status === 'complete' && tc.output && typeof tc.output === 'object' && !('error' in tc.output)) {
+                    const out = tc.output as { managed_crypto: boolean; byo_crypto_assets: PaymentType[]; off_platform_methods: PaymentType[] }
+                    const cardStatus = proposalStatus[tc.id] ?? 'idle'
+                    const mapped = cardStatus === 'importing' ? 'saving' : (cardStatus === 'cancelled' ? 'cancelled' : cardStatus)
+                    return (
+                      <PaymentMethodsProposalCard
+                        key={tc.id}
+                        initial={out}
+                        status={mapped as 'idle' | 'saving' | 'done' | 'cancelled'}
+                        onSave={input => handleProposalPaymentsImport(tc.id, input)}
+                      />
+                    )
+                  }
                   if (tc.name === 'extract_catalog' && tc.status === 'complete' && tc.output && typeof tc.output === 'object' && !('error' in tc.output)) {
                     const result = tc.output as ExtractionResult
                     const status = proposalStatus[tc.id] ?? 'idle'
