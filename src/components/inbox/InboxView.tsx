@@ -14,6 +14,7 @@ import { ProductInfoPicker } from './ProductInfoPicker'
 import type { DbConversation, DbQuickReply, DbTemplate, InboxThread, InboxMessage } from '@/types/inbox'
 import type { QueuedRun } from '@/types/automations'
 import { PendingApprovalRow } from '@/components/shared/PendingApprovalRow'
+import { CollapsiblePendingApprovals } from './CollapsiblePendingApprovals'
 import { AcquisitionSourceBanner } from '@/components/inbox/AcquisitionSourceBanner'
 import { initials } from '@/types/inbox'
 import { createClient } from '@/lib/supabase/client'
@@ -180,15 +181,11 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChann
         <kbd>⌘F</kbd>
       </div>
       {pending.length > 0 && (
-        <div className="pt-pending-section">
-          <div className="pt-pending-section-hd">
-            <span>Pending approvals</span>
-            <span className="pt-nav-badge">{pending.length}</span>
-          </div>
+        <CollapsiblePendingApprovals count={pending.length}>
           {pending.map(r => (
             <PendingApprovalRow key={r.id} run={r} onRemove={id => setPending(p => p.filter(r => r.id !== id))} />
           ))}
-        </div>
+        </CollapsiblePendingApprovals>
       )}
       <div className="pt-ix-filters">
         {filters.map(f => (

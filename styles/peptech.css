@@ -2236,6 +2236,60 @@ button.pt-chip.is-on {
   margin-bottom: 8px;
 }
 
+/* ─── Collapsible variant (inbox) ───────────────────────────────────────── */
+/* Layered on top of .pt-pending-section. The header becomes a button and the
+   body animates via grid-template-rows: 0fr ↔ 1fr so the rows transition to
+   their natural height without a magic max-height. */
+.pt-pending-section.is-collapsible {
+  padding: 0;
+}
+.pt-pending-section-toggle {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 10px 14px;
+  background: transparent; border: 0; cursor: pointer;
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--pt-fg-4);
+  text-align: left; font-family: inherit;
+  transition: background-color 160ms ease;
+}
+.pt-pending-section-toggle:hover {
+  background: oklch(from var(--pt-accent) l c h / 0.06);
+}
+.pt-pending-section-toggle:focus-visible {
+  outline: 2px solid var(--pt-accent);
+  outline-offset: -2px;
+}
+.pt-pending-section-toggle-label {
+  flex: 1;
+}
+.pt-pending-section-chevron {
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--pt-fg-3);
+  transition: transform 200ms ease;
+}
+.pt-pending-section.is-collapsible:not(.is-collapsed) .pt-pending-section-chevron {
+  transform: rotate(180deg);
+}
+.pt-pending-section-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 200ms ease;
+}
+.pt-pending-section.is-collapsed .pt-pending-section-body {
+  grid-template-rows: 0fr;
+}
+.pt-pending-section-body-inner {
+  overflow: hidden;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 0 14px 10px;
+}
+/* Suppress the height transition until the client has hydrated so the
+   localStorage-restored state doesn't slide in on first paint. */
+.pt-pending-section.is-pre-hydrate .pt-pending-section-body,
+.pt-pending-section.is-pre-hydrate .pt-pending-section-chevron {
+  transition: none;
+}
+
 /* Shared row (both surfaces) */
 .pt-pending-list { display: flex; flex-direction: column; gap: 10px; }
 .pt-pending-row {
