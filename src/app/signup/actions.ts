@@ -4,7 +4,6 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { notifyNewMerchant } from '@/lib/slack'
 
 export async function signupAction(formData: FormData) {
   const businessName = formData.get('businessName') as string
@@ -67,8 +66,9 @@ export async function signupAction(formData: FormData) {
     console.error('seed_default_automations failed for tenant', tenant.id, err)
   }
 
-  // 5. Notify Slack (non-blocking)
-  void notifyNewMerchant({ tenantId: tenant.id, businessName, email }).catch(console.error)
+  // 5. Slack notification fires at the DB layer — a trigger on the owner
+  // users row calls the shared slack-notify edge function (see
+  // 20260528000001_tenant_slack_trigger). No application-layer call needed.
 
   // 6. Sign in immediately so the session cookie is set before redirect
   const supabase = await createClient()
