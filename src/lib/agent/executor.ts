@@ -562,6 +562,7 @@ export async function confirmToolCall(
   tenantId: string,
   supabase: AgentSupabase,
   sink: AgentSink,
+  editedInput?: Record<string, unknown>,
 ) {
   const mode = await modeForSession(sessionId, supabase)
 
@@ -579,6 +580,7 @@ export async function confirmToolCall(
   if (!tc) { sink.emit({ type: 'error', message: 'Tool call not found' }); return }
 
   if (confirmed) {
+    if (editedInput) tc.input = { ...tc.input, ...editedInput }
     const tool = TOOL_MAP[tc.name]
     try {
       tc.output = await tool.execute(tc.input, supabase, tenantId)
