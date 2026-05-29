@@ -1,7 +1,7 @@
 import { READ_TOOLS } from './read'
 import { WRITE_TOOLS } from './write'
 import { ONBOARDING_TOOLS } from './onboarding'
-import { COPILOT_TOOLS, postCommentary } from './copilot'
+import { COPILOT_TOOLS } from './copilot'
 import type { AgentTool } from '../types'
 
 export type AgentMode = 'ops' | 'onboarding' | 'copilot'
@@ -9,7 +9,7 @@ export type AgentMode = 'ops' | 'onboarding' | 'copilot'
 export const ALL_TOOLS: AgentTool[] = [...READ_TOOLS, ...WRITE_TOOLS]
 
 export const TOOL_MAP: Record<string, AgentTool> = Object.fromEntries(
-  [...ALL_TOOLS, ...ONBOARDING_TOOLS, postCommentary].map(t => [t.name, t])
+  [...ALL_TOOLS, ...ONBOARDING_TOOLS, ...COPILOT_TOOLS].map(t => [t.name, t])
 )
 
 function toOpenAI(tools: AgentTool[]) {
