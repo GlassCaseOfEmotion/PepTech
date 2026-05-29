@@ -62,11 +62,14 @@ export function useCopilotSession(conversationId: string) {
     } finally { setSending(false) }
   }, [sessionId])
 
-  const confirm = useCallback(async (messageId: string, toolCallId: string, confirmed: boolean) => {
+  const confirm = useCallback(async (messageId: string, toolCallId: string, confirmed: boolean, editedContent?: string) => {
     if (!sessionId) return
     const res = await fetch('/api/agent/confirm', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, messageId, toolCallId, confirmed }),
+      body: JSON.stringify({
+        sessionId, messageId, toolCallId, confirmed,
+        ...(editedContent !== undefined ? { editedInput: { content: editedContent } } : {}),
+      }),
     })
     await res.text().catch(() => {})
   }, [sessionId])
