@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
 import { createServiceClient } from '@/lib/supabase/server'
 import { runAutomationsForEvent } from '@/lib/automations/engine'
+import { runCopilotPass } from '@/lib/copilot/run'
 
 export interface InboundMessageParams {
   tenantId: string
@@ -139,6 +140,15 @@ export async function processInboundMessage(
     })
     .eq('id', conversationId)
     .eq('tenant_id', tenantId)
+
+  // Proactive AI copilot: draft suggestions as the conversation progresses.
+  // Fire-and-forget on a service client (no user session in a webhook).
+  void runCopilotPass(createServiceClient(), {
+    tenantId,
+    conversationId,
+    customerId,
+    messageId: message.id,
+  }).catch(console.error)
 
   return { conversationId, messageId: message.id }
 }
