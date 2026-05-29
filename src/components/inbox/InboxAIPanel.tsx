@@ -112,16 +112,6 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
     msgsRef.current?.scrollTo({ top: msgsRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
 
-  // Expand rail when AI is active
-  useEffect(() => {
-    if (messages.length > 0) {
-      document.documentElement.classList.add('pt-ai-expanded')
-    } else {
-      document.documentElement.classList.remove('pt-ai-expanded')
-    }
-    return () => document.documentElement.classList.remove('pt-ai-expanded')
-  }, [messages.length])
-
   // Reset when conversation changes
   useEffect(() => {
     setMessages([])
