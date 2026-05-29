@@ -33,10 +33,19 @@ export interface SuggestionDraft {
 export const COPILOT_CONFIDENCE_THRESHOLD = 0.6
 
 // Cheap classifier model + capable drafting model. Both overridable via env.
+// Treat blank env vars as unset: `??` alone keeps an empty string (e.g. a
+// `OPENROUTER_COPILOT_DRAFT_MODEL=` defined-but-blank var on Vercel would
+// otherwise resolve the model to "" and every draft call would fail).
+const envModel = (v: string | undefined): string | undefined => {
+  const t = v?.trim()
+  return t ? t : undefined
+}
 export const COPILOT_CLASSIFY_MODEL =
-  process.env.OPENROUTER_COPILOT_CLASSIFY_MODEL ?? 'anthropic/claude-haiku-4.5'
+  envModel(process.env.OPENROUTER_COPILOT_CLASSIFY_MODEL) ?? 'anthropic/claude-haiku-4.5'
 export const COPILOT_DRAFT_MODEL =
-  process.env.OPENROUTER_COPILOT_DRAFT_MODEL ?? process.env.OPENROUTER_MODEL ?? 'google/gemini-flash-2.5'
+  envModel(process.env.OPENROUTER_COPILOT_DRAFT_MODEL)
+  ?? envModel(process.env.OPENROUTER_MODEL)
+  ?? 'google/gemini-flash-2.5'
 
 // How many recent messages of the conversation to feed the LLM passes.
 export const COPILOT_HISTORY_LIMIT = 20
