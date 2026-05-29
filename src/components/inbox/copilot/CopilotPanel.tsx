@@ -109,7 +109,7 @@ function ConfirmEntry({ tc, onApprove, onDismiss, busy }: {
 function renderMessage(
   m: CopilotMsg, customerName: string,
   onConfirm: (messageId: string, toolCallId: string, confirmed: boolean) => void,
-  busy: boolean,
+  confirmingIds: Set<string>,
 ) {
   if (m.role === 'user') {
     // Customer messages + operator-to-customer sends already live in the main
@@ -135,7 +135,7 @@ function renderMessage(
   }
   if (actions.length) nodes.push(<ChipsEntry key={`${m.id}-chips`} names={actions.map(a => a.name)} />)
   for (const tc of [...pending, ...resolvedGated]) {
-    nodes.push(<ConfirmEntry key={`${m.id}-${tc.id}`} tc={tc} busy={busy}
+    nodes.push(<ConfirmEntry key={`${m.id}-${tc.id}`} tc={tc} busy={confirmingIds.has(tc.id)}
       onApprove={() => onConfirm(m.id, tc.id, true)} onDismiss={() => onConfirm(m.id, tc.id, false)} />)
   }
   return nodes.length ? <div key={m.id}>{nodes}</div> : null
@@ -144,6 +144,16 @@ function renderMessage(
 export function CopilotPanel({ conversationId, customerName }: { conversationId: string; customerName: string }) {
   const { messages, draftOrder, loading, sending, send, confirm } = useCopilotSession(conversationId)
   const [draft, setDraft] = useState('')
+  // Per-tool-call in-flight guard so an Approve/Dismiss can't double-fire while
+  // the confirm round-trips (the card only flips status via realtime, which can
+  // be seconds away). Cleared once the action resolves.
+  const [confirming, setConfirming] = useState<Set<string>>(new Set())
+  async function handleConfirm(messageId: string, toolCallId: string, confirmed: boolean) {
+    if (confirming.has(toolCallId)) return
+    setConfirming(s => new Set(s).add(toolCallId))
+    try { await confirm(messageId, toolCallId, confirmed) }
+    finally { setConfirming(s => { const n = new Set(s); n.delete(toolCallId); return n }) }
+  }
   const feedRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -191,7 +201,7 @@ export function CopilotPanel({ conversationId, customerName }: { conversationId:
           </div>
         ) : (
           <div className="pt-cp-thread">
-            {messages.map(m => renderMessage(m, customerName, confirm, sending))}
+            {messages.map(m => renderMessage(m, customerName, handleConfirm, confirming))}
           </div>
         )}
       </div>
