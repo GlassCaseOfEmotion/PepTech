@@ -218,3 +218,11 @@
 @media (prefers-reduced-motion: reduce) {
   .pt-cp-entry, .pt-cp-line, .pt-cp.is-working .pt-cp-dot, .pt-cp-confirm, .pt-cp-send.is-sending svg, .pt-cp-skel { animation: none; }
 }
+
+.pt-cp-confirm-edit {
+  width: 100%; box-sizing: border-box; margin: 6px 0 2px;
+  border: 1px solid var(--pt-line); border-radius: 9px;
+  background: var(--pt-bg); color: var(--pt-fg);
+  padding: 9px 11px; font: inherit; font-size: 13px; line-height: 1.5; resize: vertical;
+}
+.pt-cp-confirm-edit:focus { outline: none; border-color: var(--pt-accent); box-shadow: 0 0 0 3px var(--pt-accent-soft); }
