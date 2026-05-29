@@ -116,8 +116,21 @@ async function buildSystemForTurn(
   mode: AgentMode,
   supabase: AgentSupabase,
   tenantId: string,
+  sessionId?: string,
 ): Promise<string> {
-  if (mode === 'copilot') return buildCopilotSystem()
+  if (mode === 'copilot') {
+    let conversationId = ''
+    let customerId = ''
+    if (sessionId) {
+      const { data: sess } = await supabase.from('agent_sessions').select('trigger_ref').eq('id', sessionId).single()
+      conversationId = (sess?.trigger_ref as string | null) ?? ''
+      if (conversationId) {
+        const { data: conv } = await supabase.from('conversations').select('customer_id').eq('id', conversationId).eq('tenant_id', tenantId).single()
+        customerId = (conv?.customer_id as string | null) ?? ''
+      }
+    }
+    return buildCopilotSystem({ conversationId, customerId })
+  }
   if (mode !== 'onboarding') return buildSystem(mode)
   const state = await fetchOnboardingStateSnapshot(supabase, tenantId).catch((e) => {
     console.warn('[executor] failed to fetch onboarding state for system prompt', e)
@@ -330,7 +343,7 @@ export async function executeAgentTurn(
     history = [{ role: 'user', content: messageForAgent }]
   }
 
-  const system = await buildSystemForTurn(mode, supabase, tenantId)
+  const system = await buildSystemForTurn(mode, supabase, tenantId, sessionId)
   let { text, toolCalls, finishReason } = await runCompletion(client, system, history, sink, mode)
 
   // Empty response detection. A 200 OK with no text AND no tool calls + a
@@ -446,7 +459,7 @@ async function continueTurn(
   // Re-fetch state each follow-up turn so save_* tools that just ran are
   // reflected in the system prompt. Cheap (one query) and keeps the prompt
   // honest as the conversation advances.
-  const system = await buildSystemForTurn(mode, supabase, tenantId)
+  const system = await buildSystemForTurn(mode, supabase, tenantId, sessionId)
   let { text, toolCalls, finishReason } = await runCompletion(client, system, history, sink, mode)
 
   // Empty follow-up mid-turn. finishReason === 'stop' with empty content is
