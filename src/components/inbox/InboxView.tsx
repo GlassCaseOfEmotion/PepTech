@@ -18,6 +18,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ConvertToCustomerButton } from '@/components/contacts/ConvertToCustomerButton'
 import { RailStrip, type RailPanel } from './RailStrip'
 import { RailPanelHost } from './RailPanelHost'
+import { CopilotSessionProvider } from './copilot/CopilotSessionContext'
 import { ViewsColumn } from './ViewsColumn'
 import { useViewsCollapsed } from './useViewsCollapsed'
 import { CH_NAMES } from './inbox-shared'
@@ -933,17 +934,22 @@ function InboxLayout({ initialPrefill, baseCurrency, hasChannels, queuedRuns, op
         />
       )}
       {activeThread && (
-        <div className={`pt-ix-rail-region${activePanel ? ' is-open' : ''}`}>
-          {activePanel && (
-            <RailPanelHost
-              panel={activePanel}
-              thread={activeThread}
-              baseCurrency={baseCurrency}
-              onClose={() => setActivePanel(null)}
-            />
-          )}
-          <RailStrip active={activePanel} onSelect={(p) => setActivePanel(cur => cur === p ? null : p)} />
-        </div>
+        // Provider lives above the rail toggle so the copilot session, its
+        // messages, and its realtime subscription survive open/close. Keyed
+        // by conversation so switching conversations cleanly remounts it.
+        <CopilotSessionProvider key={activeThread.id} conversationId={activeThread.id}>
+          <div className={`pt-ix-rail-region${activePanel ? ' is-open' : ''}`}>
+            {activePanel && (
+              <RailPanelHost
+                panel={activePanel}
+                thread={activeThread}
+                baseCurrency={baseCurrency}
+                onClose={() => setActivePanel(null)}
+              />
+            )}
+            <RailStrip active={activePanel} onSelect={(p) => setActivePanel(cur => cur === p ? null : p)} />
+          </div>
+        </CopilotSessionProvider>
       )}
     </div>
   )

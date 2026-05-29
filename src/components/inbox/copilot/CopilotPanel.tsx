@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { useCopilotSession } from './useCopilotSession'
+import { useCopilotSession } from './CopilotSessionContext'
 import type { CopilotMsg, CopilotToolCall } from './timeline'
 import { formatAmount } from '@/lib/currency'
 
@@ -229,8 +229,8 @@ function renderMessage(
   return nodes.length ? <div key={m.id}>{nodes}</div> : null
 }
 
-export function CopilotPanel({ conversationId, customerName }: { conversationId: string; customerName: string }) {
-  const { messages, draftOrder, loading, sending, send, confirm } = useCopilotSession(conversationId)
+export function CopilotPanel({ customerName }: { customerName: string }) {
+  const { messages, draftOrder, loading, sending, send, confirm } = useCopilotSession()
   const [draft, setDraft] = useState('')
   // Per-tool-call in-flight guard so an Approve/Dismiss can't double-fire while
   // the confirm round-trips (the card only flips status via realtime, which can

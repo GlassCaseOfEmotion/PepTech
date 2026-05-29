@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getCopilotSessionId, getCopilotTimeline, getConversationDraftOrder } from '@/app/inbox/copilot-panel-actions'
 import { mapAgentRow, upsertMessage, type CopilotMsg } from './timeline'
@@ -11,7 +11,23 @@ export interface DraftOrderView {
   order_items: { product_id: string; qty: number; unit_price_snapshot: number; products?: { name: string } | null }[]
 }
 
-export function useCopilotSession(conversationId: string) {
+interface CopilotSession {
+  sessionId: string | null
+  messages: CopilotMsg[]
+  draftOrder: DraftOrderView | null
+  loading: boolean
+  sending: boolean
+  send: (text: string) => Promise<void>
+  confirm: (messageId: string, toolCallId: string, confirmed: boolean, editedContent?: string) => Promise<void>
+  refreshDraft: () => Promise<void>
+}
+
+const Ctx = createContext<CopilotSession | null>(null)
+
+/** Owns the copilot session's data + realtime subscription for a single
+ * conversation. Mount once per conversation (keyed by conversationId) — it
+ * persists across rail open/close so toggling the panel never refetches. */
+export function CopilotSessionProvider({ conversationId, children }: { conversationId: string; children: ReactNode }) {
   const supabase = useRef(createClient()).current
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [messages, setMessages] = useState<CopilotMsg[]>([])
@@ -74,5 +90,15 @@ export function useCopilotSession(conversationId: string) {
     await res.text().catch(() => {})
   }, [sessionId])
 
-  return { sessionId, messages, draftOrder, loading, sending, send, confirm, refreshDraft }
+  return (
+    <Ctx.Provider value={{ sessionId, messages, draftOrder, loading, sending, send, confirm, refreshDraft }}>
+      {children}
+    </Ctx.Provider>
+  )
+}
+
+export function useCopilotSession(): CopilotSession {
+  const ctx = useContext(Ctx)
+  if (!ctx) throw new Error('useCopilotSession must be used inside <CopilotSessionProvider>')
+  return ctx
 }

@@ -64,7 +64,7 @@ export function RailPanelHost({ panel, thread, baseCurrency, onClose }: {
     if (!thread.id || !thread.customerId) return null
     return (
       <aside className="pt-ix-rail is-copilot">
-        <CopilotPanel conversationId={thread.id} customerName={thread.name} />
+        <CopilotPanel customerName={thread.name} />
       </aside>
     )
   }
