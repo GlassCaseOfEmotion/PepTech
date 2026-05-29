@@ -2836,7 +2836,7 @@ button.pt-chip.is-on {
   display: grid; place-items: center;
   color: #fff;
 }
-.pt-avatar-ch svg { width: 9px; height: 9px; }
+.pt-avatar-ch svg { width: 11px; height: 11px; display: block; }
 .pt-avatar-ch-wa { background: var(--pt-wa); }
 .pt-avatar-ch-tg { background: var(--pt-tg); }
 .pt-avatar-ch-em { background: var(--pt-em); }
