@@ -8,6 +8,8 @@ import {
   commitDraftOrder,
 } from '@/app/inbox/copilot-actions'
 import type { SuggestionRow, DraftOrderPayload } from '@/types/copilot'
+import { useInbox } from './InboxProvider'
+import { formatAmount } from '@/lib/currency'
 
 type CardState = 'idle' | 'confirming' | 'working' | 'done' | 'error'
 
@@ -29,6 +31,7 @@ export function SuggestionCard({ suggestion, onRemove }: {
   suggestion: SuggestionRow
   onRemove: (id: string) => void
 }) {
+  const { baseCurrency } = useInbox()
   const isMessageKind = suggestion.kind === 'reply' || suggestion.kind === 'quote' || suggestion.kind === 'cross_sell'
   const [state, setState] = useState<CardState>('idle')
   const [edited, setEdited] = useState(messageText(suggestion))
@@ -96,7 +99,7 @@ export function SuggestionCard({ suggestion, onRemove }: {
       )}
 
       {suggestion.kind === 'draft_order' && (
-        <DraftOrderBody payload={suggestion.payload as unknown as DraftOrderPayload} />
+        <DraftOrderBody payload={suggestion.payload as unknown as DraftOrderPayload} currency={baseCurrency} />
       )}
 
       {state === 'idle' && (
@@ -133,17 +136,17 @@ export function SuggestionCard({ suggestion, onRemove }: {
   )
 }
 
-function DraftOrderBody({ payload }: { payload: DraftOrderPayload }) {
+function DraftOrderBody({ payload, currency }: { payload: DraftOrderPayload; currency: string }) {
   return (
     <div className="pt-sug-order">
       {(payload.items ?? []).map((it, i) => (
         <div key={i} className="pt-sug-order-line">
           <span className="pt-sug-order-name">{it.qty}× {it.product_name}</span>
-          <span className="pt-sug-order-price">${(it.qty * it.unit_price).toFixed(2)}</span>
+          <span className="pt-sug-order-price">{formatAmount(it.qty * it.unit_price, currency)}</span>
         </div>
       ))}
       <div className="pt-sug-order-total">
-        <span>Total</span><span>${Number(payload.total ?? 0).toFixed(2)}</span>
+        <span>Total</span><span>{formatAmount(Number(payload.total ?? 0), currency)}</span>
       </div>
     </div>
   )

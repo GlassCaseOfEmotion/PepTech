@@ -31,6 +31,7 @@ type InboxCtx = {
   setView: (v: string) => void
   messages: InboxMessage[]
   suggestions: SuggestionRow[]
+  baseCurrency: string
   notes: DbNote[]
   quickReplies: DbQuickReply[]
   templates: DbTemplate[]
@@ -68,11 +69,12 @@ interface Props {
   initialActiveId?: string
   initialInvoicePath?: string
   initialInvoiceName?: string
+  baseCurrency: string
   children: ReactNode
 }
 
 
-export function InboxProvider({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId, initialInvoicePath, initialInvoiceName, children }: Props) {
+export function InboxProvider({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId, initialInvoicePath, initialInvoiceName, baseCurrency, children }: Props) {
   const supabase = useMemo(() => createClient(), [])
   const [threads, setThreads] = useState<InboxThread[]>(
     initialConversations.map(dbConversationToThread)
@@ -511,7 +513,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
   return (
     <InboxContext.Provider value={{
       threads, activeId, setActiveId, filter, setFilter, view, setView,
-      messages, suggestions, notes, quickReplies, templates, isSending, messagesLoading, resolvedCount, activeThread, sendMessage, sendTemplate, addNote, snooze, markDone, reopen, togglePin,
+      messages, suggestions, baseCurrency, notes, quickReplies, templates, isSending, messagesLoading, resolvedCount, activeThread, sendMessage, sendTemplate, addNote, snooze, markDone, reopen, togglePin,
       pendingInvoicePath, pendingInvoiceName, clearPendingInvoice,
       updateThreadLifecycle, updateThreadAcquisitionSource,
     }}>

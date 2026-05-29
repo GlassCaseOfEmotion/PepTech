@@ -981,6 +981,7 @@ export function InboxView({ initialConversations, quickReplies, templates, initi
       initialActiveId={initialActiveId}
       initialInvoicePath={initialInvoicePath}
       initialInvoiceName={initialInvoiceName}
+      baseCurrency={baseCurrency}
     >
       <Suspense fallback={null}>
         <InboxLayout initialPrefill={initialPrefill} baseCurrency={baseCurrency} hasChannels={hasChannels} queuedRuns={queuedRuns} operatorName={operatorName} />
