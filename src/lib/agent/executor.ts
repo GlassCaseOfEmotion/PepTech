@@ -2,7 +2,7 @@ import OpenAI from 'openai'
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
 import { TOOL_MAP, toolsForMode, openAiToolsForMode, type AgentMode } from './tools/index'
 import { fetchOnboardingStateSnapshot, type OnboardingStateSnapshot } from './tools/onboarding'
-import type { AgentSupabase, SseEvent, ToolCall, AgentMessage } from './types'
+import type { AgentSupabase, ToolCall, AgentMessage } from './types'
 import type { AgentSink } from './sink'
 import { buildCopilotSystem } from './copilot/system'
 
@@ -137,10 +137,6 @@ function createClient() {
   })
 }
 
-function encodeEvent(event: SseEvent): string {
-  return `data: ${JSON.stringify(event)}\n\n`
-}
-
 // Convert stored messages to OpenAI chat format
 async function loadHistory(sessionId: string, supabase: AgentSupabase): Promise<ChatCompletionMessageParam[]> {
   const { data } = await supabase
@@ -209,7 +205,7 @@ async function streamCompletion(
   client: OpenAI,
   system: string,
   history: ChatCompletionMessageParam[],
-  send: (e: SseEvent) => void,
+  sink: AgentSink,
   mode: AgentMode,
 ): Promise<{ text: string; toolCalls: ToolCall[]; finishReason: string | null }> {
   const stream = await client.chat.completions.create({
@@ -256,7 +252,7 @@ async function streamCompletion(
   }
 
   // Send the complete text as a single event
-  if (textAccum) send({ type: 'text', delta: textAccum })
+  if (textAccum) sink.emit({ type: 'text', delta: textAccum })
 
   return { text: textAccum, toolCalls, finishReason }
 }
@@ -296,7 +292,7 @@ async function runCompletion(
   mode: AgentMode,
 ) {
   return sink.streaming
-    ? streamCompletion(client, system, history, (e) => sink.emit(e), mode)
+    ? streamCompletion(client, system, history, sink, mode)
     : nonStreamCompletion(client, system, history, sink, mode)
 }
 
