@@ -1234,6 +1234,61 @@
 }
 .pt-quick-product:hover { background: oklch(from var(--pt-accent) l c h / 0.22); }
 
+/* ── AI Copilot suggestion cards (internal-only; never sent to customer) ── */
+.pt-sug {
+  border: 1px solid var(--pt-accent-soft, oklch(0.9 0.04 260));
+  background: var(--pt-surface-2, oklch(0.98 0.01 260));
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 8px 0;
+  box-shadow: var(--pt-shadow-soft, 0 1px 2px rgba(0,0,0,0.04));
+  font-size: 13px;
+}
+.pt-sug-head { display: flex; align-items: center; gap: 8px; }
+.pt-sug-kind {
+  font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase;
+  font-size: 10.5px; color: var(--pt-accent, oklch(0.55 0.13 260));
+}
+.pt-sug-conf {
+  font-size: 11px; color: var(--pt-fg-3, #888);
+  background: var(--pt-surface-2, rgba(0,0,0,0.04)); border-radius: 999px; padding: 1px 7px;
+}
+.pt-sug-dismiss {
+  margin-left: auto; border: none; background: none; cursor: pointer;
+  color: var(--pt-fg-3, #999); font-size: 12px; line-height: 1; padding: 2px 4px;
+}
+.pt-sug-dismiss:hover { color: var(--pt-fg, #333); }
+.pt-sug-reason { color: var(--pt-fg-2, #666); font-size: 12px; margin: 6px 0; font-style: italic; }
+.pt-sug-msg {
+  background: var(--pt-bg, #fff); border: 1px solid var(--pt-line, #eee);
+  border-radius: 8px; padding: 8px 10px; margin: 6px 0; white-space: pre-wrap; cursor: default;
+}
+.pt-sug-edit-ta {
+  width: 100%; box-sizing: border-box; border: 1px solid var(--pt-accent, #88a);
+  border-radius: 8px; padding: 8px 10px; margin: 6px 0; font: inherit; resize: vertical;
+}
+.pt-sug-order { margin: 6px 0; }
+.pt-sug-order-line { display: flex; justify-content: space-between; padding: 2px 0; }
+.pt-sug-order-total {
+  display: flex; justify-content: space-between; font-weight: 600;
+  border-top: 1px solid var(--pt-line, #eee); margin-top: 4px; padding-top: 4px;
+}
+.pt-sug-foot { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.pt-sug-primary {
+  background: var(--pt-accent, oklch(0.55 0.13 260)); color: #fff; border: none;
+  border-radius: 8px; padding: 6px 12px; font-weight: 600; cursor: pointer; font-size: 12.5px;
+}
+.pt-sug-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.pt-sug-cancel {
+  background: none; border: 1px solid var(--pt-line, #ddd); border-radius: 8px;
+  padding: 6px 12px; cursor: pointer; font-size: 12.5px; color: var(--pt-fg-2, #555);
+}
+.pt-sug-status { margin-top: 8px; font-size: 12px; color: var(--pt-fg-2, #666); }
+.pt-sug-done { color: var(--pt-ok, #2a8); font-weight: 600; }
+.pt-sug-err { color: var(--pt-danger, #c33); font-size: 12px; flex: 1; }
+.pt-sug-list-inline { margin: 4px 0 8px; }
+.pt-sug-empty { color: var(--pt-fg-3, #999); font-size: 12.5px; padding: 12px 4px; }
+
 /* ─── v2 warmth — scoped to the inbox (Phase A showcase) ─────────────────── */
 .pt-ixt-name { font-size: 14.5px; }
 .pt-ixt-snip { font-size: 13px; }
