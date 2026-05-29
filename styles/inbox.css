@@ -396,6 +396,7 @@
 }
 .pt-ix-rail-region.is-open .pt-ix-strip { border-left: 0; }
 .pt-ix-strip-btn {
+  position: relative;
   width: 34px; height: 34px; border: 0; border-radius: 8px;
   background: transparent; color: var(--pt-fg-3); cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
@@ -403,6 +404,20 @@
 }
 .pt-ix-strip-btn:hover { background: oklch(from var(--pt-fg) l c h / 0.06); color: var(--pt-fg); }
 .pt-ix-strip-btn.is-on { background: var(--pt-accent-soft); color: var(--pt-accent-fg); }
+
+/* AI-copilot live-suggestion count badge + new-arrival pulse on the rail icon */
+.pt-ix-strip-badge {
+  position: absolute; top: 1px; right: 1px;
+  min-width: 15px; height: 15px; padding: 0 4px; box-sizing: border-box;
+  border-radius: 999px; background: var(--pt-accent); color: #fff;
+  font-size: 9.5px; font-weight: 700; line-height: 15px; text-align: center;
+  box-shadow: 0 0 0 2px var(--pt-bg);
+}
+.pt-ix-strip-btn.is-pulsing .pt-ix-strip-badge { animation: pt-ai-badge-pulse 0.85s ease-out 2; transform-origin: center; }
+@keyframes pt-ai-badge-pulse {
+  0%, 100% { transform: scale(1); }
+  40%      { transform: scale(1.4); }
+}
 
 /* The open panel fills the rest of the region */
 .pt-ix-rail-region > .pt-ix-rail,

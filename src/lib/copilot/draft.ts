@@ -41,28 +41,44 @@ export async function draftSuggestions(
   deps: { complete?: CompleteFn } = {},
 ): Promise<SuggestionDraft[]> {
   const complete = deps.complete ?? defaultComplete
-  let parsed: { suggestions?: unknown }
+  let parsed: unknown
+  let rawContent = ''
   try {
-    const content = await complete({
+    rawContent = await complete({
       model: COPILOT_DRAFT_MODEL,
       messages: [
         { role: 'system', content: SYSTEM },
         { role: 'user', content: JSON.stringify(ctx) },
       ],
     })
-    parsed = parseJsonContent(content) as { suggestions?: unknown }
+    parsed = parseJsonContent(rawContent)
   } catch (err) {
-    console.error('[copilot] drafting pass failed:', err instanceof Error ? err.message : err)
+    console.error('[copilot] drafting pass failed:', err instanceof Error ? err.message : err, '| raw:', rawContent.slice(0, 500))
     return []
   }
 
-  const raw = Array.isArray(parsed.suggestions) ? parsed.suggestions : []
+  // Tolerate model output variance: accept {suggestions:[...]} OR a bare [...] array.
+  const container = parsed as { suggestions?: unknown }
+  const raw = Array.isArray(container?.suggestions) ? container.suggestions
+    : Array.isArray(parsed) ? parsed
+    : []
+  if (raw.length === 0) {
+    console.warn('[copilot] draft produced no suggestions array | raw:', rawContent.slice(0, 500))
+  }
+
   const drafts: SuggestionDraft[] = []
   for (const entry of raw as Record<string, unknown>[]) {
     const kind = entry.kind as SuggestionKind
-    if (!KINDS.includes(kind)) continue
-    const confidence = typeof entry.confidence === 'number' ? entry.confidence : 0
-    if (confidence < COPILOT_CONFIDENCE_THRESHOLD) continue
+    if (!KINDS.includes(kind)) {
+      console.warn(`[copilot] dropped suggestion: unknown kind "${String(entry.kind)}"`)
+      continue
+    }
+    // Coerce confidence — some models return it as a string ("0.8").
+    const confidence = Number(entry.confidence)
+    if (!Number.isFinite(confidence) || confidence < COPILOT_CONFIDENCE_THRESHOLD) {
+      console.warn(`[copilot] dropped ${kind}: confidence ${JSON.stringify(entry.confidence)} below ${COPILOT_CONFIDENCE_THRESHOLD}`)
+      continue
+    }
     const payload = (entry.payload && typeof entry.payload === 'object'
       ? entry.payload
       : {}) as Record<string, unknown>
