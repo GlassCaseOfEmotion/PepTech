@@ -680,7 +680,7 @@ function snoozeOptions() {
   ]
 }
 
-function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, onBack, initialPrefill, baseCurrency }: {
+function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, onBack, initialPrefill, baseCurrency, operatorName }: {
   thread: InboxThread
   messages: InboxMessage[]
   onSend: (text: string) => void
@@ -689,6 +689,7 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
   onBack: () => void
   initialPrefill?: string
   baseCurrency: string
+  operatorName: string
 }) {
   const { snooze, markDone, reopen, messagesLoading, updateThreadLifecycle, updateThreadAcquisitionSource } = useInbox()
   const [showSnooze, setShowSnooze] = useState(false)
@@ -803,7 +804,21 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
             isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 100
           }}
         >
-          {messages.map(m => <Bubble key={m.id} m={m} onImageClick={setLightboxUrl} onOpenWaPicker={() => setShowWaPicker(true)} />)}
+          {messages.map((m, i, arr) => {
+            // Avatar on the last message of each consecutive same-sender run
+            // (standard chat grouping); a spacer holds the column on the rest.
+            const lastOfGroup = i === arr.length - 1 || arr[i + 1].from !== m.from
+            return (
+              <div key={m.id} className={`pt-msg-row pt-msg-row-${m.from}`}>
+                {lastOfGroup
+                  ? (m.from === 'them'
+                      ? <Avatar name={thread.name} channel={thread.channel} size={26} />
+                      : <Avatar name={operatorName} size={26} />)
+                  : <span className="pt-msg-avatar-spacer" aria-hidden />}
+                <Bubble m={m} onImageClick={setLightboxUrl} onOpenWaPicker={() => setShowWaPicker(true)} />
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -872,7 +887,7 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
 
 // ─── Inner layout (consumes context) ────────────────────────────────────────
 
-function InboxLayout({ initialPrefill, baseCurrency, hasChannels, queuedRuns }: { initialPrefill?: string; baseCurrency: string; hasChannels: boolean; queuedRuns: QueuedRun[] }) {
+function InboxLayout({ initialPrefill, baseCurrency, hasChannels, queuedRuns, operatorName }: { initialPrefill?: string; baseCurrency: string; hasChannels: boolean; queuedRuns: QueuedRun[]; operatorName: string }) {
   const { threads, activeId, setActiveId, filter, setFilter, messages, isSending, sendMessage } = useInbox()
   const activeThread = threads.find(t => t.id === activeId) ?? threads[0]
   const [activePanel, setActivePanel] = useState<RailPanel | null>(null)
@@ -914,6 +929,7 @@ function InboxLayout({ initialPrefill, baseCurrency, hasChannels, queuedRuns }: 
           onBack={handleBack}
           initialPrefill={initialPrefill}
           baseCurrency={baseCurrency}
+          operatorName={operatorName}
         />
       )}
       {activeThread && (
@@ -947,9 +963,10 @@ interface InboxViewProps {
   baseCurrency: string
   hasChannels?: boolean
   queuedRuns?: QueuedRun[]
+  operatorName?: string
 }
 
-export function InboxView({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId, initialInvoicePath, initialInvoiceName, initialPrefill, baseCurrency, hasChannels = true, queuedRuns = [] }: InboxViewProps) {
+export function InboxView({ initialConversations, quickReplies, templates, initialResolvedCount = 0, initialActiveId, initialInvoicePath, initialInvoiceName, initialPrefill, baseCurrency, hasChannels = true, queuedRuns = [], operatorName = 'You' }: InboxViewProps) {
   return (
     <InboxProvider
       initialConversations={initialConversations}
@@ -961,7 +978,7 @@ export function InboxView({ initialConversations, quickReplies, templates, initi
       initialInvoiceName={initialInvoiceName}
     >
       <Suspense fallback={null}>
-        <InboxLayout initialPrefill={initialPrefill} baseCurrency={baseCurrency} hasChannels={hasChannels} queuedRuns={queuedRuns} />
+        <InboxLayout initialPrefill={initialPrefill} baseCurrency={baseCurrency} hasChannels={hasChannels} queuedRuns={queuedRuns} operatorName={operatorName} />
       </Suspense>
     </InboxProvider>
   )

@@ -1232,7 +1232,17 @@
 .pt-ixt { border-radius: 10px; }
 .pt-ixt.is-active { box-shadow: var(--pt-shadow-soft); }
 .pt-ix-view { font-size: 13px; }
-.pt-ch-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: middle; }
-.pt-ch-dot-wa { background: var(--pt-wa); }
-.pt-ch-dot-tg { background: var(--pt-tg); }
-.pt-ch-dot-em { background: var(--pt-em); }
+/* Message rows — per-message sender avatar (grouped by consecutive sender) */
+.pt-msg-row { display: flex; align-items: flex-end; gap: 8px; max-width: 78%; }
+.pt-msg-row-them { align-self: flex-start; }
+.pt-msg-row-me { align-self: flex-end; flex-direction: row-reverse; }
+.pt-msg-row > .pt-bubble { max-width: 100%; align-self: flex-end; }
+.pt-msg-avatar-spacer { width: 26px; flex: 0 0 auto; }
+
+/* Views column — icon per item */
+.pt-ix-view-label { display: inline-flex; align-items: center; min-width: 0; }
+.pt-ix-view-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; margin-right: 9px; color: var(--pt-fg-3); flex: 0 0 auto; }
+.pt-ix-view.is-on .pt-ix-view-icon { color: var(--pt-accent-fg); }
+.pt-ix-view-icon.pt-ch-wa { color: var(--pt-wa); }
+.pt-ix-view-icon.pt-ch-tg { color: var(--pt-tg); }
+.pt-ix-view-icon.pt-ch-em { color: var(--pt-em); }

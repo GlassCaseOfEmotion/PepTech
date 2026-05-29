@@ -14,7 +14,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const { conversation: initialConversationId, invoice_path: initialInvoicePath, invoice_name: initialInvoiceName, prefill: initialPrefill } = await searchParams
   const supabase = await createClient()
 
-  const [{ data: conversations }, { data: quickReplies }, { data: templates }, { count: resolvedCount }, { data: tenantRow }, { count: channelCount }, queuedRuns] = await Promise.all([
+  const [{ data: conversations }, { data: quickReplies }, { data: templates }, { count: resolvedCount }, { data: tenantRow }, { count: channelCount }, queuedRuns, { data: meRow }] = await Promise.all([
     supabase
       .from('conversations')
       .select(`
@@ -43,8 +43,10 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
     supabase.from('tenants').select('base_currency').single(),
     supabase.from('tenant_channels').select('id', { count: 'exact', head: true }).eq('is_active', true),
     getQueuedRuns().catch((): QueuedRun[] => []),
+    supabase.from('users').select('display_name').eq('id', user.id).single(),
   ])
   const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
+  const operatorName = (meRow?.display_name as string | null) ?? user.email?.split('@')[0] ?? 'You'
 
   return (
     <InboxView
@@ -59,6 +61,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       baseCurrency={baseCurrency}
       hasChannels={(channelCount ?? 0) > 0}
       queuedRuns={queuedRuns}
+      operatorName={operatorName}
     />
   )
 }

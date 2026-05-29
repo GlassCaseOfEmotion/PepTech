@@ -3,14 +3,16 @@
 import { Icons } from '@/lib/icons'
 import { useInbox } from './InboxProvider'
 
-const LIFECYCLE: { id: string; label: string }[] = [
-  { id: 'lead',     label: 'New leads' },
-  { id: 'customer', label: 'Customers' },
+type ViewDef = { id: string; label: string; icon: React.FC<{ size?: number }>; iconClass?: string }
+
+const LIFECYCLE: ViewDef[] = [
+  { id: 'lead',     label: 'New leads', icon: Icons.user },
+  { id: 'customer', label: 'Customers', icon: Icons.users },
 ]
-const CHANNELS: { id: string; label: string }[] = [
-  { id: 'wa', label: 'WhatsApp' },
-  { id: 'tg', label: 'Telegram' },
-  { id: 'em', label: 'Email' },
+const CHANNELS: ViewDef[] = [
+  { id: 'wa', label: 'WhatsApp', icon: Icons.wa, iconClass: 'pt-ch-wa' },
+  { id: 'tg', label: 'Telegram', icon: Icons.tg, iconClass: 'pt-ch-tg' },
+  { id: 'em', label: 'Email',    icon: Icons.em, iconClass: 'pt-ch-em' },
 ]
 
 export function ViewsColumn({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
@@ -35,12 +37,15 @@ export function ViewsColumn({ collapsed, onToggle }: { collapsed: boolean; onTog
     )
   }
 
-  const Row = ({ id, label }: { id: string; label: string }) => (
+  const Row = ({ id, label, icon: Icon, iconClass }: ViewDef) => (
     <button
       className={`pt-ix-view ${view === id ? 'is-on' : ''}`}
       onClick={() => setView(id)}
     >
-      <span className="pt-ix-view-label">{label}</span>
+      <span className="pt-ix-view-label">
+        <span className={`pt-ix-view-icon ${iconClass ?? ''}`}><Icon size={14} /></span>
+        {label}
+      </span>
       <span className="pt-ix-view-count">{countFor(id)}</span>
     </button>
   )
@@ -54,16 +59,11 @@ export function ViewsColumn({ collapsed, onToggle }: { collapsed: boolean; onTog
         </button>
       </div>
       <div className="pt-ix-views-body">
-        <Row id="all" label="All" />
+        <Row id="all" label="All" icon={Icons.inbox} />
         <div className="pt-ix-views-sec">Lifecycle</div>
         {LIFECYCLE.map(v => <Row key={v.id} {...v} />)}
         <div className="pt-ix-views-sec">Channels</div>
-        {CHANNELS.map(v => (
-          <button key={v.id} className={`pt-ix-view ${view === v.id ? 'is-on' : ''}`} onClick={() => setView(v.id)}>
-            <span className="pt-ix-view-label"><i className={`pt-ch-dot pt-ch-dot-${v.id}`} />{v.label}</span>
-            <span className="pt-ix-view-count">{countFor(v.id)}</span>
-          </button>
-        ))}
+        {CHANNELS.map(v => <Row key={v.id} {...v} />)}
       </div>
     </aside>
   )
