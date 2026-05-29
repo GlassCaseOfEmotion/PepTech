@@ -14,9 +14,14 @@ vi.mock('@/lib/agent/copilot/draft-order', () => ({
   finalizeDraftOrder: vi.fn(),
 }))
 
+vi.mock('@/lib/agent/copilot/deliver', () => ({
+  deliverMessage: vi.fn().mockResolvedValue({ messageId: 'm1' }),
+}))
+
 import { getPeptideReference } from '../copilot-commerce'
-import { updateDraftOrder, setShippingAddress, setPaymentAssetTool, getDraftOrder, finalizeOrder } from '../copilot-commerce'
+import { updateDraftOrder, setShippingAddress, setPaymentAssetTool, getDraftOrder, finalizeOrder, sendMessage } from '../copilot-commerce'
 import { mergeDraftItems } from '@/lib/agent/copilot/draft-order'
+import { deliverMessage } from '@/lib/agent/copilot/deliver'
 
 describe('get_peptide_reference', () => {
   it('returns a compact name+aliases list', async () => {
@@ -48,5 +53,19 @@ describe('copilot commerce tools', () => {
     )
     expect(mergeDraftItems).toHaveBeenCalledWith({}, 't1', 'c1', 'cu1', [{ product_id: 'p1', qty: 2 }])
     expect(out).toEqual({ orderId: 'o1', total: 200 })
+  })
+})
+
+describe('send_message tool', () => {
+  it('is gated and summarises the draft', () => {
+    expect(sendMessage.name).toBe('send_message')
+    expect(sendMessage.requiresConfirmation).toBe(true)
+    expect(sendMessage.summarise?.({ conversation_id: 'c1', content: 'Hi Jordan, RETA-10 is in stock.' } as never)).toMatch(/RETA-10/)
+  })
+
+  it('forwards to deliverMessage', async () => {
+    const out = await sendMessage.execute({ conversation_id: 'c1', content: 'hi' } as never, {} as never, 't1')
+    expect(deliverMessage).toHaveBeenCalledWith({}, 't1', 'c1', 'hi')
+    expect(out).toEqual({ messageId: 'm1' })
   })
 })

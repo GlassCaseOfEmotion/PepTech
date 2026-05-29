@@ -9,7 +9,6 @@ describe('copilot mode tool set', () => {
     expect(names).toContain('query_catalog')
     expect(names).toContain('get_conversation_messages')
     expect(names).not.toContain('create_order')
-    expect(names).not.toContain('send_message')
   })
 
   it('post_commentary is auto-execute and registered in TOOL_MAP', () => {
@@ -31,5 +30,11 @@ describe('copilot mode tool set', () => {
 
   it('finalize_order is resolvable in TOOL_MAP and confirm-gated', () => {
     expect(TOOL_MAP['finalize_order']?.requiresConfirmation).toBe(true)
+  })
+
+  it('send_message is resolvable in TOOL_MAP and confirm-gated', () => {
+    expect(TOOL_MAP['send_message']?.requiresConfirmation).toBe(true)
+    const names = toolsForMode('copilot').map(t => t.name)
+    expect(names).toContain('send_message')
   })
 })

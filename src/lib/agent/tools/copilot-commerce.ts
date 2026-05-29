@@ -1,6 +1,7 @@
 import type { AgentTool } from '../types'
 import { loadPeptideReference } from '@/lib/catalog/reference/lookup'
 import { mergeDraftItems, setShipping, setPaymentAsset, readDraftOrder, finalizeDraftOrder } from '@/lib/agent/copilot/draft-order'
+import { deliverMessage } from '@/lib/agent/copilot/deliver'
 
 /** Read-only: the platform-wide peptide reference (canonical names + informal
  * aliases) for resolving customer shorthand. Compact projection to keep the
@@ -89,5 +90,24 @@ export const finalizeOrder: AgentTool = {
   async execute(raw, supabase, tenantId) {
     const i = raw as { conversation_id: string }
     return finalizeDraftOrder(supabase, tenantId, i.conversation_id)
+  },
+}
+
+export const sendMessage: AgentTool = {
+  name: 'send_message',
+  description: 'Draft and send a message to the CUSTOMER in this conversation (a reply, a quote, a cross-sell offer, or a question like asking for the shipping address). REQUIRES operator approval — the operator reviews and may edit your draft before it is sent, so write it as a ready-to-send message.',
+  inputSchema: {
+    type: 'object',
+    required: ['conversation_id', 'content'],
+    properties: {
+      conversation_id: { type: 'string', description: 'The conversation_id from your context block.' },
+      content: { type: 'string', description: 'The message to send to the customer.' },
+    },
+  },
+  requiresConfirmation: true,
+  summarise: (input) => `Send: "${String((input as { content?: string }).content ?? '').slice(0, 80)}"`,
+  async execute(raw, supabase, tenantId) {
+    const i = raw as { conversation_id: string; content: string }
+    return deliverMessage(supabase, tenantId, i.conversation_id, i.content)
   },
 }
