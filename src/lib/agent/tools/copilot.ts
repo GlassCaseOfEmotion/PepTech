@@ -1,5 +1,6 @@
 import type { AgentTool } from '../types'
 import { queryCustomers, getCustomer, queryOrders, getOrder, queryCatalog, getAnalytics, getConversationMessages } from './read'
+import { getPeptideReference, updateDraftOrder, setShippingAddress, setPaymentAssetTool, getDraftOrder, finalizeOrder } from './copilot-commerce'
 
 /** The copilot narrates to the operator by calling this. It performs no DB
  * write — the narration is the assistant message the executor persists; this
@@ -21,9 +22,9 @@ export const postCommentary: AgentTool = {
   },
 }
 
-/** Read tools the copilot may use + post_commentary. No customer-facing or
- * committing tools in Phase 1. */
+/** Read tools the copilot may use + post_commentary + draft-order commerce tools. */
 export const COPILOT_TOOLS: AgentTool[] = [
   queryCustomers, getCustomer, queryOrders, getOrder, queryCatalog, getAnalytics, getConversationMessages,
   postCommentary,
+  getPeptideReference, getDraftOrder, updateDraftOrder, setShippingAddress, setPaymentAssetTool, finalizeOrder,
 ]

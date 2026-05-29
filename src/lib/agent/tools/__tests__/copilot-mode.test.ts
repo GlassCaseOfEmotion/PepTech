@@ -21,4 +21,15 @@ describe('copilot mode tool set', () => {
     const tools = openAiToolsForMode('copilot')
     expect(tools.find(t => t.function.name === 'post_commentary')).toBeTruthy()
   })
+
+  it('includes the draft-order commerce tools', () => {
+    const names = toolsForMode('copilot').map(t => t.name)
+    for (const n of ['get_peptide_reference', 'get_draft_order', 'update_draft_order', 'set_shipping_address', 'set_payment_asset', 'finalize_order']) {
+      expect(names).toContain(n)
+    }
+  })
+
+  it('finalize_order is resolvable in TOOL_MAP and confirm-gated', () => {
+    expect(TOOL_MAP['finalize_order']?.requiresConfirmation).toBe(true)
+  })
 })
