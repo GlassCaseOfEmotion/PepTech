@@ -133,14 +133,13 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChann
         <span className="pt-ix-list-title">Inbox</span>
       </div>
       <div className="pt-ix-search">
-        <Icons.search size={12} />
+        <Icons.search size={11} />
         <input
           ref={searchRef}
-          placeholder="search threads, names, txids…"
+          placeholder="Search threads"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
-        <kbd>⌘F</kbd>
       </div>
       {pending.length > 0 && (
         <CollapsiblePendingApprovals count={pending.length}>

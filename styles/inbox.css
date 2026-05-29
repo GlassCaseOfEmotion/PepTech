@@ -63,8 +63,12 @@
   background: var(--pt-bg-side);
   min-height: 0;
 }
+/* Hidden on desktop — the workspace breadcrumb + views column already
+   convey "you are in the inbox". Brought back inside the mobile media
+   query as the only way back to the dashboard from the thread list. */
 .pt-ix-list-hd {
-  display: flex; align-items: center; gap: 6px;
+  display: none;
+  align-items: center; gap: 6px;
   padding: 10px 12px; height: 44px;
   border-bottom: 0.5px solid var(--pt-line-soft);
 }
@@ -77,9 +81,9 @@
 .pt-ix-list-title { flex: 1; font-size: 13px; font-weight: 600; }
 
 .pt-ix-search {
-  display: flex; align-items: center; gap: 7px;
-  margin: 8px 12px;
-  height: 30px; padding: 0 10px;
+  display: flex; align-items: center; gap: 6px;
+  margin: 6px 12px 4px;
+  height: 26px; padding: 0 9px;
   border: 0.5px solid var(--pt-line);
   border-radius: 7px;
   background: var(--pt-surface);
@@ -88,16 +92,22 @@
 .pt-ix-search input {
   flex: 1; border: 0; background: transparent; outline: none;
   font: inherit; color: var(--pt-fg);
-  font-size: 12px;
+  font-size: 11.5px;
 }
 .pt-ix-search input::placeholder { color: var(--pt-fg-4); }
 
 .pt-ix-filters {
-  padding: 0 12px 8px;
-  display: flex; gap: 3px;
-  flex-wrap: wrap;
+  padding: 0 12px 6px;
+  display: flex; gap: 2px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none; /* horizontal scroll is a fallback only */
 }
-.pt-ix-filters .pt-pill { padding: 3px 7px; font-size: 10.5px; }
+.pt-ix-filters::-webkit-scrollbar { display: none; }
+.pt-ix-filters .pt-pill {
+  padding: 2px 6px; font-size: 10.5px; white-space: nowrap; flex: none;
+}
+.pt-ix-filters .pt-pill-num { margin-left: 4px; }
 
 .pt-ix-threads {
   list-style: none; margin: 0; padding: 0;
@@ -762,6 +772,10 @@
     grid-template-columns: 1fr !important;
     height: calc(100vh - 48px);
   }
+
+  /* The "< Inbox" title row is mobile-only — it's how you get back to the
+     dashboard from the thread list. Restored here. */
+  .pt-ix-list-hd { display: flex; }
 
   /* Default: show thread list, hide conversation and rail */
   .pt-ix-conv { display: none !important; }
