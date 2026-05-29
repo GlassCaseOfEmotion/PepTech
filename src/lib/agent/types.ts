@@ -26,7 +26,7 @@ export interface AgentMessage {
 export interface AgentSession {
   id: string
   tenant_id: string
-  trigger: 'user' | 'automation' | 'schedule' | 'onboarding'
+  trigger: 'user' | 'automation' | 'schedule' | 'onboarding' | 'copilot'
   trigger_ref: string | null
   status: 'active' | 'complete'
   title: string | null
