@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import '../../styles/peptech.css'
 import '../../styles/inbox.css'
+import '../../styles/copilot.css'
 import '../../styles/customer.css'
 import '../../styles/settings.css'
 import '../../styles/orders.css'

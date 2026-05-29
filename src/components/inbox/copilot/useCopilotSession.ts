@@ -8,7 +8,7 @@ import { mapAgentRow, upsertMessage, type CopilotMsg } from './timeline'
 export interface DraftOrderView {
   id: string; ref_number: string; status: string; payment_amount: number
   payment_asset: string | null; currency: string; shipping_address: unknown
-  order_items: { product_id: string; qty: number; unit_price_snapshot: number }[]
+  order_items: { product_id: string; qty: number; unit_price_snapshot: number; products?: { name: string } | null }[]
 }
 
 export function useCopilotSession(conversationId: string) {
