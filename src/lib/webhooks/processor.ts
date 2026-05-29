@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
+import { after } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { runAutomationsForEvent } from '@/lib/automations/engine'
 import { runCopilotPass } from '@/lib/copilot/run'
@@ -142,13 +143,16 @@ export async function processInboundMessage(
     .eq('tenant_id', tenantId)
 
   // Proactive AI copilot: draft suggestions as the conversation progresses.
-  // Fire-and-forget on a service client (no user session in a webhook).
-  void runCopilotPass(createServiceClient(), {
-    tenantId,
-    conversationId,
-    customerId,
-    messageId: message.id,
-  }).catch(console.error)
+  // Schedule via after() so the work survives past the serverless response — a
+  // bare fire-and-forget promise gets frozen/killed once the webhook returns, so
+  // the LLM calls never run and the logs never flush. Outside a request scope
+  // (e.g. unit tests) after() throws, so fall back to fire-and-forget.
+  const copilotParams = { tenantId, conversationId, customerId, messageId: message.id }
+  try {
+    after(() => runCopilotPass(createServiceClient(), copilotParams))
+  } catch {
+    void runCopilotPass(createServiceClient(), copilotParams).catch(console.error)
+  }
 
   return { conversationId, messageId: message.id }
 }

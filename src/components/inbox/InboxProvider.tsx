@@ -136,9 +136,12 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
       .from('messages')
       .select('id, direction, content, sent_at, status, metadata')
       .eq('conversation_id', conversationId)
-      .order('sent_at', { ascending: true })
+      .order('sent_at', { ascending: false })
       .limit(100)
-    const mapped = (data ?? []).map(m => dbMessageToInboxMessage(m as unknown as DbMessage))
+    // Fetch the NEWEST 100, then restore chronological order for display.
+    // (Ordering ascending + limit returned the OLDEST 100, silently dropping the
+    // most recent messages in conversations longer than 100.)
+    const mapped = (data ?? []).reverse().map(m => dbMessageToInboxMessage(m as unknown as DbMessage))
     // Track IDs so the signing effect doesn't re-process messages already signed at fetch time
     mapped.forEach(m => { if (m.kind === 'photo') signedUrlsRef.current.add(m.id) })
     const withUrls = await Promise.all(mapped.map(async msg => {
