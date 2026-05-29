@@ -5,14 +5,56 @@
 
 .pt-inbox {
   display: grid;
-  grid-template-columns: 320px 1fr 48px;
+  --pt-views-w: 188px;
+  --pt-thread-w: 320px;
+  --pt-rail-w: 48px;
+  grid-template-columns: var(--pt-views-w) var(--pt-thread-w) 1fr var(--pt-rail-w);
   height: calc(100vh - 48px);
   overflow: hidden;
   transition: grid-template-columns 0.22s ease;
 }
-.pt-inbox.is-panel-open { grid-template-columns: 320px 1fr 368px; }
-.pt-d-compact .pt-inbox { grid-template-columns: 296px 1fr 48px; }
-.pt-d-compact .pt-inbox.is-panel-open { grid-template-columns: 296px 1fr 368px; }
+.pt-inbox.is-panel-open      { --pt-rail-w: 368px; }
+.pt-inbox.is-views-collapsed { --pt-views-w: 40px; }
+.pt-d-compact .pt-inbox      { --pt-thread-w: 296px; }
+
+/* ─── Views column (Phase 3) ─────────────────────────────────────────────── */
+.pt-ix-views {
+  border-right: 0.5px solid var(--pt-line);
+  background: var(--pt-bg-side);
+  display: flex; flex-direction: column;
+  min-height: 0; overflow: hidden;
+}
+.pt-ix-views-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 14px 8px;
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--pt-fg-4);
+}
+.pt-ix-views-toggle {
+  width: 22px; height: 22px; border: 0; border-radius: 6px; cursor: pointer;
+  background: transparent; color: var(--pt-fg-3);
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background-color 140ms ease, transform 180ms ease;
+}
+.pt-ix-views-toggle:hover { background: oklch(from var(--pt-fg) l c h / 0.06); color: var(--pt-fg); }
+.pt-ix-views.is-collapsed { align-items: center; padding-top: 14px; }
+.pt-ix-views.is-collapsed .pt-ix-views-toggle { transform: rotate(180deg); }
+.pt-ix-views-body { display: flex; flex-direction: column; gap: 1px; padding: 0 8px; overflow-y: auto; min-height: 0; }
+.pt-ix-views-sec {
+  font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--pt-fg-4); padding: 12px 6px 4px;
+}
+.pt-ix-view {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; border: 0; background: transparent; cursor: pointer;
+  padding: 6px 8px; border-radius: 6px;
+  font-size: 12.5px; color: var(--pt-fg-2); text-align: left;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+.pt-ix-view:hover { background: oklch(from var(--pt-fg) l c h / 0.05); color: var(--pt-fg); }
+.pt-ix-view.is-on { background: var(--pt-accent-soft); color: var(--pt-accent-fg); font-weight: 500; }
+.pt-ix-view-count { font-size: 11px; color: var(--pt-fg-4); font-family: var(--pt-mono); }
+.pt-ix-view.is-on .pt-ix-view-count { color: var(--pt-accent-fg); }
 
 /* ── Thread list column ─────────────────────────────────────────────── */
 .pt-ix-list {
@@ -696,6 +738,7 @@
   .pt-ix-conv { display: none !important; }
   .pt-ix-rail { display: none !important; }
   .pt-ix-rail-region { display: none !important; }
+  .pt-ix-views { display: none !important; }
 
   /* When a conversation is selected: hide list, show conversation */
   .pt-inbox.has-conversation .pt-ix-list { display: none !important; }

@@ -19,6 +19,8 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ConvertToCustomerButton } from '@/components/contacts/ConvertToCustomerButton'
 import { RailStrip, type RailPanel } from './RailStrip'
 import { RailPanelHost } from './RailPanelHost'
+import { ViewsColumn } from './ViewsColumn'
+import { useViewsCollapsed } from './useViewsCollapsed'
 import { CH_NAMES } from './inbox-shared'
 
 function fmtMins(m: number) {
@@ -884,6 +886,7 @@ function InboxLayout({ initialPrefill, baseCurrency, hasChannels, queuedRuns }: 
   const { threads, activeId, setActiveId, filter, setFilter, messages, isSending, sendMessage } = useInbox()
   const activeThread = threads.find(t => t.id === activeId) ?? threads[0]
   const [activePanel, setActivePanel] = useState<RailPanel | null>(null)
+  const { collapsed: viewsCollapsed, toggle: toggleViews } = useViewsCollapsed()
   const searchParams = useSearchParams()
   const router = useRouter()
   const selectedConvId = searchParams.get('conversation')
@@ -900,7 +903,8 @@ function InboxLayout({ initialPrefill, baseCurrency, hasChannels, queuedRuns }: 
   }, [router])
 
   return (
-    <div className={`pt-inbox${selectedConvId ? ' has-conversation' : ''}${activePanel ? ' is-panel-open' : ''}`}>
+    <div className={`pt-inbox${selectedConvId ? ' has-conversation' : ''}${activePanel ? ' is-panel-open' : ''}${viewsCollapsed ? ' is-views-collapsed' : ''}`}>
+      <ViewsColumn collapsed={viewsCollapsed} onToggle={toggleViews} />
       <ThreadColumn
         threads={threads}
         activeId={activeThread?.id ?? ''}
