@@ -2829,17 +2829,21 @@ button.pt-chip.is-on {
 }
 .pt-avatar-init { font-size: 13px; font-weight: 600; line-height: 1; }
 .pt-avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+/* The badge hosts the SAME channel icon used in the views column / shell
+   header. Icons.wa/tg are self-contained coloured circles, Icons.em is an
+   envelope — the white backing circle gives all three a clean ring on the
+   avatar, and the per-channel colour drives the icon via currentColor. */
 .pt-avatar-ch {
   position: absolute; right: -3px; bottom: -3px;
-  width: 16px; height: 16px; border-radius: 50%;
-  border: 2px solid var(--pt-surface);
+  width: 17px; height: 17px; border-radius: 50%;
+  border: 2px solid var(--pt-bg);
+  background: var(--pt-surface);
   display: grid; place-items: center;
-  color: #fff;
 }
-.pt-avatar-ch svg { width: 11px; height: 11px; display: block; }
-.pt-avatar-ch-wa { background: var(--pt-wa); }
-.pt-avatar-ch-tg { background: var(--pt-tg); }
-.pt-avatar-ch-em { background: var(--pt-em); }
+.pt-avatar-ch svg { width: 13px; height: 13px; display: block; }
+.pt-avatar-ch-wa { color: var(--pt-wa); }
+.pt-avatar-ch-tg { color: var(--pt-tg); }
+.pt-avatar-ch-em { color: var(--pt-em); }
 
 /* ─── Badge primitive (v2 soft-fill, fully rounded) ──────────────────────── */
 .pt-badge {
