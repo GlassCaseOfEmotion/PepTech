@@ -84,17 +84,40 @@ function ChipsEntry({ names }: { names: string[] }) {
 }
 
 function ConfirmEntry({ tc, onApprove, onDismiss, busy }: {
-  tc: CopilotToolCall; onApprove: () => void; onDismiss: () => void; busy: boolean
+  tc: CopilotToolCall
+  onApprove: (editedContent?: string) => void
+  onDismiss: () => void
+  busy: boolean
 }) {
+  const isSend = tc.name === 'send_message'
+  const initial = isSend ? String((tc.input as { content?: string }).content ?? '') : ''
+  const [edited, setEdited] = useState(initial)
   const resolved = tc.status === 'complete' || tc.status === 'rejected'
+
+  if (isSend && !resolved) {
+    return (
+      <div className="pt-cp-entry">
+        <div className="pt-cp-confirm">
+          <div className="pt-cp-confirm-eyebrow">Reply to customer — review &amp; send</div>
+          <textarea className="pt-cp-confirm-edit" value={edited} rows={3}
+            onChange={e => setEdited(e.target.value)} aria-label="Message to send" />
+          <div className="pt-cp-confirm-btns">
+            <button className="pt-cp-approve" onClick={() => onApprove(edited)} disabled={busy || !edited.trim()}>Send</button>
+            <button className="pt-cp-dismiss" onClick={onDismiss} disabled={busy}>Discard</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className={`pt-cp-entry`}>
+    <div className="pt-cp-entry">
       <div className={`pt-cp-confirm${resolved ? ' is-resolved' : ''}`}>
         <div className="pt-cp-confirm-eyebrow">Needs your nod</div>
         <div className="pt-cp-confirm-summary">{confirmSummary(tc)}</div>
         {tc.status === 'pending' && (
           <div className="pt-cp-confirm-btns">
-            <button className="pt-cp-approve" onClick={onApprove} disabled={busy}>Approve</button>
+            <button className="pt-cp-approve" onClick={() => onApprove()} disabled={busy}>Approve</button>
             <button className="pt-cp-dismiss" onClick={onDismiss} disabled={busy}>Not now</button>
           </div>
         )}
@@ -108,7 +131,7 @@ function ConfirmEntry({ tc, onApprove, onDismiss, busy }: {
 /** Render one persisted agent turn into zero-or-more feed entries. */
 function renderMessage(
   m: CopilotMsg, customerName: string,
-  onConfirm: (messageId: string, toolCallId: string, confirmed: boolean) => void,
+  onConfirm: (messageId: string, toolCallId: string, confirmed: boolean, editedContent?: string) => void,
   confirmingIds: Set<string>,
 ) {
   if (m.role === 'user') {
@@ -127,7 +150,7 @@ function renderMessage(
   const pending = m.toolCalls.filter(tc => tc.status === 'pending')
   const commentaries = m.toolCalls.filter(tc => tc.name === 'post_commentary' && tc.status !== 'pending')
   const actions = m.toolCalls.filter(tc => tc.status !== 'pending' && tc.name !== 'post_commentary' && ACTION_LABEL[tc.name])
-  const resolvedGated = m.toolCalls.filter(tc => (tc.status === 'complete' || tc.status === 'rejected') && tc.name === 'finalize_order')
+  const resolvedGated = m.toolCalls.filter(tc => (tc.status === 'complete' || tc.status === 'rejected') && (tc.name === 'finalize_order' || tc.name === 'send_message'))
 
   for (const tc of commentaries) {
     const note = String((tc.input as { note?: string }).note ?? (tc.output as { note?: string } | null)?.note ?? '').trim()
@@ -136,7 +159,7 @@ function renderMessage(
   if (actions.length) nodes.push(<ChipsEntry key={`${m.id}-chips`} names={actions.map(a => a.name)} />)
   for (const tc of [...pending, ...resolvedGated]) {
     nodes.push(<ConfirmEntry key={`${m.id}-${tc.id}`} tc={tc} busy={confirmingIds.has(tc.id)}
-      onApprove={() => onConfirm(m.id, tc.id, true)} onDismiss={() => onConfirm(m.id, tc.id, false)} />)
+      onApprove={(editedContent) => onConfirm(m.id, tc.id, true, editedContent)} onDismiss={() => onConfirm(m.id, tc.id, false)} />)
   }
   return nodes.length ? <div key={m.id}>{nodes}</div> : null
 }
@@ -148,10 +171,10 @@ export function CopilotPanel({ conversationId, customerName }: { conversationId:
   // the confirm round-trips (the card only flips status via realtime, which can
   // be seconds away). Cleared once the action resolves.
   const [confirming, setConfirming] = useState<Set<string>>(new Set())
-  async function handleConfirm(messageId: string, toolCallId: string, confirmed: boolean) {
+  async function handleConfirm(messageId: string, toolCallId: string, confirmed: boolean, editedContent?: string) {
     if (confirming.has(toolCallId)) return
     setConfirming(s => new Set(s).add(toolCallId))
-    try { await confirm(messageId, toolCallId, confirmed) }
+    try { await confirm(messageId, toolCallId, confirmed, editedContent) }
     finally { setConfirming(s => { const n = new Set(s); n.delete(toolCallId); return n }) }
   }
   const feedRef = useRef<HTMLDivElement>(null)

@@ -17,4 +17,9 @@ describe('buildCopilotSystem', () => {
     expect(s).toContain('cust-xyz')
     expect(s).toMatch(/update_draft_order/)
   })
+
+  it('teaches the agent to use send_message', () => {
+    const s = buildCopilotSystem({ conversationId: 'conv-abc', customerId: 'cust-xyz' })
+    expect(s).toMatch(/send_message/)
+  })
 })

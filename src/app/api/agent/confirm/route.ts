@@ -7,8 +7,8 @@ export async function POST(request: Request) {
   const user = await getServerUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { sessionId, messageId, toolCallId, confirmed } =
-    await request.json() as { sessionId?: string; messageId?: string; toolCallId?: string; confirmed?: boolean }
+  const { sessionId, messageId, toolCallId, confirmed, editedInput } =
+    await request.json() as { sessionId?: string; messageId?: string; toolCallId?: string; confirmed?: boolean; editedInput?: Record<string, unknown> }
 
   if (!sessionId || !messageId || !toolCallId || confirmed === undefined) {
     return NextResponse.json({ error: 'sessionId, messageId, toolCallId, confirmed required' }, { status: 400 })
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        await confirmToolCall(sessionId, messageId, toolCallId, confirmed, tenantId, supabase, createSseSink(controller))
+        await confirmToolCall(sessionId, messageId, toolCallId, confirmed, tenantId, supabase, createSseSink(controller), editedInput)
       } catch (e) {
         const encoder = new TextEncoder()
         const msg = e instanceof Error ? e.message : 'Confirm error'
