@@ -6,7 +6,6 @@ import { Icons } from '@/lib/icons'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { formatAmount, formatAmountCompact } from '@/lib/currency'
 import { InboxProvider, useInbox } from './InboxProvider'
-import { CopilotSuggestions } from './CopilotSuggestions'
 import { TemplatePicker } from './TemplatePicker'
 import { WaTemplatePicker } from './WaTemplatePicker'
 import { ProductInfoPicker } from './ProductInfoPicker'
@@ -692,7 +691,7 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
   baseCurrency: string
   operatorName: string
 }) {
-  const { snooze, markDone, reopen, messagesLoading, updateThreadLifecycle, updateThreadAcquisitionSource, suggestions } = useInbox()
+  const { snooze, markDone, reopen, messagesLoading, updateThreadLifecycle, updateThreadAcquisitionSource } = useInbox()
   const [showSnooze, setShowSnooze] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [sheetExpanded, setSheetExpanded] = useState(false)
@@ -820,10 +819,6 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
               </div>
             )
           })}
-          <CopilotSuggestions
-            suggestions={suggestions.filter(s => s.conversationId === thread.id)}
-            variant="inline"
-          />
         </div>
       )}
 
