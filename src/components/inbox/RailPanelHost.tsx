@@ -58,6 +58,17 @@ export function RailPanelHost({ panel, thread, baseCurrency, onClose }: {
     )
   }
 
+  // Copilot takes over the entire rail — no outer chrome, full bleed.
+  // The strip button on the right toggles it open/closed.
+  if (panel === 'ai') {
+    if (!thread.id || !thread.customerId) return null
+    return (
+      <aside className="pt-ix-rail is-copilot">
+        <CopilotPanel conversationId={thread.id} customerName={thread.name} />
+      </aside>
+    )
+  }
+
   return (
     <aside className="pt-ix-rail">
       <div className="pt-ix-panel-hd">
@@ -88,10 +99,6 @@ export function RailPanelHost({ panel, thread, baseCurrency, onClose }: {
             {thread.tags.map(tag => <span key={tag} className="pt-tag pt-tag-soft">{tag}</span>)}
           </div>
         </div>
-      )}
-
-      {panel === 'ai' && thread.id && thread.customerId && (
-        <CopilotPanel conversationId={thread.id} customerName={thread.name} />
       )}
 
       {panel === 'notes' && (

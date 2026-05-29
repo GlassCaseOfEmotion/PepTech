@@ -430,6 +430,11 @@
   display: flex; flex-direction: column; gap: 16px;
   min-height: 0; min-width: 0;
 }
+/* Copilot takes over the whole rail — no host chrome, no padding, no host
+   scroll (the panel manages its own feed scroll). */
+.pt-ix-rail.is-copilot {
+  padding: 0; gap: 0; overflow: hidden;
+}
 .pt-ix-panel-hd {
   position: sticky; top: 0; z-index: 1;
   display: flex; align-items: center; justify-content: space-between;
