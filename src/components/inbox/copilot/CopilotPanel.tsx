@@ -112,9 +112,12 @@ function renderMessage(
   busy: boolean,
 ) {
   if (m.role === 'user') {
+    // Customer messages + operator-to-customer sends already live in the main
+    // conversation window — don't duplicate them here. Only the operator's
+    // direct commands to the copilot belong in this feed.
     const v = voiceOf(m.content ?? '')
-    if (v.kind === 'plain' || !v.body) return null
-    return <VoiceEntry key={m.id} kind={v.kind} body={v.body} name={customerName} />
+    if (v.kind !== 'operator' || !v.body) return null
+    return <VoiceEntry key={m.id} kind="operator" body={v.body} name={customerName} />
   }
 
   // assistant turn → commentary + post_commentary notes + action chips + confirm cards
@@ -157,7 +160,7 @@ export function CopilotPanel({ conversationId, customerName }: { conversationId:
 
   const hasFeed = messages.some(m => {
     if (m.role === 'assistant') return m.content?.trim() || m.toolCalls.length
-    return voiceOf(m.content ?? '').body
+    return voiceOf(m.content ?? '').kind === 'operator'
   })
   const items = draftOrder?.order_items ?? []
 
