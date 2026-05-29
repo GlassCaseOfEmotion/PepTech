@@ -1,13 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/lib/icons'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { formatAmount, formatAmountCompact } from '@/lib/currency'
 import { InboxProvider, useInbox } from './InboxProvider'
-import { InboxAIPanel } from './InboxAIPanel'
-import { OrderRail } from './OrderRail'
 import { TemplatePicker } from './TemplatePicker'
 import { WaTemplatePicker } from './WaTemplatePicker'
 import { ProductInfoPicker } from './ProductInfoPicker'
@@ -17,37 +15,11 @@ import { PendingApprovalRow } from '@/components/shared/PendingApprovalRow'
 import { CollapsiblePendingApprovals } from './CollapsiblePendingApprovals'
 import { AcquisitionSourceBanner } from '@/components/inbox/AcquisitionSourceBanner'
 import { initials } from '@/types/inbox'
-import { createClient } from '@/lib/supabase/client'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ConvertToCustomerButton } from '@/components/contacts/ConvertToCustomerButton'
-
-interface ActivityItem {
-  id: string
-  source: 'order' | 'tag'
-  label: string
-  ref_number: string | null
-  amount: number | null
-  note: string | null
-  created_at: string
-}
-
-function actBullet(item: ActivityItem) {
-  if (item.source === 'tag') return ''
-  const l = item.label.toLowerCase()
-  if (l.includes('shipped') || l.includes('delivered') || l.includes('creat') || l.includes('draft')) return 'pt-bul-cool'
-  if (l.includes('confirm')) return 'pt-bul-warn'
-  return ''
-}
-
-function actDetail(item: ActivityItem, baseCurrency: string) {
-  if (item.source === 'tag') return item.note ? ` · ${item.note}` : ''
-  const parts: string[] = []
-  if (item.ref_number) parts.push(item.ref_number)
-  if (item.amount != null && (item.label.toLowerCase().includes('creat') || item.label.toLowerCase().includes('draft'))) {
-    parts.push(formatAmount(Number(item.amount), baseCurrency))
-  }
-  return parts.length ? ` · ${parts.join(' · ')}` : ''
-}
+import { RailStrip, type RailPanel } from './RailStrip'
+import { RailPanelHost } from './RailPanelHost'
+import { CH_NAMES } from './inbox-shared'
 
 function fmtMins(m: number) {
   if (m < 60) return `${m}m`
@@ -55,17 +27,7 @@ function fmtMins(m: number) {
   return `${Math.floor(m / 1440)}d`
 }
 
-function fmtRelative(iso: string) {
-  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
-  if (mins < 60) return `${mins}m ago`
-  if (mins < 1440) return `${Math.floor(mins / 60)}h ago`
-  const days = Math.floor(mins / 1440)
-  if (days < 30) return `${days}d ago`
-  return `${Math.floor(days / 30)}mo ago`
-}
-
 const CH_ICONS: Record<string, React.FC<{ size?: number }>> = { wa: Icons.wa, tg: Icons.tg, em: Icons.em }
-const CH_NAMES: Record<string, string> = { wa: 'WhatsApp', tg: 'Telegram', em: 'Email' }
 
 // ─── Thread item ─────────────────────────────────────────────────────────────
 
@@ -925,131 +887,17 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
   )
 }
 
-// ─── Conversation right rail ─────────────────────────────────────────────────
-
-function ConversationRail({ thread, baseCurrency }: { thread: InboxThread; baseCurrency: string }) {
-  const { notes, addNote } = useInbox()
-  const [addingNote, setAddingNote] = useState(false)
-  const [noteText, setNoteText] = useState('')
-  const [activity, setActivity] = useState<ActivityItem[]>([])
-  const trustCls = thread.trust >= 85 ? 'hi' : thread.trust >= 65 ? 'md' : 'lo'
-  const supabase = useMemo(() => createClient(), [])
-
-  useEffect(() => {
-    if (!thread.customerId) return
-    supabase
-      .from('customer_activity')
-      .select('id, source, label, ref_number, amount, note, created_at')
-      .eq('customer_id', thread.customerId)
-      .order('created_at', { ascending: false })
-      .limit(15)
-      .then(({ data }) => { if (data) setActivity(data as ActivityItem[]) })
-  }, [supabase, thread.customerId])
-
-  const submitNote = async () => {
-    if (!noteText.trim()) return
-    await addNote(noteText)
-    setNoteText('')
-    setAddingNote(false)
-  }
-
-  return (
-    <aside className="pt-ix-rail">
-      {/* Customer card */}
-      <div className="pt-cust">
-        <Link href={`/contacts/${thread.customerId}`} className="pt-cust-hd" style={{ textDecoration: 'none', color: 'inherit' }}>
-          <div className="pt-cust-av" data-channel={thread.channel}>{initials(thread.name)}</div>
-          <div className="pt-cust-id">
-            <div className="pt-cust-name">{thread.name}</div>
-            <div className="pt-cust-handle mono">{thread.handle}</div>
-          </div>
-          <div className={`pt-trust pt-trust-${trustCls}`}>
-            <div className="pt-trust-num">{thread.trust}</div>
-            <div className="pt-trust-lbl">trust</div>
-          </div>
-        </Link>
-        <div className="pt-cust-stats">
-          <div><div className="lbl">LTV</div><div className="val mono">{formatAmount(thread.ltv, baseCurrency)}</div></div>
-          <div><div className="lbl">Channel</div><div className="val">{CH_NAMES[thread.channel]}</div></div>
-        </div>
-        <div className="pt-cust-tags">
-          {thread.tags.map(tag => <span key={tag} className="pt-tag pt-tag-soft">{tag}</span>)}
-        </div>
-      </div>
-
-      {/* AI Assistant */}
-      {thread.id && thread.customerId && (
-        <InboxAIPanel
-          conversationId={thread.id}
-          customerId={thread.customerId}
-          customerName={thread.name}
-        />
-      )}
-
-      {/* Notes */}
-      <div className="pt-right-section">
-        <div className="pt-right-hd">
-          <span>Notes</span>
-          <button className="pt-right-add" onClick={() => { setAddingNote(v => !v); setNoteText('') }}>
-            <Icons.plus size={11} />
-          </button>
-        </div>
-        {addingNote && (
-          <div className="pt-note-form">
-            <textarea
-              className="pt-note-input"
-              placeholder="Add an internal note…"
-              value={noteText}
-              onChange={e => setNoteText(e.target.value)}
-              rows={3}
-              autoFocus
-            />
-            <div className="pt-note-actions">
-              <button className="pt-btn pt-btn-ghost" style={{ fontSize: 11 }} onClick={() => { setAddingNote(false); setNoteText('') }}>Cancel</button>
-              <button className="pt-btn pt-btn-primary" style={{ fontSize: 11 }} onClick={submitNote} disabled={!noteText.trim()}>Save</button>
-            </div>
-          </div>
-        )}
-        {notes.map(note => (
-          <div key={note.id} className="pt-rail-note">
-            <div className="pt-rail-note-meta">{fmtRelative(note.created_at)}</div>
-            <div>{note.content}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Activity */}
-      {activity.length > 0 && (
-        <div className="pt-right-section">
-          <div className="pt-right-hd"><span>Activity</span></div>
-          <ul className="pt-rail-activity">
-            {activity.map(item => (
-              <li key={item.id}>
-                <i className={`pt-act-dot ${actBullet(item)}`} />
-                <div>
-                  <b>{item.label}</b>{actDetail(item, baseCurrency)}
-                  <div className="pt-act-time">{fmtRelative(item.created_at)}</div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </aside>
-  )
-}
-
 // ─── Inner layout (consumes context) ────────────────────────────────────────
 
 function InboxLayout({ initialPrefill, baseCurrency, hasChannels, queuedRuns }: { initialPrefill?: string; baseCurrency: string; hasChannels: boolean; queuedRuns: QueuedRun[] }) {
   const { threads, activeId, setActiveId, filter, setFilter, messages, isSending, sendMessage } = useInbox()
   const activeThread = threads.find(t => t.id === activeId) ?? threads[0]
-  const [showOrderRail, setShowOrderRail] = useState(false)
+  const [activePanel, setActivePanel] = useState<RailPanel | null>(null)
   const searchParams = useSearchParams()
   const router = useRouter()
   const selectedConvId = searchParams.get('conversation')
 
-  useEffect(() => { setShowOrderRail(false) }, [activeId])
+  useEffect(() => { setActivePanel(null) }, [activeId])
 
   const handleSelect = useCallback((id: string) => {
     setActiveId(id)
@@ -1061,7 +909,7 @@ function InboxLayout({ initialPrefill, baseCurrency, hasChannels, queuedRuns }: 
   }, [router])
 
   return (
-    <div className={`pt-inbox${selectedConvId ? ' has-conversation' : ''}`}>
+    <div className={`pt-inbox${selectedConvId ? ' has-conversation' : ''}${activePanel ? ' is-panel-open' : ''}`}>
       <ThreadColumn
         threads={threads}
         activeId={activeThread?.id ?? ''}
@@ -1077,20 +925,24 @@ function InboxLayout({ initialPrefill, baseCurrency, hasChannels, queuedRuns }: 
           messages={messages}
           onSend={sendMessage}
           isSending={isSending}
-          onCreateOrder={() => setShowOrderRail(true)}
+          onCreateOrder={() => setActivePanel('order')}
           onBack={handleBack}
           initialPrefill={initialPrefill}
           baseCurrency={baseCurrency}
         />
       )}
-      {activeThread && !showOrderRail && <ConversationRail thread={activeThread} baseCurrency={baseCurrency} />}
-      {activeThread && showOrderRail && (
-        <OrderRail
-          customerId={activeThread.customerId}
-          customerName={activeThread.name}
-          conversationId={activeThread.id}
-          onClose={() => setShowOrderRail(false)}
-        />
+      {activeThread && (
+        <div className={`pt-ix-rail-region${activePanel ? ' is-open' : ''}`}>
+          {activePanel && (
+            <RailPanelHost
+              panel={activePanel}
+              thread={activeThread}
+              baseCurrency={baseCurrency}
+              onClose={() => setActivePanel(null)}
+            />
+          )}
+          <RailStrip active={activePanel} onSelect={(p) => setActivePanel(cur => cur === p ? null : p)} />
+        </div>
       )}
     </div>
   )
