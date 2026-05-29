@@ -8,6 +8,8 @@ import {
   type DbConversation, type DbMessage, type DbQuickReply, type InboxThread, type InboxMessage, type DbNote, type DbTemplate
 } from '@/types/inbox'
 import { playChime, tryNotify } from '@/lib/notifications'
+import { getOpenSuggestions } from '@/app/inbox/copilot-actions'
+import { mapSuggestionRow, type SuggestionRow } from '@/types/copilot'
 
 const CONV_SELECT = `
   id, status, unread_count, last_message_at, last_message_snippet,
@@ -28,6 +30,7 @@ type InboxCtx = {
   view: string
   setView: (v: string) => void
   messages: InboxMessage[]
+  suggestions: SuggestionRow[]
   notes: DbNote[]
   quickReplies: DbQuickReply[]
   templates: DbTemplate[]
@@ -81,6 +84,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
   const [filter, setFilter] = useState('all')
   const [view, setView] = useState('all')
   const [messages, setMessages] = useState<InboxMessage[]>([])
+  const [suggestions, setSuggestions] = useState<SuggestionRow[]>([])
   const [resolvedCount, setResolvedCount] = useState(initialResolvedCount)
   const signedUrlsRef = useRef<Set<string>>(new Set())
   const activeIdRef = useRef(activeId)
@@ -397,6 +401,44 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
     return () => { supabase.removeChannel(channel) }
   }, [activeId, supabase])
 
+  // ── Load open suggestions on conversation change ───────────────────────────
+  useEffect(() => {
+    if (!activeId) { setSuggestions([]); return }
+    let cancelled = false
+    getOpenSuggestions(activeId).then(rows => { if (!cancelled) setSuggestions(rows) })
+    return () => { cancelled = true }
+  }, [activeId])
+
+  // ── Real-time: ai_suggestions for active conversation ─────────────────────
+  useEffect(() => {
+    if (!activeId) return
+    const channel = supabase
+      .channel(`ai_suggestions:${activeId}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'ai_suggestions',
+        filter: `conversation_id=eq.${activeId}`,
+      }, (payload) => {
+        const row = mapSuggestionRow(payload.new as never)
+        if (row.status !== 'open') return
+        setSuggestions(prev => prev.some(s => s.id === row.id) ? prev : [...prev, row])
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'ai_suggestions',
+        filter: `conversation_id=eq.${activeId}`,
+      }, (payload) => {
+        const row = mapSuggestionRow(payload.new as never)
+        setSuggestions(prev =>
+          row.status === 'open'
+            ? prev.map(s => s.id === row.id ? row : s)
+            : prev.filter(s => s.id !== row.id),
+        )
+      })
+      .subscribe((status, err) => {
+        console.log('[RT] ai_suggestions subscription:', status, err ?? '')
+      })
+    return () => { supabase.removeChannel(channel) }
+  }, [activeId, supabase])
+
   // ── Real-time: conversation list updates ──────────────────────────────────
   useEffect(() => {
     const channel = supabase
@@ -466,7 +508,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
   return (
     <InboxContext.Provider value={{
       threads, activeId, setActiveId, filter, setFilter, view, setView,
-      messages, notes, quickReplies, templates, isSending, messagesLoading, resolvedCount, activeThread, sendMessage, sendTemplate, addNote, snooze, markDone, reopen, togglePin,
+      messages, suggestions, notes, quickReplies, templates, isSending, messagesLoading, resolvedCount, activeThread, sendMessage, sendTemplate, addNote, snooze, markDone, reopen, togglePin,
       pendingInvoicePath, pendingInvoiceName, clearPendingInvoice,
       updateThreadLifecycle, updateThreadAcquisitionSource,
     }}>

@@ -5,6 +5,8 @@ import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Icons } from '@/lib/icons'
 import type { SseEvent, ToolCall } from '@/lib/agent/types'
+import { CopilotSuggestions } from './CopilotSuggestions'
+import { useInbox } from './InboxProvider'
 
 const mdComponents: Components = {
   table: ({ children, ...props }) => (
@@ -99,6 +101,8 @@ interface Props {
 }
 
 export function InboxAIPanel({ conversationId, customerId, customerName }: Props) {
+  const { suggestions } = useInbox()
+  const live = suggestions.filter(s => s.conversationId === conversationId)
   const [messages, setMessages] = useState<Msg[]>([])
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [streaming, setStreaming] = useState(false)
@@ -207,6 +211,11 @@ export function InboxAIPanel({ conversationId, customerId, customerName }: Props
             Clear
           </button>
         )}
+      </div>
+
+      <div className="pt-inbox-ai-live">
+        <div className="pt-inbox-ai-live-hd">Live suggestions</div>
+        <CopilotSuggestions suggestions={live} variant="panel" />
       </div>
 
       {messages.length === 0 && (
