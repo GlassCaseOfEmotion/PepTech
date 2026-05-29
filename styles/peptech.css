@@ -171,12 +171,6 @@ kbd {
   flex: 1;
 }
 .pt-brand-name span { color: var(--pt-accent); }
-.pt-brand-menu {
-  appearance: none; border: 0; background: transparent; color: var(--pt-fg-3);
-  width: 22px; height: 22px; border-radius: 5px; display: grid; place-items: center;
-  cursor: pointer;
-}
-.pt-brand-menu:hover { background: oklch(from var(--pt-fg) l c h / 0.06); color: var(--pt-fg); }
 
 .pt-compose, .pt-search {
   display: flex; align-items: center; gap: 8px;
@@ -305,7 +299,8 @@ kbd {
 .pt-root.pt-nav-collapsed .pt-search kbd,
 .pt-root.pt-nav-collapsed .pt-nav-section,
 .pt-root.pt-nav-collapsed .pt-me-info,
-.pt-root.pt-nav-collapsed .pt-me-more {
+.pt-root.pt-nav-collapsed .pt-me-more,
+.pt-root.pt-nav-collapsed .pt-nav-badge {
   display: none;
 }
 .pt-root.pt-nav-collapsed .pt-sidebar { padding: 10px 6px; }
