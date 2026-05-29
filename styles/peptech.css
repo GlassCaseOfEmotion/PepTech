@@ -35,6 +35,16 @@
   --pt-tg:  oklch(0.66 0.13 240);
   --pt-em:  oklch(0.55 0.02 280);
 
+  /* v2 — soft elevation (Phase A additive; promoted globally in Phase B) */
+  --pt-shadow-soft: 0 2px 8px rgba(20, 20, 40, 0.06);
+
+  /* v2 — family-hue palette (lifted from catalog) as reusable tokens */
+  --pt-hue-glp1: 30;
+  --pt-hue-healing: 145;
+  --pt-hue-cosmetic: 320;
+  --pt-hue-mito: 240;
+  --pt-hue-gh: 90;
+
   --pt-radius: 8px;
   --pt-radius-sm: 6px;
   --pt-radius-lg: 12px;
