@@ -14,7 +14,6 @@ import type { QueuedRun } from '@/types/automations'
 import { PendingApprovalRow } from '@/components/shared/PendingApprovalRow'
 import { CollapsiblePendingApprovals } from './CollapsiblePendingApprovals'
 import { AcquisitionSourceBanner } from '@/components/inbox/AcquisitionSourceBanner'
-import { initials } from '@/types/inbox'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ConvertToCustomerButton } from '@/components/contacts/ConvertToCustomerButton'
 import { RailStrip, type RailPanel } from './RailStrip'
@@ -22,6 +21,8 @@ import { RailPanelHost } from './RailPanelHost'
 import { ViewsColumn } from './ViewsColumn'
 import { useViewsCollapsed } from './useViewsCollapsed'
 import { CH_NAMES } from './inbox-shared'
+import { Avatar } from '@/components/ui/Avatar'
+import { Badge } from '@/components/ui/Badge'
 
 function fmtMins(m: number) {
   if (m < 60) return `${m}m`
@@ -29,19 +30,13 @@ function fmtMins(m: number) {
   return `${Math.floor(m / 1440)}d`
 }
 
-const CH_ICONS: Record<string, React.FC<{ size?: number }>> = { wa: Icons.wa, tg: Icons.tg, em: Icons.em }
-
 // ─── Thread item ─────────────────────────────────────────────────────────────
 
 function IxThread({ t, active, onClick }: { t: InboxThread; active: boolean; onClick: () => void }) {
   const { togglePin } = useInbox()
-  const ChIcon = CH_ICONS[t.channel]
   return (
     <li className={`pt-ixt ${active ? 'is-active' : ''} ${t.unread ? 'is-unread' : ''} ${t.status === 'snoozed' ? 'is-snoozed' : ''} ${t.pinned ? 'is-pinned' : ''}`} onClick={onClick}>
-      <div className="pt-ixt-av" data-channel={t.channel}>
-        <span>{initials(t.name)}</span>
-        <i className={`pt-thread-ch pt-ch-${t.channel}`}>{ChIcon && <ChIcon size={9} />}</i>
-      </div>
+      <Avatar name={t.name} channel={t.channel} size={38} />
       <div className="pt-ixt-mid">
         <div className="pt-ixt-row1">
           <span className="pt-ixt-name">{t.name}</span>
@@ -59,15 +54,15 @@ function IxThread({ t, active, onClick }: { t: InboxThread; active: boolean; onC
           {t.unread > 0 && <span className="pt-thread-unread">{t.unread}</span>}
         </div>
         <div className="pt-ixt-row3">
-          {t.status === 'snoozed'       && <span className="pt-tag pt-tag-soft pt-tag-snoozed">⏰ snoozed</span>}
-          {t.lifecycleStage === 'lead'  && <span className="pt-tag pt-tag-lead">Lead</span>}
-          {t.tags.includes('vip')      && <span className="pt-tag pt-tag-vip">VIP</span>}
-          {t.tags.includes('new')      && <span className="pt-tag pt-tag-new">new</span>}
-          {t.tags.includes('waitlist') && <span className="pt-tag">waitlist</span>}
-          {t.tags.includes('payment')  && <span className="pt-tag pt-tag-warn">payment</span>}
-          {t.tags.includes('repeat') && !t.tags.includes('vip') && <span className="pt-tag pt-tag-soft">repeat</span>}
-          {t.tags.includes('shipping') && <span className="pt-tag pt-tag-soft">shipping</span>}
-          {t.tags.includes('reorder')  && <span className="pt-tag pt-tag-soft">reorder</span>}
+          {t.status === 'snoozed' && <Badge tone="neutral">⏰ snoozed</Badge>}
+          {t.lifecycleStage === 'lead' && <Badge tone="lead">Lead</Badge>}
+          {t.tags.includes('vip') && <Badge tone="vip">VIP</Badge>}
+          {t.tags.includes('new') && <Badge tone="new">new</Badge>}
+          {t.tags.includes('waitlist') && <Badge tone="neutral">waitlist</Badge>}
+          {t.tags.includes('payment') && <Badge tone="warn">payment</Badge>}
+          {t.tags.includes('repeat') && !t.tags.includes('vip') && <Badge tone="neutral">repeat</Badge>}
+          {t.tags.includes('shipping') && <Badge tone="neutral">shipping</Badge>}
+          {t.tags.includes('reorder') && <Badge tone="neutral">reorder</Badge>}
           <span className="pt-ixt-trust mono">trust {t.trust}</span>
         </div>
       </div>
@@ -723,8 +718,6 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [showSnooze])
-  const ChIcon = CH_ICONS[thread.channel]
-
   // On thread switch: always scroll to bottom after DOM updates
   useEffect(() => {
     prevMsgCountRef.current = 0
@@ -753,10 +746,7 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
         </button>
         <div className="pt-ix-conv-id">
-          <div className="pt-ixt-av" data-channel={thread.channel}>
-            <span>{initials(thread.name)}</span>
-            <i className={`pt-thread-ch pt-ch-${thread.channel}`}>{ChIcon && <ChIcon size={9} />}</i>
-          </div>
+          <Avatar name={thread.name} channel={thread.channel as 'wa' | 'tg' | 'em'} size={36} />
           <div>
             <div className="pt-ix-conv-name">{thread.name}</div>
             <div className="pt-ix-conv-meta">

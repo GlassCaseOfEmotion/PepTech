@@ -58,7 +58,12 @@ export function ViewsColumn({ collapsed, onToggle }: { collapsed: boolean; onTog
         <div className="pt-ix-views-sec">Lifecycle</div>
         {LIFECYCLE.map(v => <Row key={v.id} {...v} />)}
         <div className="pt-ix-views-sec">Channels</div>
-        {CHANNELS.map(v => <Row key={v.id} {...v} />)}
+        {CHANNELS.map(v => (
+          <button key={v.id} className={`pt-ix-view ${view === v.id ? 'is-on' : ''}`} onClick={() => setView(v.id)}>
+            <span className="pt-ix-view-label"><i className={`pt-ch-dot pt-ch-dot-${v.id}`} />{v.label}</span>
+            <span className="pt-ix-view-count">{countFor(v.id)}</span>
+          </button>
+        ))}
       </div>
     </aside>
   )

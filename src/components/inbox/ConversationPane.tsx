@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { ChannelIcon, Icons } from '@/lib/icons'
-import { initials } from '@/types/inbox'
+import { Icons } from '@/lib/icons'
 import { MessageBubble } from './MessageBubble'
+import { Avatar } from '@/components/ui/Avatar'
 import { Composer } from './Composer'
 import type { ConversationWithCustomer, MessageRow } from '@/types/inbox'
 import type { QuickReply } from './Composer'
@@ -40,12 +40,7 @@ export function ConversationPane({
       {/* Header */}
       <div className="pt-ix-conv-hd">
         <div className="pt-ix-conv-id">
-          <div className="pt-ixt-av" data-channel={conversation.channel_type}>
-            <span>{initials(name)}</span>
-            <i className={`pt-thread-ch pt-ch-${conversation.channel_type}`}>
-              <ChannelIcon channelType={conversation.channel_type} size={9} />
-            </i>
-          </div>
+          <Avatar name={name} channel={conversation.channel_type as 'wa' | 'tg' | 'em'} size={36} />
           <div>
             <div className="pt-ix-conv-name">{name}</div>
             <div className="pt-ix-conv-meta">
