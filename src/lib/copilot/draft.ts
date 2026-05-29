@@ -1,0 +1,77 @@
+import { defaultComplete, parseJsonContent, type CompleteFn } from './client'
+import {
+  COPILOT_DRAFT_MODEL,
+  COPILOT_CONFIDENCE_THRESHOLD,
+  type SuggestionDraft,
+  type SuggestionKind,
+} from './types'
+import type { CopilotContext } from './context'
+
+const KINDS: SuggestionKind[] = ['cross_sell', 'draft_order', 'quote', 'reply', 'payment_link']
+
+const SYSTEM = `You are a commerce copilot for a peptide-supply seller. You watch a live conversation and DRAFT actions for the seller to approve. You never send anything yourself.
+
+You may propose these suggestion kinds:
+- "cross_sell": a product to offer, with an affinity reason. payload: {product_id, product_name, offer_message, affinity_pct}. offer_message is a short, ready-to-send reply offering it.
+- "draft_order": an order to build. payload: {customer_id, payment_asset, items:[{product_id, product_name, qty, unit_price}], total}.
+- "quote": a drafted message stating price + availability for what the customer asked. payload: {message}.
+- "reply": a drafted conversational reply. payload: {message}.
+- "payment_link": only when an order is ready to pay. payload: {draft_order:{...}} or {order_id}.
+
+Rules:
+- Use ONLY product_ids, names and prices present in the provided catalog. Never invent SKUs or prices.
+- affinity_pct must be derived from the provided affinity data, not guessed.
+- Be conservative: only suggest when there is a real, specific moment. Prefer fewer, high-confidence suggestions.
+- confidence is 0..1.
+
+Respond ONLY with JSON: {"suggestions":[{"kind","payload","confidence","reasoning"}]}.`
+
+function dedupKeyFor(kind: SuggestionKind, payload: Record<string, unknown>): string {
+  if (kind === 'cross_sell') return `cross_sell:${String(payload.product_id ?? '')}`
+  if (kind === 'draft_order' || kind === 'payment_link') {
+    const items = (payload.items as { product_id: string }[] | undefined) ?? []
+    const key = items.map(i => i.product_id).sort().join(',')
+    return `${kind}:${key}`
+  }
+  return kind  // quote / reply: at most one open at a time per conversation
+}
+
+export async function draftSuggestions(
+  ctx: CopilotContext,
+  deps: { complete?: CompleteFn } = {},
+): Promise<SuggestionDraft[]> {
+  const complete = deps.complete ?? defaultComplete
+  let parsed: { suggestions?: unknown }
+  try {
+    const content = await complete({
+      model: COPILOT_DRAFT_MODEL,
+      messages: [
+        { role: 'system', content: SYSTEM },
+        { role: 'user', content: JSON.stringify(ctx) },
+      ],
+    })
+    parsed = parseJsonContent(content) as { suggestions?: unknown }
+  } catch {
+    return []
+  }
+
+  const raw = Array.isArray(parsed.suggestions) ? parsed.suggestions : []
+  const drafts: SuggestionDraft[] = []
+  for (const entry of raw as Record<string, unknown>[]) {
+    const kind = entry.kind as SuggestionKind
+    if (!KINDS.includes(kind)) continue
+    const confidence = typeof entry.confidence === 'number' ? entry.confidence : 0
+    if (confidence < COPILOT_CONFIDENCE_THRESHOLD) continue
+    const payload = (entry.payload && typeof entry.payload === 'object'
+      ? entry.payload
+      : {}) as Record<string, unknown>
+    drafts.push({
+      kind,
+      payload,
+      confidence: Math.max(0, Math.min(1, confidence)),
+      reasoning: typeof entry.reasoning === 'string' ? entry.reasoning : '',
+      dedupKey: dedupKeyFor(kind, payload),
+    })
+  }
+  return drafts
+}
