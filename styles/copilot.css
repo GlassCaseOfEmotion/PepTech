@@ -93,7 +93,7 @@
   display: inline-block; padding: 3px 9px; border-radius: 10px 10px 10px 3px;
 }
 
-/* action chips — the agent's concrete moves */
+/* action chips — the agent's concrete moves (decisions) */
 .pt-cp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
 .pt-cp-chip {
   display: inline-flex; align-items: center; gap: 5px;
@@ -103,6 +103,53 @@
   box-shadow: inset 0 0 0 1px oklch(from var(--pt-accent) l c h / 0.16);
 }
 .pt-cp-chip svg { opacity: 0.85; }
+
+/* activity chips — the agent "showing its work" (reads). Subtler than moves:
+   no fill, muted ink, hairline outline. Supporting texture, not a headline. */
+.pt-cp-activity {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 500;
+  padding: 2px 8px 2px 6px; border-radius: 999px;
+  background: transparent; color: var(--pt-fg-3);
+  box-shadow: inset 0 0 0 1px var(--pt-line-soft);
+}
+.pt-cp-activity svg { opacity: 0.6; }
+.pt-cp-entry.is-activity { margin-bottom: 11px; }
+.pt-cp-entry.is-activity::before {
+  width: 7px; height: 7px; top: 6px; left: -17px;
+  box-shadow: inset 0 0 0 2px var(--pt-line);
+}
+
+/* reply — the copilot speaking directly to the operator (answers, suggested
+   wording). A soft panel with an accent eyebrow, distinct from margin notes. */
+.pt-cp-reply {
+  border-radius: var(--pt-radius-lg);
+  background: var(--pt-surface-2);
+  box-shadow: inset 0 0 0 1px var(--pt-line-soft);
+  padding: 10px 12px;
+}
+.pt-cp-reply-eyebrow {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--pt-accent); margin-bottom: 5px;
+}
+.pt-cp-reply-body { color: var(--pt-fg); }
+.pt-cp-entry.is-reply::before { box-shadow: inset 0 0 0 2px var(--pt-accent); }
+
+/* compact markdown inside notes + replies */
+.pt-cp-md > :first-child { margin-top: 0; }
+.pt-cp-md > :last-child { margin-bottom: 0; }
+.pt-cp-md p { margin: 0 0 7px; }
+.pt-cp-md ul, .pt-cp-md ol { margin: 5px 0; padding-left: 18px; }
+.pt-cp-md li { margin: 2px 0; }
+.pt-cp-md li::marker { color: var(--pt-fg-4); }
+.pt-cp-md strong { font-weight: 700; color: var(--pt-fg); }
+.pt-cp-md em { font-style: italic; }
+.pt-cp-md hr { border: 0; border-top: 1px solid var(--pt-line-soft); margin: 8px 0; }
+.pt-cp-md code {
+  font-size: 0.92em; font-family: var(--pt-font-mono, ui-monospace, monospace);
+  background: var(--pt-bg); padding: 1px 4px; border-radius: 4px;
+}
+.pt-cp-md a { color: var(--pt-accent); text-decoration: underline; }
 
 /* ── Confirm card — tactile, decisive, breathes while pending ───────────── */
 .pt-cp-confirm {

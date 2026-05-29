@@ -1,17 +1,36 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { useCopilotSession } from './useCopilotSession'
 import type { CopilotMsg, CopilotToolCall } from './timeline'
 import { formatAmount } from '@/lib/currency'
 
-// Tools that are concrete "moves" worth surfacing as chips. Pure reads
-// (query_*, get_*) stay invisible — the feed is about narration + decisions.
+// Concrete "moves" — decisions with consequences. Prominent accent chips.
 const ACTION_LABEL: Record<string, string> = {
   update_draft_order: 'Updated the draft order',
   set_shipping_address: 'Set shipping address',
   set_payment_asset: 'Set payment method',
   finalize_order: 'Finalized the order',
+}
+
+// Read tools — supporting activity ("showing its work"). Subtle, muted chips,
+// in present-tense so the copilot reads like a live assistant.
+const READ_LABEL: Record<string, string> = {
+  get_conversation_messages: 'Reviewing the conversation',
+  get_customer: 'Looking up customer details',
+  query_customers: 'Looking up customer details',
+  query_catalog: 'Checking the catalog',
+  get_peptide_reference: 'Matching peptide names',
+  get_draft_order: 'Checking the draft order',
+  query_orders: 'Reviewing order history',
+  get_order: 'Reviewing order history',
+  get_analytics: 'Checking the numbers',
+}
+
+function Md({ text }: { text: string }) {
+  return <div className="pt-cp-md"><ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown></div>
 }
 
 function confirmSummary(tc: CopilotToolCall): string {
@@ -51,11 +70,45 @@ const SpinSvg = () => (
     <path d="M12 3a9 9 0 1 0 9 9" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
   </svg>
 )
+const SearchSvg = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+    <path d="M20 20l-3.4-3.4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+)
 
+// The agent's running observations — its margin notes. Markdown-rendered.
 function CommentaryEntry({ text, time }: { text: string; time: string }) {
   return (
     <div className="pt-cp-entry">
-      <div className="pt-cp-note">{text}</div>
+      <div className="pt-cp-note"><Md text={text} /></div>
+      {time && <div className="pt-cp-time">{time}</div>}
+    </div>
+  )
+}
+
+// Read-tool activity — "showing its work". Subtle, muted, deduped per turn.
+function ActivityEntry({ labels }: { labels: string[] }) {
+  return (
+    <div className="pt-cp-entry is-activity">
+      <div className="pt-cp-chips">
+        {labels.map((l, i) => (
+          <span key={i} className="pt-cp-activity"><SearchSvg />{l}</span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Free-text the copilot writes directly to the operator (answers, suggested
+// wording). Distinct from the margin-note commentary. Markdown-rendered.
+function ReplyEntry({ text, time }: { text: string; time: string }) {
+  return (
+    <div className="pt-cp-entry is-reply">
+      <div className="pt-cp-reply">
+        <div className="pt-cp-reply-eyebrow">Copilot</div>
+        <div className="pt-cp-reply-body"><Md text={text} /></div>
+      </div>
       {time && <div className="pt-cp-time">{time}</div>}
     </div>
   )
@@ -143,20 +196,32 @@ function renderMessage(
     return <VoiceEntry key={m.id} kind="operator" body={v.body} name={customerName} />
   }
 
-  // assistant turn → commentary + post_commentary notes + action chips + confirm cards
+  // assistant turn → activity (reads) + commentary + move chips + reply + confirm cards
   const nodes: React.ReactNode[] = []
-  if (m.content?.trim()) nodes.push(<CommentaryEntry key={`${m.id}-c`} text={m.content.trim()} time={timeOf(m.createdAt)} />)
 
-  const pending = m.toolCalls.filter(tc => tc.status === 'pending')
+  // reads → subtle "showing its work" chips, deduped by label within the turn
+  const readLabels = [...new Set(
+    m.toolCalls.filter(tc => tc.status !== 'pending' && READ_LABEL[tc.name]).map(tc => READ_LABEL[tc.name]),
+  )]
+  if (readLabels.length) nodes.push(<ActivityEntry key={`${m.id}-act`} labels={readLabels} />)
+
+  // post_commentary → the agent's observations
   const commentaries = m.toolCalls.filter(tc => tc.name === 'post_commentary' && tc.status !== 'pending')
-  const actions = m.toolCalls.filter(tc => tc.status !== 'pending' && tc.name !== 'post_commentary' && ACTION_LABEL[tc.name])
-  const resolvedGated = m.toolCalls.filter(tc => (tc.status === 'complete' || tc.status === 'rejected') && (tc.name === 'finalize_order' || tc.name === 'send_message'))
-
   for (const tc of commentaries) {
     const note = String((tc.input as { note?: string }).note ?? (tc.output as { note?: string } | null)?.note ?? '').trim()
     if (note) nodes.push(<CommentaryEntry key={`${m.id}-${tc.id}`} text={note} time={timeOf(m.createdAt)} />)
   }
+
+  // write moves → prominent decision chips
+  const actions = m.toolCalls.filter(tc => tc.status !== 'pending' && ACTION_LABEL[tc.name])
   if (actions.length) nodes.push(<ChipsEntry key={`${m.id}-chips`} names={actions.map(a => a.name)} />)
+
+  // free-text content → a direct reply to the operator
+  if (m.content?.trim()) nodes.push(<ReplyEntry key={`${m.id}-r`} text={m.content.trim()} time={timeOf(m.createdAt)} />)
+
+  // gated tools → confirm cards
+  const pending = m.toolCalls.filter(tc => tc.status === 'pending')
+  const resolvedGated = m.toolCalls.filter(tc => (tc.status === 'complete' || tc.status === 'rejected') && (tc.name === 'finalize_order' || tc.name === 'send_message'))
   for (const tc of [...pending, ...resolvedGated]) {
     nodes.push(<ConfirmEntry key={`${m.id}-${tc.id}`} tc={tc} busy={confirmingIds.has(tc.id)}
       onApprove={(editedContent) => onConfirm(m.id, tc.id, true, editedContent)} onDismiss={() => onConfirm(m.id, tc.id, false)} />)
