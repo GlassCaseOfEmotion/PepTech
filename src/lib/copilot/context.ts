@@ -35,6 +35,7 @@ export async function gatherContext(
   const { data: recentOrders } = await supabase
     .from('orders')
     .select('order_items(product_id)')
+    .eq('tenant_id', tenantId)
     .in('status', ['packing', 'shipped', 'delivered'])
     .gte('created_at', thirtyDaysAgo)
 
