@@ -10,8 +10,9 @@ type Db = SupabaseClient<Database>
 export interface CopilotContext {
   customer: unknown
   messages: ConvMessage[]
-  catalog: { id: string; name: string; total_stock: number; unit_price: number; margin_pct: number | null }[]
+  catalog: { id: string; sku?: string; name: string; product_family?: string; total_stock: number; unit_price: number; margin_pct: number | null }[]
   affinity: Record<string, CoProduct[]>
+  currency: string
 }
 
 export async function gatherContext(
@@ -19,6 +20,7 @@ export async function gatherContext(
   tenantId: string,
   conversationId: string,
   customerId: string,
+  currency: string,
 ): Promise<CopilotContext> {
   const [customer, messages, catalog] = await Promise.all([
     getCustomer.execute({ id: customerId }, supabase, tenantId).catch(() => null),
@@ -44,5 +46,6 @@ export async function gatherContext(
     messages: (messages as ConvMessage[]) ?? [],
     catalog: (catalog as CopilotContext['catalog']) ?? [],
     affinity: computeCoProductAffinity((recentOrders as { order_items: { product_id: string }[] | null }[]) ?? []),
+    currency,
   }
 }

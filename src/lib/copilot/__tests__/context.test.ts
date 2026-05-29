@@ -23,11 +23,12 @@ describe('gatherContext', () => {
         }),
       }),
     }
-    const ctx = await gatherContext(supabase as never, 'tenant1', 'conv1', 'cust1')
+    const ctx = await gatherContext(supabase as never, 'tenant1', 'conv1', 'cust1', 'IDR')
     expect(ctx.customer).toMatchObject({ id: 'cust1' })
     expect(ctx.messages).toHaveLength(1)
     expect(ctx.catalog).toHaveLength(1)
     expect(ctx.affinity['p1']).toEqual([{ productId: 'p2', count: 1 }])
+    expect(ctx.currency).toBe('IDR')
     expect(eqSpy).toHaveBeenCalledWith('tenant_id', 'tenant1')
   })
 })

@@ -24,13 +24,14 @@ export async function runCopilotPass(supabase: Db, params: CopilotPassParams): P
     // 1. Tenant opt-in gate.
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('copilot_enabled')
+      .select('copilot_enabled, base_currency')
       .eq('id', params.tenantId)
       .single()
     if (!tenant?.copilot_enabled) {
       console.log(`${tag} skip: copilot_enabled is off for tenant ${params.tenantId}`)
       return
     }
+    const currency = (tenant as { base_currency?: string | null }).base_currency ?? 'USD'
 
     // 2. Debounce: only the latest inbound message in the conversation runs.
     //    A burst of rapid inbound messages collapses to one pass.
@@ -47,7 +48,7 @@ export async function runCopilotPass(supabase: Db, params: CopilotPassParams): P
     }
 
     // 3. Gather context first (we need the transcript for the pre-filter too).
-    const ctx = await gatherContext(supabase, params.tenantId, params.conversationId, params.customerId)
+    const ctx = await gatherContext(supabase, params.tenantId, params.conversationId, params.customerId, currency)
     console.log(`${tag} context: ${ctx.messages?.length ?? 0} msgs, ${ctx.catalog?.length ?? 0} catalog items`)
 
     // 4. Cheap pre-filter.

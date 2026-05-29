@@ -7,6 +7,7 @@ const ctx: CopilotContext = {
   messages: [{ direction: 'inbound', content: 'how much is RETA-10?', sent_at: 't' }],
   catalog: [{ id: 'p1', name: 'RETA-10', total_stock: 8, unit_price: 120, margin_pct: 40 }],
   affinity: { p1: [{ productId: 'p2', count: 6 }] },
+  currency: 'USD',
 }
 
 describe('draftSuggestions', () => {

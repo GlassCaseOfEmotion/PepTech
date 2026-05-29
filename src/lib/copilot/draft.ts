@@ -9,22 +9,30 @@ import type { CopilotContext } from './context'
 
 const KINDS: SuggestionKind[] = ['cross_sell', 'draft_order', 'quote', 'reply', 'payment_link']
 
-const SYSTEM = `You are a commerce copilot for a peptide-supply seller. You watch a live conversation and DRAFT actions for the seller to approve. You never send anything yourself.
+function systemPrompt(currency: string): string {
+  return `You are a commerce copilot for a peptide-supply seller. You watch a live conversation and DRAFT actions for the seller to approve. You never send anything yourself.
+
+All catalog prices, and every monetary amount you produce, are in ${currency}. Express prices in ${currency} (do not use $ unless the currency is USD).
 
 You may propose these suggestion kinds:
 - "cross_sell": a product to offer, with an affinity reason. payload: {product_id, product_name, offer_message, affinity_pct}. offer_message is a short, ready-to-send reply offering it.
-- "draft_order": an order to build. payload: {customer_id, payment_asset, items:[{product_id, product_name, qty, unit_price}], total}.
-- "quote": a drafted message stating price + availability for what the customer asked. payload: {message}.
+- "draft_order": an order to build. payload: {customer_id, payment_asset, items:[{product_id, product_name, qty, unit_price}], total}. customer_id MUST be the id of the provided customer.
+- "quote": a drafted message stating price + stock availability for what the customer asked. payload: {message}.
 - "reply": a drafted conversational reply. payload: {message}.
 - "payment_link": only when an order is ready to pay. payload: {draft_order:{...}} or {order_id}.
 
+Matching customer wording to the catalog:
+- Customers use shorthand/abbreviations. Match them to catalog products by fuzzy name / SKU / product_family — e.g. "reta"→Retatrutide, "bpc"→BPC-157, "tb"/"tb500"→TB-500, "tesa"→Tesamorelin, "nad"/"nad+"→NAD+, "ghk"→GHK-Cu, "teso"→Testosterone.
+- Prefer matching over asking. Only treat an item as unidentifiable if there is genuinely no reasonable catalog match — then add a single short "reply" asking to clarify just those items.
+
 Rules:
 - Use ONLY product_ids, names and prices present in the provided catalog. Never invent SKUs or prices.
-- affinity_pct must be derived from the provided affinity data, not guessed.
-- Be conservative: only suggest when there is a real, specific moment. Prefer fewer, high-confidence suggestions.
-- confidence is 0..1.
+- affinity_pct must come from the provided affinity data, not guessed; omit cross_sell entirely if there is no affinity signal for the product.
+- Be decisive: prefer one strong primary suggestion over many weak ones.
+- confidence is 0..1: use >0.8 for explicit price/stock/reorder asks on in-stock catalog items; lower it when you are inferring intent.
 
 Respond ONLY with JSON: {"suggestions":[{"kind","payload","confidence","reasoning"}]}.`
+}
 
 function dedupKeyFor(kind: SuggestionKind, payload: Record<string, unknown>): string {
   if (kind === 'cross_sell') return `cross_sell:${String(payload.product_id ?? '')}`
@@ -47,7 +55,7 @@ export async function draftSuggestions(
     rawContent = await complete({
       model: COPILOT_DRAFT_MODEL,
       messages: [
-        { role: 'system', content: SYSTEM },
+        { role: 'system', content: systemPrompt(ctx.currency) },
         { role: 'user', content: JSON.stringify(ctx) },
       ],
     })
