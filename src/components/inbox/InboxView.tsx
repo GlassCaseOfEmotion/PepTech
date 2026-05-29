@@ -36,7 +36,7 @@ function IxThread({ t, active, onClick }: { t: InboxThread; active: boolean; onC
   const { togglePin } = useInbox()
   return (
     <li className={`pt-ixt ${active ? 'is-active' : ''} ${t.unread ? 'is-unread' : ''} ${t.status === 'snoozed' ? 'is-snoozed' : ''} ${t.pinned ? 'is-pinned' : ''}`} onClick={onClick}>
-      <Avatar name={t.name} channel={t.channel} size={38} />
+      <Avatar name={t.name} channel={t.channel} size={30} />
       <div className="pt-ixt-mid">
         <div className="pt-ixt-row1">
           <span className="pt-ixt-name">{t.name}</span>
@@ -747,7 +747,7 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
         </button>
         <div className="pt-ix-conv-id">
-          <Avatar name={thread.name} channel={thread.channel as 'wa' | 'tg' | 'em'} size={36} />
+          <Avatar name={thread.name} channel={thread.channel as 'wa' | 'tg' | 'em'} size={30} />
           <div>
             <div className="pt-ix-conv-name">{thread.name}</div>
             <div className="pt-ix-conv-meta">
