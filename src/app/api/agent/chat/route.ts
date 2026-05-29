@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, getServerUser } from '@/lib/supabase/server'
 import { executeAgentTurn } from '@/lib/agent/executor'
+import { createSseSink } from '@/lib/agent/sink'
 
 export async function POST(request: Request) {
   const user = await getServerUser()
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        await executeAgentTurn(sid!, message, tenantId, supabase, controller, attachments ?? [])
+        await executeAgentTurn(sid!, message, tenantId, supabase, createSseSink(controller), attachments ?? [])
       } catch (e) {
         const encoder = new TextEncoder()
         const msg = e instanceof Error ? e.message : 'Agent error'

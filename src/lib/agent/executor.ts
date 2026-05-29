@@ -2,7 +2,9 @@ import OpenAI from 'openai'
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
 import { TOOL_MAP, toolsForMode, openAiToolsForMode, type AgentMode } from './tools/index'
 import { fetchOnboardingStateSnapshot, type OnboardingStateSnapshot } from './tools/onboarding'
-import type { AgentSupabase, SseEvent, ToolCall, AgentMessage } from './types'
+import type { AgentSupabase, ToolCall, AgentMessage } from './types'
+import type { AgentSink } from './sink'
+import { buildCopilotSystem } from './copilot/system'
 
 /**
  * Chat model selection — onboarding turns prefer a fast, cheap model since
@@ -115,6 +117,7 @@ async function buildSystemForTurn(
   supabase: AgentSupabase,
   tenantId: string,
 ): Promise<string> {
+  if (mode === 'copilot') return buildCopilotSystem()
   if (mode !== 'onboarding') return buildSystem(mode)
   const state = await fetchOnboardingStateSnapshot(supabase, tenantId).catch((e) => {
     console.warn('[executor] failed to fetch onboarding state for system prompt', e)
@@ -132,10 +135,6 @@ function createClient() {
       'X-Title': 'Peptech',
     },
   })
-}
-
-function encodeEvent(event: SseEvent): string {
-  return `data: ${JSON.stringify(event)}\n\n`
 }
 
 // Convert stored messages to OpenAI chat format
@@ -206,7 +205,7 @@ async function streamCompletion(
   client: OpenAI,
   system: string,
   history: ChatCompletionMessageParam[],
-  send: (e: SseEvent) => void,
+  sink: AgentSink,
   mode: AgentMode,
 ): Promise<{ text: string; toolCalls: ToolCall[]; finishReason: string | null }> {
   const stream = await client.chat.completions.create({
@@ -253,9 +252,48 @@ async function streamCompletion(
   }
 
   // Send the complete text as a single event
-  if (textAccum) send({ type: 'text', delta: textAccum })
+  if (textAccum) sink.emit({ type: 'text', delta: textAccum })
 
   return { text: textAccum, toolCalls, finishReason }
+}
+
+// Non-streaming completion for headless (background) turns — same return shape
+// as streamCompletion, but a single request with no token streaming.
+async function nonStreamCompletion(
+  client: OpenAI,
+  system: string,
+  history: ChatCompletionMessageParam[],
+  sink: AgentSink,
+  mode: AgentMode,
+): Promise<{ text: string; toolCalls: ToolCall[]; finishReason: string | null }> {
+  const completion = await client.chat.completions.create({
+    model: modelForMode(mode),
+    messages: [{ role: 'system', content: system }, ...history],
+    tools: openAiToolsForMode(mode),
+  })
+  const choice = completion.choices[0]
+  const msg = choice?.message
+  const text = msg?.content ?? ''
+  const toolCalls: ToolCall[] = (msg?.tool_calls ?? []).map(tc => {
+    let input: Record<string, unknown> = {}
+    try { input = JSON.parse((tc as { function: { arguments: string } }).function.arguments) } catch { /* malformed */ }
+    return { id: tc.id, name: (tc as { function: { name: string } }).function.name, input, output: null, status: 'pending' as const }
+  })
+  if (text) sink.emit({ type: 'text', delta: text })
+  return { text, toolCalls, finishReason: choice?.finish_reason ?? null }
+}
+
+// Pick the completion strategy for this sink.
+async function runCompletion(
+  client: OpenAI,
+  system: string,
+  history: ChatCompletionMessageParam[],
+  sink: AgentSink,
+  mode: AgentMode,
+) {
+  return sink.streaming
+    ? streamCompletion(client, system, history, sink, mode)
+    : nonStreamCompletion(client, system, history, sink, mode)
 }
 
 async function modeForSession(sessionId: string, supabase: AgentSupabase): Promise<AgentMode> {
@@ -264,7 +302,9 @@ async function modeForSession(sessionId: string, supabase: AgentSupabase): Promi
     .select('trigger')
     .eq('id', sessionId)
     .single()
-  return data?.trigger === 'onboarding' ? 'onboarding' : 'ops'
+  if (data?.trigger === 'onboarding') return 'onboarding'
+  if (data?.trigger === 'copilot') return 'copilot'
+  return 'ops'
 }
 
 export async function executeAgentTurn(
@@ -272,11 +312,9 @@ export async function executeAgentTurn(
   userMessage: string,
   tenantId: string,
   supabase: AgentSupabase,
-  controller: ReadableStreamDefaultController<Uint8Array>,
+  sink: AgentSink,
   attachments: { file_ref: string; filename: string; mime_type: string }[] = [],
 ) {
-  const encoder = new TextEncoder()
-  const send = (e: SseEvent) => controller.enqueue(encoder.encode(encodeEvent(e)))
   const client = createClient()
   const mode = await modeForSession(sessionId, supabase)
 
@@ -293,7 +331,7 @@ export async function executeAgentTurn(
   }
 
   const system = await buildSystemForTurn(mode, supabase, tenantId)
-  let { text, toolCalls, finishReason } = await streamCompletion(client, system, history, send, mode)
+  let { text, toolCalls, finishReason } = await runCompletion(client, system, history, sink, mode)
 
   // Empty response detection. A 200 OK with no text AND no tool calls + a
   // finishReason that ISN'T 'stop' almost always means the model errored
@@ -305,13 +343,13 @@ export async function executeAgentTurn(
   if (!text.trim() && toolCalls.length === 0 && finishReason !== 'stop') {
     const modelName = modelForMode(mode)
     console.warn('[executor] empty completion, retrying once', { sessionId, mode, model: modelName, finishReason })
-    const retry = await streamCompletion(client, system, history, send, mode)
+    const retry = await runCompletion(client, system, history, sink, mode)
     text = retry.text
     toolCalls = retry.toolCalls
     finishReason = retry.finishReason
     if (!text.trim() && toolCalls.length === 0 && finishReason !== 'stop') {
       console.error('[executor] model returned empty completion (after retry)', { sessionId, mode, model: modelName, finishReason })
-      send({
+      sink.emit({
         type: 'error',
         message: `The model (${modelName}) returned an empty response twice in a row. This usually means it failed to format a tool call — try a different model via the OPENROUTER_${mode === 'onboarding' ? 'ONBOARDING_' : ''}MODEL env var (recommended: anthropic/claude-haiku-4.5 for reliable tool calls).`,
       })
@@ -345,13 +383,13 @@ export async function executeAgentTurn(
 
   if (pendingWrites.length === 0 && toolCalls.some(tc => tc.status === 'complete')) {
     await saveAssistantMessage(sessionId, tenantId, text || null, toolCalls, supabase)
-    send({ type: 'tool_use', toolCalls })
+    sink.emit({ type: 'tool_use', toolCalls })
 
     // If every tool in this turn was a terminal/interactive tool (e.g.
     // present_choices), stop here — the model has already said its piece
     // and the conversation is now waiting on the user.
     if (toolCalls.every(tc => TERMINAL_TOOLS.has(tc.name))) {
-      send({ type: 'done', sessionId })
+      sink.emit({ type: 'done', sessionId })
       return
     }
 
@@ -371,21 +409,21 @@ export async function executeAgentTurn(
     }))
     const nextHistory = [...history, assistantMsg, ...toolResultMsgs]
 
-    send({ type: 'new_turn' })
-    await continueTurn(nextHistory, sessionId, tenantId, supabase, client, send, mode)
-    send({ type: 'done', sessionId })
+    sink.emit({ type: 'new_turn' })
+    await continueTurn(nextHistory, sessionId, tenantId, supabase, client, sink, mode)
+    sink.emit({ type: 'done', sessionId })
     return
   }
 
   if (pendingWrites.length > 0) {
     const messageId = await saveAssistantMessage(sessionId, tenantId, text || null, toolCalls, supabase)
-    send({ type: 'confirm', toolCalls: pendingWrites, messageId: messageId ?? '' })
-    send({ type: 'done', sessionId })
+    sink.emit({ type: 'confirm', toolCalls: pendingWrites, messageId: messageId ?? '' })
+    sink.emit({ type: 'done', sessionId })
     return
   }
 
   await saveAssistantMessage(sessionId, tenantId, text || null, [], supabase)
-  send({ type: 'done', sessionId })
+  sink.emit({ type: 'done', sessionId })
 }
 
 const MAX_CONTINUATION_DEPTH = 6
@@ -396,7 +434,7 @@ async function continueTurn(
   tenantId: string,
   supabase: AgentSupabase,
   client: OpenAI,
-  send: (e: SseEvent) => void,
+  sink: AgentSink,
   mode: AgentMode,
   depth: number = 0,
 ) {
@@ -409,7 +447,7 @@ async function continueTurn(
   // reflected in the system prompt. Cheap (one query) and keeps the prompt
   // honest as the conversation advances.
   const system = await buildSystemForTurn(mode, supabase, tenantId)
-  let { text, toolCalls, finishReason } = await streamCompletion(client, system, history, send, mode)
+  let { text, toolCalls, finishReason } = await runCompletion(client, system, history, sink, mode)
 
   // Empty follow-up mid-turn. finishReason === 'stop' with empty content is
   // legitimate (the model already produced a complete turn before the tool
@@ -420,13 +458,13 @@ async function continueTurn(
   if (!text.trim() && toolCalls.length === 0 && finishReason !== 'stop') {
     const modelName = modelForMode(mode)
     console.warn('[continueTurn] empty completion, retrying once', { sessionId, mode, model: modelName, depth, finishReason })
-    const retry = await streamCompletion(client, system, history, send, mode)
+    const retry = await runCompletion(client, system, history, sink, mode)
     text = retry.text
     toolCalls = retry.toolCalls
     finishReason = retry.finishReason
     if (!text.trim() && toolCalls.length === 0 && finishReason !== 'stop') {
       console.error('[continueTurn] model returned empty completion (after retry)', { sessionId, mode, model: modelName, depth, finishReason })
-      send({
+      sink.emit({
         type: 'error',
         message: `The model (${modelName}) returned an empty follow-up twice in a row. This usually means a malformed tool call — try a different model via the OPENROUTER_${mode === 'onboarding' ? 'ONBOARDING_' : ''}MODEL env var (recommended: anthropic/claude-haiku-4.5 for reliable tool calls).`,
       })
@@ -470,7 +508,7 @@ async function continueTurn(
   if (pendingWrites.length > 0) {
     // A confirm-required tool was requested mid-continuation — surface the card and stop.
     const messageId = await saveAssistantMessage(sessionId, tenantId, text || null, toolCalls, supabase)
-    send({ type: 'confirm', toolCalls: pendingWrites, messageId: messageId ?? '' })
+    sink.emit({ type: 'confirm', toolCalls: pendingWrites, messageId: messageId ?? '' })
     return
   }
 
@@ -478,7 +516,7 @@ async function continueTurn(
   // interactive (e.g. present_choices), stop here. Otherwise recurse so
   // the model can produce its follow-up text or chain another tool.
   await saveAssistantMessage(sessionId, tenantId, text || null, toolCalls, supabase)
-  send({ type: 'tool_use', toolCalls })
+  sink.emit({ type: 'tool_use', toolCalls })
 
   if (toolCalls.every(tc => TERMINAL_TOOLS.has(tc.name))) {
     return
@@ -499,8 +537,8 @@ async function continueTurn(
   }))
   const nextHistory = [...history, assistantMsg, ...toolResultMsgs]
 
-  send({ type: 'new_turn' })
-  await continueTurn(nextHistory, sessionId, tenantId, supabase, client, send, mode, depth + 1)
+  sink.emit({ type: 'new_turn' })
+  await continueTurn(nextHistory, sessionId, tenantId, supabase, client, sink, mode, depth + 1)
 }
 
 export async function confirmToolCall(
@@ -510,10 +548,8 @@ export async function confirmToolCall(
   confirmed: boolean,
   tenantId: string,
   supabase: AgentSupabase,
-  controller: ReadableStreamDefaultController<Uint8Array>
+  sink: AgentSink,
 ) {
-  const encoder = new TextEncoder()
-  const send = (e: SseEvent) => controller.enqueue(encoder.encode(encodeEvent(e)))
   const mode = await modeForSession(sessionId, supabase)
 
   const { data: msg } = await supabase
@@ -523,11 +559,11 @@ export async function confirmToolCall(
     .eq('session_id', sessionId)
     .single() as { data: Pick<AgentMessage, 'tool_calls'> | null }
 
-  if (!msg) { send({ type: 'error', message: 'Message not found' }); return }
+  if (!msg) { sink.emit({ type: 'error', message: 'Message not found' }); return }
 
   const toolCalls = (msg.tool_calls as unknown as ToolCall[]) ?? []
   const tc = toolCalls.find(t => t.id === toolCallId)
-  if (!tc) { send({ type: 'error', message: 'Tool call not found' }); return }
+  if (!tc) { sink.emit({ type: 'error', message: 'Tool call not found' }); return }
 
   if (confirmed) {
     const tool = TOOL_MAP[tc.name]
@@ -548,11 +584,11 @@ export async function confirmToolCall(
 
   // Let the client see the resolved tool call (status: complete | rejected) so it
   // can react to terminal tools like complete_onboarding before the follow-up message.
-  send({ type: 'tool_use', toolCalls })
+  sink.emit({ type: 'tool_use', toolCalls })
 
   const history = await loadHistory(sessionId, supabase)
   const client = createClient()
-  send({ type: 'new_turn' })
-  await continueTurn(history, sessionId, tenantId, supabase, client, send, mode)
-  send({ type: 'done', sessionId })
+  sink.emit({ type: 'new_turn' })
+  await continueTurn(history, sessionId, tenantId, supabase, client, sink, mode)
+  sink.emit({ type: 'done', sessionId })
 }

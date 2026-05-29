@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, getServerUser } from '@/lib/supabase/server'
 import { confirmToolCall } from '@/lib/agent/executor'
+import { createSseSink } from '@/lib/agent/sink'
 
 export async function POST(request: Request) {
   const user = await getServerUser()
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        await confirmToolCall(sessionId, messageId, toolCallId, confirmed, tenantId, supabase, controller)
+        await confirmToolCall(sessionId, messageId, toolCallId, confirmed, tenantId, supabase, createSseSink(controller))
       } catch (e) {
         const encoder = new TextEncoder()
         const msg = e instanceof Error ? e.message : 'Confirm error'
