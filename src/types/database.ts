@@ -1701,6 +1701,7 @@ export type Database = {
         Row: {
           base_currency: string
           business_type: string | null
+          copilot_enabled: boolean
           created_at: string
           id: string
           intended_channels: string[]
@@ -1716,6 +1717,7 @@ export type Database = {
         Insert: {
           base_currency?: string
           business_type?: string | null
+          copilot_enabled?: boolean
           created_at?: string
           id?: string
           intended_channels?: string[]
@@ -1731,6 +1733,7 @@ export type Database = {
         Update: {
           base_currency?: string
           business_type?: string | null
+          copilot_enabled?: boolean
           created_at?: string
           id?: string
           intended_channels?: string[]
