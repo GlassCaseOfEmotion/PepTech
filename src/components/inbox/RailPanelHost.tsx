@@ -7,13 +7,13 @@ import { createClient } from '@/lib/supabase/client'
 import { formatAmount } from '@/lib/currency'
 import { initials, type InboxThread } from '@/types/inbox'
 import { useInbox } from './InboxProvider'
-import { InboxAIPanel } from './InboxAIPanel'
+import { CopilotPanel } from './copilot/CopilotPanel'
 import { OrderRail } from './OrderRail'
 import type { RailPanel } from './RailStrip'
 import { CH_NAMES, fmtRelative, actBullet, actDetail, type ActivityItem } from './inbox-shared'
 
 const TITLES: Record<RailPanel, string> = {
-  contact: 'Contact', ai: 'AI assistant', notes: 'Notes', activity: 'Activity', order: 'Create order',
+  contact: 'Contact', ai: 'Copilot', notes: 'Notes', activity: 'Activity', order: 'Create order',
 }
 
 export function RailPanelHost({ panel, thread, baseCurrency, onClose }: {
@@ -91,7 +91,7 @@ export function RailPanelHost({ panel, thread, baseCurrency, onClose }: {
       )}
 
       {panel === 'ai' && thread.id && thread.customerId && (
-        <InboxAIPanel conversationId={thread.id} customerId={thread.customerId} customerName={thread.name} />
+        <CopilotPanel conversationId={thread.id} customerName={thread.name} />
       )}
 
       {panel === 'notes' && (

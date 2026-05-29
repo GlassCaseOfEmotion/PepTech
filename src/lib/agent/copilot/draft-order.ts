@@ -112,7 +112,7 @@ export async function readDraftOrder(
 ): Promise<unknown> {
   const { data: order } = await supabase
     .from('orders')
-    .select('id, ref_number, status, payment_amount, payment_asset, currency, shipping_address, order_items(product_id, qty, unit_price_snapshot)')
+    .select('id, ref_number, status, payment_amount, payment_asset, currency, shipping_address, order_items(product_id, qty, unit_price_snapshot, products(name))')
     .eq('tenant_id', tenantId).eq('conversation_id', conversationId).eq('status', 'draft').maybeSingle()
   return order ?? null
 }

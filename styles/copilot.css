@@ -1,0 +1,220 @@
+/* ============================================================================
+   Copilot v2 — the agentic conversational panel ("the lieutenant's ledger").
+   A calm, warm, alive feed on a single hairline thread-spine. Pairs with the
+   Peptech pt-* token system (light/dark aware). No chat bubbles.
+   ========================================================================== */
+
+.pt-cp {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background:
+    radial-gradient(120% 60% at 100% 0%, oklch(from var(--pt-accent) l c h / 0.05), transparent 60%),
+    var(--pt-bg);
+  color: var(--pt-fg);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.pt-cp-head {
+  display: flex; align-items: center; gap: 9px;
+  padding: 13px 14px 12px;
+  border-bottom: 1px solid var(--pt-line-soft);
+}
+.pt-cp-spark {
+  display: grid; place-items: center;
+  width: 26px; height: 26px; border-radius: 8px;
+  background: var(--pt-accent-soft); color: var(--pt-accent);
+  box-shadow: inset 0 0 0 1px oklch(from var(--pt-accent) l c h / 0.18);
+}
+.pt-cp-head-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pt-cp-name {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--pt-fg);
+}
+.pt-cp-status {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--pt-fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pt-cp-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--pt-fg-4); flex: none;
+}
+.pt-cp.is-working .pt-cp-dot {
+  background: var(--pt-accent);
+  box-shadow: 0 0 0 0 oklch(from var(--pt-accent) l c h / 0.5);
+  animation: pt-cp-pulse 1.4s ease-out infinite;
+}
+@keyframes pt-cp-pulse {
+  0%   { box-shadow: 0 0 0 0 oklch(from var(--pt-accent) l c h / 0.5); }
+  70%  { box-shadow: 0 0 0 7px oklch(from var(--pt-accent) l c h / 0); }
+  100% { box-shadow: 0 0 0 0 oklch(from var(--pt-accent) l c h / 0); }
+}
+
+/* ── Feed (the thread) ──────────────────────────────────────────────────── */
+.pt-cp-feed {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 16px 14px 14px;
+  position: relative;
+}
+/* the hairline spine running down the agent's notes */
+.pt-cp-thread { position: relative; padding-left: 18px; }
+.pt-cp-thread::before {
+  content: ''; position: absolute; left: 4px; top: 4px; bottom: 4px;
+  width: 1px; background: linear-gradient(var(--pt-line), var(--pt-line-soft));
+}
+
+.pt-cp-entry { position: relative; margin-bottom: 15px; animation: pt-cp-rise 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes pt-cp-rise { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+/* node dot on the spine */
+.pt-cp-entry::before {
+  content: ''; position: absolute; left: -18px; top: 5px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--pt-bg); box-shadow: inset 0 0 0 2px var(--pt-accent);
+}
+.pt-cp-entry.is-voice::before { box-shadow: inset 0 0 0 2px var(--pt-fg-4); }
+.pt-cp-entry.is-sent::before  { box-shadow: inset 0 0 0 2px var(--pt-line); }
+
+/* agent commentary — reads like a sharp colleague's margin note */
+.pt-cp-note { color: var(--pt-fg); }
+.pt-cp-time { font-size: 10.5px; color: var(--pt-fg-4); margin-top: 3px; letter-spacing: 0.02em; }
+
+/* customer / operator voices — secondary to the agent's voice */
+.pt-cp-voice-label {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--pt-fg-4); margin-bottom: 2px;
+}
+.pt-cp-voice-customer .pt-cp-voice-body { color: var(--pt-fg-2); }
+.pt-cp-voice-operator .pt-cp-voice-body {
+  color: var(--pt-accent-fg); background: var(--pt-accent-soft);
+  display: inline-block; padding: 3px 9px; border-radius: 10px 10px 10px 3px;
+}
+
+/* action chips — the agent's concrete moves */
+.pt-cp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.pt-cp-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600;
+  padding: 3px 9px 3px 7px; border-radius: 999px;
+  background: var(--pt-accent-soft); color: var(--pt-accent-fg);
+  box-shadow: inset 0 0 0 1px oklch(from var(--pt-accent) l c h / 0.16);
+}
+.pt-cp-chip svg { opacity: 0.85; }
+
+/* ── Confirm card — tactile, decisive, breathes while pending ───────────── */
+.pt-cp-confirm {
+  margin-top: 9px; border-radius: var(--pt-radius-lg);
+  background: var(--pt-surface-2);
+  box-shadow: 0 0 0 1px var(--pt-accent), 0 6px 18px oklch(from var(--pt-accent) l c h / 0.14);
+  padding: 12px 13px; animation: pt-cp-breathe 2.4s ease-in-out infinite;
+}
+@keyframes pt-cp-breathe {
+  0%, 100% { box-shadow: 0 0 0 1px oklch(from var(--pt-accent) l c h / 0.5), 0 4px 14px oklch(from var(--pt-accent) l c h / 0.10); }
+  50%      { box-shadow: 0 0 0 1px var(--pt-accent), 0 8px 22px oklch(from var(--pt-accent) l c h / 0.18); }
+}
+.pt-cp-confirm.is-resolved { animation: none; box-shadow: inset 0 0 0 1px var(--pt-line); background: transparent; }
+.pt-cp-confirm-eyebrow {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--pt-accent); margin-bottom: 5px;
+}
+.pt-cp-confirm-summary { color: var(--pt-fg); font-weight: 500; }
+.pt-cp-confirm-btns { display: flex; gap: 8px; margin-top: 11px; }
+.pt-cp-approve {
+  flex: 1; border: 0; border-radius: 9px; cursor: pointer;
+  padding: 8px 12px; font-weight: 700; font-size: 12.5px;
+  background: var(--pt-accent); color: #fff;
+  transition: transform 120ms ease, filter 120ms ease;
+}
+.pt-cp-approve:hover { filter: brightness(1.05); transform: translateY(-1px); }
+.pt-cp-approve:active { transform: translateY(0); }
+.pt-cp-dismiss {
+  border: 1px solid var(--pt-line); border-radius: 9px; cursor: pointer;
+  padding: 8px 14px; font-weight: 600; font-size: 12.5px;
+  background: transparent; color: var(--pt-fg-2);
+}
+.pt-cp-dismiss:hover { background: oklch(from var(--pt-fg) l c h / 0.05); }
+.pt-cp-confirm-done { display: inline-flex; align-items: center; gap: 5px; color: var(--pt-ok); font-weight: 600; font-size: 12px; }
+.pt-cp-confirm-skip { color: var(--pt-fg-4); font-size: 12px; }
+.pt-cp-confirm-btns button:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Live draft-order receipt ───────────────────────────────────────────── */
+.pt-cp-receipt {
+  margin: 4px 14px 0; flex: none;
+  background: var(--pt-surface-2);
+  border-radius: 0 0 var(--pt-radius-lg) var(--pt-radius-lg);
+  box-shadow: var(--pt-shadow-soft);
+  padding: 12px 14px 13px;
+  position: relative;
+}
+/* torn-paper top edge */
+.pt-cp-receipt::before {
+  content: ''; position: absolute; left: 0; right: 0; top: -6px; height: 6px;
+  background: repeating-linear-gradient(135deg, var(--pt-surface-2) 0 6px, transparent 6px 12px);
+  -webkit-mask: repeating-linear-gradient(90deg, #000 0 7px, transparent 7px 14px);
+          mask: repeating-linear-gradient(90deg, #000 0 7px, transparent 7px 14px);
+}
+.pt-cp-receipt-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--pt-fg-3); margin-bottom: 8px;
+}
+.pt-cp-receipt-ref { color: var(--pt-fg-4); font-weight: 600; letter-spacing: 0.04em; }
+.pt-cp-line { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 3px 0; animation: pt-cp-rise 0.35s ease both; }
+.pt-cp-line-name { color: var(--pt-fg); }
+.pt-cp-line-qty { color: var(--pt-accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+.pt-cp-line-price { color: var(--pt-fg-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pt-cp-receipt-total {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-top: 8px; padding-top: 9px; border-top: 1px dashed var(--pt-line);
+}
+.pt-cp-receipt-total-l { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pt-fg-3); }
+.pt-cp-receipt-total-v { font-size: 16px; font-weight: 800; color: var(--pt-fg); font-variant-numeric: tabular-nums; }
+.pt-cp-receipt-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.pt-cp-meta-chip {
+  font-size: 10.5px; color: var(--pt-fg-2);
+  background: var(--pt-bg); border: 1px solid var(--pt-line-soft);
+  border-radius: 7px; padding: 2px 8px;
+}
+.pt-cp-meta-chip b { color: var(--pt-fg); font-weight: 600; }
+
+/* ── Composer ───────────────────────────────────────────────────────────── */
+.pt-cp-composer {
+  flex: none; display: flex; align-items: center; gap: 8px;
+  padding: 11px 13px 13px; border-top: 1px solid var(--pt-line-soft);
+}
+.pt-cp-input {
+  flex: 1; border: 1px solid var(--pt-line); border-radius: 11px;
+  background: var(--pt-bg); color: var(--pt-fg);
+  padding: 9px 12px; font: inherit; font-size: 13px;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+.pt-cp-input::placeholder { color: var(--pt-fg-4); }
+.pt-cp-input:focus { outline: none; border-color: var(--pt-accent); box-shadow: 0 0 0 3px var(--pt-accent-soft); }
+.pt-cp-send {
+  flex: none; display: grid; place-items: center;
+  width: 36px; height: 36px; border: 0; border-radius: 11px; cursor: pointer;
+  background: var(--pt-accent); color: #fff;
+  transition: filter 120ms ease, transform 120ms ease;
+}
+.pt-cp-send:hover:not(:disabled) { filter: brightness(1.05); transform: translateY(-1px); }
+.pt-cp-send:disabled { opacity: 0.45; cursor: default; }
+.pt-cp-send.is-sending svg { animation: pt-cp-spin 0.9s linear infinite; }
+@keyframes pt-cp-spin { to { transform: rotate(360deg); } }
+
+/* ── Empty / loading ────────────────────────────────────────────────────── */
+.pt-cp-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 32px; text-align: center; color: var(--pt-fg-3);
+}
+.pt-cp-empty .pt-cp-spark { width: 38px; height: 38px; border-radius: 12px; }
+.pt-cp-empty-title { font-weight: 600; color: var(--pt-fg-2); }
+.pt-cp-empty-sub { font-size: 12px; color: var(--pt-fg-4); max-width: 220px; }
+.pt-cp-skel { height: 11px; border-radius: 6px; background: linear-gradient(90deg, var(--pt-line-soft), var(--pt-surface-2), var(--pt-line-soft)); background-size: 200% 100%; animation: pt-cp-shim 1.3s linear infinite; }
+@keyframes pt-cp-shim { to { background-position: -200% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-cp-entry, .pt-cp-line, .pt-cp.is-working .pt-cp-dot, .pt-cp-confirm, .pt-cp-send.is-sending svg, .pt-cp-skel { animation: none; }
+}
