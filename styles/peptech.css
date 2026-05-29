@@ -9,13 +9,14 @@
   --pt-accent-soft: oklch(var(--pt-accent-l) var(--pt-accent-c) var(--pt-accent-h) / 0.14);
   --pt-accent-fg:  oklch(0.32 0.08 var(--pt-accent-h));
 
-  /* light surfaces */
-  --pt-bg:        oklch(0.985 0.002 100);
-  --pt-bg-side:   oklch(0.972 0.003 100);
+  /* light surfaces — v2: brighter + neutral (dropped the warm hue-100 tint
+     that read as "cream"; canvas now reads clean white like respond.io) */
+  --pt-bg:        oklch(0.992 0 0);
+  --pt-bg-side:   oklch(0.976 0 0);
   --pt-surface:   oklch(1    0    0);
-  --pt-surface-2: oklch(0.974 0.002 100);
-  --pt-line:      oklch(0.91 0.004 100);
-  --pt-line-soft: oklch(0.945 0.004 100);
+  --pt-surface-2: oklch(0.972 0 0);
+  --pt-line:      oklch(0.905 0 0);
+  --pt-line-soft: oklch(0.94 0 0);
 
   --pt-fg:        oklch(0.20 0.01 100);
   --pt-fg-2:      oklch(0.40 0.01 100);
@@ -2827,6 +2828,7 @@ button.pt-chip.is-on {
   color: #fff;
 }
 .pt-avatar-init { font-size: 13px; font-weight: 600; line-height: 1; }
+.pt-avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
 .pt-avatar-ch {
   position: absolute; right: -2px; bottom: -2px;
   width: 13px; height: 13px; border-radius: 50%;

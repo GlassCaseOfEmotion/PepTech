@@ -6,8 +6,8 @@ import { useInbox } from './InboxProvider'
 type ViewDef = { id: string; label: string; icon: React.FC<{ size?: number }>; iconClass?: string }
 
 const LIFECYCLE: ViewDef[] = [
-  { id: 'lead',     label: 'New leads', icon: Icons.user },
-  { id: 'customer', label: 'Customers', icon: Icons.users },
+  { id: 'lead',     label: 'New leads', icon: Icons.user,  iconClass: 'pt-vi-lead' },
+  { id: 'customer', label: 'Customers', icon: Icons.users, iconClass: 'pt-vi-customer' },
 ]
 const CHANNELS: ViewDef[] = [
   { id: 'wa', label: 'WhatsApp', icon: Icons.wa, iconClass: 'pt-ch-wa' },
@@ -59,7 +59,7 @@ export function ViewsColumn({ collapsed, onToggle }: { collapsed: boolean; onTog
         </button>
       </div>
       <div className="pt-ix-views-body">
-        <Row id="all" label="All" icon={Icons.inbox} />
+        <Row id="all" label="All" icon={Icons.inbox} iconClass="pt-vi-all" />
         <div className="pt-ix-views-sec">Lifecycle</div>
         {LIFECYCLE.map(v => <Row key={v.id} {...v} />)}
         <div className="pt-ix-views-sec">Channels</div>
