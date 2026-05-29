@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeCoProductAffinity } from '../affinity'
+import { computeCoProductAffinity, type OrderForAffinity } from '../affinity'
 
 describe('computeCoProductAffinity', () => {
   it('counts co-occurrence within the same order and returns top-5 sorted desc', () => {
@@ -22,7 +22,7 @@ describe('computeCoProductAffinity', () => {
       { order_items: [] },
       { order_items: null },
     ]
-    const result = computeCoProductAffinity(orders as never)
+    const result = computeCoProductAffinity(orders as OrderForAffinity[])
     expect(result['A']).toBeUndefined()
   })
 

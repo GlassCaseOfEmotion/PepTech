@@ -14,8 +14,8 @@ export function computeCoProductAffinity(
   orders: OrderForAffinity[],
 ): Record<string, CoProduct[]> {
   const coFreq: Record<string, Record<string, number>> = {}
-  for (const order of orders ?? []) {
-    const ids = ((order.order_items ?? []) as { product_id: string }[]).map(i => i.product_id)
+  for (const order of orders) {
+    const ids = (order.order_items ?? []).map(i => i.product_id)
     for (const pid of ids) {
       for (const other of ids) {
         if (pid === other) continue
