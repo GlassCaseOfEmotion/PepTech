@@ -7,6 +7,7 @@ import { CatalogView } from '@/components/catalog/CatalogView'
 import { dbProductToDisplay } from '@/types/catalog'
 import type { DbProduct, DbBatch, ProductMediaItem } from '@/types/catalog'
 import type { ProductProtocol } from '@/types/protocols'
+import { computeCoProductAffinity } from '@/lib/catalog/affinity'
 
 export default async function CatalogPage() {
   const user = await getServerUser()
@@ -105,26 +106,7 @@ export default async function CatalogPage() {
     velocity30dTotal: velocity30dMap[p.id] ?? 0,
   }))
 
-  // Co-product affinity — computed from the already-fetched recentOrders, no extra DB query.
-  // For each order, every pair of products in it gets a co-occurrence count.
-  const coFreq: Record<string, Record<string, number>> = {}
-  for (const order of (recentOrders ?? [])) {
-    const ids = ((order.order_items ?? []) as { product_id: string }[]).map(i => i.product_id)
-    for (const pid of ids) {
-      for (const other of ids) {
-        if (pid === other) continue
-        if (!coFreq[pid]) coFreq[pid] = {}
-        coFreq[pid][other] = (coFreq[pid][other] ?? 0) + 1
-      }
-    }
-  }
-  const coProductsByProductId: Record<string, { productId: string; count: number }[]> = {}
-  for (const [pid, freq] of Object.entries(coFreq)) {
-    coProductsByProductId[pid] = Object.entries(freq)
-      .map(([productId, count]) => ({ productId, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5)
-  }
+  const coProductsByProductId = computeCoProductAffinity(recentOrders ?? [])
 
   const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
 
