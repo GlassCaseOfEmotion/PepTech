@@ -51,7 +51,8 @@ export async function draftSuggestions(
       ],
     })
     parsed = parseJsonContent(content) as { suggestions?: unknown }
-  } catch {
+  } catch (err) {
+    console.error('[copilot] drafting pass failed:', err instanceof Error ? err.message : err)
     return []
   }
 

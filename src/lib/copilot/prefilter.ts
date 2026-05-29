@@ -44,8 +44,10 @@ export async function classifyActionable(
       actionable: parsed.actionable === true,
       signals: Array.isArray(parsed.signals) ? parsed.signals.filter(s => typeof s === 'string') : [],
     }
-  } catch {
+  } catch (err) {
     // Fail closed: never let a classifier error trigger the expensive pass.
+    // Log it though — a missing OPENROUTER_API_KEY or model error is otherwise invisible.
+    console.error('[copilot] pre-filter classify failed:', err instanceof Error ? err.message : err)
     return { actionable: false, signals: [] }
   }
 }
