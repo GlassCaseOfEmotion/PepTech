@@ -128,13 +128,16 @@ kbd {
 /* ─── Layout shell ───────────────────────────────────────────────────────── */
 .pt-root {
   display: grid;
-  grid-template-columns: 232px 1fr 320px;
+  --pt-nav-w: 232px;
+  grid-template-columns: var(--pt-nav-w) 1fr 320px;
   height: 100%;
   background: var(--pt-bg);
   color: var(--pt-fg);
 }
-.pt-root.no-right { grid-template-columns: 232px 1fr; }
-.pt-d-compact .pt-root { grid-template-columns: 220px 1fr 296px; }
+.pt-root.pt-nav-collapsed { --pt-nav-w: 56px; }
+.pt-root.no-right { grid-template-columns: var(--pt-nav-w) 1fr; }
+.pt-d-compact .pt-root { grid-template-columns: var(--pt-nav-w) 1fr 296px; }
+.pt-d-compact .pt-root.no-right { grid-template-columns: var(--pt-nav-w) 1fr; }
 
 /* Reflow dashboard grid to 2 cols when right rail is open on mid-size screens */
 @media (max-width: 1500px) {
@@ -281,6 +284,40 @@ kbd {
   width: 22px; height: 22px; border-radius: 5px; cursor: pointer;
 }
 .pt-me-more:hover { background: oklch(from var(--pt-fg) l c h / 0.06); color: var(--pt-fg); }
+
+/* ─── Collapsed nav rail (Phase 1) ───────────────────────────────────────── */
+.pt-nav-collapse-btn {
+  margin-left: auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--pt-fg-3); cursor: pointer;
+  transition: transform 180ms ease, background-color 160ms ease;
+}
+.pt-nav-collapse-btn:hover { background: oklch(from var(--pt-fg) l c h / 0.06); color: var(--pt-fg); }
+.pt-root.pt-nav-collapsed .pt-nav-collapse-btn { transform: rotate(180deg); }
+
+/* When collapsed: hide labels + text, center the icons, keep the rail tidy */
+.pt-root.pt-nav-collapsed .pt-brand-name,
+.pt-root.pt-nav-collapsed .pt-nav-label,
+.pt-root.pt-nav-collapsed .pt-compose span,
+.pt-root.pt-nav-collapsed .pt-compose kbd,
+.pt-root.pt-nav-collapsed .pt-search span,
+.pt-root.pt-nav-collapsed .pt-search kbd,
+.pt-root.pt-nav-collapsed .pt-nav-section,
+.pt-root.pt-nav-collapsed .pt-me-info,
+.pt-root.pt-nav-collapsed .pt-me-more {
+  display: none;
+}
+.pt-root.pt-nav-collapsed .pt-sidebar { padding: 10px 6px; }
+.pt-root.pt-nav-collapsed .pt-nav-item,
+.pt-root.pt-nav-collapsed .pt-compose,
+.pt-root.pt-nav-collapsed .pt-search {
+  justify-content: center;
+  padding-left: 0; padding-right: 0;
+}
+.pt-root.pt-nav-collapsed .pt-me { justify-content: center; }
+.pt-root.pt-nav-collapsed .pt-brand { justify-content: center; gap: 0; }
+.pt-root.pt-nav-collapsed .pt-nav-collapse-btn { margin-left: 0; }
 
 /* ─── Main column ────────────────────────────────────────────────────────── */
 .pt-main { min-width: 0; display: flex; flex-direction: column; min-height: 0; }
