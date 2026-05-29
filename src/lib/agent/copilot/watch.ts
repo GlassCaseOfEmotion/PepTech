@@ -25,6 +25,7 @@ export async function runCopilotWatch(supabase: AgentSupabase, params: CopilotWa
     const { data: latest } = await supabase
       .from('messages')
       .select('id, content')
+      .eq('tenant_id', params.tenantId)
       .eq('conversation_id', params.conversationId)
       .eq('direction', 'inbound')
       .order('sent_at', { ascending: false })

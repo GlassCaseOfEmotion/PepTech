@@ -22,11 +22,12 @@ export const queryCustomers: AgentTool = {
       limit:         { type: 'number', description: 'Max results (default 20)' },
     },
   },
-  async execute(raw: Record<string, unknown>, supabase: AgentSupabase) {
+  async execute(raw: Record<string, unknown>, supabase: AgentSupabase, tenantId: string) {
     const input = raw as { name?: string; tag?: string; min_ltv?: number; min_trust?: number; created_after?: string; limit?: number }
     let q = supabase
       .from('customers')
       .select('id, display_name, trust_score, ltv, created_at, customer_tags(tag), customer_channels(channel_type, display_handle, is_primary)')
+      .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .limit(input.limit ?? 20)
 
@@ -110,11 +111,12 @@ export const queryOrders: AgentTool = {
       limit:       { type: 'number', description: 'Max results (default 20)' },
     },
   },
-  async execute(raw: Record<string, unknown>, supabase: AgentSupabase) {
+  async execute(raw: Record<string, unknown>, supabase: AgentSupabase, tenantId: string) {
     const input = raw as { status?: string; customer_id?: string; since?: string; until?: string; limit?: number }
     let q = supabase
       .from('orders')
       .select(ORDER_SELECT)
+      .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .limit(input.limit ?? 20)
 
@@ -140,9 +142,9 @@ export const getOrder: AgentTool = {
       ref_number: { type: 'string', description: 'Order reference like A-1012' },
     },
   },
-  async execute(raw: Record<string, unknown>, supabase: AgentSupabase) {
+  async execute(raw: Record<string, unknown>, supabase: AgentSupabase, tenantId: string) {
     const input = raw as { id?: string; ref_number?: string }
-    let q = supabase.from('orders').select(ORDER_SELECT)
+    let q = supabase.from('orders').select(ORDER_SELECT).eq('tenant_id', tenantId)
     if (input.id)             q = q.eq('id', input.id)
     else if (input.ref_number) q = q.eq('ref_number', input.ref_number)
     else throw new Error('Provide id or ref_number')
@@ -202,11 +204,12 @@ export const getAnalytics: AgentTool = {
       until: { type: 'string', description: 'ISO date string for end of period' },
     },
   },
-  async execute(raw: Record<string, unknown>, supabase: AgentSupabase) {
+  async execute(raw: Record<string, unknown>, supabase: AgentSupabase, tenantId: string) {
     const input = raw as { since?: string; until?: string }
     let q = supabase
       .from('orders')
       .select('id, ref_number, status, payment_amount, payment_asset, created_at, customers(display_name), order_items(qty, unit_price_snapshot, products(name))')
+      .eq('tenant_id', tenantId)
       .not('status', 'in', '("cancelled")')
 
     if (input.since) q = q.gte('created_at', input.since)

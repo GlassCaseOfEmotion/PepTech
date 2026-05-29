@@ -17,7 +17,7 @@ function fakeSupabase(opts: { enabled: boolean; latestInboundId: string; content
         return { select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { copilot_enabled: opts.enabled } }) }) }) }
       }
       if (table === 'messages') {
-        return { select: () => ({ eq: () => ({ eq: () => ({ order: () => ({ limit: () => Promise.resolve({ data: [{ id: opts.latestInboundId, content: opts.content ?? 'hi' }] }) }) }) }) }) }
+        return { select: () => ({ eq: () => ({ eq: () => ({ eq: () => ({ order: () => ({ limit: () => Promise.resolve({ data: [{ id: opts.latestInboundId, content: opts.content ?? 'hi' }] }) }) }) }) }) }) }
       }
       throw new Error('unexpected table ' + table)
     }),
