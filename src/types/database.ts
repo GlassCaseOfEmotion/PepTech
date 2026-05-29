@@ -125,6 +125,73 @@ export type Database = {
           },
         ]
       }
+      ai_suggestions: {
+        Row: {
+          confidence: number
+          conversation_id: string
+          created_at: string
+          customer_id: string
+          dedup_key: string
+          id: string
+          kind: string
+          payload: Json
+          reasoning: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          confidence?: number
+          conversation_id: string
+          created_at?: string
+          customer_id: string
+          dedup_key: string
+          id?: string
+          kind: string
+          payload?: Json
+          reasoning?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          confidence?: number
+          conversation_id?: string
+          created_at?: string
+          customer_id?: string
+          dedup_key?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          reasoning?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_suggestions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_suggestions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_suggestions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_runs: {
         Row: {
           action_payload: Json | null
@@ -646,18 +713,15 @@ export type Database = {
           },
         ]
       }
-      // HAND-NARROWED: lifecycle_stage and acquisition_source are text+CHECK columns in DB.
-      // `npm run db:types` will overwrite these literal unions back to `string` — re-apply
-      // the narrowings after any regen. See CLAUDE.md "Hand-narrowed database types".
       customers: {
         Row: {
-          acquisition_source: 'referral' | 'community' | 'group_chat' | 'direct' | 'other' | null
+          acquisition_source: 'referral' | 'community' | 'group_chat' | 'direct' | 'other' | null // HAND-NARROWED
           acquisition_source_note: string | null
           converted_at: string | null
           created_at: string
           display_name: string
           id: string
-          lifecycle_stage: 'lead' | 'customer'
+          lifecycle_stage: 'lead' | 'customer' // HAND-NARROWED
           ltv: number
           notes: string | null
           referred_by_customer_id: string | null
@@ -666,13 +730,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          acquisition_source?: 'referral' | 'community' | 'group_chat' | 'direct' | 'other' | null
+          acquisition_source?: 'referral' | 'community' | 'group_chat' | 'direct' | 'other' | null // HAND-NARROWED
           acquisition_source_note?: string | null
           converted_at?: string | null
           created_at?: string
           display_name: string
           id?: string
-          lifecycle_stage?: 'lead' | 'customer'
+          lifecycle_stage?: 'lead' | 'customer' // HAND-NARROWED
           ltv?: number
           notes?: string | null
           referred_by_customer_id?: string | null
@@ -681,13 +745,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          acquisition_source?: 'referral' | 'community' | 'group_chat' | 'direct' | 'other' | null
+          acquisition_source?: 'referral' | 'community' | 'group_chat' | 'direct' | 'other' | null // HAND-NARROWED
           acquisition_source_note?: string | null
           converted_at?: string | null
           created_at?: string
           display_name?: string
           id?: string
-          lifecycle_stage?: 'lead' | 'customer'
+          lifecycle_stage?: 'lead' | 'customer' // HAND-NARROWED
           ltv?: number
           notes?: string | null
           referred_by_customer_id?: string | null
@@ -1637,6 +1701,7 @@ export type Database = {
         Row: {
           base_currency: string
           business_type: string | null
+          copilot_enabled: boolean
           created_at: string
           id: string
           intended_channels: string[]
@@ -1652,6 +1717,7 @@ export type Database = {
         Insert: {
           base_currency?: string
           business_type?: string | null
+          copilot_enabled?: boolean
           created_at?: string
           id?: string
           intended_channels?: string[]
@@ -1667,6 +1733,7 @@ export type Database = {
         Update: {
           base_currency?: string
           business_type?: string | null
+          copilot_enabled?: boolean
           created_at?: string
           id?: string
           intended_channels?: string[]
@@ -1710,6 +1777,62 @@ export type Database = {
           {
             foreignKeyName: "users_tenant_id_fkey"
             columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      waitlist_signups: {
+        Row: {
+          channel: string
+          contact: string
+          converted_at: string | null
+          converted_tenant_id: string | null
+          created_at: string
+          id: string
+          ip_address: unknown
+          notes: string | null
+          referrer: string | null
+          source: string
+          status: string
+          user_agent: string | null
+          volume_bucket: string
+        }
+        Insert: {
+          channel: string
+          contact: string
+          converted_at?: string | null
+          converted_tenant_id?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          notes?: string | null
+          referrer?: string | null
+          source?: string
+          status?: string
+          user_agent?: string | null
+          volume_bucket: string
+        }
+        Update: {
+          channel?: string
+          contact?: string
+          converted_at?: string | null
+          converted_tenant_id?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          notes?: string | null
+          referrer?: string | null
+          source?: string
+          status?: string
+          user_agent?: string | null
+          volume_bucket?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_signups_converted_tenant_id_fkey"
+            columns: ["converted_tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
@@ -1860,6 +1983,22 @@ export type Database = {
         Returns: undefined
       }
       unsnooze_expired: { Args: never; Returns: undefined }
+      waitlist_join: {
+        Args: {
+          p_channel: string
+          p_contact: string
+          p_ip?: string
+          p_referrer?: string
+          p_source?: string
+          p_user_agent?: string
+          p_volume_bucket: string
+        }
+        Returns: {
+          duplicate: boolean
+          queue_position: number
+          queue_total: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

@@ -63,11 +63,12 @@ export const getCustomer: AgentTool = {
       name: { type: 'string', description: 'Exact or partial name (used if id not provided)' },
     },
   },
-  async execute(raw: Record<string, unknown>, supabase: AgentSupabase) {
+  async execute(raw: Record<string, unknown>, supabase: AgentSupabase, tenantId: string) {
     const input = raw as { id?: string; name?: string }
     let q = supabase
       .from('customers')
       .select('id, display_name, trust_score, ltv, created_at, customer_tags(tag), customer_channels(channel_type, display_handle, is_primary)')
+      .eq('tenant_id', tenantId)
     if (input.id)        q = (q as ReturnType<typeof q.eq>).eq('id', input.id).single() as never
     else if (input.name) q = (q as ReturnType<typeof q.ilike>).ilike('display_name', `%${input.name}%`).limit(1).single() as never
     else throw new Error('Provide id or name')
@@ -78,6 +79,7 @@ export const getCustomer: AgentTool = {
     const { data: orders } = await supabase
       .from('orders')
       .select('id, ref_number, status, payment_amount, payment_asset, created_at')
+      .eq('tenant_id', tenantId)
       .eq('customer_id', customer.id)
       .order('created_at', { ascending: false })
       .limit(10)
@@ -85,6 +87,7 @@ export const getCustomer: AgentTool = {
     const { data: notes } = await supabase
       .from('notes')
       .select('id, content, created_at')
+      .eq('tenant_id', tenantId)
       .eq('customer_id', customer.id)
       .order('created_at', { ascending: false })
       .limit(5)
@@ -161,11 +164,11 @@ export const queryCatalog: AgentTool = {
       low_stock: { type: 'boolean', description: 'If true, return only products with stock < 10' },
     },
   },
-  async execute(raw: Record<string, unknown>, supabase: AgentSupabase) {
+  async execute(raw: Record<string, unknown>, supabase: AgentSupabase, tenantId: string) {
     const input = raw as { family?: string; low_stock?: boolean }
     const [{ data: products }, { data: batches }] = await Promise.all([
-      supabase.from('products').select('id, sku, name, product_family, unit_price, cost_price, is_active').eq('is_active', true).order('name'),
-      supabase.from('batches').select('id, product_id, batch_number, stock, expires_at'),
+      supabase.from('products').select('id, sku, name, product_family, unit_price, cost_price, is_active').eq('tenant_id', tenantId).eq('is_active', true).order('name'),
+      supabase.from('batches').select('id, product_id, batch_number, stock, expires_at').eq('tenant_id', tenantId),
     ])
 
     const stockByProduct: Record<string, number> = {}
@@ -250,11 +253,12 @@ export const getConversationMessages: AgentTool = {
       limit: { type: 'number', description: 'Number of recent messages to fetch (default 30)' },
     },
   },
-  async execute(raw: Record<string, unknown>, supabase: AgentSupabase) {
+  async execute(raw: Record<string, unknown>, supabase: AgentSupabase, tenantId: string) {
     const input = raw as { conversation_id: string; limit?: number }
     const { data, error } = await supabase
       .from('messages')
       .select('id, direction, content, sent_at, metadata')
+      .eq('tenant_id', tenantId)
       .eq('conversation_id', input.conversation_id)
       .order('sent_at', { ascending: false })
       .limit(input.limit ?? 30)
