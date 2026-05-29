@@ -3,7 +3,7 @@ import type { Database } from '@/types/database'
 import { after } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { runAutomationsForEvent } from '@/lib/automations/engine'
-import { runCopilotPass } from '@/lib/copilot/run'
+import { runCopilotWatch } from '@/lib/agent/copilot/watch'
 
 export interface InboundMessageParams {
   tenantId: string
@@ -149,9 +149,9 @@ export async function processInboundMessage(
   // (e.g. unit tests) after() throws, so fall back to fire-and-forget.
   const copilotParams = { tenantId, conversationId, customerId, messageId: message.id }
   try {
-    after(() => runCopilotPass(createServiceClient(), copilotParams))
+    after(() => runCopilotWatch(createServiceClient(), copilotParams))
   } catch {
-    void runCopilotPass(createServiceClient(), copilotParams).catch(console.error)
+    void runCopilotWatch(createServiceClient(), copilotParams).catch(console.error)
   }
 
   return { conversationId, messageId: message.id }
