@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { Icons } from '@/lib/icons'
 import { createClient } from '@/lib/supabase/client'
 import { dbConversationToThread, type DbConversation } from '@/types/inbox'
+import { useNavCollapsed } from './useNavCollapsed'
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
 
@@ -83,6 +84,7 @@ export function Sidebar({ displayName, initialPinned = [], queuedCount = 0 }: Si
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
   const supabase = useMemo(() => createClient(), [])
   const { theme, cycle } = useTheme()
+  const { collapsed, toggle } = useNavCollapsed()
   const [pinned, setPinnedRaw] = useState<ReturnType<typeof dbConversationToThread>[]>(() => {
     // Prefer the realtime-updated cache over server-fetched initialPinned — the cache
     // reflects patches applied after mount, so it's always more current than the server render.
@@ -189,7 +191,15 @@ export function Sidebar({ displayName, initialPinned = [], queuedCount = 0 }: Si
           </svg>
         </div>
         <div className="pt-brand-name">Peptech<span>.</span></div>
-        <button className="pt-brand-menu" title="Workspace"><Icons.arrowDn size={12} /></button>
+        <button
+          className="pt-nav-collapse-btn"
+          title={collapsed ? 'Pin sidebar open' : 'Collapse sidebar'}
+          aria-label={collapsed ? 'Pin sidebar open' : 'Collapse sidebar'}
+          aria-pressed={!collapsed}
+          onClick={toggle}
+        >
+          <Icons.arrowL size={13} />
+        </button>
       </div>
 
       <button className="pt-compose" onClick={() => window.dispatchEvent(new CustomEvent('pt:compose:open'))}>
@@ -210,7 +220,7 @@ export function Sidebar({ displayName, initialPinned = [], queuedCount = 0 }: Si
           const on = isActive(n.href)
           const badge = n.href === '/automations' && queuedCount > 0 ? queuedCount : null
           return (
-            <Link key={n.href} href={n.href} className={`pt-nav-item ${on ? 'is-on' : ''}`} {...(n.href === '/inbox' ? { 'data-tour': 'inbox-link' } : {})}>
+            <Link key={n.href} href={n.href} title={n.label} className={`pt-nav-item ${on ? 'is-on' : ''}`} {...(n.href === '/inbox' ? { 'data-tour': 'inbox-link' } : {})}>
               <Icon size={15} />
               <span className="pt-nav-label">{n.label}</span>
               {badge != null && <span className="pt-nav-badge">{badge}</span>}
@@ -225,7 +235,7 @@ export function Sidebar({ displayName, initialPinned = [], queuedCount = 0 }: Si
             {pinned.map((p) => {
               const ChIcon = CH_ICONS[p.channel]
               return (
-                <Link key={p.id} href={`/inbox?conversation=${p.id}`} className="pt-pin">
+                <Link key={p.id} href={`/inbox?conversation=${p.id}`} title={p.name} className="pt-pin">
                   {ChIcon && <ChIcon size={11} />}
                   <div className="pt-pin-body">
                     <div className="pt-pin-name">{p.name}</div>
@@ -243,7 +253,7 @@ export function Sidebar({ displayName, initialPinned = [], queuedCount = 0 }: Si
           const Icon = n.icon
           const on = isActive(n.href)
           return (
-            <Link key={n.href} href={n.href} className={`pt-nav-item ${on ? 'is-on' : ''}`}>
+            <Link key={n.href} href={n.href} title={n.label} className={`pt-nav-item ${on ? 'is-on' : ''}`}>
               <Icon size={15} />
               <span className="pt-nav-label">{n.label}</span>
             </Link>
