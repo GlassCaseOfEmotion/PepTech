@@ -25,6 +25,8 @@ type InboxCtx = {
   setActiveId: (id: string) => void
   filter: string
   setFilter: (f: string) => void
+  view: string
+  setView: (v: string) => void
   messages: InboxMessage[]
   notes: DbNote[]
   quickReplies: DbQuickReply[]
@@ -77,6 +79,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
     return threads[0]?.id ?? ''
   })
   const [filter, setFilter] = useState('all')
+  const [view, setView] = useState('all')
   const [messages, setMessages] = useState<InboxMessage[]>([])
   const [resolvedCount, setResolvedCount] = useState(initialResolvedCount)
   const signedUrlsRef = useRef<Set<string>>(new Set())
@@ -462,7 +465,7 @@ export function InboxProvider({ initialConversations, quickReplies, templates, i
 
   return (
     <InboxContext.Provider value={{
-      threads, activeId, setActiveId, filter, setFilter,
+      threads, activeId, setActiveId, filter, setFilter, view, setView,
       messages, notes, quickReplies, templates, isSending, messagesLoading, resolvedCount, activeThread, sendMessage, sendTemplate, addNote, snooze, markDone, reopen, togglePin,
       pendingInvoicePath, pendingInvoiceName, clearPendingInvoice,
       updateThreadLifecycle, updateThreadAcquisitionSource,

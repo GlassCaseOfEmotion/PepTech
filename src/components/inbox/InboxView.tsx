@@ -79,9 +79,8 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChann
   threads: InboxThread[]; activeId: string; onSelect: (id: string) => void
   filter: string; setFilter: (f: string) => void; hasChannels: boolean; queuedRuns: QueuedRun[]
 }) {
-  const { resolvedCount } = useInbox()
+  const { resolvedCount, view } = useInbox()
   const [search, setSearch] = useState('')
-  const [chanFilter, setChanFilter] = useState<'all' | 'wa' | 'tg' | 'em'>('all')
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -116,7 +115,10 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChann
   const visible = threads.filter(t => {
     if (filter === 'all') { if (t.status === 'resolved') return false }
     else if (t.status !== filter) return false
-    if (chanFilter !== 'all' && t.channel !== chanFilter) return false
+    // Views lens (single-select): lifecycle or channel
+    if (view === 'lead' && t.lifecycleStage !== 'lead') return false
+    if (view === 'customer' && t.lifecycleStage !== 'customer') return false
+    if ((view === 'wa' || view === 'tg' || view === 'em') && t.channel !== view) return false
     if (search) {
       const q = search.toLowerCase()
       return t.name.toLowerCase().includes(q) || t.handle.toLowerCase().includes(q)
@@ -153,17 +155,6 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChann
         {filters.map(f => (
           <button key={f.id} className={`pt-pill ${filter === f.id ? 'is-on' : ''}`} onClick={() => setFilter(f.id)}>
             {f.label}<span className="pt-pill-num">{f.count}</span>
-          </button>
-        ))}
-      </div>
-      <div className="pt-ix-filters">
-        {(['all', 'wa', 'tg', 'em'] as const).map(ch => (
-          <button
-            key={ch}
-            className={`pt-pill ${chanFilter === ch ? 'is-on' : ''}`}
-            onClick={() => setChanFilter(ch)}
-          >
-            {ch === 'all' ? 'All channels' : ch === 'wa' ? 'WhatsApp' : ch === 'tg' ? 'Telegram' : 'Email'}
           </button>
         ))}
       </div>
