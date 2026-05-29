@@ -1,6 +1,6 @@
 /* inbox.css — Inbox view styles */
 
-.pt-root.is-inbox { grid-template-columns: 232px 1fr; }
+.pt-root.is-inbox { grid-template-columns: var(--pt-nav-w) 1fr; }
 .pt-root.is-inbox .pt-page { padding: 0; }
 
 .pt-inbox {
