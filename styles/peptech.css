@@ -2830,10 +2830,13 @@ button.pt-chip.is-on {
 .pt-avatar-init { font-size: 13px; font-weight: 600; line-height: 1; }
 .pt-avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
 .pt-avatar-ch {
-  position: absolute; right: -2px; bottom: -2px;
-  width: 13px; height: 13px; border-radius: 50%;
-  border: 2px solid var(--pt-bg);
+  position: absolute; right: -3px; bottom: -3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid var(--pt-surface);
+  display: grid; place-items: center;
+  color: #fff;
 }
+.pt-avatar-ch svg { width: 9px; height: 9px; }
 .pt-avatar-ch-wa { background: var(--pt-wa); }
 .pt-avatar-ch-tg { background: var(--pt-tg); }
 .pt-avatar-ch-em { background: var(--pt-em); }

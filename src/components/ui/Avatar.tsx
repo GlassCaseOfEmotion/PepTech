@@ -2,8 +2,11 @@
 
 import { useState } from 'react'
 import { initials } from '@/types/inbox'
+import { Icons } from '@/lib/icons'
 
 type Channel = 'wa' | 'tg' | 'em'
+
+const CH_ICON: Record<Channel, React.FC<{ size?: number }>> = { wa: Icons.wa, tg: Icons.tg, em: Icons.em }
 
 // 8 well-spaced hues for the fallback circle. A stable hash of the name picks one.
 const HUES = [350, 25, 90, 145, 190, 240, 285, 320]
@@ -31,7 +34,10 @@ export function Avatar({ name, channel, size = 36, seed }: { name: string; chann
       {imgOk
         ? <img className="pt-avatar-img" src={url} alt="" loading="lazy" onError={() => setImgOk(false)} />
         : <span className="pt-avatar-init">{initials(name)}</span>}
-      {channel && <i className={`pt-avatar-ch pt-avatar-ch-${channel}`} />}
+      {channel && (() => {
+        const ChIcon = CH_ICON[channel]
+        return <i className={`pt-avatar-ch pt-avatar-ch-${channel}`}><ChIcon size={9} /></i>
+      })()}
     </div>
   )
 }

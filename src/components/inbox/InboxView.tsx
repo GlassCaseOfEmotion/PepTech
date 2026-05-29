@@ -36,7 +36,7 @@ function IxThread({ t, active, onClick }: { t: InboxThread; active: boolean; onC
   const { togglePin } = useInbox()
   return (
     <li className={`pt-ixt ${active ? 'is-active' : ''} ${t.unread ? 'is-unread' : ''} ${t.status === 'snoozed' ? 'is-snoozed' : ''} ${t.pinned ? 'is-pinned' : ''}`} onClick={onClick}>
-      <Avatar name={t.name} channel={t.channel} size={30} />
+      <Avatar name={t.name} channel={t.channel} size={34} />
       <div className="pt-ixt-mid">
         <div className="pt-ixt-row1">
           <span className="pt-ixt-name">{t.name}</span>
@@ -812,7 +812,7 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
               <div key={m.id} className={`pt-msg-row pt-msg-row-${m.from}`}>
                 {lastOfGroup
                   ? (m.from === 'them'
-                      ? <Avatar name={thread.name} channel={thread.channel} size={20} />
+                      ? <Avatar name={thread.name} size={20} />
                       : <Avatar name={operatorName} size={20} />)
                   : <span className="pt-msg-avatar-spacer" aria-hidden />}
                 <Bubble m={m} onImageClick={setLightboxUrl} onOpenWaPicker={() => setShowWaPicker(true)} />
