@@ -812,8 +812,8 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
               <div key={m.id} className={`pt-msg-row pt-msg-row-${m.from}`}>
                 {lastOfGroup
                   ? (m.from === 'them'
-                      ? <Avatar name={thread.name} channel={thread.channel} size={26} />
-                      : <Avatar name={operatorName} size={26} />)
+                      ? <Avatar name={thread.name} channel={thread.channel} size={20} />
+                      : <Avatar name={operatorName} size={20} />)
                   : <span className="pt-msg-avatar-spacer" aria-hidden />}
                 <Bubble m={m} onImageClick={setLightboxUrl} onOpenWaPicker={() => setShowWaPicker(true)} />
               </div>
