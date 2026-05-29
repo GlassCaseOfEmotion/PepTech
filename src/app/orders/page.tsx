@@ -34,6 +34,7 @@ export default async function OrdersPage() {
   const { data: orders } = await supabase
     .from('orders')
     .select(ORDER_SELECT)
+    .neq('status', 'draft')
     .or(`status.neq.delivered,and(status.eq.delivered,created_at.gte.${thirtyDaysAgo})`)
     .order('created_at', { ascending: false })
     .limit(100)

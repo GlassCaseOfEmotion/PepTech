@@ -86,6 +86,7 @@ export default async function Home() {
       .from('orders')
       .select('created_at, payment_amount_base, payment_amount')
       .neq('status', 'cancelled')
+      .neq('status', 'draft')
       .gte('created_at', d90),
     supabase
       .from('orders')
