@@ -42,6 +42,7 @@ export function SuggestionCard({ suggestion, onRemove }: {
   }
 
   async function handleSendMessage() {
+    if (state === 'working') return
     setIsEditing(false)
     setState('working')
     const result = await sendSuggestionMessage(suggestion.id, edited)
@@ -51,6 +52,7 @@ export function SuggestionCard({ suggestion, onRemove }: {
   }
 
   async function handleCommitOrder() {
+    if (state === 'working') return
     setState('working')
     const result = await commitDraftOrder(suggestion.id)
       .catch(e => ({ error: e instanceof Error ? e.message : 'Unknown error' }))

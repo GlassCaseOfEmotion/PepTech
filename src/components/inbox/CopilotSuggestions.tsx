@@ -11,7 +11,13 @@ export function CopilotSuggestions({ suggestions, variant }: {
   // Local removal so a dismissed/sent card disappears immediately,
   // even before the realtime UPDATE round-trips.
   const [removed, setRemoved] = useState<Set<string>>(new Set())
-  useEffect(() => { setRemoved(new Set()) }, [suggestions.length])
+  useEffect(() => {
+    setRemoved(prev => {
+      const ids = new Set(suggestions.map(s => s.id))
+      const next = new Set([...prev].filter(id => ids.has(id)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [suggestions])
 
   const visible = suggestions.filter(s => !removed.has(s.id))
   if (visible.length === 0) {
