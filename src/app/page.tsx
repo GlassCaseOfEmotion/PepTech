@@ -79,7 +79,7 @@ export default async function Home() {
       .neq('payment_asset', 'Cash')
       .order('created_at', { ascending: false })
       .limit(10),
-    supabase.from('tenants').select('base_currency').single(),
+    supabase.from('tenants').select('base_currency, name, logo_path').single(),
     supabase
       .from('orders')
       .select('customer_id, status, created_at, delivered_at, customers(id, display_name), order_items(product_id, qty, products(id, name))')
@@ -155,6 +155,13 @@ export default async function Home() {
 
   const stats0 = { revenue7d, revenuePrev7d, revenue90dDaily, pendingOrders, pendingTotal }
   const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
+  const tenantName = (tenantRow as { name?: string | null } | null)?.name ?? null
+  const tenantLogoPath = (tenantRow as { logo_path?: string | null } | null)?.logo_path ?? null
+  let tenantLogoUrl: string | null = null
+  if (tenantLogoPath) {
+    const { data: signed } = await supabase.storage.from('logos').createSignedUrl(tenantLogoPath, 3600)
+    tenantLogoUrl = signed?.signedUrl ?? null
+  }
 
   // ── Reorder signals ──────────────────────────────────────────────────────
   const reorderOrders = (reorderOrdersRaw ?? []).map(o => ({
@@ -274,6 +281,8 @@ export default async function Home() {
   return (
     <DashboardLayout
       displayName={displayName}
+      tenantName={tenantName}
+      tenantLogoUrl={tenantLogoUrl}
       connectedChannels={connectedChannels}
       threads={threads}
       stockProducts={stockProducts}

@@ -22,6 +22,8 @@ import type { QueuedRun } from '@/types/automations'
 
 interface DashboardLayoutProps {
   displayName: string
+  tenantName?: string | null
+  tenantLogoUrl?: string | null
   connectedChannels: string[]
   threads: InboxThread[]
   stockProducts: CatalogProduct[]
@@ -36,7 +38,7 @@ interface DashboardLayoutProps {
   queuedRuns: QueuedRun[]
 }
 
-export function DashboardLayout({ displayName, connectedChannels, threads, stockProducts, stats, reorderSignals, baseCurrency, shipments, packingOrders, activityItems, onboardingStatus, queuedCount, queuedRuns }: DashboardLayoutProps) { // queuedRuns used in Task 3
+export function DashboardLayout({ displayName, tenantName = null, tenantLogoUrl = null, connectedChannels, threads, stockProducts, stats, reorderSignals, baseCurrency, shipments, packingOrders, activityItems, onboardingStatus, queuedCount, queuedRuns }: DashboardLayoutProps) { // queuedRuns used in Task 3
   const [rightOpen, setRightOpen] = useState(true)
   const channels = connectedChannels
   const focusThread = threads.find(t => t.status === 'needs_reply') ?? threads[0] ?? null
@@ -57,7 +59,7 @@ export function DashboardLayout({ displayName, connectedChannels, threads, stock
           hasPayment={onboardingStatus.hasPayment}
         />
       )}
-      <Sidebar displayName={displayName} queuedCount={queuedCount} />
+      <Sidebar displayName={displayName} tenantName={tenantName} tenantLogoUrl={tenantLogoUrl} queuedCount={queuedCount} />
       <main className="pt-main">
         <TopBar
           section="Dashboard"

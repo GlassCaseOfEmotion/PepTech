@@ -19,13 +19,16 @@ export async function Shell({ children, section, isInbox = false, rightRail }: S
   let displayName = 'User'
   let connectedChannels: string[] = []
   let unreadCount = 0
+  let tenantName: string | null = null
+  let tenantLogoUrl: string | null = null
 
   try {
     const user = await getServerUser()
     if (user) {
       const supabase = await createClient()
       const [{ data: userRow }, { data: channels }, { count }] = await Promise.all([
-        supabase.from('users').select('display_name').eq('id', user.id).single(),
+        // Embed the tenant row for the sidebar workspace mark (name + logo_path).
+        supabase.from('users').select('display_name, tenants(name, logo_path)').eq('id', user.id).single(),
         supabase.from('tenant_channels').select('channel_type').eq('is_active', true),
         // BottomNav inbox-tab badge: count of unread, non-resolved conversations.
         // Server-rendered snapshot — same lifecycle as the previous pinned-derived count.
@@ -35,6 +38,13 @@ export async function Shell({ children, section, isInbox = false, rightRail }: S
       displayName = userRow?.display_name ?? user.email?.split('@')[0] ?? 'User'
       connectedChannels = (channels ?? []).map((c) => c.channel_type)
       unreadCount = count ?? 0
+      const tenant = (userRow as { tenants?: { name: string; logo_path: string | null } | null } | null)?.tenants ?? null
+      tenantName = tenant?.name ?? null
+      if (tenant?.logo_path) {
+        // The 'logos' bucket is private — sign for the request window only.
+        const { data: signed } = await supabase.storage.from('logos').createSignedUrl(tenant.logo_path, 3600)
+        tenantLogoUrl = signed?.signedUrl ?? null
+      }
     }
   } catch {
     // Render shell with defaults if data fetching fails
@@ -53,7 +63,7 @@ export async function Shell({ children, section, isInbox = false, rightRail }: S
       <AgentPalette />
       <CommandPalette />
       <ComposeModal />
-      <Sidebar displayName={displayName} queuedCount={queuedCount} />
+      <Sidebar displayName={displayName} tenantName={tenantName} tenantLogoUrl={tenantLogoUrl} queuedCount={queuedCount} />
       <main className="pt-main">
         <TopBar section={section} connectedChannels={connectedChannels} />
         {children}

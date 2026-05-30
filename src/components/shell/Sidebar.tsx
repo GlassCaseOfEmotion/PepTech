@@ -58,35 +58,81 @@ const NAV_SECONDARY = [
 
 interface SidebarProps {
   displayName: string
+  /** Optional — when present, the brand mark + name show the tenant's
+   * workspace identity instead of the Peptech default. */
+  tenantName?: string | null
+  tenantLogoUrl?: string | null
   queuedCount?: number
 }
 
-export function Sidebar({ displayName, queuedCount = 0 }: SidebarProps) {
+export function Sidebar({ displayName, tenantName = null, tenantLogoUrl = null, queuedCount = 0 }: SidebarProps) {
   const pathname = usePathname()
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
   const { theme, cycle } = useTheme()
   const { collapsed, toggle } = useNavCollapsed()
 
+  // ⌘\ (or Ctrl+\) toggles the sidebar from anywhere — same shortcut Linear,
+  // Notion, Vercel use, so users guess it. Discoverable replacement for the
+  // tiny chevron we lose in the collapsed brand.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === '\\') {
+        e.preventDefault()
+        toggle()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [toggle])
+
+  // Workspace mark — tenant logo if uploaded, otherwise initials from the
+  // tenant name, otherwise the Peptech default (unauthed / pre-data load).
+  const initials = tenantName ? tenantName.trim().slice(0, 2).toUpperCase() : null
+  const BrandMark = tenantLogoUrl ? (
+    <div className="pt-brand-mark pt-brand-mark-logo" aria-hidden="true">
+      <img src={tenantLogoUrl} alt="" />
+    </div>
+  ) : initials ? (
+    <div className="pt-brand-mark pt-brand-mark-initials" aria-hidden="true">
+      {initials}
+    </div>
+  ) : (
+    <div className="pt-brand-mark" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 20 20">
+        <path d="M3 10.5 7 5.5h6l4 5-4 5H7l-4-5Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+        <circle cx="10" cy="10.5" r="2" fill="currentColor"/>
+      </svg>
+    </div>
+  )
+  const brandLabel = tenantName ?? 'Peptech'
+
   return (
     <aside className="pt-sidebar">
-      <div className="pt-brand">
-        <div className="pt-brand-mark" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 20 20">
-            <path d="M3 10.5 7 5.5h6l4 5-4 5H7l-4-5Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-            <circle cx="10" cy="10.5" r="2" fill="currentColor"/>
-          </svg>
-        </div>
-        <div className="pt-brand-name">Peptech<span>.</span></div>
+      {collapsed ? (
+        // Collapsed: the brand mark itself is the expand button — no cramped
+        // chevron beside it. Whole 36×36 square is the hit area.
         <button
-          className="pt-nav-collapse-btn"
-          title={collapsed ? 'Pin sidebar open' : 'Collapse sidebar'}
-          aria-label={collapsed ? 'Pin sidebar open' : 'Collapse sidebar'}
-          aria-pressed={!collapsed}
+          className="pt-brand-toggle"
           onClick={toggle}
+          title="Expand sidebar (⌘\)"
+          aria-label="Expand sidebar"
         >
-          <Icons.arrowL size={13} />
+          {BrandMark}
         </button>
-      </div>
+      ) : (
+        <div className="pt-brand">
+          {BrandMark}
+          <div className="pt-brand-name">{brandLabel}<span>.</span></div>
+          <button
+            className="pt-nav-collapse-btn"
+            title="Collapse sidebar (⌘\)"
+            aria-label="Collapse sidebar"
+            onClick={toggle}
+          >
+            <Icons.arrowL size={13} />
+          </button>
+        </div>
+      )}
 
       <button className="pt-compose" onClick={() => window.dispatchEvent(new CustomEvent('pt:compose:open'))}>
         <Icons.plus size={13} />
@@ -99,6 +145,8 @@ export function Sidebar({ displayName, queuedCount = 0 }: SidebarProps) {
         <span>Search…</span>
         <kbd>⌘K</kbd>
       </button>
+
+      {collapsed && <div className="pt-nav-sep" />}
 
       <nav className="pt-nav">
         {NAV_PRIMARY.map((n) => {
