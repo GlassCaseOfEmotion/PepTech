@@ -42,7 +42,11 @@ export async function Shell({ children, section, isInbox = false, rightRail }: S
       tenantName = tenant?.name ?? null
       if (tenant?.logo_path) {
         // The 'logos' bucket is private — sign for the request window only.
-        const { data: signed } = await supabase.storage.from('logos').createSignedUrl(tenant.logo_path, 3600)
+        // 96×96 covers up to ~2.6× retina for the 36×36 sidebar mark.
+        const { data: signed } = await supabase.storage.from('logos').createSignedUrl(
+          tenant.logo_path, 3600,
+          { transform: { width: 96, height: 96, quality: 80, resize: 'cover' } },
+        )
         tenantLogoUrl = signed?.signedUrl ?? null
       }
     }

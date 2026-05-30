@@ -159,7 +159,11 @@ export default async function Home() {
   const tenantLogoPath = (tenantRow as { logo_path?: string | null } | null)?.logo_path ?? null
   let tenantLogoUrl: string | null = null
   if (tenantLogoPath) {
-    const { data: signed } = await supabase.storage.from('logos').createSignedUrl(tenantLogoPath, 3600)
+    // 96×96 covers up to ~2.6× retina for the 36×36 sidebar mark.
+    const { data: signed } = await supabase.storage.from('logos').createSignedUrl(
+      tenantLogoPath, 3600,
+      { transform: { width: 96, height: 96, quality: 80, resize: 'cover' } },
+    )
     tenantLogoUrl = signed?.signedUrl ?? null
   }
 
