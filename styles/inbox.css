@@ -519,10 +519,34 @@
 /* ── Conversation right rail ────────────────────────────────────────── */
 /* Right region = optional panel + persistent icon strip */
 .pt-ix-rail-region {
+  position: relative; /* positioning context for the resize handle */
   display: flex;
   min-height: 0; min-width: 0;
   border-left: 0.5px solid var(--pt-line);
 }
+
+/* User-draggable resize handle on the left edge of the rail region.
+   6px wide for an easy hit-area, but visually quiet — a hairline that
+   brightens to accent on hover/active. Double-click resets to default. */
+.pt-ix-rail-resize {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 6px; z-index: 5;
+  cursor: col-resize;
+  background: transparent;
+}
+.pt-ix-rail-resize::after {
+  content: '';
+  position: absolute; left: 2px; top: 0; bottom: 0;
+  width: 1px; background: transparent;
+  transition: background-color 140ms ease;
+}
+.pt-ix-rail-resize:hover::after,
+body.pt-resizing-rail .pt-ix-rail-resize::after { background: var(--pt-accent); }
+
+/* Kill the .pt-inbox grid-template-columns transition while dragging,
+   otherwise every var() change retriggers the 0.22s ease and the panel
+   lags behind the cursor. */
+body.pt-resizing-rail .pt-inbox { transition: none; }
 .pt-ix-strip {
   flex: 0 0 48px;
   display: flex; flex-direction: column; align-items: center; gap: 6px;

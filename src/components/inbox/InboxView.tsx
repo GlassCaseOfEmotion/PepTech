@@ -19,6 +19,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ConvertToCustomerButton } from '@/components/contacts/ConvertToCustomerButton'
 import { RailStrip, type RailPanel } from './RailStrip'
 import { RailPanelHost } from './RailPanelHost'
+import { RailResizeHandle } from './RailResizeHandle'
 import { CopilotSessionProvider } from './copilot/CopilotSessionContext'
 import { ViewsColumn } from './ViewsColumn'
 import { useViewsCollapsed } from './useViewsCollapsed'
@@ -883,6 +884,27 @@ function InboxLayout({ initialPrefill, baseCurrency, hasChannels, queuedRuns, op
 
   useEffect(() => { setActivePanel(null) }, [activeId])
 
+  // User-resized rail width (px). null = use the CSS default (368px).
+  // Hydrated from localStorage on mount so SSR markup matches client.
+  const [railWidth, setRailWidth] = useState<number | null>(null)
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem('pt-rail-width')
+      if (stored) {
+        const n = parseInt(stored, 10)
+        if (!isNaN(n) && n >= 320 && n <= 500) setRailWidth(n)
+      }
+    } catch { /* ignore — private mode */ }
+  }, [])
+  const commitRailWidth = useCallback((w: number) => {
+    setRailWidth(w)
+    try { window.localStorage.setItem('pt-rail-width', String(w)) } catch { /* ignore */ }
+  }, [])
+  const resetRailWidth = useCallback(() => {
+    setRailWidth(null)
+    try { window.localStorage.removeItem('pt-rail-width') } catch { /* ignore */ }
+  }, [])
+
   const handleSelect = useCallback((id: string) => {
     setActiveId(id)
     router.replace(`?conversation=${id}`, { scroll: false })
@@ -892,8 +914,17 @@ function InboxLayout({ initialPrefill, baseCurrency, hasChannels, queuedRuns, op
     router.replace('?', { scroll: false })
   }, [router])
 
+  // Inline override of --pt-rail-w only when the user has resized AND a panel
+  // is open. When closed, the default rule wins (just shows the strip).
+  const inboxStyle = railWidth != null && activePanel
+    ? ({ '--pt-rail-w': `${railWidth}px` } as React.CSSProperties)
+    : undefined
+
   return (
-    <div className={`pt-inbox${selectedConvId ? ' has-conversation' : ''}${activePanel ? ' is-panel-open' : ''}${viewsCollapsed ? ' is-views-collapsed' : ''}`}>
+    <div
+      className={`pt-inbox${selectedConvId ? ' has-conversation' : ''}${activePanel ? ' is-panel-open' : ''}${viewsCollapsed ? ' is-views-collapsed' : ''}`}
+      style={inboxStyle}
+    >
       <ViewsColumn collapsed={viewsCollapsed} onToggle={toggleViews} />
       <ThreadColumn
         threads={threads}
@@ -925,6 +956,14 @@ function InboxLayout({ initialPrefill, baseCurrency, hasChannels, queuedRuns, op
         // by conversation so switching conversations cleanly remounts it.
         <CopilotSessionProvider key={activeThread.id} conversationId={activeThread.id}>
           <div className={`pt-ix-rail-region${activePanel ? ' is-open' : ''}`}>
+            {activePanel && (
+              <RailResizeHandle
+                minWidth={320}
+                maxWidth={500}
+                onCommit={commitRailWidth}
+                onReset={resetRailWidth}
+              />
+            )}
             {activePanel && (
               <RailPanelHost
                 panel={activePanel}
