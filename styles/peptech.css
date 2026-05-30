@@ -178,6 +178,10 @@ kbd {
   display: grid; place-items: center;
   overflow: hidden; flex: none;
 }
+/* SVG inside the mark scales with the container — so the Peptech-default
+   glyph grows from the small expanded-row size up to the full 36×36 in the
+   collapsed brand toggle. */
+.pt-brand-mark svg { width: 80%; height: 80%; }
 /* Tenant logo — fills the mark; preserve aspect with cover */
 .pt-brand-mark-logo { background: var(--pt-bg); }
 .pt-brand-mark-logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -350,7 +354,9 @@ kbd {
 .pt-root.pt-nav-collapsed .pt-search:hover {
   background: oklch(from var(--pt-fg) l c h / 0.06);
 }
-/* Brand mark IS the expand button when collapsed — same chip vocabulary. */
+/* Brand mark IS the expand button when collapsed — fills the 36×36 hit area
+   so the workspace's identity reads first. Hover lifts a subtle accent ring
+   instead of a background tint (the mark covers the button). */
 .pt-brand-toggle {
   display: grid; place-items: center;
   width: 36px; height: 36px;
@@ -358,10 +364,15 @@ kbd {
   padding: 0; border: 0;
   background: transparent; color: var(--pt-fg);
   border-radius: 8px; cursor: pointer;
-  transition: background-color 140ms ease;
+  transition: box-shadow 140ms ease, transform 140ms ease;
 }
-.pt-brand-toggle:hover { background: oklch(from var(--pt-fg) l c h / 0.06); }
-.pt-brand-toggle .pt-brand-mark { width: 22px; height: 22px; }
+.pt-brand-toggle:hover { box-shadow: 0 0 0 2px oklch(from var(--pt-fg) l c h / 0.10); }
+.pt-brand-toggle:active { transform: scale(0.96); }
+.pt-brand-toggle .pt-brand-mark {
+  width: 100%; height: 100%;
+  border-radius: 8px;
+}
+.pt-brand-toggle .pt-brand-mark-initials { font-size: 14px; }
 .pt-root.pt-nav-collapsed .pt-me { justify-content: center; }
 .pt-root.pt-nav-collapsed .pt-brand { justify-content: center; gap: 0; }
 .pt-root.pt-nav-collapsed .pt-nav-collapse-btn { margin-left: 0; }
