@@ -80,34 +80,146 @@
 .pt-ix-back:hover { background: oklch(from var(--pt-fg) l c h / 0.06); color: var(--pt-fg); }
 .pt-ix-list-title { flex: 1; font-size: 13px; font-weight: 600; }
 
-.pt-ix-search {
-  display: flex; align-items: center; gap: 6px;
-  margin: 6px 12px 4px;
-  height: 26px; padding: 0 9px;
-  border: 0.5px solid var(--pt-line);
-  border-radius: 7px;
-  background: var(--pt-surface);
-  color: var(--pt-fg-3);
+/* ─── Toolbar (single row: status dropdown · pending toggle · search) ──── */
+.pt-ix-toolbar {
+  position: relative;
+  display: flex; align-items: center;
+  padding: 7px 12px;
+  border-bottom: 0.5px solid var(--pt-line-soft);
+  height: 42px; box-sizing: border-box;
 }
-.pt-ix-search input {
-  flex: 1; border: 0; background: transparent; outline: none;
-  font: inherit; color: var(--pt-fg);
-  font-size: 11.5px;
+.pt-ix-toolbar-chips {
+  display: flex; align-items: center; gap: 5px;
+  flex: 1; min-width: 0;
+  transition: opacity 160ms ease, transform 160ms ease;
 }
-.pt-ix-search input::placeholder { color: var(--pt-fg-4); }
+.pt-ix-toolbar.is-searching .pt-ix-toolbar-chips {
+  opacity: 0; transform: translateX(-4px); pointer-events: none;
+}
+.pt-ix-toolbar-spacer { flex: 1 1 auto; }
 
-.pt-ix-filters {
-  padding: 0 12px 6px;
-  display: flex; gap: 2px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  scrollbar-width: none; /* horizontal scroll is a fallback only */
+/* Status filter dropdown */
+.pt-ix-status { position: relative; }
+.pt-ix-status-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 26px; padding: 0 7px 0 9px;
+  border: 0; border-radius: 6px;
+  background: transparent; color: var(--pt-fg);
+  font: inherit; font-size: 11.5px; font-weight: 500; cursor: pointer;
+  transition: background-color 140ms ease, box-shadow 140ms ease;
 }
-.pt-ix-filters::-webkit-scrollbar { display: none; }
-.pt-ix-filters .pt-pill {
-  padding: 2px 6px; font-size: 10.5px; white-space: nowrap; flex: none;
+.pt-ix-status-btn:hover,
+.pt-ix-status-btn.is-open {
+  background: var(--pt-surface);
+  box-shadow: inset 0 0 0 0.5px var(--pt-line);
 }
-.pt-ix-filters .pt-pill-num { margin-left: 4px; }
+.pt-ix-status-label { color: var(--pt-fg); }
+.pt-ix-status-count { font-family: var(--pt-mono); font-size: 10.5px; color: var(--pt-fg-3); }
+.pt-ix-status-chev {
+  display: inline-flex; color: var(--pt-fg-3);
+  transition: transform 140ms ease;
+}
+.pt-ix-status-btn.is-open .pt-ix-status-chev { transform: rotate(180deg); }
+
+.pt-ix-status-menu {
+  position: absolute; top: calc(100% + 4px); left: 0;
+  z-index: 20; min-width: 200px;
+  background: var(--pt-surface);
+  border: 0.5px solid var(--pt-line); border-radius: 8px;
+  box-shadow: var(--pt-shadow-soft);
+  padding: 4px;
+  animation: pt-ix-menu-in 140ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@keyframes pt-ix-menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+.pt-ix-status-menu-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 6px 8px 6px 7px;
+  border: 0; border-radius: 5px;
+  background: transparent; color: var(--pt-fg);
+  font: inherit; font-size: 12px; text-align: left; cursor: pointer;
+  transition: background-color 100ms ease;
+}
+.pt-ix-status-menu-item:hover { background: var(--pt-bg); }
+.pt-ix-status-menu-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: transparent; flex: none;
+  transition: background-color 100ms ease;
+}
+.pt-ix-status-menu-item.is-active .pt-ix-status-menu-dot { background: var(--pt-accent); }
+.pt-ix-status-menu-item.is-active .pt-ix-status-menu-label { font-weight: 500; }
+.pt-ix-status-menu-label { flex: 1; }
+.pt-ix-status-menu-count { font-family: var(--pt-mono); font-size: 10.5px; color: var(--pt-fg-3); }
+
+/* Pending toggle chip */
+.pt-ix-pending-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 26px; padding: 0 9px;
+  border: 0; border-radius: 6px;
+  background: transparent; color: var(--pt-fg-2);
+  font: inherit; font-size: 11.5px; font-weight: 500; cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+.pt-ix-pending-chip:hover { background: var(--pt-surface); color: var(--pt-fg); }
+.pt-ix-pending-chip.is-on {
+  background: var(--pt-accent-soft);
+  color: var(--pt-accent-fg);
+  box-shadow: inset 0 0 0 0.5px oklch(from var(--pt-accent) l c h / 0.18);
+}
+.pt-ix-pending-chip svg { opacity: 0.85; }
+.pt-ix-pending-count { font-family: var(--pt-mono); font-size: 10.5px; color: var(--pt-fg-3); }
+.pt-ix-pending-chip.is-on .pt-ix-pending-count { color: var(--pt-accent-fg); }
+
+/* Search icon button (idle state) */
+.pt-ix-search-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px;
+  border: 0; border-radius: 6px;
+  background: transparent; color: var(--pt-fg-2);
+  cursor: pointer; flex: none;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+.pt-ix-search-btn:hover { background: var(--pt-surface); color: var(--pt-fg); }
+
+/* Search takeover overlay — covers the chips when active */
+.pt-ix-search-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 12px;
+  background: var(--pt-bg-side);
+  opacity: 0; pointer-events: none;
+  transition: opacity 160ms ease;
+}
+.pt-ix-toolbar.is-searching .pt-ix-search-overlay {
+  opacity: 1; pointer-events: auto;
+}
+.pt-ix-search-overlay-icon { display: inline-flex; color: var(--pt-fg-3); flex: none; }
+.pt-ix-search-overlay-input {
+  flex: 1; min-width: 0;
+  border: 0; background: transparent; outline: none;
+  font: inherit; font-size: 12.5px; color: var(--pt-fg);
+}
+.pt-ix-search-overlay-input::placeholder { color: var(--pt-fg-4); }
+.pt-ix-search-close {
+  display: grid; place-items: center;
+  width: 22px; height: 22px;
+  border: 0; border-radius: 5px;
+  background: transparent; color: var(--pt-fg-3);
+  cursor: pointer; flex: none;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+.pt-ix-search-close:hover { background: var(--pt-surface); color: var(--pt-fg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-ix-toolbar-chips, .pt-ix-search-overlay,
+  .pt-ix-status-btn, .pt-ix-status-chev,
+  .pt-ix-status-menu, .pt-ix-pending-chip,
+  .pt-ix-search-btn, .pt-ix-search-close {
+    transition: none; animation: none;
+  }
+}
 
 .pt-ix-threads {
   list-style: none; margin: 0; padding: 0;

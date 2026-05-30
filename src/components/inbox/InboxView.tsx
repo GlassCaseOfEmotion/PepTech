@@ -13,6 +13,7 @@ import type { DbConversation, DbQuickReply, DbTemplate, InboxThread, InboxMessag
 import type { QueuedRun } from '@/types/automations'
 import { PendingApprovalRow } from '@/components/shared/PendingApprovalRow'
 import { CollapsiblePendingApprovals } from './CollapsiblePendingApprovals'
+import { InboxToolbar } from './InboxToolbar'
 import { AcquisitionSourceBanner } from '@/components/inbox/AcquisitionSourceBanner'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ConvertToCustomerButton } from '@/components/contacts/ConvertToCustomerButton'
@@ -79,18 +80,6 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChann
 }) {
   const { resolvedCount, view } = useInbox()
   const [search, setSearch] = useState('')
-  const searchRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
-        e.preventDefault()
-        searchRef.current?.focus()
-      }
-    }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [])
 
   const counts = {
     all: threads.filter(t => t.status !== 'resolved').length,
@@ -100,15 +89,12 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChann
     resolved: resolvedCount,
   }
 
-  const filters = [
-    { id: 'all',         label: 'All',          count: counts.all },
-    { id: 'needs_reply', label: 'Needs reply',   count: counts.needs_reply },
-    { id: 'new',         label: 'New',           count: counts.new },
-    { id: 'snoozed',     label: 'Snoozed',       count: counts.snoozed },
-    { id: 'resolved',    label: 'Resolved',      count: counts.resolved },
-  ]
-
   const [pending, setPending] = useState<QueuedRun[]>(queuedRuns)
+  const [pendingOnly, setPendingOnly] = useState(false)
+  // Convs the queued runs are attached to — the "Pending" toggle filters to these.
+  const pendingConvIds = pendingOnly
+    ? new Set(pending.map(p => p.conversationId).filter((id): id is string => !!id))
+    : null
 
   const visible = threads.filter(t => {
     if (filter === 'all') { if (t.status === 'resolved') return false }
@@ -117,6 +103,7 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChann
     if (view === 'lead' && t.lifecycleStage !== 'lead') return false
     if (view === 'customer' && t.lifecycleStage !== 'customer') return false
     if ((view === 'wa' || view === 'tg' || view === 'em') && t.channel !== view) return false
+    if (pendingConvIds && !pendingConvIds.has(t.id)) return false
     if (search) {
       const q = search.toLowerCase()
       return t.name.toLowerCase().includes(q) || t.handle.toLowerCase().includes(q)
@@ -132,29 +119,23 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChann
         </Link>
         <span className="pt-ix-list-title">Inbox</span>
       </div>
-      <div className="pt-ix-search">
-        <Icons.search size={11} />
-        <input
-          ref={searchRef}
-          placeholder="Search threads"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-      </div>
-      {pending.length > 0 && (
+      <InboxToolbar
+        filter={filter}
+        setFilter={setFilter}
+        counts={counts}
+        search={search}
+        setSearch={setSearch}
+        pendingCount={pending.length}
+        pendingOnly={pendingOnly}
+        setPendingOnly={setPendingOnly}
+      />
+      {pendingOnly && pending.length > 0 && (
         <CollapsiblePendingApprovals count={pending.length}>
           {pending.map(r => (
             <PendingApprovalRow key={r.id} run={r} onRemove={id => setPending(p => p.filter(r => r.id !== id))} />
           ))}
         </CollapsiblePendingApprovals>
       )}
-      <div className="pt-ix-filters">
-        {filters.map(f => (
-          <button key={f.id} className={`pt-pill ${filter === f.id ? 'is-on' : ''}`} onClick={() => setFilter(f.id)}>
-            {f.label}<span className="pt-pill-num">{f.count}</span>
-          </button>
-        ))}
-      </div>
       <ul className="pt-ix-threads">
         {visible.map(t => <IxThread key={t.id} t={t} active={t.id === activeId} onClick={() => onSelect(t.id)} />)}
         {visible.length === 0 && (
