@@ -107,7 +107,7 @@ export function Sidebar({ displayName, queuedCount = 0 }: SidebarProps) {
           const badge = n.href === '/automations' && queuedCount > 0 ? queuedCount : null
           return (
             <Link key={n.href} href={n.href} title={n.label} className={`pt-nav-item ${on ? 'is-on' : ''}`} {...(n.href === '/inbox' ? { 'data-tour': 'inbox-link' } : {})}>
-              <Icon size={15} />
+              <Icon size={16} />
               <span className="pt-nav-label">{n.label}</span>
               {badge != null && <span className="pt-nav-badge">{badge}</span>}
             </Link>
@@ -120,7 +120,7 @@ export function Sidebar({ displayName, queuedCount = 0 }: SidebarProps) {
           const on = isActive(n.href)
           return (
             <Link key={n.href} href={n.href} title={n.label} className={`pt-nav-item ${on ? 'is-on' : ''}`}>
-              <Icon size={15} />
+              <Icon size={16} />
               <span className="pt-nav-label">{n.label}</span>
             </Link>
           )

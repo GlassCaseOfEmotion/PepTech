@@ -315,11 +315,18 @@ kbd {
   display: none;
 }
 .pt-root.pt-nav-collapsed .pt-sidebar { padding: 10px 6px; }
+/* Collapsed: icon-only chips become 36×36 squares with rail-strip-style
+   spacing — bigger hit area + cleaner rhythm now that the column isn't
+   carrying pinned threads. */
+.pt-root.pt-nav-collapsed .pt-nav { gap: 6px; }
 .pt-root.pt-nav-collapsed .pt-nav-item,
 .pt-root.pt-nav-collapsed .pt-compose,
 .pt-root.pt-nav-collapsed .pt-search {
+  width: 36px; height: 36px;
+  margin-left: auto; margin-right: auto;
+  padding: 0;
+  border-radius: 8px;
   justify-content: center;
-  padding-left: 0; padding-right: 0;
 }
 .pt-root.pt-nav-collapsed .pt-me { justify-content: center; }
 .pt-root.pt-nav-collapsed .pt-brand { justify-content: center; gap: 0; }
