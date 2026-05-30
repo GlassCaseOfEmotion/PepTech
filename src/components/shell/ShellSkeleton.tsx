@@ -1,18 +1,28 @@
 import { Sidebar } from './Sidebar'
 import { getNavCollapsed } from '@/lib/nav-state'
+import { getTenantBrand } from '@/lib/tenant-brand'
 
 interface ShellSkeletonProps {
   section?: string
   isInbox?: boolean
 }
 
-/** Server component — reads the nav-collapse cookie so the skeleton paints
- * with the sidebar at the user's preferred width on first frame (no flash). */
+/** Server component — reads the nav-collapse cookie AND the tenant brand so
+ * the skeleton paints with the user's sidebar width AND the workspace logo
+ * on the very first frame. No flash of the Peptech default while loading. */
 export async function ShellSkeleton({ section = '', isInbox = false }: ShellSkeletonProps) {
-  const navCollapsed = await getNavCollapsed()
+  const [navCollapsed, { tenantName, tenantLogoUrl }] = await Promise.all([
+    getNavCollapsed(),
+    getTenantBrand(),
+  ])
   return (
     <div className={`pt-root${navCollapsed ? ' pt-nav-collapsed' : ''} no-right${isInbox ? ' is-inbox' : ''}`}>
-      <Sidebar displayName="••" initialCollapsed={navCollapsed} />
+      <Sidebar
+        displayName="••"
+        tenantName={tenantName}
+        tenantLogoUrl={tenantLogoUrl}
+        initialCollapsed={navCollapsed}
+      />
       <main className="pt-main">
         <header className="pt-top">
           <div className="pt-top-crumbs">
