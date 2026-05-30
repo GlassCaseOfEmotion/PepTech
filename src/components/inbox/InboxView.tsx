@@ -74,9 +74,10 @@ function IxThread({ t, active, onClick }: { t: InboxThread; active: boolean; onC
 
 // ─── Thread column ───────────────────────────────────────────────────────────
 
-function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChannels, queuedRuns }: {
+function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChannels, queuedRuns, viewsCollapsed, onExpandViews }: {
   threads: InboxThread[]; activeId: string; onSelect: (id: string) => void
   filter: string; setFilter: (f: string) => void; hasChannels: boolean; queuedRuns: QueuedRun[]
+  viewsCollapsed: boolean; onExpandViews: () => void
 }) {
   const { resolvedCount, view } = useInbox()
   const [search, setSearch] = useState('')
@@ -128,6 +129,8 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChann
         pendingCount={pending.length}
         pendingOnly={pendingOnly}
         setPendingOnly={setPendingOnly}
+        viewsCollapsed={viewsCollapsed}
+        onExpandViews={onExpandViews}
       />
       {pendingOnly && pending.length > 0 && (
         <CollapsiblePendingApprovals count={pending.length}>
@@ -899,6 +902,8 @@ function InboxLayout({ initialPrefill, baseCurrency, hasChannels, queuedRuns, op
         setFilter={setFilter}
         hasChannels={hasChannels}
         queuedRuns={queuedRuns}
+        viewsCollapsed={viewsCollapsed}
+        onExpandViews={toggleViews}
       />
       {activeThread && (
         <ConversationPane

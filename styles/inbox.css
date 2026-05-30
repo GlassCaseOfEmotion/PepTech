@@ -14,7 +14,10 @@
   transition: grid-template-columns 0.22s ease;
 }
 .pt-inbox.is-panel-open      { --pt-rail-w: 368px; }
-.pt-inbox.is-views-collapsed { --pt-views-w: 40px; }
+/* Collapsed: the column track goes to 0 and the empty aside has no border —
+   the expand toggle moves into the inbox toolbar. */
+.pt-inbox.is-views-collapsed { --pt-views-w: 0px; }
+.pt-inbox.is-views-collapsed .pt-ix-views { border-right: 0; }
 .pt-d-compact .pt-inbox      { --pt-thread-w: 296px; }
 
 /* ─── Views column (Phase 3) ─────────────────────────────────────────────── */
@@ -37,8 +40,7 @@
   transition: background-color 140ms ease, transform 180ms ease;
 }
 .pt-ix-views-toggle:hover { background: oklch(from var(--pt-fg) l c h / 0.06); color: var(--pt-fg); }
-.pt-ix-views.is-collapsed { align-items: center; padding-top: 14px; }
-.pt-ix-views.is-collapsed .pt-ix-views-toggle { transform: rotate(180deg); }
+.pt-ix-views.is-collapsed { overflow: hidden; }
 .pt-ix-views-body { display: flex; flex-direction: column; gap: 1px; padding: 0 8px; overflow-y: auto; min-height: 0; }
 .pt-ix-views-sec {
   font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em;
@@ -97,6 +99,18 @@
   opacity: 0; transform: translateX(-4px); pointer-events: none;
 }
 .pt-ix-toolbar-spacer { flex: 1 1 auto; }
+
+/* Leading expand-views toggle (only when the views column is collapsed) */
+.pt-ix-views-expand {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px;
+  border: 0; border-radius: 6px;
+  background: transparent; color: var(--pt-fg-2);
+  cursor: pointer; flex: none;
+  margin-right: 1px;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+.pt-ix-views-expand:hover { background: var(--pt-surface); color: var(--pt-fg); }
 
 /* Status filter dropdown */
 .pt-ix-status { position: relative; }

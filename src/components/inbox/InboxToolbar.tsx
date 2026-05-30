@@ -30,6 +30,10 @@ interface Props {
   pendingCount: number
   pendingOnly: boolean
   setPendingOnly: (b: boolean) => void
+  /** Optional. When the views column is collapsed, a leading toggle
+   * appears here so the user can re-expand it without an empty side strip. */
+  viewsCollapsed?: boolean
+  onExpandViews?: () => void
 }
 
 /** Single-row toolbar: status dropdown · pending toggle · search takeover.
@@ -39,6 +43,7 @@ export function InboxToolbar({
   filter, setFilter, counts,
   search, setSearch,
   pendingCount, pendingOnly, setPendingOnly,
+  viewsCollapsed, onExpandViews,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [searching, setSearching] = useState(false)
@@ -95,6 +100,17 @@ export function InboxToolbar({
   return (
     <div className={`pt-ix-toolbar${searching ? ' is-searching' : ''}`}>
       <div className="pt-ix-toolbar-chips">
+        {viewsCollapsed && onExpandViews && (
+          <button
+            type="button"
+            className="pt-ix-views-expand"
+            onClick={onExpandViews}
+            aria-label="Expand views"
+            title="Expand views"
+          >
+            <Icons.panelLeft size={14} />
+          </button>
+        )}
         <div ref={statusRef} className="pt-ix-status">
           <button
             type="button"

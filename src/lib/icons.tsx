@@ -32,6 +32,7 @@ export const Icons = {
   plus:    (p: IconProps) => <PtIcon {...p} d="M12 5v14 M5 12h14" />,
   arrowDn: (p: IconProps) => <PtIcon {...p} d="M7 10l5 5 5-5" />,
   arrowL:  (p: IconProps) => <PtIcon {...p} d="M15 6l-6 6 6 6" />,
+  panelLeft: (p: IconProps) => <PtIcon {...p}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M9 5v14"/></PtIcon>,
   check:   (p: IconProps) => <PtIcon {...p} d="M5 12.5 10 17 19 7" />,
   more:    (p: IconProps) => <PtIcon {...p}><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></PtIcon>,
   filter:  (p: IconProps) => <PtIcon {...p} d="M3 5h18l-7 9v6l-4-2v-4L3 5Z" />,

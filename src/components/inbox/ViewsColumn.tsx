@@ -28,13 +28,10 @@ export function ViewsColumn({ collapsed, onToggle }: { collapsed: boolean; onTog
   }
 
   if (collapsed) {
-    return (
-      <aside className="pt-ix-views is-collapsed">
-        <button className="pt-ix-views-toggle" title="Expand views" aria-label="Expand views" onClick={onToggle}>
-          <Icons.arrowL size={13} />
-        </button>
-      </aside>
-    )
+    // Render an empty aside so the parent grid keeps the track placement
+    // stable — width collapses to 0 via the .is-views-collapsed modifier.
+    // The expand toggle lives in the inbox toolbar in this state.
+    return <aside className="pt-ix-views is-collapsed" aria-hidden />
   }
 
   const Row = ({ id, label, icon: Icon, iconClass }: ViewDef) => (
@@ -55,7 +52,7 @@ export function ViewsColumn({ collapsed, onToggle }: { collapsed: boolean; onTog
       <div className="pt-ix-views-hd">
         <span>Views</span>
         <button className="pt-ix-views-toggle" title="Collapse views" aria-label="Collapse views" onClick={onToggle}>
-          <Icons.arrowL size={13} />
+          <Icons.panelLeft size={14} />
         </button>
       </div>
       <div className="pt-ix-views-body">
