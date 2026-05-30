@@ -251,6 +251,10 @@
 .pt-ixt.is-snoozed { opacity: 0.6; }
 .pt-ixt.is-snoozed:hover { opacity: 0.85; }
 .pt-tag-snoozed { font-size: 10px; }
+/* Selection state — adopts the strongest available identity. The default
+   (platform accent) is the fallback for unknown channels; channel-specific
+   rules below override it so the selected row tints to match the conversation
+   pane's chat bubbles. */
 .pt-ixt.is-active {
   background: var(--pt-accent-soft);
 }
@@ -258,6 +262,12 @@
   content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 2px;
   background: var(--pt-accent); border-radius: 2px;
 }
+.pt-ixt.is-active[data-channel="wa"] { background: oklch(from var(--pt-wa) l c h / 0.14); }
+.pt-ixt.is-active[data-channel="wa"]::before { background: var(--pt-wa); }
+.pt-ixt.is-active[data-channel="tg"] { background: oklch(from var(--pt-tg) l c h / 0.14); }
+.pt-ixt.is-active[data-channel="tg"]::before { background: var(--pt-tg); }
+.pt-ixt.is-active[data-channel="em"] { background: oklch(from var(--pt-em) l c h / 0.10); }
+.pt-ixt.is-active[data-channel="em"]::before { background: var(--pt-em); }
 .pt-ixt-av {
   position: relative;
   width: 36px; height: 36px; border-radius: 8px;

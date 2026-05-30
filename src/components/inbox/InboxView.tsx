@@ -38,7 +38,11 @@ function fmtMins(m: number) {
 function IxThread({ t, active, onClick }: { t: InboxThread; active: boolean; onClick: () => void }) {
   const { togglePin } = useInbox()
   return (
-    <li className={`pt-ixt ${active ? 'is-active' : ''} ${t.unread ? 'is-unread' : ''} ${t.status === 'snoozed' ? 'is-snoozed' : ''} ${t.pinned ? 'is-pinned' : ''}`} onClick={onClick}>
+    <li
+      className={`pt-ixt ${active ? 'is-active' : ''} ${t.unread ? 'is-unread' : ''} ${t.status === 'snoozed' ? 'is-snoozed' : ''} ${t.pinned ? 'is-pinned' : ''}`}
+      data-channel={t.channel}
+      onClick={onClick}
+    >
       <Avatar name={t.name} channel={t.channel} size={34} />
       <div className="pt-ixt-mid">
         <div className="pt-ixt-row1">
@@ -876,13 +880,46 @@ function ConversationPane({ thread, messages, onSend, isSending, onCreateOrder, 
 function InboxLayout({ initialPrefill, baseCurrency, hasChannels, queuedRuns, operatorName }: { initialPrefill?: string; baseCurrency: string; hasChannels: boolean; queuedRuns: QueuedRun[]; operatorName: string }) {
   const { threads, activeId, setActiveId, filter, setFilter, messages, isSending, sendMessage } = useInbox()
   const activeThread = threads.find(t => t.id === activeId) ?? threads[0]
-  const [activePanel, setActivePanel] = useState<RailPanel | null>(null)
+  // Rail panel choice persists across conversation switches AND page reloads.
+  // 'order' is a flow (not a view) — never persisted, and reset on convo change.
+  // Other panels are sticky.
+  const [activePanel, setActivePanelState] = useState<RailPanel | null>(null)
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem('pt-rail-panel')
+      if (stored === 'contact' || stored === 'ai' || stored === 'notes' || stored === 'activity') {
+        setActivePanelState(stored)
+      }
+    } catch { /* ignore — private mode */ }
+  }, [])
+  const setActivePanel = useCallback((next: React.SetStateAction<RailPanel | null>) => {
+    setActivePanelState(prev => {
+      const resolved = typeof next === 'function'
+        ? (next as (p: RailPanel | null) => RailPanel | null)(prev)
+        : next
+      try {
+        if (resolved === 'order') {
+          // Flow — don't touch the persisted view choice.
+        } else if (resolved === null) {
+          window.localStorage.setItem('pt-rail-panel', '')
+        } else {
+          window.localStorage.setItem('pt-rail-panel', resolved)
+        }
+      } catch { /* ignore */ }
+      return resolved
+    })
+  }, [])
   const { collapsed: viewsCollapsed, toggle: toggleViews } = useViewsCollapsed()
   const searchParams = useSearchParams()
   const router = useRouter()
   const selectedConvId = searchParams.get('conversation')
 
-  useEffect(() => { setActivePanel(null) }, [activeId])
+  // On conversation switch: only reset the 'order' flow. View panels persist —
+  // bypassing the persisting setter so localStorage keeps the user's last view
+  // choice intact (e.g. 'ai' stays remembered even if 'order' was on top).
+  useEffect(() => {
+    setActivePanelState(prev => prev === 'order' ? null : prev)
+  }, [activeId])
 
   // User-resized rail width (px). null = use the CSS default (368px).
   // Hydrated from localStorage on mount so SSR markup matches client.
