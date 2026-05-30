@@ -1,0 +1,11 @@
+-- Make the `logos` bucket public so tenant brand marks can be served as
+-- plain public URLs (no createSignedUrl roundtrip on every page load).
+--
+-- Tenant logos are decorative, not sensitive. Paths are scoped under
+-- `${tenant_uuid}/logo.${ext}`; tenant UUIDs aren't enumerable, so the
+-- practical exposure is the existence of a logo for a given (already-known)
+-- tenant id. Acceptable for a workspace brand asset.
+--
+-- Uploads / deletes remain tenant-scoped through the existing object-level
+-- RLS policies — only public READ is opened up.
+update storage.buckets set public = true where id = 'logos';

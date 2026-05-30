@@ -1,5 +1,6 @@
 import { createClient, getServerUser } from '@/lib/supabase/server'
 import { getQueuedRuns } from '@/app/automations/actions'
+import { getNavCollapsed, rootClassName } from '@/lib/nav-state'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { GlobalNotifications } from './GlobalNotifications'
@@ -31,7 +32,6 @@ export async function Shell({ children, section, isInbox = false, rightRail }: S
         supabase.from('users').select('display_name, tenants(name, logo_path)').eq('id', user.id).single(),
         supabase.from('tenant_channels').select('channel_type').eq('is_active', true),
         // BottomNav inbox-tab badge: count of unread, non-resolved conversations.
-        // Server-rendered snapshot — same lifecycle as the previous pinned-derived count.
         supabase.from('conversations').select('id', { count: 'exact', head: true })
           .gt('unread_count', 0).neq('status', 'resolved'),
       ])
@@ -41,13 +41,12 @@ export async function Shell({ children, section, isInbox = false, rightRail }: S
       const tenant = (userRow as { tenants?: { name: string; logo_path: string | null } | null } | null)?.tenants ?? null
       tenantName = tenant?.name ?? null
       if (tenant?.logo_path) {
-        // The 'logos' bucket is private — sign for the request window only.
-        // 96×96 covers up to ~2.6× retina for the 36×36 sidebar mark.
-        const { data: signed } = await supabase.storage.from('logos').createSignedUrl(
-          tenant.logo_path, 3600,
+        // Public bucket → sync URL construction, zero round-trips. The browser
+        // caches the resulting image at the HTTP layer across navigations.
+        tenantLogoUrl = supabase.storage.from('logos').getPublicUrl(
+          tenant.logo_path,
           { transform: { width: 96, height: 96, quality: 80, resize: 'cover' } },
-        )
-        tenantLogoUrl = signed?.signedUrl ?? null
+        ).data.publicUrl
       }
     }
   } catch {
@@ -57,9 +56,11 @@ export async function Shell({ children, section, isInbox = false, rightRail }: S
   const queuedRuns = await getQueuedRuns().catch(() => [])
   const queuedCount = queuedRuns.length
 
-  const rootClass = rightRail
-    ? 'pt-root'
-    : `pt-root no-right${isInbox ? ' is-inbox' : ''}`
+  // Server-read cookie → apply pt-nav-collapsed to .pt-root on initial render
+  // so the sidebar starts at the right width with no width-snap on hydrate.
+  const navCollapsed = await getNavCollapsed()
+  const extra = rightRail ? '' : `no-right${isInbox ? ' is-inbox' : ''}`
+  const rootClass = rootClassName(navCollapsed, extra)
 
   return (
     <div className={rootClass}>
@@ -67,7 +68,7 @@ export async function Shell({ children, section, isInbox = false, rightRail }: S
       <AgentPalette />
       <CommandPalette />
       <ComposeModal />
-      <Sidebar displayName={displayName} tenantName={tenantName} tenantLogoUrl={tenantLogoUrl} queuedCount={queuedCount} />
+      <Sidebar displayName={displayName} tenantName={tenantName} tenantLogoUrl={tenantLogoUrl} initialCollapsed={navCollapsed} queuedCount={queuedCount} />
       <main className="pt-main">
         <TopBar section={section} connectedChannels={connectedChannels} />
         {children}

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient, getServerUser } from '@/lib/supabase/server'
+import { getNavCollapsed } from '@/lib/nav-state'
 import { DashboardLayout } from '@/components/shell/DashboardLayout'
 import { dbConversationToThread, type DbConversation } from '@/types/inbox'
 import { dbProductToDisplay, type DbProduct, type DbBatch } from '@/types/catalog'
@@ -31,12 +32,15 @@ export default async function Home() {
 
   const d180 = new Date(now - 180 * 86400_000).toISOString()
 
-  // Gate: bounce unboarded tenants to the wizard
-  const { data: gateUserRow } = await supabase
-    .from('users').select('tenant_id').eq('id', user.id).single()
-  const { data: tenantGate } = await supabase
-    .from('tenants').select('onboarded_at').eq('id', gateUserRow?.tenant_id ?? '').single()
-  if (!tenantGate?.onboarded_at) redirect('/onboarding')
+  // Gate: bounce unboarded tenants to the wizard. Single round-trip via
+  // the users→tenants embed instead of two sequential awaits.
+  const { data: gateRow } = await supabase
+    .from('users')
+    .select('tenants(onboarded_at)')
+    .eq('id', user.id)
+    .single()
+  const gateTenant = (gateRow as { tenants?: { onboarded_at: string | null } | null } | null)?.tenants ?? null
+  if (!gateTenant?.onboarded_at) redirect('/onboarding')
 
   const [
     { data: userRow },
@@ -157,15 +161,12 @@ export default async function Home() {
   const baseCurrency = (tenantRow?.base_currency as string | null) ?? 'USD'
   const tenantName = (tenantRow as { name?: string | null } | null)?.name ?? null
   const tenantLogoPath = (tenantRow as { logo_path?: string | null } | null)?.logo_path ?? null
-  let tenantLogoUrl: string | null = null
-  if (tenantLogoPath) {
-    // 96×96 covers up to ~2.6× retina for the 36×36 sidebar mark.
-    const { data: signed } = await supabase.storage.from('logos').createSignedUrl(
-      tenantLogoPath, 3600,
-      { transform: { width: 96, height: 96, quality: 80, resize: 'cover' } },
-    )
-    tenantLogoUrl = signed?.signedUrl ?? null
-  }
+  // Public bucket → sync URL construction, zero round-trips.
+  const tenantLogoUrl = tenantLogoPath
+    ? supabase.storage.from('logos').getPublicUrl(tenantLogoPath, {
+        transform: { width: 96, height: 96, quality: 80, resize: 'cover' },
+      }).data.publicUrl
+    : null
 
   // ── Reorder signals ──────────────────────────────────────────────────────
   const reorderOrders = (reorderOrdersRaw ?? []).map(o => ({
@@ -282,11 +283,16 @@ export default async function Home() {
     dbProductToDisplay(p as DbProduct, batchesByProduct[p.id] ?? [])
   )
 
+  // Server-read cookie → DashboardLayout renders .pt-root with the right
+  // collapsed class on first paint (no FOUC width-snap on hydrate).
+  const navCollapsed = await getNavCollapsed()
+
   return (
     <DashboardLayout
       displayName={displayName}
       tenantName={tenantName}
       tenantLogoUrl={tenantLogoUrl}
+      navCollapsed={navCollapsed}
       connectedChannels={connectedChannels}
       threads={threads}
       stockProducts={stockProducts}

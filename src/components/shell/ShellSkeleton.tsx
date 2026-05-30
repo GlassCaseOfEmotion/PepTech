@@ -1,16 +1,18 @@
-'use client'
-
 import { Sidebar } from './Sidebar'
+import { getNavCollapsed } from '@/lib/nav-state'
 
 interface ShellSkeletonProps {
   section?: string
   isInbox?: boolean
 }
 
-export function ShellSkeleton({ section = '', isInbox = false }: ShellSkeletonProps) {
+/** Server component — reads the nav-collapse cookie so the skeleton paints
+ * with the sidebar at the user's preferred width on first frame (no flash). */
+export async function ShellSkeleton({ section = '', isInbox = false }: ShellSkeletonProps) {
+  const navCollapsed = await getNavCollapsed()
   return (
-    <div className={`pt-root no-right${isInbox ? ' is-inbox' : ''}`}>
-      <Sidebar displayName="••" />
+    <div className={`pt-root${navCollapsed ? ' pt-nav-collapsed' : ''} no-right${isInbox ? ' is-inbox' : ''}`}>
+      <Sidebar displayName="••" initialCollapsed={navCollapsed} />
       <main className="pt-main">
         <header className="pt-top">
           <div className="pt-top-crumbs">

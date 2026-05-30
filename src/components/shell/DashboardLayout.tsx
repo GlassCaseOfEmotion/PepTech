@@ -24,6 +24,7 @@ interface DashboardLayoutProps {
   displayName: string
   tenantName?: string | null
   tenantLogoUrl?: string | null
+  navCollapsed?: boolean
   connectedChannels: string[]
   threads: InboxThread[]
   stockProducts: CatalogProduct[]
@@ -38,14 +39,14 @@ interface DashboardLayoutProps {
   queuedRuns: QueuedRun[]
 }
 
-export function DashboardLayout({ displayName, tenantName = null, tenantLogoUrl = null, connectedChannels, threads, stockProducts, stats, reorderSignals, baseCurrency, shipments, packingOrders, activityItems, onboardingStatus, queuedCount, queuedRuns }: DashboardLayoutProps) { // queuedRuns used in Task 3
+export function DashboardLayout({ displayName, tenantName = null, tenantLogoUrl = null, navCollapsed = true, connectedChannels, threads, stockProducts, stats, reorderSignals, baseCurrency, shipments, packingOrders, activityItems, onboardingStatus, queuedCount, queuedRuns }: DashboardLayoutProps) { // queuedRuns used in Task 3
   const [rightOpen, setRightOpen] = useState(true)
   const channels = connectedChannels
   const focusThread = threads.find(t => t.status === 'needs_reply') ?? threads[0] ?? null
   const unreadCount = threads.filter(t => t.unread > 0).length
 
   return (
-    <div className={`pt-root${rightOpen ? '' : ' no-right'}`}>
+    <div className={`pt-root${navCollapsed ? ' pt-nav-collapsed' : ''}${rightOpen ? '' : ' no-right'}`}>
       <GlobalNotifications />
       <AgentPalette />
       <CommandPalette />
@@ -59,7 +60,7 @@ export function DashboardLayout({ displayName, tenantName = null, tenantLogoUrl 
           hasPayment={onboardingStatus.hasPayment}
         />
       )}
-      <Sidebar displayName={displayName} tenantName={tenantName} tenantLogoUrl={tenantLogoUrl} queuedCount={queuedCount} />
+      <Sidebar displayName={displayName} tenantName={tenantName} tenantLogoUrl={tenantLogoUrl} initialCollapsed={navCollapsed} queuedCount={queuedCount} />
       <main className="pt-main">
         <TopBar
           section="Dashboard"

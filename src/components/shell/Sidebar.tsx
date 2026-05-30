@@ -61,15 +61,20 @@ interface SidebarProps {
   /** Optional — when present, the brand mark + name show the tenant's
    * workspace identity instead of the Peptech default. */
   tenantName?: string | null
+  /** Public URL (logos bucket is public) — synchronous, server-rendered,
+   * no client fetch. The browser caches the image at the HTTP layer. */
   tenantLogoUrl?: string | null
+  /** Server-rendered nav-collapsed state from the cookie — passed in so the
+   * useState initial matches SSR and there's no width-snap on hydrate. */
+  initialCollapsed?: boolean
   queuedCount?: number
 }
 
-export function Sidebar({ displayName, tenantName = null, tenantLogoUrl = null, queuedCount = 0 }: SidebarProps) {
+export function Sidebar({ displayName, tenantName = null, tenantLogoUrl = null, initialCollapsed = true, queuedCount = 0 }: SidebarProps) {
   const pathname = usePathname()
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
   const { theme, cycle } = useTheme()
-  const { collapsed, toggle } = useNavCollapsed()
+  const { collapsed, toggle } = useNavCollapsed(initialCollapsed)
 
   // ⌘\ (or Ctrl+\) toggles the sidebar from anywhere — same shortcut Linear,
   // Notion, Vercel use, so users guess it. Discoverable replacement for the
