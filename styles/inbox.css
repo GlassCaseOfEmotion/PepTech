@@ -1474,6 +1474,7 @@
 .pt-ix-view-label { display: inline-flex; align-items: center; min-width: 0; }
 .pt-ix-view-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; margin-right: 9px; color: var(--pt-fg-3); flex: 0 0 auto; }
 .pt-ix-view-icon.pt-vi-all { color: var(--pt-accent); }
+.pt-ix-view-icon.pt-vi-pinned { color: var(--pt-warn); }
 .pt-ix-view-icon.pt-vi-lead { color: var(--pt-cool); }
 .pt-ix-view-icon.pt-vi-customer { color: var(--pt-ok); }
 .pt-ix-view-icon.pt-ch-wa { color: var(--pt-wa); }

@@ -1,11 +1,9 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Icons } from '@/lib/icons'
-import { createClient } from '@/lib/supabase/client'
-import { dbConversationToThread, type DbConversation } from '@/types/inbox'
 import { useNavCollapsed } from './useNavCollapsed'
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
@@ -58,128 +56,16 @@ const NAV_SECONDARY = [
   { label: 'Settings', href: '/settings/channels', icon: Icons.gear,   badge: null },
 ]
 
-const CH_ICONS: Record<string, React.FC<{ size?: number }>> = { wa: Icons.wa, tg: Icons.tg, em: Icons.em }
-
-// Module-level cache — survives component remounts during navigation, cleared on full page reload
-let _pinnedCache: ReturnType<typeof dbConversationToThread>[] = []
-
-const PINNED_SELECT = `
-  id, status, unread_count, last_message_at, last_message_snippet,
-  channel_type, channel_identifier, is_pinned,
-  customers (
-    id, display_name, trust_score, ltv,
-    customer_tags (tag),
-    customer_channels (channel_type, display_handle, is_primary)
-  )
-`
-
 interface SidebarProps {
   displayName: string
-  initialPinned?: DbConversation[]
   queuedCount?: number
 }
 
-export function Sidebar({ displayName, initialPinned = [], queuedCount = 0 }: SidebarProps) {
+export function Sidebar({ displayName, queuedCount = 0 }: SidebarProps) {
   const pathname = usePathname()
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
-  const supabase = useMemo(() => createClient(), [])
   const { theme, cycle } = useTheme()
   const { collapsed, toggle } = useNavCollapsed()
-  const [pinned, setPinnedRaw] = useState<ReturnType<typeof dbConversationToThread>[]>(() => {
-    // Prefer the realtime-updated cache over server-fetched initialPinned — the cache
-    // reflects patches applied after mount, so it's always more current than the server render.
-    if (_pinnedCache.length > 0) return _pinnedCache
-    if (initialPinned.length > 0) {
-      const threads = initialPinned.map(c => dbConversationToThread(c))
-      _pinnedCache = threads
-      return threads
-    }
-    return []
-  })
-
-  const setPinned = (threads: ReturnType<typeof dbConversationToThread>[]) => {
-    _pinnedCache = threads
-    setPinnedRaw(threads)
-  }
-
-  useEffect(() => {
-    // Only fetch if nothing came from server or cache
-    if (initialPinned.length === 0 && _pinnedCache.length === 0) {
-      supabase
-        .from('conversations')
-        .select(PINNED_SELECT)
-        .eq('is_pinned', true)
-        .order('last_message_at', { ascending: false, nullsFirst: false })
-        .then(({ data }) => {
-          if (data) setPinned(data.map(c => dbConversationToThread(c as unknown as DbConversation)))
-        })
-    }
-  }, [supabase])
-
-  useEffect(() => {
-    const channel = supabase
-      .channel(`sidebar:pinned-${Math.random()}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations' }, (payload) => {
-        const updated = payload.new as {
-          id: string; is_pinned: boolean
-          last_message_snippet: string | null; last_message_at: string | null; unread_count: number
-        }
-
-        if (!updated.is_pinned) {
-          // Conversation was unpinned — remove it
-          setPinnedRaw(prev => {
-            const next = prev.filter(p => p.id !== updated.id)
-            _pinnedCache = next
-            return next
-          })
-          return
-        }
-
-        const alreadyPinned = _pinnedCache.some(p => p.id === updated.id)
-
-        if (alreadyPinned) {
-          // Already pinned — patch mutable fields directly, no re-fetch needed.
-          // Customer data (name, trust, tags) never changes on a message update.
-          //
-          // Don't update snippet when unread_count is being cleared to 0 — that's a
-          // "conversation was read" event fired by InboxProvider, not a new message.
-          // Patching snippet from that event can revert to a stale DB value.
-          const isNewMessage = updated.unread_count > 0
-          setPinnedRaw(prev => {
-            const next = prev.map(p => p.id !== updated.id ? p : {
-              ...p,
-              unread: updated.unread_count,
-              ...(isNewMessage ? {
-                snippet: updated.last_message_snippet ?? p.snippet,
-                ...(updated.last_message_at ? {
-                  minsAgo: Math.floor((Date.now() - new Date(updated.last_message_at).getTime()) / 60000),
-                } : {}),
-              } : {}),
-            })
-            _pinnedCache = next
-            return next
-          })
-        } else {
-          // Newly pinned — re-fetch to get the customer join data
-          void supabase
-            .from('conversations')
-            .select(PINNED_SELECT)
-            .eq('id', updated.id)
-            .single()
-            .then(({ data }) => {
-              if (!data) return
-              const thread = dbConversationToThread(data as unknown as DbConversation)
-              setPinnedRaw(prev => {
-                const next = [thread, ...prev.filter(p => p.id !== thread.id)]
-                _pinnedCache = next
-                return next
-              })
-            })
-        }
-      })
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [supabase])
 
   return (
     <aside className="pt-sidebar">
@@ -227,26 +113,6 @@ export function Sidebar({ displayName, initialPinned = [], queuedCount = 0 }: Si
             </Link>
           )
         })}
-
-        {pinned.length > 0 && (
-          <>
-            <div className="pt-nav-sep" />
-            <div className="pt-nav-section">Pinned threads</div>
-            {pinned.map((p) => {
-              const ChIcon = CH_ICONS[p.channel]
-              return (
-                <Link key={p.id} href={`/inbox?conversation=${p.id}`} title={p.name} className="pt-pin">
-                  {ChIcon && <ChIcon size={11} />}
-                  <div className="pt-pin-body">
-                    <div className="pt-pin-name">{p.name}</div>
-                    <div className="pt-pin-snip">{p.snippet}</div>
-                  </div>
-                  {p.unread > 0 && <span className="pt-pin-unread">{p.unread}</span>}
-                </Link>
-              )
-            })}
-          </>
-        )}
 
         <div className="pt-nav-sep" />
         {NAV_SECONDARY.map((n) => {

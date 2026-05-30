@@ -12,7 +12,7 @@ import { TourAutostart } from './TourAutostart'
 import { BottomNav } from './BottomNav'
 import { DashboardView, DashboardRightRail } from '@/components/dashboard/DashboardView'
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist'
-import type { InboxThread, DbConversation } from '@/types/inbox'
+import type { InboxThread } from '@/types/inbox'
 import type { CatalogProduct } from '@/types/catalog'
 import type { DashboardStats } from '@/types/dashboard'
 import type { ReorderSignal } from '@/lib/reorder-signals'
@@ -24,7 +24,6 @@ interface DashboardLayoutProps {
   displayName: string
   connectedChannels: string[]
   threads: InboxThread[]
-  initialPinned: DbConversation[]
   stockProducts: CatalogProduct[]
   stats: DashboardStats
   reorderSignals: ReorderSignal[]
@@ -37,7 +36,7 @@ interface DashboardLayoutProps {
   queuedRuns: QueuedRun[]
 }
 
-export function DashboardLayout({ displayName, connectedChannels, threads, initialPinned, stockProducts, stats, reorderSignals, baseCurrency, shipments, packingOrders, activityItems, onboardingStatus, queuedCount, queuedRuns }: DashboardLayoutProps) { // queuedRuns used in Task 3
+export function DashboardLayout({ displayName, connectedChannels, threads, stockProducts, stats, reorderSignals, baseCurrency, shipments, packingOrders, activityItems, onboardingStatus, queuedCount, queuedRuns }: DashboardLayoutProps) { // queuedRuns used in Task 3
   const [rightOpen, setRightOpen] = useState(true)
   const channels = connectedChannels
   const focusThread = threads.find(t => t.status === 'needs_reply') ?? threads[0] ?? null
@@ -58,7 +57,7 @@ export function DashboardLayout({ displayName, connectedChannels, threads, initi
           hasPayment={onboardingStatus.hasPayment}
         />
       )}
-      <Sidebar displayName={displayName} initialPinned={initialPinned} queuedCount={queuedCount} />
+      <Sidebar displayName={displayName} queuedCount={queuedCount} />
       <main className="pt-main">
         <TopBar
           section="Dashboard"

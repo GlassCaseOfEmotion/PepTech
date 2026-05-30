@@ -18,41 +18,27 @@ interface ShellProps {
 export async function Shell({ children, section, isInbox = false, rightRail }: ShellProps) {
   let displayName = 'User'
   let connectedChannels: string[] = []
-
-  let pinnedConversations: import('@/types/inbox').DbConversation[] = []
+  let unreadCount = 0
 
   try {
     const user = await getServerUser()
     if (user) {
       const supabase = await createClient()
-      const [{ data: userRow }, { data: channels }, { data: pinned }] = await Promise.all([
+      const [{ data: userRow }, { data: channels }, { count }] = await Promise.all([
         supabase.from('users').select('display_name').eq('id', user.id).single(),
         supabase.from('tenant_channels').select('channel_type').eq('is_active', true),
-        supabase
-          .from('conversations')
-          .select(`
-            id, status, unread_count, last_message_at, last_message_snippet,
-            channel_type, channel_identifier, is_pinned,
-            customers (
-              id, display_name, trust_score, ltv,
-              customer_tags (tag),
-              customer_channels (channel_type, display_handle, is_primary)
-            )
-          `)
-          .eq('is_pinned', true)
-          .order('last_message_at', { ascending: false, nullsFirst: false }),
+        // BottomNav inbox-tab badge: count of unread, non-resolved conversations.
+        // Server-rendered snapshot — same lifecycle as the previous pinned-derived count.
+        supabase.from('conversations').select('id', { count: 'exact', head: true })
+          .gt('unread_count', 0).neq('status', 'resolved'),
       ])
       displayName = userRow?.display_name ?? user.email?.split('@')[0] ?? 'User'
       connectedChannels = (channels ?? []).map((c) => c.channel_type)
-      pinnedConversations = (pinned ?? []) as import('@/types/inbox').DbConversation[]
+      unreadCount = count ?? 0
     }
   } catch {
     // Render shell with defaults if data fetching fails
   }
-
-  const unreadCount = pinnedConversations.filter(
-    (c: { unread_count: number }) => c.unread_count > 0
-  ).length
 
   const queuedRuns = await getQueuedRuns().catch(() => [])
   const queuedCount = queuedRuns.length
@@ -67,7 +53,7 @@ export async function Shell({ children, section, isInbox = false, rightRail }: S
       <AgentPalette />
       <CommandPalette />
       <ComposeModal />
-      <Sidebar displayName={displayName} initialPinned={pinnedConversations} queuedCount={queuedCount} />
+      <Sidebar displayName={displayName} queuedCount={queuedCount} />
       <main className="pt-main">
         <TopBar section={section} connectedChannels={connectedChannels} />
         {children}

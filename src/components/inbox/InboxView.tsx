@@ -100,7 +100,8 @@ function ThreadColumn({ threads, activeId, onSelect, filter, setFilter, hasChann
   const visible = threads.filter(t => {
     if (filter === 'all') { if (t.status === 'resolved') return false }
     else if (t.status !== filter) return false
-    // Views lens (single-select): lifecycle or channel
+    // Views lens (single-select): pinned, lifecycle, or channel
+    if (view === 'pinned' && !t.pinned) return false
     if (view === 'lead' && t.lifecycleStage !== 'lead') return false
     if (view === 'customer' && t.lifecycleStage !== 'customer') return false
     if ((view === 'wa' || view === 'tg' || view === 'em') && t.channel !== view) return false

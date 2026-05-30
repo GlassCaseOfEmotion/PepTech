@@ -23,6 +23,7 @@ export function ViewsColumn({ collapsed, onToggle }: { collapsed: boolean; onTog
   const active = threads.filter(t => t.status !== 'resolved')
   const countFor = (id: string): number => {
     if (id === 'all') return active.length
+    if (id === 'pinned') return active.filter(t => t.pinned).length
     if (id === 'lead' || id === 'customer') return active.filter(t => t.lifecycleStage === id).length
     return active.filter(t => t.channel === id).length
   }
@@ -57,6 +58,7 @@ export function ViewsColumn({ collapsed, onToggle }: { collapsed: boolean; onTog
       </div>
       <div className="pt-ix-views-body">
         <Row id="all" label="All" icon={Icons.inbox} iconClass="pt-vi-all" />
+        <Row id="pinned" label="Pinned" icon={Icons.pin} iconClass="pt-vi-pinned" />
         <div className="pt-ix-views-sec">Lifecycle</div>
         {LIFECYCLE.map(v => <Row key={v.id} {...v} />)}
         <div className="pt-ix-views-sec">Channels</div>
