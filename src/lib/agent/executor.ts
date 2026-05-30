@@ -129,7 +129,10 @@ async function buildSystemForTurn(
         customerId = (conv?.customer_id as string | null) ?? ''
       }
     }
-    return buildCopilotSystem({ conversationId, customerId })
+    // Tenant currency for price formatting in drafts + commentary. Tenant-scoped.
+    const { data: tenant } = await supabase.from('tenants').select('base_currency').eq('id', tenantId).single()
+    const baseCurrency = (tenant?.base_currency as string | null) ?? 'USD'
+    return buildCopilotSystem({ conversationId, customerId, baseCurrency })
   }
   if (mode !== 'onboarding') return buildSystem(mode)
   const state = await fetchOnboardingStateSnapshot(supabase, tenantId).catch((e) => {

@@ -3,7 +3,7 @@ import { buildCopilotSystem } from '../system'
 
 describe('buildCopilotSystem', () => {
   it('explains the three voices and the watch/narrate job', () => {
-    const s = buildCopilotSystem({ conversationId: 'conv1', customerId: 'cust1' })
+    const s = buildCopilotSystem({ conversationId: 'conv1', customerId: 'cust1', baseCurrency: 'USD' })
     expect(s).toMatch(/\[CUSTOMER\]/)
     expect(s).toMatch(/\[SENT\]/)
     expect(s).toMatch(/\[OPERATOR\]/)
@@ -12,14 +12,20 @@ describe('buildCopilotSystem', () => {
   })
 
   it('embeds the conversation + customer ids for the commerce tools', () => {
-    const s = buildCopilotSystem({ conversationId: 'conv-abc', customerId: 'cust-xyz' })
+    const s = buildCopilotSystem({ conversationId: 'conv-abc', customerId: 'cust-xyz', baseCurrency: 'USD' })
     expect(s).toContain('conv-abc')
     expect(s).toContain('cust-xyz')
     expect(s).toMatch(/update_draft_order/)
   })
 
   it('teaches the agent to use send_message', () => {
-    const s = buildCopilotSystem({ conversationId: 'conv-abc', customerId: 'cust-xyz' })
+    const s = buildCopilotSystem({ conversationId: 'conv-abc', customerId: 'cust-xyz', baseCurrency: 'USD' })
     expect(s).toMatch(/send_message/)
+  })
+
+  it('injects the tenant currency so drafts don\'t default to USD', () => {
+    const s = buildCopilotSystem({ conversationId: 'c', customerId: 'k', baseCurrency: 'IDR' })
+    expect(s).toContain('IDR')
+    expect(s).toMatch(/never default to USD/)
   })
 })
